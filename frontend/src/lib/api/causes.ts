@@ -1,6 +1,6 @@
 import { USE_MOCK } from "@/lib/config";
 import { toCauseDetail } from "@/lib/mock/join";
-import { causeCover, causeImage } from "@/lib/mock/images";
+import { causeCover, causeGallery, causeImage } from "@/lib/mock/images";
 import {
   badRequest,
   commit,
@@ -156,6 +156,7 @@ export async function createCause(
     category: payload.category,
     imageUrl: payload.imageUrl ?? causeImage(id, payload.category),
     coverUrl: causeCover(id, payload.category),
+    gallery: causeGallery(id, payload.category),
     organizerId,
     status: submit ? "PENDING_APPROVAL" : "DRAFT",
     validation: {

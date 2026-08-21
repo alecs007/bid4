@@ -1,0 +1,166 @@
+import Image from "next/image";
+import Link from "next/link";
+
+import { Icons } from "@/components/icons";
+import { Skeleton } from "@/components/ui";
+import { CAUSE_CATEGORIES } from "@/lib/config";
+import { formatMoney, progressPercent } from "@/lib/money";
+import type { CauseDetail } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
+
+/**
+ * Causes are the emotional half of the product, so their card is deliberately
+ * larger and more editorial than a listing tile: a wide image, the name set
+ * over it, and the money underneath where it reads as a promise kept.
+ */
+export function CauseCard({
+  cause,
+  className,
+}: {
+  cause: CauseDetail;
+  className?: string;
+}) {
+  const category = CAUSE_CATEGORIES.find((item) => item.id === cause.category);
+  const percent = progressPercent(cause.raisedAmount, cause.goalAmount);
+  const reached = percent >= 100;
+
+  return (
+    <article
+      className={cn(
+        "group relative flex flex-col rounded-3xl bg-white ring-1 ring-edge p-2 transition-transform duration-200 hover:-translate-y-0.5",
+        className,
+      )}
+    >
+      <div className="relative aspect-4/3 w-full overflow-hidden rounded-2xl bg-ink-100">
+        <Image
+          src={cause.imageUrl}
+          alt=""
+          fill
+          unoptimized
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+        />
+
+        {/* Scrim so the name stays readable over any artwork. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-900/85 via-ink-900/35 to-transparent"
+        />
+
+        {category ? (
+          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1 text-sm font-bold text-ink-800 backdrop-blur-sm">
+            <span aria-hidden="true">{category.emoji}</span>
+            {category.label}
+          </span>
+        ) : null}
+
+        {cause.activeAuctionCount > 0 ? (
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-2.5 py-1 text-sm font-bold text-white">
+            <Icons.auction aria-hidden="true" className="h-4 w-4" />
+            {cause.activeAuctionCount}
+          </span>
+        ) : null}
+
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <Link
+            href={`/cauze/${cause.slug}`}
+            className="font-display text-xl leading-tight font-extrabold text-white after:absolute after:inset-0 sm:text-2xl"
+          >
+            <span className="line-clamp-2">{cause.name}</span>
+          </Link>
+        </div>
+      </div>
+
+      <div className="px-3 pt-4 pb-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="numeric font-display text-2xl leading-none font-extrabold text-ink-900">
+            {formatMoney(cause.raisedAmount, { compact: true })}
+          </span>
+          <span
+            className={cn(
+              "numeric font-display text-base font-extrabold",
+              reached ? "text-success-600" : "text-primary-700",
+            )}
+          >
+            {Math.round(percent)}%
+          </span>
+        </div>
+
+        <div
+          role="progressbar"
+          aria-valuenow={Math.round(percent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Strâns din obiectivul de ${formatMoney(cause.goalAmount)}`}
+          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-ink-100"
+        >
+          <div
+            className={cn(
+              "h-full rounded-full transition-[width] duration-700 ease-out",
+              reached ? "bg-success-500" : "bg-primary-500",
+            )}
+            style={{ width: `${Math.min(100, percent)}%` }}
+          />
+        </div>
+
+        <p className="mt-2 text-sm text-ink-500">
+          din {formatMoney(cause.goalAmount, { compact: true })}
+          {cause.supporterCount > 0
+            ? ` · ${cause.supporterCount} susținători`
+            : ""}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+export function SkeletonCauseCard() {
+  return (
+    <div className="rounded-3xl bg-white ring-1 ring-edge p-2">
+      <Skeleton className="aspect-4/3 w-full rounded-2xl" />
+      <div className="flex flex-col gap-3 px-3 pt-4 pb-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-5 w-12" />
+        </div>
+        <Skeleton className="h-2 w-full rounded-full" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </div>
+  );
+}
+
+export function CauseGrid({
+  causes,
+  loading,
+  skeletonCount = 3,
+  emptyState,
+}: {
+  causes: CauseDetail[];
+  loading?: boolean;
+  skeletonCount?: number;
+  emptyState?: React.ReactNode;
+}) {
+  // Bigger tiles than listings: one per row on a phone, so each one lands.
+  const grid = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
+
+  if (loading) {
+    return (
+      <div role="status" aria-label="Se încarcă cauzele" className={grid}>
+        {Array.from({ length: skeletonCount }).map((_, index) => (
+          <SkeletonCauseCard key={index} />
+        ))}
+      </div>
+    );
+  }
+
+  if (causes.length === 0) return <>{emptyState}</>;
+
+  return (
+    <div className={cn(grid, "animate-fade-in")}>
+      {causes.map((cause) => (
+        <CauseCard key={cause.id} cause={cause} />
+      ))}
+    </div>
+  );
+}

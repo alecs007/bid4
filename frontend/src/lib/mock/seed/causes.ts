@@ -2,7 +2,7 @@ import type { CauseCategoryId } from "@/lib/config";
 import { lei } from "@/lib/money";
 import type { Cause, CauseStatus } from "@/lib/types";
 import { isoAgo } from "@/lib/utils/date";
-import { causeCover, causeImage } from "../images";
+import { causeCover, causeGallery, causeImage } from "../images";
 
 /**
  * Seed causes across every status the operator queue has to handle: live ones
@@ -398,6 +398,8 @@ export function buildCauses(): Cause[] {
       category: seed.category,
       imageUrl: causeImage(seed.id, seed.category),
       coverUrl: causeCover(seed.id, seed.category),
+      gallery:
+        seed.status === "DRAFT" ? [] : causeGallery(seed.id, seed.category),
       organizerId: seed.organizerId,
       status: seed.status,
       validation: {

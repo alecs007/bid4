@@ -129,6 +129,22 @@ export function causeImage(seed: string, category: CauseCategoryId): string {
   });
 }
 
+/** A handful of pictures of the cause at work. */
+export function causeGallery(
+  seed: string,
+  category: CauseCategoryId,
+  count = 4,
+): string[] {
+  return Array.from({ length: count }, (_, index) =>
+    tile({
+      seed: `${seed}-photo-${index}`,
+      glyph: CAUSE_GLYPHS.get(category) ?? "💚",
+      width: 900,
+      height: 675,
+    }),
+  );
+}
+
 export function causeCover(seed: string, category: CauseCategoryId): string {
   return tile({
     seed: `${seed}-cover`,

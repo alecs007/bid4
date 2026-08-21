@@ -65,6 +65,8 @@ export interface Cause {
   category: CauseCategoryId;
   imageUrl: string;
   coverUrl: string;
+  /** Extra photographs of the work, shown as a gallery on the cause page. */
+  gallery: string[];
 
   organizerId: ID;
   status: CauseStatus;
