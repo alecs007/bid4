@@ -3,6 +3,7 @@ import type { Bani } from "@/lib/config";
 import { delay, forbidden, getWorld, maybeFailRead } from "@/lib/mock/store";
 import type { ID, OrderStatus, UserRole } from "@/lib/types";
 
+import { CACHE_KEYS, readCache, writeCache } from "./cache";
 import { http } from "./http";
 
 /** Numbers for the homepage impact band. */
@@ -15,9 +16,25 @@ export interface PlatformStats {
   averageDonationPercent: number;
 }
 
+/**
+ * Platform totals move slowly, so they are cached for the session rather than
+ * refetched every time someone lands on the homepage.
+ *
+ * TODO(backend): serve this with a Cache-Control header and drop the local
+ * cache; the shape and call site stay the same.
+ */
+const STATS_TTL_MS = 5 * 60_000;
+
 /** GET /stats/public */
 export async function getPlatformStats(): Promise<PlatformStats> {
-  if (!USE_MOCK) return http<PlatformStats>("/stats/public");
+  const cached = readCache<PlatformStats>(CACHE_KEYS.platformStats, STATS_TTL_MS);
+  if (cached) return cached;
+
+  if (!USE_MOCK) {
+    const fresh = await http<PlatformStats>("/stats/public");
+    writeCache(CACHE_KEYS.platformStats, fresh);
+    return fresh;
+  }
 
   await delay();
   maybeFailRead("statisticile");
@@ -31,7 +48,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     (auction) => auction.donationPercent,
   );
 
-  return {
+  const stats: PlatformStats = {
     totalRaised: publicCauses.reduce(
       (total, cause) => total + cause.raisedAmount,
       0,
@@ -49,6 +66,9 @@ export async function getPlatformStats(): Promise<PlatformStats> {
         )
       : 0,
   };
+
+  writeCache(CACHE_KEYS.platformStats, stats);
+  return stats;
 }
 
 /** Everything `/cont` needs in one call. */

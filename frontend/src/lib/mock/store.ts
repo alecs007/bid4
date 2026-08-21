@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/types";
 import type { ID, Order, OrderStatus, TrackingEvent } from "@/lib/types";
 
 import { shippingPriceFor, snapshotDelivery } from "./delivery";
+import { CACHE_KEYS, invalidateCache } from "@/lib/api/cache";
 import { createWorld, type World } from "./seed";
 
 /**
@@ -27,8 +28,12 @@ let lastSync = 0;
 
 interface PersistedWorld {
   version: number;
+  /** When the world was first seeded, used for the freshness check. */
+  seededAt: number;
   world: World;
 }
+
+let seededAt = Date.now();
 
 function loadPersisted(): World | null {
   if (typeof window === "undefined") return null;
@@ -37,6 +42,13 @@ function loadPersisted(): World | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedWorld;
     if (parsed.version !== MOCK.SCHEMA_VERSION) return null;
+
+    const ageHours = (Date.now() - parsed.seededAt) / 3_600_000;
+    if (!Number.isFinite(ageHours) || ageHours > MOCK.MAX_WORLD_AGE_HOURS) {
+      return null;
+    }
+
+    seededAt = parsed.seededAt;
     return parsed.world;
   } catch {
     // Corrupt or unavailable storage is not worth crashing the app over.
@@ -53,6 +65,7 @@ function persist(): void {
     try {
       const payload: PersistedWorld = {
         version: MOCK.SCHEMA_VERSION,
+        seededAt,
         world: world as World,
       };
       window.localStorage.setItem(MOCK.STORAGE_KEY, JSON.stringify(payload));
@@ -65,6 +78,7 @@ function persist(): void {
 /** Wipes the persisted world and reseeds. Exposed through the dev tools. */
 export function resetWorld(): void {
   world = createWorld();
+  seededAt = Date.now();
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(MOCK.STORAGE_KEY);
   }
@@ -73,7 +87,13 @@ export function resetWorld(): void {
 
 export function getWorld(): World {
   if (!world) {
-    world = loadPersisted() ?? createWorld();
+    const restored = loadPersisted();
+    if (restored) {
+      world = restored;
+    } else {
+      world = createWorld();
+      seededAt = Date.now();
+    }
   }
   syncWorld();
   return world;
@@ -186,6 +206,8 @@ function releaseFunds(current: World, order: Order): void {
   }
 
   order.releasedAt = new Date().toISOString();
+  // The public totals just moved.
+  invalidateCache(CACHE_KEYS.platformStats);
 
   const buyerName =
     current.users.find((item) => item.id === order.buyerId)?.displayName ?? "";
