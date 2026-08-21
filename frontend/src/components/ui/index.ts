@@ -9,8 +9,11 @@ export type { ButtonProps, ButtonLinkProps, ButtonVariant, ButtonSize } from "./
 export { Card, CardHeader, IconBubble, SectionLabel } from "./Card";
 export { Badge, StatusBadge, DonationBadge, MetaChip } from "./Badge";
 export { Alert } from "./Alert";
+export { AnimatedNumber } from "./AnimatedNumber";
 
-export { Field, Input, Textarea, Select, Checkbox, RadioCard } from "./Field";
+export { Field, Input, Textarea, Checkbox, RadioCard } from "./Field";
+export { Select } from "./Select";
+export type { SelectOption } from "./Select";
 
 export { ProgressBar, GoalProgress } from "./Progress";
 export { Avatar, AvatarStack } from "./Avatar";
@@ -30,6 +33,9 @@ export {
 export { EmptyState, ErrorState } from "./EmptyState";
 export { Stat, StatInline } from "./Stat";
 export { Modal } from "./Modal";
+export { Pagination } from "./Pagination";
+export { Sheet } from "./Sheet";
+export { Slider, RangeSlider } from "./Slider";
 export { SegmentedControl, NavTabs } from "./Tabs";
 export type { SegmentOption, NavTabItem } from "./Tabs";
 
