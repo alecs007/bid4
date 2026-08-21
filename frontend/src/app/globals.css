@@ -1,0 +1,335 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   bid4 — design tokens
+   "Duolingo-style, but humanitarian": bright, rounded, generous, hopeful.
+   Every solid surface that carries white text is >= 4.5:1 (WCAG AA).
+   ========================================================================== */
+
+@theme {
+  /* ---- Brand: primary "verde speranta" ---------------------------------- */
+  --color-primary-50: #f3fcea;
+  --color-primary-100: #e3f8cf;
+  --color-primary-200: #c8f1a4;
+  --color-primary-300: #a6e772;
+  --color-primary-400: #7fda3e;
+  --color-primary-500: #58cc02; /* brand green: fills, progress, mascot     */
+  --color-primary-600: #35870f; /* solid surfaces w/ white text (4.54:1)    */
+  --color-primary-700: #2f7a14; /* 3D bottom edge / pressed                 */
+  --color-primary-800: #245e12;
+  --color-primary-900: #14401a; /* text on primary-50 (11.2:1)              */
+
+  /* ---- Brand: accent "coral" -------------------------------------------- */
+  --color-accent-50: #fff3ef;
+  --color-accent-100: #ffe1d8;
+  --color-accent-200: #ffc3b2;
+  --color-accent-300: #ff9e85;
+  --color-accent-400: #ff7f5f;
+  --color-accent-500: #ff6b4a;
+  --color-accent-600: #d64020; /* solid w/ white text (4.55:1)              */
+  --color-accent-700: #b93518;
+  --color-accent-800: #932c15;
+  --color-accent-900: #7a2413;
+
+  /* ---- Support: sky ------------------------------------------------------ */
+  --color-sky-50: #eff9fe;
+  --color-sky-100: #d9f0fd;
+  --color-sky-200: #b3e2fb;
+  --color-sky-300: #7bcdf8;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #1d9bd8;
+  --color-sky-600: #0c7cb4; /* solid w/ white text (4.61:1)                 */
+  --color-sky-700: #0b6390;
+  --color-sky-800: #0a4f72;
+  --color-sky-900: #08405c;
+
+  /* ---- Support: sun (soft yellow — ALWAYS ink text, never white) --------- */
+  --color-sun-50: #fffbeb;
+  --color-sun-100: #fff3c6;
+  --color-sun-200: #ffe587;
+  --color-sun-300: #ffd75c;
+  --color-sun-400: #ffc93c;
+  --color-sun-500: #f5b301;
+  --color-sun-600: #c98a02;
+  --color-sun-700: #9a6802;
+  --color-sun-800: #7b5302;
+  --color-sun-900: #6b4a02;
+
+  /* ---- Warm neutrals ----------------------------------------------------- */
+  --color-cream: #fbf8f3; /* app background                                  */
+  --color-ink-50: #f6f5f3;
+  --color-ink-100: #eceae5;
+  --color-ink-200: #ded9d1;
+  --color-ink-300: #c3bcb1;
+  --color-ink-400: #9b9389;
+  --color-ink-500: #7a8279;
+  --color-ink-600: #5c6b62; /* muted body text on cream (5.3:1)             */
+  --color-ink-700: #3f4a43;
+  --color-ink-800: #2b352e;
+  --color-ink-900: #1f2a24; /* primary text (14:1 on cream)                 */
+
+  /* ---- Semantic ---------------------------------------------------------- */
+  --color-success-50: #eefaf2;
+  --color-success-100: #d4f3e0;
+  --color-success-500: #16a45a;
+  --color-success-600: #0e7a3c; /* white text 5.43:1                        */
+  --color-success-700: #0b6231;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fff3c6;
+  --color-warning-500: #f5b301;
+  --color-warning-600: #c98a02;
+  --color-warning-700: #9a6802;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee0e0;
+  --color-danger-500: #e34b4b;
+  --color-danger-600: #c92a2a; /* white text 5.7:1                          */
+  --color-danger-700: #a81f1f;
+
+  /* ---- Typography -------------------------------------------------------- */
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-display: var(--font-baloo), var(--font-nunito), ui-rounded,
+    ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Radii: rounded everything ---------------------------------------- */
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+
+  /* ---- Depth ------------------------------------------------------------- */
+  /* The app is flat: separation comes from rings and warm surfaces, not from
+     shadows. Only genuinely floating layers (modal, toast, popover) may use
+     Tailwind's `shadow-sm`, and nothing heavier exists to reach for. */
+
+  /* ---- Motion ------------------------------------------------------------ */
+  /* One easing curve for everything, so the whole app decelerates alike. */
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-pop-in: pop-in 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  --animate-fade-up: fade-up 0.35s var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 0.25s var(--ease-out-soft) both;
+  --animate-toast-in: toast-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  --animate-toast-out: toast-out 0.2s var(--ease-out-soft) both;
+  --animate-pulse-ring: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-confetti: confetti-fall 2.8s linear forwards;
+  --animate-tick: tick 0.9s ease-out;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes pop-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes toast-in {
+    0% {
+      opacity: 0;
+      transform: translateY(16px) scale(0.96);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes toast-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgb(214 64 32 / 0.5);
+    }
+    70% {
+      box-shadow: 0 0 0 12px rgb(214 64 32 / 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgb(214 64 32 / 0);
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -600px 0;
+    }
+    100% {
+      background-position: 600px 0;
+    }
+  }
+  @keyframes confetti-fall {
+    0% {
+      opacity: 1;
+      transform: translate3d(0, -10vh, 0) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(var(--confetti-x, 0px), 100vh, 0)
+        rotate(var(--confetti-r, 540deg));
+    }
+  }
+  @keyframes tick {
+    0% {
+      transform: translateY(-0.35em);
+      opacity: 0;
+    }
+    45% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* ============================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    letter-spacing: 0.005em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* One consistent, highly visible focus ring across the whole app. */
+  :focus-visible {
+    outline: 3px solid var(--color-primary-600);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+  }
+
+  ::selection {
+    background-color: var(--color-primary-200);
+    color: var(--color-primary-900);
+  }
+
+  /* Respect users who ask for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ============================================================================
+   Utilities
+   ========================================================================== */
+
+/* Chunky Duolingo-style 3D button: a solid bottom edge that compresses when
+   pressed. Each variant sets --btn-edge (colour) and optionally --btn-depth. */
+@utility btn-3d {
+  box-shadow: 0 var(--btn-depth, 4px) 0 0 var(--btn-edge, transparent);
+  transition:
+    transform 80ms ease-out,
+    box-shadow 80ms ease-out,
+    background-color 150ms ease,
+    filter 150ms ease;
+
+  &:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: translateY(var(--btn-depth, 4px));
+    box-shadow: 0 0 0 0 var(--btn-edge, transparent);
+  }
+}
+
+/* Cards and tiles that rise a little when pointed at. No shadow — the lift is
+   a small translate plus a firmer ring, which reads as depth without ink. */
+@utility lift {
+  transition:
+    transform 200ms var(--ease-out-soft),
+    border-color 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px var(--color-ink-300);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton shimmer for loading states. */
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-ink-100) 0%,
+    var(--color-ink-50) 40%,
+    var(--color-ink-100) 80%
+  );
+  background-size: 600px 100%;
+  background-repeat: no-repeat;
+  animation: var(--animate-shimmer);
+}
+
+/* Tabular, non-jumping digits — essential for countdowns and money. */
+@utility numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
