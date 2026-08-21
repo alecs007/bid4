@@ -174,7 +174,7 @@ function ToastCard({
     <div
       role={tone === "danger" ? "alert" : "status"}
       className={cn(
-        "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-ink-200 bg-white p-4 shadow-sm",
+        "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl bg-white p-4 shadow-sm",
         leaving ? "animate-toast-out" : "animate-toast-in",
       )}
     >

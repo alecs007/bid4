@@ -34,7 +34,7 @@ export function Stat({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-3xl border border-ink-200 bg-white p-5",
+        "flex items-start gap-3 rounded-3xl bg-white ring-1 ring-edge p-5",
         className,
       )}
     >

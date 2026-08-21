@@ -20,7 +20,7 @@ const SOFT: Record<Tone, string> = {
   success: "bg-success-50 text-success-700 border-success-100",
   warning: "bg-warning-50 text-warning-700 border-warning-100",
   danger: "bg-danger-50 text-danger-700 border-danger-100",
-  neutral: "bg-ink-50 text-ink-700 border-ink-200",
+  neutral: "bg-ink-50 text-ink-700 border-line",
 };
 
 const SOLID: Record<Tone, string> = {
@@ -199,7 +199,7 @@ export function MetaChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-ink-200 bg-white px-2 py-1 text-xs font-semibold text-ink-600",
+        "inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs font-semibold text-ink-600",
         className,
       )}
     >

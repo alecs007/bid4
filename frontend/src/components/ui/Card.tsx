@@ -33,8 +33,8 @@ export function Card({
       className={cn(
         "rounded-3xl border",
         surface === "white"
-          ? "border-ink-200 bg-white"
-          : "border-ink-200 bg-ink-50",
+          ? "border-line bg-white"
+          : "border-line bg-ink-50",
         padded === true && "p-5 sm:p-6",
         padded === "sm" && "p-4",
         padded === "lg" && "p-6 sm:p-8",

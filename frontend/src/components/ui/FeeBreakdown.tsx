@@ -72,7 +72,7 @@ function Row({
   );
 }
 
-const Divider = () => <hr className="my-1 border-ink-100" />;
+const Divider = () => <hr className="my-1 border-line" />;
 
 export function FeeBreakdown({
   breakdown,
@@ -107,7 +107,7 @@ export function FeeBreakdown({
   return (
     <div
       className={cn(
-        "rounded-3xl border border-ink-200 bg-white p-5",
+        "rounded-3xl bg-white ring-1 ring-edge p-5",
         className,
       )}
     >
@@ -194,7 +194,7 @@ export function FeeBreakdown({
 
       {/* The point of the whole product. It earns emphasis through a divider,
           an icon chip and the green number — not a coloured panel. */}
-      <div className="mt-3 flex items-center gap-3 border-t border-ink-200 pt-4">
+      <div className="mt-3 flex items-center gap-3 border-t border-line pt-4">
         <IconBubble tone="primary">
           <Icons.donation aria-hidden="true" className="h-5 w-5" />
         </IconBubble>

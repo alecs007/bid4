@@ -105,11 +105,17 @@ function useFieldProps() {
   };
 }
 
+/**
+ * A white field with a hairline ring. Grey-on-grey disappeared against the
+ * canvas, so the field carries its own surface and reads as somewhere to type
+ * wherever it is placed.
+ */
 const CONTROL_BASE =
-  "w-full rounded-2xl bg-white text-ink-900 placeholder:text-ink-400 " +
-  "ring-2 ring-inset ring-ink-200 transition-[box-shadow,background-color] " +
-  "hover:ring-ink-300 focus:ring-primary-500 focus-visible:outline-none focus:ring-[3px] " +
-  "aria-[invalid]:ring-danger-500 disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-500";
+  "w-full rounded-2xl bg-white ring-1 ring-edge text-ink-900 placeholder:text-ink-500 " +
+  "ring-1 ring-ink-200 transition-[box-shadow] hover:ring-ink-300 " +
+  "focus:ring-2 focus:ring-primary-500 focus-visible:outline-none " +
+  "aria-[invalid]:ring-2 aria-[invalid]:ring-danger-500 " +
+  "disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400";
 
 export interface InputProps extends ComponentPropsWithoutRef<"input"> {
   /** Static content glued to the start, e.g. an icon. */
@@ -135,8 +141,8 @@ export function Input({ className, leading, trailing, ...props }: InputProps) {
   return (
     <div
       className={cn(
-        "group flex h-12 items-center gap-2 rounded-2xl bg-white px-4 ring-2 ring-inset ring-ink-200",
-        "focus-within:ring-[3px] focus-within:ring-primary-500 hover:ring-ink-300",
+        "group flex h-12 items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-ink-200 transition",
+        "focus-within:ring-2 focus-within:ring-primary-500 hover:ring-ink-300",
         props["aria-invalid"] ?? fieldProps["aria-invalid"]
           ? "ring-danger-500"
           : "",
@@ -173,35 +179,6 @@ export function Textarea({
       {...props}
       className={cn(CONTROL_BASE, "resize-y px-4 py-3 text-[15px]", className)}
     />
-  );
-}
-
-export function Select({
-  className,
-  children,
-  ...props
-}: ComponentPropsWithoutRef<"select">) {
-  const fieldProps = useFieldProps();
-  return (
-    <div className="relative">
-      <select
-        {...fieldProps}
-        {...props}
-        className={cn(
-          CONTROL_BASE,
-          "h-12 appearance-none pr-11 pl-4 text-[15px]",
-          className,
-        )}
-      >
-        {children}
-      </select>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-ink-500"
-      >
-        ▾
-      </span>
-    </div>
   );
 }
 
@@ -262,8 +239,8 @@ export function RadioCard({
       <label
         htmlFor={id}
         className={cn(
-          "flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 ring-2 ring-inset ring-ink-200 transition",
-          "hover:ring-ink-300 peer-checked:bg-primary-50 peer-checked:ring-primary-500",
+          "flex cursor-pointer items-start gap-3 rounded-2xl bg-ink-100 p-4 transition",
+          "hover:bg-ink-200/70 peer-checked:bg-primary-50 peer-checked:ring-2 peer-checked:ring-primary-500",
           "peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
           "peer-disabled:cursor-not-allowed peer-disabled:opacity-60",
           // The dot lives inside the label, so it is styled through the label.
@@ -289,7 +266,7 @@ export function RadioCard({
         <span
           data-dot=""
           aria-hidden="true"
-          className="mt-1 h-5 w-5 shrink-0 rounded-full ring-2 ring-inset ring-ink-300 transition-all"
+          className="mt-1 h-5 w-5 shrink-0 rounded-full bg-white ring-2 ring-inset ring-ink-300 transition-all"
         />
       </label>
     </div>

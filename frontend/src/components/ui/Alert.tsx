@@ -68,7 +68,7 @@ export function Alert({
     <div
       role={tone === "danger" ? "alert" : "status"}
       className={cn(
-        "flex items-start gap-3 rounded-2xl border border-ink-200 bg-white p-4",
+        "flex items-start gap-3 rounded-2xl bg-white ring-1 ring-edge p-4",
         className,
       )}
     >

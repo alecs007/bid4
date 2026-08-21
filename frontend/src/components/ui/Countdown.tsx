@@ -104,7 +104,7 @@ export function Countdown({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-md border border-ink-200 bg-ink-50 px-2 py-1 text-xs font-bold text-ink-600",
+          "inline-flex items-center gap-1.5 rounded-md bg-ink-50 px-2 py-1 text-xs font-bold text-ink-600",
           className,
         )}
       >

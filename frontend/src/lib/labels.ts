@@ -53,7 +53,7 @@ export const AUCTION_STATUS: Record<AuctionStatus, StatusMeta> = {
   },
   LIVE: { label: "În desfășurare", tone: "primary", hint: "Poți licita acum." },
   ENDED: { label: "Încheiată", tone: "neutral" },
-  SOLD: { label: "Adjudecată", tone: "success" },
+  SOLD: { label: "Vândut", tone: "success" },
   UNSOLD: {
     label: "Fără câștigător",
     tone: "neutral",

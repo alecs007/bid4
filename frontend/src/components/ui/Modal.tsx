@@ -81,7 +81,7 @@ export function Modal({
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
         className={cn(
-          "relative w-full animate-pop-in rounded-t-3xl border border-ink-200 bg-white p-6 shadow-sm sm:rounded-3xl",
+          "relative w-full animate-pop-in rounded-t-3xl bg-white p-6 shadow-sm sm:rounded-3xl",
           sizes[size],
         )}
       >

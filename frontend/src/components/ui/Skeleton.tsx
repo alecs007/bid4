@@ -35,15 +35,14 @@ export function SkeletonText({
 /** Matches the footprint of an auction card so the grid does not jump. */
 export function SkeletonAuctionCard() {
   return (
-    <div className="overflow-hidden rounded-3xl border border-ink-200 bg-white">
-      <Skeleton className="aspect-4/3 w-full rounded-none" />
-      <div className="flex flex-col gap-3 p-5">
-        <Skeleton className="h-5 w-20 rounded-full" />
-        <Skeleton className="h-5 w-full" />
-        <Skeleton className="h-5 w-1/2" />
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-8 w-20 rounded-full" />
+    <div className="rounded-3xl bg-white ring-1 ring-edge p-2">
+      <Skeleton className="aspect-square w-full rounded-2xl" />
+      <div className="flex flex-col gap-2 px-2 pt-2.5 pb-1.5">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <Skeleton className="h-7 w-24" />
+          <Skeleton className="h-4 w-12" />
         </div>
       </div>
     </div>
@@ -55,7 +54,7 @@ export function SkeletonGrid({ count = 8 }: { count?: number }) {
     <div
       role="status"
       aria-label="Se încarcă"
-      className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
       {Array.from({ length: count }).map((_, index) => (
         <SkeletonAuctionCard key={index} />
@@ -70,7 +69,7 @@ export function SkeletonRows({ count = 5 }: { count?: number }) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="flex items-center gap-4 rounded-2xl border border-ink-200 bg-white p-4"
+          className="flex items-center gap-4 rounded-2xl bg-white ring-1 ring-edge p-4"
         >
           <Skeleton className="h-14 w-14 rounded-2xl" />
           <div className="flex-1">
@@ -84,29 +83,52 @@ export function SkeletonRows({ count = 5 }: { count?: number }) {
   );
 }
 
-/** Detail-page skeleton: gallery + panel, used by /licitatii/[id]-style routes. */
+/**
+ * Detail-page skeleton. Its geometry matches the real auction page exactly
+ * (square gallery, chips, title, bid box, actions), so content replaces it
+ * without the layout jumping.
+ */
 export function SkeletonDetail() {
   return (
     <div
       role="status"
       aria-label="Se încarcă"
-      className="grid gap-6 lg:grid-cols-[1.2fr_1fr]"
+      className="flex flex-col gap-4"
     >
-      <div className="flex flex-col gap-3">
-        <Skeleton className="aspect-4/3 w-full rounded-3xl" />
-        <div className="flex gap-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-20 w-20 rounded-2xl" />
-          ))}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="flex flex-col gap-3">
+          <Skeleton className="aspect-4/3 w-full rounded-3xl" />
+          <div className="flex gap-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-20 w-20 rounded-2xl" />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="flex flex-col gap-4 rounded-3xl border border-ink-200 bg-white p-6">
-        <Skeleton className="h-6 w-24 rounded-full" />
-        <Skeleton className="h-8 w-3/4" />
-        <Skeleton className="h-12 w-40" />
-        <Skeleton className="h-20 w-full rounded-2xl" />
-        <Skeleton className="h-13 w-full rounded-2xl" />
-        <SkeletonText lines={3} />
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <div className="mb-2 flex gap-2">
+              <Skeleton className="h-7 w-28 rounded-lg" />
+              <Skeleton className="h-7 w-20 rounded-lg" />
+            </div>
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="mt-2 h-8 w-2/3" />
+          </div>
+
+          <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-2 h-9 w-40" />
+            <Skeleton className="mt-5 h-14 w-full rounded-2xl" />
+            <Skeleton className="mt-3 h-13 w-full rounded-2xl" />
+          </div>
+
+          <Skeleton className="h-14 w-full rounded-2xl" />
+
+          <div className="flex gap-2">
+            <Skeleton className="h-11 flex-1 rounded-2xl" />
+            <Skeleton className="h-11 flex-1 rounded-2xl" />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -123,7 +145,7 @@ export function SkeletonStats({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="flex items-start gap-3 rounded-3xl border border-ink-200 bg-white p-5"
+          className="flex items-start gap-3 rounded-3xl bg-white ring-1 ring-edge p-5"
         >
           <Skeleton className="h-11 w-11 rounded-2xl" />
           <div className="flex-1">

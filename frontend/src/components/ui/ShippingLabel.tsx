@@ -206,7 +206,7 @@ export function ShippingLabelPreview({
 
   return (
     <div className={cn("flex flex-col items-start gap-4", className)}>
-      <div className="w-full max-w-full overflow-x-auto rounded-2xl border border-ink-200 bg-ink-50 p-3">
+      <div className="w-full max-w-full overflow-x-auto rounded-2xl bg-ink-50 p-3">
         <ShippingLabel data={data} qrRef={qrRef} className="rounded-lg" />
       </div>
 
