@@ -13,6 +13,7 @@ import {
   syncWorld,
 } from "@/lib/mock/store";
 import type {
+  Auction,
   AuctionDetail,
   Bid,
   BidWithBidder,
@@ -245,4 +246,95 @@ export async function listMyBids(userId: ID): Promise<MyBidSummary[]> {
     (a, b) =>
       Date.parse(b.myTopBid.createdAt) - Date.parse(a.myTopBid.createdAt),
   );
+}
+
+/**
+ * How long before the close a bid can no longer be pulled back.
+ * Retracting in the closing moments would be indistinguishable from bid
+ * shielding, so the window is locked once anti-sniping territory starts.
+ */
+export const RETRACT_LOCK_SECONDS = 300;
+
+export interface RetractEligibility {
+  canRetract: boolean;
+  reason?: string;
+}
+
+/** Whether the signed-in user may pull back their current top bid. */
+export function checkRetractEligibility(
+  auction: { id: ID; status: string; endTime: string },
+  viewerId?: ID,
+): RetractEligibility {
+  if (!viewerId) return { canRetract: false };
+  if (auction.status !== "LIVE") {
+    return { canRetract: false, reason: "Licitația s-a încheiat." };
+  }
+
+  const world = getWorld();
+  const auctionBids = world.bids
+    .filter((bid) => bid.auctionId === auction.id)
+    .sort((a, b) => b.amount - a.amount);
+
+  const top = auctionBids[0];
+  if (!top || top.bidderId !== viewerId) {
+    return { canRetract: false };
+  }
+
+  const secondsLeft = (Date.parse(auction.endTime) - Date.now()) / 1000;
+  if (secondsLeft <= RETRACT_LOCK_SECONDS) {
+    return {
+      canRetract: false,
+      reason: "Nu mai poți retrage oferta în ultimele 5 minute.",
+    };
+  }
+
+  return { canRetract: true };
+}
+
+/**
+ * DELETE /auctions/{id}/bids/mine
+ *
+ * Removes the caller's leading bid and rolls the price back to whatever was
+ * underneath it. Only the top bid can go: removing one from the middle would
+ * rewrite a history other people already acted on.
+ */
+export async function retractBid(
+  auctionId: ID,
+  bidderId: ID,
+): Promise<{ auction: Auction }> {
+  if (!USE_MOCK) {
+    return http<{ auction: Auction }>(`/auctions/${auctionId}/bids/mine`, {
+      method: "DELETE",
+    });
+  }
+
+  await delay();
+  syncWorld(true);
+  const world = getWorld();
+
+  const auction = world.auctions.find((item) => item.id === auctionId);
+  if (!auction) notFound("Licitația");
+
+  const eligibility = checkRetractEligibility(auction, bidderId);
+  if (!eligibility.canRetract) {
+    badRequest(
+      eligibility.reason ?? "Poți retrage doar propria ofertă aflată pe primul loc.",
+      "RETRACT_NOT_ALLOWED",
+    );
+  }
+
+  const ordered = world.bids
+    .filter((bid) => bid.auctionId === auctionId)
+    .sort((a, b) => b.amount - a.amount);
+
+  const [top, previous] = ordered;
+  if (!top) badRequest("Nu ai nicio ofertă de retras.");
+
+  world.bids = world.bids.filter((bid) => bid.id !== top.id);
+  auction.bidCount = Math.max(0, auction.bidCount - 1);
+  auction.currentPrice = previous ? previous.amount : auction.startingPrice;
+  if (previous) previous.status = "WINNING";
+
+  commit();
+  return { auction };
 }
