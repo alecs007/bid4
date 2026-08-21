@@ -1,0 +1,6 @@
+# IDE
+.idea/
+*.iml
+
+# Java / Maven
+backend/target/
