@@ -40,7 +40,7 @@ export function DevRoleSwitcher() {
   return (
     <div className="fixed bottom-4 left-4 z-50 print:hidden">
       {open ? (
-        <div className="w-80 max-w-[calc(100vw-2rem)] rounded-3xl border border-ink-200 bg-white p-4 shadow-sm">
+        <div className="w-80 max-w-[calc(100vw-2rem)] rounded-3xl bg-white ring-1 ring-edge p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-display font-extrabold text-ink-900">
               Conturi demo
@@ -98,7 +98,7 @@ export function DevRoleSwitcher() {
                 })}
           </div>
 
-          <div className="mt-3 flex gap-2 border-t border-ink-200 pt-3">
+          <div className="mt-3 flex gap-2 border-t border-line pt-3">
             <Button
               variant="secondary"
               size="sm"
@@ -133,7 +133,7 @@ export function DevRoleSwitcher() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 py-2.5 font-display text-sm font-bold text-ink-800 transition hover:border-ink-300"
+          className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 font-display text-sm font-bold text-ink-800 transition hover:border-ink-300"
         >
           <Icons.roleSwitch aria-hidden="true" className="h-4 w-4 text-primary-700" />
           {user ? user.displayName.split(" ")[0] : "Vizitator"}

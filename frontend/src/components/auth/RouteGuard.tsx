@@ -97,7 +97,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 export function SignInPrompt({ message }: { message: string }) {
   const router = useRouter();
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-ink-200 bg-white p-4">
+    <div className="flex flex-col gap-3 rounded-2xl bg-white ring-1 ring-edge p-4">
       <p className="text-sm text-ink-700">{message}</p>
       <div className="flex gap-2">
         <Button onClick={() => router.push("/autentificare")}>
