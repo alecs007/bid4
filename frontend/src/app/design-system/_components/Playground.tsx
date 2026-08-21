@@ -21,6 +21,7 @@ import {
 export function FormPlayground() {
   const [amount, setAmount] = useState("120");
   const [delivery, setDelivery] = useState("easybox");
+  const [category, setCategory] = useState<"moda" | "sport" | "arta">("sport");
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
@@ -51,11 +52,16 @@ export function FormPlayground() {
         </Field>
 
         <Field label="Categorie">
-          <Select defaultValue="sport">
-            <option value="moda">Modă</option>
-            <option value="sport">Sport & Outdoor</option>
-            <option value="arta">Artă & Handmade</option>
-          </Select>
+          <Select
+            ariaLabel="Categorie"
+            value={category}
+            onChange={(next) => setCategory(next as typeof category)}
+            options={[
+              { value: "moda", label: "Modă", prefix: "👗" },
+              { value: "sport", label: "Sport & Outdoor", prefix: "⚽" },
+              { value: "arta", label: "Artă & Handmade", prefix: "🎨" },
+            ]}
+          />
         </Field>
       </div>
 

@@ -111,7 +111,7 @@ const PALETTE: { name: string; token: string; hex: string; note?: string }[][] =
     { name: "sun-100", token: "bg-sun-100", hex: "#fff3c6" },
   ],
   [
-    { name: "cream", token: "bg-cream", hex: "#fbf8f3", note: "fundal app" },
+    { name: "cream", token: "bg-canvas", hex: "#fbf8f3", note: "fundal app" },
     { name: "ink-100", token: "bg-ink-100", hex: "#eceae5" },
     { name: "ink-600", token: "bg-ink-600", hex: "#5c6b62", note: "text secundar" },
     { name: "ink-900", token: "bg-ink-900", hex: "#1f2a24", note: "text principal" },
@@ -169,7 +169,7 @@ export default function DesignSystemPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       {/* Header ------------------------------------------------------------ */}
-      <header className="mb-12 flex flex-col gap-6 rounded-4xl border border-ink-200 bg-white p-6 sm:p-10">
+      <header className="mb-12 flex flex-col gap-6 rounded-4xl bg-white ring-1 ring-edge p-6 sm:p-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Logo size="lg" href={null} />
           <Badge tone="sky" variant="soft">
@@ -205,7 +205,7 @@ export default function DesignSystemPage() {
                 {row.map((swatch) => (
                   <div
                     key={swatch.name}
-                    className="overflow-hidden rounded-2xl border border-ink-200"
+                    className="overflow-hidden rounded-2xl border border-line"
                   >
                     <div className={`h-16 ${swatch.token}`} />
                     <div className="bg-white px-3 py-2">
@@ -680,7 +680,7 @@ export default function DesignSystemPage() {
                 return (
                   <div
                     key={name}
-                    className="flex items-center gap-2.5 rounded-2xl border border-ink-200 bg-white px-3 py-2.5"
+                    className="flex items-center gap-2.5 rounded-2xl bg-white ring-1 ring-edge px-3 py-2.5"
                   >
                     <Glyph
                       aria-hidden="true"
