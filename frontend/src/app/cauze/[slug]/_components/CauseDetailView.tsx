@@ -8,6 +8,7 @@ import { Icons } from "@/components/icons";
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import {
   Avatar,
+  Breadcrumbs,
   ButtonLink,
   EmptyState,
   ErrorState,
@@ -79,7 +80,10 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
         {frames.length > 1 ? (
           <div
             data-lenis-prevent
-            className="-mx-4 mt-3 flex gap-2.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
+            /* overflow-x-auto clips on both axes, and the selected frame's
+               ring is drawn outside its box — hence the padding, with a
+               matching negative margin so the rail still lines up. */
+            className="-mx-4 mt-2 flex gap-2.5 overflow-x-auto px-4 py-1 sm:-mx-1 sm:px-1"
           >
             {frames.map((frame, index) => (
               <button
@@ -209,6 +213,14 @@ export function CauseDetailView({ slug }: { slug: string }) {
 
   return (
     <div className="animate-reveal flex flex-col gap-8 sm:gap-10">
+      <Breadcrumbs
+        className="-mb-4 sm:-mb-6"
+        items={[
+          { label: "Acasă", href: "/" },
+          { label: "Cauze", href: "/cauze" },
+          { label: cause.name },
+        ]}
+      />
       <CauseHead cause={cause} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-8">
         <section className="min-w-0">

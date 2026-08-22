@@ -182,6 +182,9 @@ export function SkeletonDetail() {
       aria-label="Se încarcă"
       className="flex flex-col gap-4 pb-24 lg:pb-0"
     >
+      {/* The breadcrumb trail the loaded page puts here. */}
+      <Skeleton className="h-5 w-64" />
+
       <div className={DETAIL_GRID}>
         <div className="flex min-w-0 flex-col gap-3">
           <Skeleton className="aspect-4/3 w-full rounded-3xl" />
@@ -276,10 +279,12 @@ export function SkeletonCauseDetail() {
       aria-label="Se încarcă"
       className="flex flex-col gap-8 sm:gap-10"
     >
+      <Skeleton className="-mb-4 h-5 w-64 sm:-mb-6" />
+
       <section className="grid gap-5 lg:grid-cols-2 lg:gap-8">
         <div className="min-w-0">
           <Skeleton className="aspect-4/3 w-full rounded-3xl" />
-          <div className="mt-3 flex gap-2.5 pb-1">
+          <div className="mt-2 flex gap-2.5 py-1">
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton
                 key={index}

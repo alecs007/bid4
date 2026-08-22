@@ -4,6 +4,8 @@ export type { ButtonProps, ButtonLinkProps, ButtonVariant, ButtonSize } from "./
 export { Card, CardHeader, IconBubble, SectionLabel } from "./Card";
 export { Badge, StatusBadge, DonationBadge, MetaChip } from "./Badge";
 export { Alert } from "./Alert";
+export { Breadcrumbs } from "./Breadcrumbs";
+export type { Crumb } from "./Breadcrumbs";
 export { AnimatedNumber } from "./AnimatedNumber";
 
 export { Field, Input, Textarea, Checkbox, RadioCard } from "./Field";

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Icons } from "@/components/icons";
 import {
   Avatar,
+  Breadcrumbs,
   Button,
   ButtonLink,
   ErrorState,
@@ -147,6 +148,13 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
   return (
     <div className="animate-reveal flex flex-col gap-4 pb-24 lg:pb-0">
+      <Breadcrumbs
+        items={[
+          { label: "Acasă", href: "/" },
+          { label: "Licitații", href: "/licitatii" },
+          { label: auction.product.title },
+        ]}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0">
           <Gallery

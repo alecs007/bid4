@@ -6,6 +6,7 @@ import {
   LuBuilding2,
   LuCalendar,
   LuChevronDown,
+  LuChevronRight,
   LuChevronUp,
   LuCircleAlert,
   LuCircleCheck,
@@ -137,6 +138,7 @@ export const Icons = {
   share: LuShare2,
   check: LuCheck,
   expand: LuChevronDown,
+  crumb: LuChevronRight,
   collapse: LuChevronUp,
   loading: LuLoaderCircle,
 
