@@ -117,7 +117,7 @@ export function CauseBrowser() {
         <CauseGrid
           causes={data ?? []}
           loading={loading}
-          skeletonCount={6}
+          skeletonCount={10}
           emptyState={
             <EmptyState
               title="Nicio cauză pe filtrele astea"

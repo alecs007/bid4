@@ -108,13 +108,14 @@ export function SkeletonCauseCard() {
   return (
     <div className="rounded-3xl bg-white ring-1 ring-edge p-2">
       <Skeleton className="aspect-4/3 w-full rounded-2xl" />
-      <div className="flex flex-col gap-3 px-3 pt-4 pb-3">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-5 w-12" />
+      <div className="px-3 pt-4 pb-3">
+        {/* The real row is baseline-aligned and comes to 26px tall. */}
+        <div className="flex h-[26px] items-center justify-between gap-3">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-10" />
         </div>
-        <Skeleton className="h-2 w-full rounded-full" />
-        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-3 h-2 w-full rounded-full" />
+        <Skeleton className="mt-2 h-5 w-40" />
       </div>
     </div>
   );

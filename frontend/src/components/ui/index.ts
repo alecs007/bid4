@@ -17,10 +17,13 @@ export type { AvatarSize } from "./Avatar";
 export {
   Skeleton,
   SkeletonText,
+  SkeletonParagraph,
   SkeletonAuctionCard,
   SkeletonGrid,
   SkeletonRows,
+  SkeletonBidRows,
   SkeletonDetail,
+  SkeletonCauseDetail,
   SkeletonStats,
   Reveal,
 } from "./Skeleton";

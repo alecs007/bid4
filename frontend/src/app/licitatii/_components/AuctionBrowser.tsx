@@ -19,7 +19,11 @@ import {
 } from "@/components/ui";
 import { listAuctions } from "@/lib/api/auctions";
 import { listCauses } from "@/lib/api/causes";
-import { PRODUCT_CATEGORIES, type ProductCategoryId } from "@/lib/config";
+import {
+  PAGINATION,
+  PRODUCT_CATEGORIES,
+  type ProductCategoryId,
+} from "@/lib/config";
 import { AUCTION_STATUS } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -331,7 +335,7 @@ export function AuctionBrowser() {
               auctions={data?.items ?? []}
               loading={loading}
               columns={3}
-              skeletonCount={9}
+              skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
               emptyState={
                 <EmptyState
                   title="Nimic pe filtrele astea"
@@ -361,7 +365,11 @@ export function AuctionBrowser() {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             />
-          ) : null}
+          ) : (
+            /* Hold the pagination's place so the page does not grow under the
+               user when the first results land. */
+            <div className="mt-8 h-10" />
+          )}
         </div>
       </div>
       <Sheet

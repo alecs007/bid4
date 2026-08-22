@@ -13,7 +13,7 @@ import {
   ErrorState,
   Select,
   Sheet,
-  Skeleton,
+  SkeletonCauseDetail,
 } from "@/components/ui";
 import { listAuctions } from "@/lib/api/auctions";
 import { getCause } from "@/lib/api/causes";
@@ -196,28 +196,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
     { enabled: Boolean(cause?.id) },
   );
 
-  if (loading && !cause) {
-    return (
-      <div className="grid gap-5 lg:grid-cols-2 lg:gap-8">
-        <div>
-          <Skeleton className="aspect-4/3 w-full rounded-3xl" />
-          <div className="mt-3 flex gap-2.5 overflow-hidden">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-16 w-16 rounded-xl sm:h-20 sm:w-20" />
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-9 w-3/4" />
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="mt-4 h-10 w-40" />
-          <Skeleton className="h-2.5 w-full rounded-full" />
-          <Skeleton className="h-5 w-2/3" />
-          <Skeleton className="mt-3 h-13 w-56 rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
+  if (loading && !cause) return <SkeletonCauseDetail />;
 
   if (error || !cause) {
     return (

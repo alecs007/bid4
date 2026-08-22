@@ -33,11 +33,16 @@ export function useApi<T>(
 ): ApiState<T> & { reload: () => void } {
   const { enabled = true } = options;
 
-  const [state, setState] = useState<ApiState<T>>({
-    data: null,
-    error: null,
-    loading: enabled,
-  });
+  // `key` is stored alongside the result so `loading` can be derived rather
+  // than announced from inside the effect. Announcing it a frame late let the
+  // caller render "loaded, empty" for one frame every time the key changed —
+  // long enough for an empty state to flash in place of a skeleton.
+  const [state, setState] = useState<{
+    data: T | null;
+    error: string | null;
+    key: string | null;
+  }>({ data: null, error: null, key: null });
+  const [pending, setPending] = useState(false);
   const [nonce, setNonce] = useState(0);
 
   // The loader is recreated on every render; keep it out of the deps.
@@ -51,14 +56,16 @@ export function useApi<T>(
     let cancelled = false;
 
     const run = async () => {
-      setState((previous) => ({ ...previous, loading: true, error: null }));
+      setPending(true);
       try {
         const data = await loaderRef.current();
-        if (!cancelled) setState({ data, error: null, loading: false });
+        if (!cancelled) setState({ data, error: null, key });
       } catch (error) {
         if (!cancelled) {
-          setState({ data: null, error: errorMessage(error), loading: false });
+          setState({ data: null, error: errorMessage(error), key });
         }
+      } finally {
+        if (!cancelled) setPending(false);
       }
     };
 
@@ -70,7 +77,15 @@ export function useApi<T>(
 
   const reload = useCallback(() => setNonce((value) => value + 1), []);
 
-  return { ...state, reload };
+  return {
+    // Whatever was loaded last stays on screen while the next request runs;
+    // callers guard with `loading && !data` when they want a skeleton instead.
+    data: state.data,
+    // An error from a previous key is not this key's error.
+    error: state.key === key ? state.error : null,
+    loading: enabled && (state.key !== key || pending),
+    reload,
+  };
 }
 
 /**
