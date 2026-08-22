@@ -1,6 +1,7 @@
-# IDE
+# IDE and local agent config
 .idea/
 *.iml
+.claude/
 
 # Java / Maven
 backend/target/
