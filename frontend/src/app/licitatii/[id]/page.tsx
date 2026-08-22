@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AuctionDetailView } from "./_components/AuctionDetailView";
+import { PageTransition } from "@/components/layout/PageTransition";
 
 export const metadata: Metadata = {
   title: "Licitație",
@@ -12,8 +13,10 @@ export default async function AuctionPage({ params }: PageProps<"/licitatii/[id]
   const { id } = await params;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      <AuctionDetailView auctionId={id} />
-    </main>
+    <PageTransition>
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <AuctionDetailView auctionId={id} />
+      </main>
+    </PageTransition>
   );
 }

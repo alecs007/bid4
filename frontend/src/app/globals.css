@@ -251,6 +251,8 @@
        then share the same content width, so navigating between them does not
        nudge the layout sideways. */
     scrollbar-gutter: stable;
+    /* Anchor links land below the sticky header, not behind it. */
+    scroll-padding-top: 5rem;
   }
 
   body {
@@ -354,4 +356,72 @@
 @utility numeric {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+/* ============================================================================
+   Page transitions
+   <PageTransition> wraps the root of every page.tsx and loading.tsx, so React
+   names the outgoing snapshot `page-exit` and the incoming one `page-enter`.
+   A navigation therefore reads as one continuous motion: page out, skeleton
+   in, then skeleton out, content in.
+   ========================================================================== */
+
+/* The overlay would otherwise swallow clicks for the length of the animation. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* Old leaves quickly so it stops competing for attention; new arrives a beat
+   later and more gently. Blur hides the pixel interpolation mid-flight. */
+::view-transition-old(.page-exit) {
+  animation: 130ms ease-in both page-leave;
+}
+
+::view-transition-new(.page-enter) {
+  animation: 260ms var(--ease-out-soft) 90ms both page-arrive;
+}
+
+@keyframes page-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes page-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+}
+
+/* The shell (header, footer) is the user's fixed reference point. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+
+::view-transition-old(site-header) {
+  display: none;
+}
+
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+::view-transition-group(root) {
+  animation-duration: 200ms;
+}
+
+/* Positional movement is the most common motion-sensitivity trigger: keep the
+   navigation legible, drop the travel. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
 }

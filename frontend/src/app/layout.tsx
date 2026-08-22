@@ -7,6 +7,7 @@ import { DevRoleSwitcher } from "@/components/auth/DevRoleSwitcher";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
+import { RouteProgress } from "@/components/layout/RouteProgress";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               Sari la conținut
             </a>
             <SmoothScroll />
+            <RouteProgress />
             <SiteHeader />
             <div id="continut" className="flex-1">
               {children}

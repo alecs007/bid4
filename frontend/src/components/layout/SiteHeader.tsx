@@ -77,11 +77,14 @@ export function SiteHeader() {
 
   const searchField = (
     <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-ink-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500">
-      <Icons.search aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-500" />
+      <Icons.search
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-ink-500"
+      />
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Ce cauți azi?"
+        placeholder="Caută cauze sau licitații"
         aria-label="Caută licitații"
         className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none"
       />
@@ -89,7 +92,9 @@ export function SiteHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-40 bg-white">
+    // `site-header` is anchored in globals.css: during a page transition the
+    // header holds still while the content slides under it.
+    <header className="sticky top-0 z-40 bg-white [view-transition-name:site-header]">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
         <button
           type="button"
@@ -130,7 +135,11 @@ export function SiteHeader() {
             Strânge fonduri
           </Link>
         </nav>
-        <form onSubmit={search} role="search" className="ml-auto hidden w-64 lg:block">
+        <form
+          onSubmit={search}
+          role="search"
+          className="ml-auto hidden w-64 lg:block"
+        >
           {searchField}
         </form>
         <div className="ml-auto flex items-center gap-1 lg:ml-3">
@@ -225,7 +234,6 @@ export function SiteHeader() {
         </div>
       </div>
 
-      
       {openPanel === "search" || openPanel === "nav" ? (
         <>
           <button
@@ -264,18 +272,21 @@ export function SiteHeader() {
                     aria-hidden="true"
                     className="h-5 w-5 shrink-0 text-primary-700"
                   />
-                  <span className="min-w-0">
-                    <span className="block font-display font-bold text-primary-900">
+                  <span className="min-w-0 flex flex-col">
+                    <span className="font-display font-bold text-primary-900">
                       Strânge fonduri
                     </span>
-                    <span className="block text-sm text-primary-900/80">
+                    <span className="text-sm text-primary-900/80">
                       Deschide o cauză
                     </span>
                   </span>
                 </Link>
 
                 {user ? (
-                  <ButtonLink href="/cont/anunturi/nou" className="mt-2 sm:hidden">
+                  <ButtonLink
+                    href="/cont/anunturi/nou"
+                    className="mt-2 sm:hidden"
+                  >
                     Listează un produs
                   </ButtonLink>
                 ) : null}
