@@ -112,8 +112,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       }
       await navigator.clipboard.writeText(url);
       toast.success("Link copiat");
-    } catch {
-    }
+    } catch {}
   };
 
   const impact = (
@@ -130,7 +129,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         merg la{" "}
         <Link
           href={`/cauze/${auction.cause.slug}`}
-          className="font-bold underline underline-offset-2"
+          className="font-bold underline underline-offset-2 whitespace-nowrap"
         >
           {auction.cause.name}
         </Link>
@@ -150,14 +149,17 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     <div className="flex flex-col gap-4 pb-24 lg:pb-0">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0">
-          <Gallery images={auction.product.images} alt={auction.product.title} />
+          <Gallery
+            images={auction.product.images}
+            alt={auction.product.title}
+          />
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary-100 px-2 py-1 text-sm font-extrabold text-primary-900">
                 <Icons.donation aria-hidden="true" className="h-4 w-4" />
-                {auction.donationPercent}% donat
+                {auction.donationPercent}% donație
               </span>
               {auction.status !== "LIVE" ? (
                 <span className="rounded-lg bg-ink-100 px-2 py-1 text-sm font-bold text-ink-700">
@@ -229,7 +231,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </div>
             </dl>
           </Block>
-          <Block title="Oferte">
+          <Block title="Licitații">
             <BidHistory
               bids={bids}
               loading={bidsLoading}
@@ -258,8 +260,8 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   {auction.cause.name}
                 </p>
                 <p className="numeric text-sm text-ink-500">
-                  {formatMoney(auction.cause.raisedAmount, { compact: true })} din{" "}
-                  {formatMoney(auction.cause.goalAmount, { compact: true })}
+                  {formatMoney(auction.cause.raisedAmount, { compact: true })}{" "}
+                  din {formatMoney(auction.cause.goalAmount, { compact: true })}
                 </p>
               </div>
             </div>
@@ -274,31 +276,29 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             href={`/profil/${auction.seller.username}`}
             className="group rounded-3xl bg-white ring-1 ring-edge p-5 transition-transform hover:-translate-y-0.5"
           >
-            <p className="mb-3 text-sm font-bold text-ink-500">
-              Vândut de
-            </p>
+            <p className="mb-3 text-sm font-bold text-ink-500">Vândut de</p>
             <div className="flex items-center gap-3">
-            <Avatar
-              name={auction.seller.displayName}
-              src={auction.seller.avatarUrl}
-              accountType={auction.seller.accountType}
-              size="md"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-ink-900 group-hover:text-primary-700">
-                {auction.seller.displayName}
-              </p>
-              <p className="text-sm text-ink-500">
-                <span className="numeric">
-                  {auction.seller.rating.toFixed(1).replace(".", ",")}
-                </span>{" "}
-                din {auction.seller.ratingCount} evaluări
-              </p>
-            </div>
-            <Icons.forward
-              aria-hidden="true"
-              className="h-4 w-4 shrink-0 text-ink-400"
-            />
+              <Avatar
+                name={auction.seller.displayName}
+                src={auction.seller.avatarUrl}
+                accountType={auction.seller.accountType}
+                size="md"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-display font-bold text-ink-900 group-hover:text-primary-700">
+                  {auction.seller.displayName}
+                </p>
+                <p className="text-sm text-ink-500">
+                  <span className="numeric">
+                    {auction.seller.rating.toFixed(1).replace(".", ",")}
+                  </span>{" "}
+                  din {auction.seller.ratingCount} evaluări
+                </p>
+              </div>
+              <Icons.forward
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-ink-400"
+              />
             </div>
           </Link>
         </div>
@@ -311,7 +311,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         <dl className="flex flex-col gap-3 pb-2 text-[15px]">
           <div className="flex items-center justify-between gap-4">
             <dt className="text-ink-600">Preț curent</dt>
-            <dd className="numeric font-bold text-ink-900">
+            <dd className="numeric font-bold text-ink-900 whitespace-nowrap">
               {formatMoney(auction.currentPrice)}
             </dd>
           </div>
@@ -319,22 +319,28 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             <dt className="text-ink-600">
               Donație către {auction.cause.name} ({auction.donationPercent}%)
             </dt>
-            <dd className="numeric font-bold text-primary-700">
+            <dd className="numeric font-bold text-primary-700 whitespace-nowrap">
               {formatMoney(fees.donationAmount)}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <dt className="text-ink-600">Rămâne vânzătorului</dt>
-            <dd className="numeric font-bold text-ink-900">
+            <dt className="text-ink-600">Suma rămasă vânzătorului</dt>
+            <dd className="numeric font-bold text-ink-900 whitespace-nowrap">
               {formatMoney(fees.sellerNet)}
             </dd>
           </div>
           <p className="mt-2 border-t border-line pt-3 text-sm text-ink-500">
-            La final se adaugă livrarea și taxa bid4 de{" "}
-            {FEES.BUYER_TAX_PERCENT}%, între{" "}
-            {formatMoney(FEES.BUYER_TAX_MIN, { compact: true })} și{" "}
-            {formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}. Le vezi pe
-            toate înainte să confirmi comanda.
+            La final se adaugă livrarea și taxa platformei de{" "}
+            {FEES.BUYER_TAX_PERCENT}
+            %, între{" "}
+            <span className="whitespace-nowrap">
+              {formatMoney(FEES.BUYER_TAX_MIN, { compact: true })}
+            </span>{" "}
+            și{" "}
+            <span className="whitespace-nowrap">
+              {formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}
+            </span>
+            . Detaliile sunt afișate înainte de a confirma comanda.
           </p>
         </dl>
       </Sheet>

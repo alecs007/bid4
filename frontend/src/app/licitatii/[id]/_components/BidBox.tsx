@@ -196,12 +196,12 @@ function Result({
       <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
         <p className="flex items-center gap-2 font-display text-lg font-extrabold text-ink-900">
           <Icons.clock aria-hidden="true" className="h-5 w-5 text-ink-400" />
-          Încheiată fără câștigător
+          Licitația s-a încheiat
         </p>
         <p className="mt-1.5 text-ink-600">
           {auction.bidCount === 0
-            ? "Nu a licitat nimeni."
-            : "Prețul de rezervă nu a fost atins."}
+            ? "Nu a fost plasată nicio ofertă pentru acest produs."
+            : "Prețul minim al licitației nu a fost atins."}
         </p>
         <ButtonLink href="/licitatii" variant="secondary" className="mt-4">
           Vezi alte licitații
@@ -233,11 +233,7 @@ function Result({
           </dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-ink-500">Oferte</dt>
-          <dd className="numeric font-bold text-ink-900">{auction.bidCount}</dd>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-ink-500">Către cauză</dt>
+          <dt className="text-ink-500">Donație către cauză</dt>
           <dd className="numeric font-bold text-primary-700">
             {formatMoney(donation)}
           </dd>
@@ -313,7 +309,7 @@ export function BidBox({
     <div className="flex items-end justify-between gap-4">
       <div>
         <p className="text-sm text-ink-500">
-          {auction.bidCount > 0 ? "Ofertă curentă" : "Preț de pornire"}
+          {auction.bidCount > 0 ? "Oferta curentă" : "Preț de pornire"}
         </p>
         <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900">
           {formatMoney(auction.currentPrice, { compact: true })}
@@ -336,11 +332,7 @@ export function BidBox({
         Ești cel mai bun ofertant
       </p>
       <div className="flex gap-2">
-        <Button
-          size="lg"
-          className="flex-1"
-          onClick={() => setSheetOpen(true)}
-        >
+        <Button size="lg" className="flex-1" onClick={() => setSheetOpen(true)}>
           Mărește oferta
         </Button>
         {retract.canRetract ? (
@@ -382,7 +374,9 @@ export function BidBox({
           </div>
         )}
       </div>
-      <div className="rounded-3xl bg-white ring-1 ring-edge p-5 lg:hidden">{priceBlock}</div>
+      <div className="rounded-3xl bg-white ring-1 ring-edge p-5 lg:hidden">
+        {priceBlock}
+      </div>
 
       {live && !isSeller ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden">
@@ -390,7 +384,10 @@ export function BidBox({
             {isLeading ? (
               <>
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-primary-800">
-                  <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  <Icons.success
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0"
+                  />
                   Ești cel mai bun ofertant cu{" "}
                   <span className="numeric">
                     {formatMoney(auction.currentPrice, { compact: true })}
@@ -417,10 +414,10 @@ export function BidBox({
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs text-ink-500">Ofertă minimă</p>
-                  <p className="numeric font-display text-lg leading-none font-extrabold text-ink-900">
+                  <p className="text-sm text-ink-500">Oferta minimă</p>
+                  <p className="numeric font-display text-2xl leading-none font-extrabold text-ink-900">
                     {formatMoney(minimum, { compact: true })}
                   </p>
                 </div>
@@ -457,9 +454,12 @@ export function BidBox({
             />
           )}
           <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
-            <Icons.escrow aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Dacă vei câștiga, cardul salvat este debitat automat, iar banii rămân
-            la bid4 până confirmi că ai primit coletul.
+            <Icons.escrow
+              aria-hidden="true"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0"
+            />
+            Dacă vei câștiga, cardul salvat este debitat automat, iar banii
+            rămân la bid4 până confirmi că ai primit coletul.
           </p>
         </div>
       </Sheet>
