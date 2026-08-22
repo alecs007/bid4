@@ -351,23 +351,27 @@ export function SiteHeader() {
 
           <Link
             href="/cont/cauze/noua"
-            className="group mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 px-3 py-3 transition hover:bg-primary-100"
+            className="group mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 p-2.5 transition hover:bg-primary-100"
           >
-            <Icons.donation
+            <span
               aria-hidden="true"
-              className="h-5 w-5 shrink-0 text-primary-700"
-            />
-            <span className="flex min-w-0 flex-col">
+              /* The logo's mark, reused: a solid brand-green square with a
+                 white glyph on it. Coral on green fought itself. */
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-500 text-white"
+            >
+              <Icons.donation className="h-5.5 w-5.5" />
+            </span>
+            <span className="flex min-w-0 flex-col leading-tight">
               <span className="font-display font-bold text-primary-900">
                 Strânge fonduri
               </span>
-              <span className="text-sm text-primary-900/80">
+              <span className="text-sm leading-tight text-primary-900/80">
                 Pornește o cauză
               </span>
             </span>
             <Icons.forward
               aria-hidden="true"
-              className="ml-auto h-4 w-4 shrink-0 text-primary-700 transition-transform group-hover:translate-x-0.5"
+              className="mr-1 ml-auto h-5 w-5 shrink-0 text-primary-700 transition-transform group-hover:translate-x-0.5"
             />
           </Link>
 

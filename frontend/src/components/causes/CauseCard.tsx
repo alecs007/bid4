@@ -30,6 +30,15 @@ export function CauseCard({
       )}
       style={style}
     >
+      {/* The whole card is the target. It cannot be the title's own overlay,
+          the way the auction card does it: the title sits inside the caption,
+          which is positioned, so the overlay would stop at the caption. */}
+      <Link
+        href={`/cauze/${cause.slug}`}
+        aria-label={cause.name}
+        className="absolute inset-0 z-10 rounded-3xl"
+      />
+
       <div className="relative aspect-4/3 w-full overflow-hidden rounded-2xl bg-ink-100">
         <Image
           src={cause.imageUrl}
@@ -59,12 +68,9 @@ export function CauseCard({
         ) : null}
 
         <div className="absolute inset-x-0 bottom-0 p-4">
-          <Link
-            href={`/cauze/${cause.slug}`}
-            className="font-display text-xl leading-tight font-extrabold text-white after:absolute after:inset-0 sm:text-2xl"
-          >
+          <p className="font-display text-xl leading-tight font-extrabold text-white sm:text-2xl">
             <span className="line-clamp-2">{cause.name}</span>
-          </Link>
+          </p>
         </div>
       </div>
       <div className="px-3 pt-4 pb-3">
