@@ -15,7 +15,7 @@ import { listTrendingCauses } from "@/lib/api/causes";
 import { getPlatformStats } from "@/lib/api/stats";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, lei } from "@/lib/money";
 
 function RowHeader({
   id,
@@ -46,34 +46,71 @@ function RowHeader({
   );
 }
 
+/**
+ * What the counter shows until the real total arrives — and the number the
+ * odometer then rolls up from, digit for digit, so the swap is invisible.
+ *
+ * The smallest sum of the same width as the total, never a bare "0": the
+ * digits are tabular, so it is exactly as wide as the figure that replaces it
+ * and the sentence after it never reflows.
+ */
+const RAISED_PLACEHOLDER = formatMoney(lei(100_000), { compact: true });
+
+const COUNT_PLACEHOLDER = "0";
+/** Two characters holds both "8" and "12" without nudging the word after it. */
+const COUNT_CHARS = 2;
+
+function Count({ value }: { value: number | null }) {
+  if (value === null) {
+    return (
+      <span
+        aria-hidden="true"
+        className="numeric inline-block font-bold text-ink-300"
+        style={{ minWidth: `${COUNT_CHARS}ch` }}
+      >
+        {COUNT_PLACEHOLDER}
+      </span>
+    );
+  }
+
+  // Read, not watched: the figure appears as it is and only rolls if it
+  // changes while the page is open.
+  return (
+    <AnimatedNumber
+      value={value}
+      format={(count) => String(count)}
+      minChars={COUNT_CHARS}
+      animateOnMount={false}
+      className="font-bold text-ink-800"
+    />
+  );
+}
+
 export function ImpactLine() {
   const { data } = useApi(() => getPlatformStats(), "platform-stats");
 
   return (
     <div className="flex min-h-[4.25rem] flex-wrap content-start items-baseline gap-x-6 gap-y-1 text-left sm:min-h-[2.75rem]">
       <p className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
-        <AnimatedNumber
-          value={data?.totalRaised ?? 0}
-          format={(value) => formatMoney(value, { compact: true })}
-          minChars={9}
-          className="text-primary-600"
-        />{" "}
+        {data ? (
+          <AnimatedNumber
+            value={data.totalRaised}
+            format={(value) => formatMoney(value, { compact: true })}
+            className="text-primary-600"
+          />
+        ) : (
+          // The odometer mounts showing these same zeros and rolls up from
+          // them, so the swap is invisible and the sentence never reflows.
+          <span aria-hidden="true" className="numeric text-primary-300">
+            {RAISED_PLACEHOLDER}
+          </span>
+        )}{" "}
         strânși până acum
       </p>
       <p className="text-base text-ink-500">
-        <AnimatedNumber
-          value={data?.causeCount ?? 0}
-          format={(value) => String(value)}
-          className="font-bold text-ink-800"
-        />{" "}
-        cauze
+        <Count value={data?.causeCount ?? null} /> cauze
         <span className="mx-2 text-ink-300">·</span>
-        <AnimatedNumber
-          value={data?.liveAuctionCount ?? 0}
-          format={(value) => String(value)}
-          className="font-bold text-ink-800"
-        />{" "}
-        licitații acum
+        <Count value={data?.liveAuctionCount ?? null} /> licitații acum
       </p>
     </div>
   );
