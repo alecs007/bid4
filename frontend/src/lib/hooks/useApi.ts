@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { ApiError } from "@/lib/types";
 
@@ -59,10 +65,15 @@ export function useApi<T>(
       setPending(true);
       try {
         const data = await loaderRef.current();
-        if (!cancelled) setState({ data, error: null, key });
+        // Inside a transition, so the <ViewTransition> around the page can
+        // crossfade the skeleton into the content instead of swapping it in
+        // one frame. Plain setState would not qualify.
+        if (!cancelled) startTransition(() => setState({ data, error: null, key }));
       } catch (error) {
         if (!cancelled) {
-          setState({ data: null, error: errorMessage(error), key });
+          startTransition(() =>
+            setState({ data: null, error: errorMessage(error), key }),
+          );
         }
       } finally {
         if (!cancelled) setPending(false);

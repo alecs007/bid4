@@ -1,8 +1,10 @@
 import { ViewTransition } from "react";
 
 /**
- * Wraps the root element of every `page.tsx` and every `loading.tsx`: the old
- * one fades out and up, the new one fades in from below.
+ * Wraps the root element of every `page.tsx`. A route change plays exactly two
+ * beats and no more: the old page fades out and up, the new one fades in from
+ * below with its skeleton, and when the data lands the skeleton crossfades
+ * into the content in place (`update`).
  *
  * It belongs on the pages themselves, not on the layout. A layout persists
  * across navigations, so a boundary there never sees an enter/exit pair — and
@@ -10,15 +12,17 @@ import { ViewTransition } from "react";
  * which makes React fall back to the *outermost* pending boundary. That is
  * what put the auctions-list skeleton on a single auction page.
  *
- * Because the skeletons are wrapped too, a route change reads as one
- * continuous motion: page out, skeleton in, skeleton out, content in.
- *
  * `default="none"` keeps this boundary out of transitions it has no business
- * animating; enter and exit are named explicitly.
+ * animating; every state is named explicitly.
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
   return (
-    <ViewTransition enter="page-enter" exit="page-exit" default="none">
+    <ViewTransition
+      enter="page-enter"
+      exit="page-exit"
+      update="page-reveal"
+      default="none"
+    >
       {children}
     </ViewTransition>
   );

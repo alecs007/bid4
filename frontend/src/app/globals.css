@@ -397,6 +397,34 @@
   }
 }
 
+/* Skeleton to content, in place. The group animation is off so a page that
+   settles a pixel taller does not stretch its own snapshot on the way in, and
+   because the skeletons are built to the size of what replaces them, what is
+   left reads as one dissolve. */
+::view-transition-group(.page-reveal) {
+  animation: none;
+}
+
+::view-transition-old(.page-reveal) {
+  animation: 140ms ease-in both reveal-out;
+}
+
+::view-transition-new(.page-reveal) {
+  animation: 240ms var(--ease-out-soft) 80ms both reveal-in;
+}
+
+@keyframes reveal-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* The shell (header, footer) is the user's fixed reference point. */
 ::view-transition-group(site-header) {
   animation: none;
