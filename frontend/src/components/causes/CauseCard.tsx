@@ -156,7 +156,7 @@ export function CauseGrid({
         <CauseCard
           key={cause.id}
           cause={cause}
-          className="animate-fade-up"
+          className="animate-reveal"
           style={revealDelay(index)}
         />
       ))}

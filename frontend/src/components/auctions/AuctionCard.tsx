@@ -176,7 +176,7 @@ export function AuctionGrid({
         <AuctionCard
           key={auction.id}
           auction={auction}
-          className="animate-fade-up"
+          className="animate-reveal"
           style={revealDelay(index)}
         />
       ))}
