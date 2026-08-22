@@ -44,7 +44,10 @@ function FilterGroup({
 export function AuctionBrowserSkeleton() {
   return (
     <>
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
+          Licitații
+        </h1>
         <Skeleton className="h-10 w-28 rounded-2xl lg:hidden" />
         <Skeleton className="ml-auto h-10 w-44 rounded-xl sm:w-56" />
       </div>
@@ -52,9 +55,6 @@ export function AuctionBrowserSkeleton() {
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
           <div className="sticky top-24">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <Skeleton className="h-7 w-16" />
-            </div>
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
               <div className="flex flex-col gap-7">
                 <FilterGroup labelWidth="w-20">

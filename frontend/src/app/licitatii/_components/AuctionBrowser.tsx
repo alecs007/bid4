@@ -264,7 +264,12 @@ export function AuctionBrowser() {
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-2">
+      {/* The title shares the row with the sort control on desktop; on
+          narrower screens it takes the line above them. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
+          Licitații
+        </h1>
         <Button
           variant="secondary"
           size="sm"
@@ -294,21 +299,18 @@ export function AuctionBrowser() {
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
           <div className="sticky top-24">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="font-display text-lg font-extrabold text-ink-900">
-                Filtre
-              </h2>
-              {activeCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="text-sm font-bold text-primary-700 hover:text-primary-800"
-                >
-                  Șterge
-                </button>
-              ) : null}
-            </div>
+            {/* No "Filtre" heading here: the controls say what they are, and
+                the rail then starts level with the results. */}
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">{filters}</div>
+            {activeCount > 0 ? (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="mt-3 text-sm font-bold text-primary-700 hover:text-primary-800"
+              >
+                Șterge filtrele
+              </button>
+            ) : null}
           </div>
         </aside>
         <div className="min-w-0">
