@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# bid4 — frontend
 
-## Getting Started
+Romanian charity auction platform. People bid on items and a seller-chosen
+share of every sale goes to a verified cause.
 
-First, run the development server:
+Next.js 16 (App Router), TypeScript in strict mode, Tailwind v4. Package
+manager is **pnpm**.
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm build     # production build
+pnpm lint      # eslint
+pnpm exec tsc --noEmit
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Data
 
-## Learn More
+The app runs entirely on a mock layer today. `NEXT_PUBLIC_USE_MOCK=true`
+(the default) serves seeded data from `lib/mock`; setting it to `false`
+points every call in `lib/api/*` at `NEXT_PUBLIC_API_BASE` instead. UI code
+imports from `lib/api` only, never from `lib/mock`, so the swap touches no
+component.
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` to `.env.local` to change either flag.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Seed accounts all use the password `bid4demo`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Account | Role |
+| --- | --- |
+| maria@bid4.ro | USER, individual |
+| contact@zambet.ro | USER, organisation |
+| operator@bid4.ro | OPERATOR |
+| admin@bid4.ro | ADMIN |
 
-## Deploy on Vercel
+In development a floating switcher jumps between them and can reset the
+seeded world.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app          routes
+src/components   ui/ (design system), layout/, auctions/, causes/, icons/
+src/lib          api/ (the backend seam), mock/, types/, money, config
+```
+
+`lib/config.ts` holds every fee, cap and timing. `lib/money.ts` owns the fee
+split and keeps amounts in integer bani. `/design-system` renders the
+component vocabulary.
+
+A full integration guide, with the expected backend endpoints and the
+escrow, shipping and state-machine rules, is still to be written.
