@@ -56,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               {children}
             </div>
             <SiteFooter />
-            <DevRoleSwitcher />
+            {/* <DevRoleSwitcher /> */}
           </ToastProvider>
         </AuthProvider>
       </body>

@@ -76,7 +76,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
           ) : null}
         </div>
 
-        
         {frames.length > 1 ? (
           <div
             data-lenis-prevent
@@ -172,7 +171,7 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
           fullWidth
           className="mt-6 sm:w-auto"
         >
-          Licitează pentru cauza asta
+          Licitează pentru această cauză
         </ButtonLink>
       </div>
     </section>
@@ -185,10 +184,11 @@ export function CauseDetailView({ slug }: { slug: string }) {
   const [sort, setSort] = useState<AuctionSort>("ENDING_SOON");
   const [docsOpen, setDocsOpen] = useState(false);
 
-  const { data: cause, loading, error } = useApi(
-    () => getCause(slug),
-    `cause:${slug}`,
-  );
+  const {
+    data: cause,
+    loading,
+    error,
+  } = useApi(() => getCause(slug), `cause:${slug}`);
 
   const { data: auctions, loading: auctionsLoading } = useApi(
     () =>
@@ -341,7 +341,9 @@ export function CauseDetailView({ slug }: { slug: string }) {
               size="sm"
               value={sort}
               options={SORTS}
-              onChange={(next) => setSort((next || "ENDING_SOON") as AuctionSort)}
+              onChange={(next) =>
+                setSort((next || "ENDING_SOON") as AuctionSort)
+              }
             />
           </div>
         </div>
@@ -357,7 +359,9 @@ export function CauseDetailView({ slug }: { slug: string }) {
                   : "Nicio licitație aici încă"
               }
               action={
-                <ButtonLink href="/cont/anunturi/nou">Listează un produs</ButtonLink>
+                <ButtonLink href="/cont/anunturi/nou">
+                  Listează un produs
+                </ButtonLink>
               }
               compact
             />
