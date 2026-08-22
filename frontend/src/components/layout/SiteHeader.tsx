@@ -92,9 +92,7 @@ export function SiteHeader() {
   );
 
   return (
-    // `site-header` is anchored in globals.css: during a page transition the
-    // header holds still while the content slides under it.
-    <header className="sticky top-0 z-40 bg-white [view-transition-name:site-header]">
+    <header className="sticky top-0 z-40 bg-white">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
         <button
           type="button"

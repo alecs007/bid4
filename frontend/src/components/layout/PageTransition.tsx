@@ -1,30 +1,18 @@
-import { ViewTransition } from "react";
-
 /**
- * Wraps the root element of every `page.tsx`: one page dissolves into the next.
+ * Wraps the root element of every `page.tsx`, so each page arrives instead of
+ * appearing: it fades in over 450ms.
  *
- * Opacity only, deliberately. A view transition replaces the page with a
- * snapshot clipped to the viewport, so moving or blurring that snapshot drags
- * its cut edge into view on any page taller than the screen. Motion belongs on
- * real elements, which is where the content reveal does it.
+ * This used to drive React's <ViewTransition>. Two things sank that. The API
+ * replaces the page with a snapshot clipped to the viewport, so any movement
+ * on it drags a cut edge into view on a page taller than the screen — and a
+ * crossfade with no movement, between two layouts that are both white cards on
+ * a near-white canvas, is invisible. On top of that the browser skips the
+ * whole transition whenever the document is not visible, which is silent and
+ * impossible to feel out.
  *
- * The reveal itself is not a view transition at all: a page-wide crossfade
- * dips the whole screen's opacity for a change that is usually confined to one
- * grid. Components animate their own content in instead.
- *
- * It belongs on the pages themselves, not on the layout. A layout persists
- * across navigations, so a boundary there never sees an enter/exit pair — and
- * forcing one by keying it on the pathname remounts the whole route subtree,
- * which makes React fall back to the *outermost* pending boundary. That is
- * what put the auctions-list skeleton on a single auction page.
- *
- * `default="none"` keeps this boundary out of transitions it has no business
- * animating; every state is named explicitly.
+ * A CSS animation on the real element has none of those problems: nothing is
+ * snapshotted, nothing is clipped, and it runs the same everywhere.
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
-  return (
-    <ViewTransition enter="page-enter" exit="page-exit" default="none">
-      {children}
-    </ViewTransition>
-  );
+  return <div className="animate-page-in">{children}</div>;
 }
