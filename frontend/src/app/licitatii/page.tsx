@@ -16,8 +16,6 @@ export default function AuctionsPage() {
       <h1 className="mb-4 font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
         Licitații
       </h1>
-
-      {/* useSearchParams needs a boundary; the grid skeleton is the fallback. */}
       <Suspense fallback={<SkeletonGrid count={9} />}>
         <AuctionBrowser />
       </Suspense>

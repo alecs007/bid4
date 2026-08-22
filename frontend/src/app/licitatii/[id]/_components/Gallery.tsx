@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
-/** Product gallery: one large frame, thumbnails underneath. */
 export function Gallery({
   images,
   alt,

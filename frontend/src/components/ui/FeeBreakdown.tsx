@@ -6,11 +6,6 @@ import { formatMoney, type FeeBreakdown as Breakdown } from "@/lib/money";
 import { FEES } from "@/lib/config";
 import { IconBubble } from "./Card";
 
-/**
- * The single visual representation of the money split. It appears on the
- * auction page (as a preview), on order confirmation, and on every order page —
- * always fed by `computeFees()` so the numbers cannot drift between screens.
- */
 export type FeePerspective = "BUYER" | "SELLER" | "PLATFORM" | "FULL";
 
 function Row({
@@ -83,7 +78,6 @@ export function FeeBreakdown({
 }: {
   breakdown: Breakdown;
   perspective?: FeePerspective;
-  /** Named in the impact strip: "…merg către Salvează o inimă". */
   causeName?: string;
   showExplainer?: boolean;
   className?: string;
@@ -114,7 +108,6 @@ export function FeeBreakdown({
       <h3 className="mb-2 font-display text-base font-extrabold text-ink-900">
         Cum se împart banii
       </h3>
-
       <dl className="divide-y divide-transparent">
         <Row
           label={perspective === "SELLER" ? "Preț final adjudecat" : "Preț final"}
@@ -191,9 +184,6 @@ export function FeeBreakdown({
           </>
         ) : null}
       </dl>
-
-      {/* The point of the whole product. It earns emphasis through a divider,
-          an icon chip and the green number — not a coloured panel. */}
       <div className="mt-3 flex items-center gap-3 border-t border-line pt-4">
         <IconBubble tone="primary">
           <Icons.donation aria-hidden="true" className="h-5 w-5" />

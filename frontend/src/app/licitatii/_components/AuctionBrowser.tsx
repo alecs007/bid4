@@ -38,7 +38,6 @@ const SORTS: { value: AuctionSort; label: string }[] = [
 
 const STATUS_FILTERS: AuctionStatus[] = ["LIVE", "SCHEDULED", "SOLD", "UNSOLD"];
 
-/** Price slider bounds, in bani. */
 const PRICE_MIN = 0;
 const PRICE_MAX = 500_000;
 const PRICE_STEP = 5_000;
@@ -87,7 +86,6 @@ export function AuctionBrowser() {
   const maxPrice = Number(params.get("maxPrice") ?? PRICE_MAX);
   const page = Number(params.get("page") ?? 1);
 
-  // Sliders move continuously; the URL is written only when the thumb is let go.
   const [priceDraft, setPriceDraft] = useState<[number, number]>([
     minPrice,
     maxPrice,
@@ -187,7 +185,6 @@ export function AuctionBrowser() {
           ))}
         </div>
       </div>
-
       <div>
         <p className="mb-2.5 text-sm font-bold text-ink-700">Stare</p>
         <div className="flex flex-wrap gap-2">
@@ -214,7 +211,6 @@ export function AuctionBrowser() {
           ))}
         </div>
       </div>
-
       <div onPointerUp={commitPrice} onKeyUp={commitPrice}>
         <RangeSlider
           label="Preț"
@@ -230,7 +226,6 @@ export function AuctionBrowser() {
           }
         />
       </div>
-
       <div onPointerUp={commitDonation} onKeyUp={commitDonation}>
         <Slider
           label="Donație minimă"
@@ -242,7 +237,6 @@ export function AuctionBrowser() {
           formatValue={(value) => (value === 0 ? "oricât" : `${value}%`)}
         />
       </div>
-
       <div>
         <p className="mb-2.5 text-sm font-bold text-ink-700">Cauză</p>
         <Select
@@ -266,7 +260,6 @@ export function AuctionBrowser() {
 
   return (
     <>
-      {/* Toolbar sits above the fold on a phone, so results start immediately. */}
       <div className="mb-4 flex items-center gap-2">
         <Button
           variant="secondary"
@@ -282,7 +275,6 @@ export function AuctionBrowser() {
             </span>
           ) : null}
         </Button>
-
         <div className="ml-auto w-44 sm:w-56">
           <Select
             ariaLabel="Sortează"
@@ -295,7 +287,6 @@ export function AuctionBrowser() {
           />
         </div>
       </div>
-
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
           <div className="sticky top-24">
@@ -316,10 +307,7 @@ export function AuctionBrowser() {
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">{filters}</div>
           </div>
         </aside>
-
         <div className="min-w-0">
-          {/* The count is detail, not content: on a phone the grid gets the
-              space instead, and the sheet button already carries the filters. */}
           <div className="mb-3 hidden h-5 sm:block">
             {loading ? (
               <Skeleton className="h-5 w-32" />
@@ -376,7 +364,6 @@ export function AuctionBrowser() {
           ) : null}
         </div>
       </div>
-
       <Sheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

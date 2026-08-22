@@ -2,12 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-/**
- * Celebratory confetti for the two moments that deserve it: winning an auction,
- * and a cause reaching its goal. CSS-only — no canvas, no dependency.
- *
- * Silent for users with `prefers-reduced-motion: reduce`.
- */
 const COLORS = ["#58cc02", "#ff6b4a", "#38bdf8", "#ffc93c", "#7fda3e"];
 
 interface Piece {
@@ -36,18 +30,11 @@ function makePieces(count: number): Piece[] {
 
 export function Confetti({
   count = 40,
-  /** Re-fires whenever this value changes. */
   trigger = 0,
 }: {
   count?: number;
   trigger?: number;
 }) {
-  /**
-   * `active` is derived: state only remembers which trigger has already burned
-   * out, and it is written from a timer callback rather than synchronously in
-   * the effect. Reduced-motion users are handled globally in globals.css, which
-   * collapses the animation to nothing.
-   */
   const [spentTrigger, setSpentTrigger] = useState<number | null>(null);
   const active = spentTrigger !== trigger;
   const pieces = useMemo(() => makePieces(count), [count]);

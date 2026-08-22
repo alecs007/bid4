@@ -3,10 +3,6 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import { Mascot, type MascotMood } from "./Mascot";
 
-/**
- * Empty states are a chance to be encouraging rather than apologetic — the
- * mascot shows up here, and the copy always offers the next step.
- */
 export function EmptyState({
   title,
   description,
@@ -49,7 +45,6 @@ export function EmptyState({
   );
 }
 
-/** Same shape, but for a failed fetch — offers a retry instead of a next step. */
 export function ErrorState({
   title = "Nu am putut încărca datele",
   description = "A apărut o problemă de conexiune. Mai încearcă o dată.",

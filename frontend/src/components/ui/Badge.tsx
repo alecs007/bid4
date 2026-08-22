@@ -4,14 +4,6 @@ import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import type { StatusMeta, Tone } from "@/lib/labels";
 
-/**
- * Chips, not pills.
- *
- * Squared-off corners, a hairline border and a small geometric marker that
- * echoes those corners. It reads as a deliberate label rather than a generic
- * rounded tag, while staying quiet enough to sit ten-to-a-row on a dense table.
- */
-
 const SOFT: Record<Tone, string> = {
   primary: "bg-primary-50 text-primary-900 border-primary-200",
   accent: "bg-accent-50 text-accent-900 border-accent-200",
@@ -34,7 +26,6 @@ const SOLID: Record<Tone, string> = {
   neutral: "bg-ink-700 text-white border-ink-800",
 };
 
-/** The marker: a small rounded square, deliberately not a circle. */
 const MARKER: Record<Tone, string> = {
   primary: "bg-primary-500",
   accent: "bg-accent-500",
@@ -50,11 +41,8 @@ export interface BadgeProps {
   tone?: Tone;
   variant?: "soft" | "solid";
   size?: "sm" | "md";
-  /** Square marker before the label. The default for statuses. */
   marker?: boolean;
-  /** Gentle pulse on the marker. Reserved for live and closing-soon states. */
   pulse?: boolean;
-  /** Replaces the marker. Pass anything from `Icons`. */
   icon?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -111,10 +99,6 @@ export function Badge({
   );
 }
 
-/**
- * Renders any domain status from `lib/labels`, so a status is spelled and
- * coloured identically on every screen.
- */
 export function StatusBadge({
   meta,
   variant,
@@ -140,10 +124,6 @@ export function StatusBadge({
   );
 }
 
-/**
- * The signature bid4 chip: how much of this sale becomes help.
- * The number carries the weight; the words stay quiet behind it.
- */
 export function DonationBadge({
   percent,
   size = "md",
@@ -183,10 +163,6 @@ export function DonationBadge({
   );
 }
 
-/**
- * A quiet metadata chip: category, condition, city. No tone, no marker,
- * just a bordered label that groups well next to the coloured ones.
- */
 export function MetaChip({
   icon,
   children,

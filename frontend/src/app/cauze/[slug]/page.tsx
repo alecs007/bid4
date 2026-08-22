@@ -8,11 +8,6 @@ export const metadata: Metadata = {
     "Povestea cauzei, documentele verificate, progresul către obiectiv și licitațiile care o susțin.",
 };
 
-/**
- * TODO(backend): fetch the cause here once the API is live and pass it to the
- * client view as initial data, so the page can be server-rendered for search
- * engines and link previews.
- */
 export default async function CausePage({ params }: PageProps<"/cauze/[slug]">) {
   const { slug } = await params;
 

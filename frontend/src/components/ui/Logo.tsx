@@ -2,10 +2,6 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The bid4 wordmark: a heart-with-sprout glyph plus the name, "4" in coral so
- * the "pentru / for" reading stays visible ("bid for a cause").
- */
 export function LogoMark({
   size = 32,
   className,
@@ -51,7 +47,6 @@ export function Logo({
   className,
 }: {
   size?: "sm" | "md" | "lg";
-  /** Pass null to render a non-linking wordmark (footers, PDFs, print). */
   href?: string | null;
   className?: string;
 }) {

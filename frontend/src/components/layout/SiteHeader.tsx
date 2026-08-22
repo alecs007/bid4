@@ -29,7 +29,6 @@ export function SiteHeader() {
   const router = useRouter();
   const { user, status, logout, isStaff, isAdmin } = useAuth();
 
-  /** Panels are stamped with their route, so navigating closes them. */
   const [panel, setPanel] = useState<{
     path: string;
     which: "nav" | "account" | "search" | null;
@@ -92,7 +91,6 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 bg-white">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
-        {/* Menu sits before the logo on small screens, where the thumb is. */}
         <button
           type="button"
           onClick={() => toggle("nav")}
@@ -106,10 +104,8 @@ export function SiteHeader() {
             <Icons.menu aria-hidden="true" className="h-5 w-5" />
           )}
         </button>
-
         <Logo size="sm" className="shrink-0 lg:hidden" />
         <Logo size="md" className="hidden shrink-0 lg:inline-flex" />
-
         <nav aria-label="Navigare principală" className="ml-3 hidden lg:flex">
           {NAV.map((item) => (
             <Link
@@ -134,11 +130,9 @@ export function SiteHeader() {
             Strânge fonduri
           </Link>
         </nav>
-
         <form onSubmit={search} role="search" className="ml-auto hidden w-64 lg:block">
           {searchField}
         </form>
-
         <div className="ml-auto flex items-center gap-1 lg:ml-3">
           <button
             type="button"
@@ -161,7 +155,6 @@ export function SiteHeader() {
               >
                 Listează
               </ButtonLink>
-
               <div className="relative" ref={accountRef}>
                 <button
                   type="button"
@@ -232,8 +225,7 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Overlays: absolutely positioned under the bar, so the page beneath
-          keeps its place instead of being pushed down. */}
+      
       {openPanel === "search" || openPanel === "nav" ? (
         <>
           <button
@@ -242,7 +234,6 @@ export function SiteHeader() {
             onClick={close}
             className="fixed inset-0 top-14 -z-10 cursor-default bg-ink-900/20 sm:top-16 lg:hidden"
           />
-
           <div className="absolute inset-x-0 top-full origin-top animate-panel-in bg-white px-4 pt-1 pb-4 shadow-sm sm:px-6 lg:hidden">
             {openPanel === "search" ? (
               <form onSubmit={search} role="search">
@@ -265,7 +256,6 @@ export function SiteHeader() {
                   </Link>
                 ))}
 
-                {/* The invitation that is easy to miss otherwise. */}
                 <Link
                   href="/cont/cauze/noua"
                   className="mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 px-3 py-3"

@@ -27,7 +27,6 @@ import { BidBox } from "./BidBox";
 import { BidHistory } from "./BidHistory";
 import { Gallery } from "./Gallery";
 
-/** Section wrapper: a heading and its content, nothing else. */
 function Block({
   title,
   action,
@@ -70,8 +69,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     `bids:${auctionId}:${nonce}`,
   );
 
-  // Only the first load blanks the page; a refresh after bidding swaps the
-  // numbers underneath so the celebration is not interrupted.
   if (loading && !auction) return <SkeletonDetail />;
 
   if (error || !auction) {
@@ -116,11 +113,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       await navigator.clipboard.writeText(url);
       toast.success("Link copiat");
     } catch {
-      // The share sheet was dismissed; nothing to report.
     }
   };
 
-  /* --- the impact line: the only money figure worth showing here ------- */
   const impact = (
     <div className="flex items-center gap-3 rounded-2xl bg-primary-50 px-4 py-3">
       <Icons.donation
@@ -154,12 +149,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   return (
     <div className="flex flex-col gap-4 pb-24 lg:pb-0">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
-        {/* Gallery -------------------------------------------------- */}
         <div className="min-w-0">
           <Gallery images={auction.product.images} alt={auction.product.title} />
         </div>
-
-        {/* Decision column ------------------------------------------ */}
         <div className="flex min-w-0 flex-col gap-4">
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -178,12 +170,10 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 </span>
               ) : null}
             </div>
-
             <h1 className="font-display text-2xl leading-tight font-extrabold text-ink-900 sm:text-3xl">
               {auction.product.title}
             </h1>
           </div>
-
           <BidBox
             auction={auction}
             onChanged={refresh}
@@ -220,15 +210,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </div>
         </div>
       </div>
-
-      {/* Details ---------------------------------------------------- */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
         <div className="flex min-w-0 flex-col gap-4">
           <Block title="Descriere">
             <p className="leading-relaxed whitespace-pre-line text-ink-700">
               {auction.product.description}
             </p>
-
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-[15px]">
               <div>
                 <dt className="text-ink-500">Stare</dt>
@@ -242,7 +229,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </div>
             </dl>
           </Block>
-
           <Block title="Oferte">
             <BidHistory
               bids={bids}
@@ -251,9 +237,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             />
           </Block>
         </div>
-
         <div className="flex min-w-0 flex-col gap-4">
-          {/* Cause ------------------------------------------------- */}
           <Link
             href={`/cauze/${auction.cause.slug}`}
             className="group rounded-3xl bg-white ring-1 ring-edge p-5 transition-transform hover:-translate-y-0.5"
@@ -286,8 +270,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               label={`${Math.round(causePercent)}% din obiectiv`}
             />
           </Link>
-
-          {/* Seller ------------------------------------------------ */}
           <Link
             href={`/profil/${auction.seller.username}`}
             className="group rounded-3xl bg-white ring-1 ring-edge p-5 transition-transform hover:-translate-y-0.5"
@@ -321,8 +303,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </Link>
         </div>
       </div>
-
-      {/* Fee detail, on request only -------------------------------- */}
       <Sheet
         open={feesOpen}
         onClose={() => setFeesOpen(false)}

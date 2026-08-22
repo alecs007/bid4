@@ -19,11 +19,6 @@ interface FieldContextValue {
 
 const FieldContext = createContext<FieldContextValue | null>(null);
 
-/**
- * Wraps one form control with its label, hint and error, and wires up the
- * aria-describedby / aria-invalid plumbing so every form in the app is
- * accessible by construction rather than by remembering.
- */
 export function Field({
   label,
   hint,
@@ -37,7 +32,6 @@ export function Field({
   hint?: ReactNode;
   error?: string;
   required?: boolean;
-  /** Show a quiet "(opțional)" instead of a required marker. */
   optionalLabel?: boolean;
   className?: string;
   children: ReactNode;
@@ -93,7 +87,6 @@ export function Field({
   );
 }
 
-/** Controls call this to inherit ids from their surrounding <Field>. */
 function useFieldProps() {
   const context = useContext(FieldContext);
   if (!context) return {};
@@ -105,22 +98,15 @@ function useFieldProps() {
   };
 }
 
-/**
- * A white field with a hairline ring. Grey-on-grey disappeared against the
- * canvas, so the field carries its own surface and reads as somewhere to type
- * wherever it is placed.
- */
 const CONTROL_BASE =
-  "w-full rounded-2xl bg-white ring-1 ring-edge text-ink-900 placeholder:text-ink-500 " +
+  "w-full rounded-2xl bg-white text-ink-900 placeholder:text-ink-500 " +
   "ring-1 ring-ink-200 transition-[box-shadow] hover:ring-ink-300 " +
   "focus:ring-2 focus:ring-primary-500 focus-visible:outline-none " +
   "aria-[invalid]:ring-2 aria-[invalid]:ring-danger-500 " +
   "disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400";
 
 export interface InputProps extends ComponentPropsWithoutRef<"input"> {
-  /** Static content glued to the start, e.g. an icon. */
   leading?: ReactNode;
-  /** Static content glued to the end, e.g. "lei". */
   trailing?: ReactNode;
   ref?: Ref<HTMLInputElement>;
 }
@@ -210,10 +196,6 @@ export function Checkbox({
   );
 }
 
-/**
- * A big tappable radio card — the pattern used for delivery methods, donation
- * presets and account type. Far friendlier than a native radio on mobile.
- */
 export function RadioCard({
   label,
   description,
@@ -243,7 +225,6 @@ export function RadioCard({
           "hover:bg-ink-200/70 peer-checked:bg-primary-50 peer-checked:ring-2 peer-checked:ring-primary-500",
           "peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
           "peer-disabled:cursor-not-allowed peer-disabled:opacity-60",
-          // The dot lives inside the label, so it is styled through the label.
           "peer-checked:[&_[data-dot]]:ring-[6px] peer-checked:[&_[data-dot]]:ring-primary-600",
         )}
       >

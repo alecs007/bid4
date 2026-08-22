@@ -12,12 +12,6 @@ import { ACCOUNT_TYPE, USER_ROLE } from "@/lib/labels";
 import { cn } from "@/lib/utils/cn";
 import { Avatar, Badge, Button, Skeleton, useToast } from "@/components/ui";
 
-/**
- * Dev-only floating widget: hop between the four seed accounts without logging
- * out, and reset the mock world when the seeded data drifts too far.
- *
- * Rendered only when NEXT_PUBLIC_SHOW_DEV_TOOLS is on and never in production.
- */
 export function DevRoleSwitcher() {
   const [open, setOpen] = useState(false);
   const { user, switchAccount, logout } = useAuth();
@@ -54,7 +48,6 @@ export function DevRoleSwitcher() {
               <Icons.close aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
-
           <div className="flex flex-col gap-1.5">
             {loading
               ? Array.from({ length: 4 }).map((_, index) => (
@@ -97,7 +90,6 @@ export function DevRoleSwitcher() {
                   );
                 })}
           </div>
-
           <div className="mt-3 flex gap-2 border-t border-line pt-3">
             <Button
               variant="secondary"

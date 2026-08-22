@@ -8,11 +8,6 @@ import { formatMoney, progressPercent } from "@/lib/money";
 import type { CauseDetail } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Causes are the emotional half of the product, so their card is deliberately
- * larger and more editorial than a listing tile: a wide image, the name set
- * over it, and the money underneath where it reads as a promise kept.
- */
 export function CauseCard({
   cause,
   className,
@@ -40,8 +35,6 @@ export function CauseCard({
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
         />
-
-        {/* Scrim so the name stays readable over any artwork. */}
         <div
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-900/85 via-ink-900/35 to-transparent"
@@ -70,7 +63,6 @@ export function CauseCard({
           </Link>
         </div>
       </div>
-
       <div className="px-3 pt-4 pb-3">
         <div className="flex items-baseline justify-between gap-3">
           <span className="numeric font-display text-2xl leading-none font-extrabold text-ink-900">
@@ -85,7 +77,6 @@ export function CauseCard({
             {Math.round(percent)}%
           </span>
         </div>
-
         <div
           role="progressbar"
           aria-valuenow={Math.round(percent)}
@@ -102,7 +93,6 @@ export function CauseCard({
             style={{ width: `${Math.min(100, percent)}%` }}
           />
         </div>
-
         <p className="mt-2 text-sm text-ink-500">
           din {formatMoney(cause.goalAmount, { compact: true })}
           {cause.supporterCount > 0
@@ -141,7 +131,6 @@ export function CauseGrid({
   skeletonCount?: number;
   emptyState?: React.ReactNode;
 }) {
-  // Bigger tiles than listings: one per row on a phone, so each one lands.
   const grid = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 
   if (loading) {

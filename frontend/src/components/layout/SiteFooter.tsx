@@ -52,7 +52,6 @@ export function SiteFooter() {
               </p>
             </div>
           </div>
-
           <div className="grid gap-8 sm:grid-cols-3">
             {COLUMNS.map((column) => (
               <div key={column.title}>
@@ -75,7 +74,6 @@ export function SiteFooter() {
             ))}
           </div>
         </div>
-
         <div className="mt-10 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-ink-500">
             © {new Date().getFullYear()} bid4. Toate drepturile rezervate.

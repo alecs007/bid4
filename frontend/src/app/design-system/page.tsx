@@ -168,7 +168,6 @@ export default function DesignSystemPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* Header ------------------------------------------------------------ */}
       <header className="mb-12 flex flex-col gap-6 rounded-4xl bg-white ring-1 ring-edge p-6 sm:p-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Logo size="lg" href={null} />
@@ -191,9 +190,7 @@ export default function DesignSystemPage() {
           </div>
         </div>
       </header>
-
       <div className="flex flex-col gap-14">
-        {/* Palette --------------------------------------------------------- */}
         <Section
           id="culori"
           title="Culori"
@@ -223,8 +220,6 @@ export default function DesignSystemPage() {
             ))}
           </div>
         </Section>
-
-        {/* Typography ------------------------------------------------------ */}
         <Section
           id="tipografie"
           title="Tipografie"
@@ -252,8 +247,6 @@ export default function DesignSystemPage() {
             </p>
           </Card>
         </Section>
-
-        {/* Buttons --------------------------------------------------------- */}
         <Section
           id="butoane"
           title="Butoane"
@@ -273,7 +266,6 @@ export default function DesignSystemPage() {
                 <Button variant="link">Cum funcționează?</Button>
               </div>
             </Card>
-
             <Card>
               <CardHeader title="Dimensiuni și stări" />
               <div className="flex flex-wrap items-center gap-3">
@@ -302,8 +294,6 @@ export default function DesignSystemPage() {
             </Card>
           </div>
         </Section>
-
-        {/* Badges ---------------------------------------------------------- */}
         <Section
           id="badge-uri"
           title="Badge-uri și stări"
@@ -371,8 +361,6 @@ export default function DesignSystemPage() {
             </Card>
           </div>
         </Section>
-
-        {/* Cards & stats --------------------------------------------------- */}
         <Section
           id="carduri"
           title="Carduri, statistici, avatare"
@@ -405,7 +393,6 @@ export default function DesignSystemPage() {
                 label="Comenzi livrate la timp"
               />
             </div>
-
             <div className="grid gap-5 md:grid-cols-3">
               <Card>
                 <IconBubble tone="primary" size="lg">
@@ -419,7 +406,6 @@ export default function DesignSystemPage() {
                   icon, nu prin fundal.
                 </p>
               </Card>
-
               <Card interactive>
                 <CardHeader
                   title="Card interactiv"
@@ -428,7 +414,6 @@ export default function DesignSystemPage() {
                 />
                 <GoalProgress raised={lei(18_400)} goal={lei(25_000)} compact />
               </Card>
-
               <Card>
                 <CardHeader title="Oameni" subtitle="Avatare și grupuri" />
                 <div className="flex flex-wrap items-center gap-3">
@@ -452,7 +437,6 @@ export default function DesignSystemPage() {
                 </div>
               </Card>
             </div>
-
             <Card surface="subtle" padded="lg">
               <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
                 <StatInline value="12.480" label="Oferte plasate" />
@@ -466,8 +450,6 @@ export default function DesignSystemPage() {
             </Card>
           </div>
         </Section>
-
-        {/* Progress -------------------------------------------------------- */}
         <Section
           id="progres"
           title="Progres către obiectiv"
@@ -493,8 +475,6 @@ export default function DesignSystemPage() {
             </div>
           </Card>
         </Section>
-
-        {/* Countdown ------------------------------------------------------- */}
         <Section
           id="countdown"
           title="Countdown live"
@@ -548,8 +528,6 @@ export default function DesignSystemPage() {
             </div>
           </Card>
         </Section>
-
-        {/* Fee breakdown --------------------------------------------------- */}
         <Section
           id="comisioane"
           title="Împărțirea banilor"
@@ -575,8 +553,6 @@ export default function DesignSystemPage() {
             />
           </div>
         </Section>
-
-        {/* Forms ----------------------------------------------------------- */}
         <Section
           id="formulare"
           title="Formulare"
@@ -586,8 +562,6 @@ export default function DesignSystemPage() {
             <FormPlayground />
           </Card>
         </Section>
-
-        {/* Feedback -------------------------------------------------------- */}
         <Section
           id="feedback"
           title="Mesaje, stări goale și încărcare"
@@ -608,7 +582,6 @@ export default function DesignSystemPage() {
                 Banca a respins tranzacția. Încearcă alt card în următoarele 24h.
               </Alert>
             </div>
-
             <div className="grid gap-5 md:grid-cols-2">
               <EmptyState
                 title="Nicio ofertă încă"
@@ -619,7 +592,6 @@ export default function DesignSystemPage() {
                 action={<Button variant="secondary">Încearcă din nou</Button>}
               />
             </div>
-
             <Card>
               <CardHeader title="Schelete de încărcare" />
               <div className="grid gap-5 md:grid-cols-2">
@@ -632,8 +604,6 @@ export default function DesignSystemPage() {
             </Card>
           </div>
         </Section>
-
-        {/* Interactive ----------------------------------------------------- */}
         <Section
           id="interactiune"
           title="Interacțiuni"
@@ -648,8 +618,6 @@ export default function DesignSystemPage() {
             </div>
           </Card>
         </Section>
-
-        {/* Mascot ---------------------------------------------------------- */}
         <Section
           id="mascota"
           title="Mascota"
@@ -666,8 +634,6 @@ export default function DesignSystemPage() {
             </div>
           </Card>
         </Section>
-
-        {/* Icons ----------------------------------------------------------- */}
         <Section
           id="iconite"
           title="Iconițe"
@@ -702,8 +668,6 @@ export default function DesignSystemPage() {
             </p>
           </Card>
         </Section>
-
-        {/* Shipping label -------------------------------------------------- */}
         <Section
           id="eticheta"
           title="Eticheta de expediere"

@@ -17,7 +17,6 @@ import {
   useToast,
 } from "@/components/ui";
 
-/** Interactive corner of the showcase: state-bearing demos live here. */
 export function FormPlayground() {
   const [amount, setAmount] = useState("120");
   const [delivery, setDelivery] = useState("easybox");
@@ -33,7 +32,6 @@ export function FormPlayground() {
         >
           <Input placeholder="ex. Bicicletă de oraș, cadru aluminiu" />
         </Field>
-
         <Field label="Preț de pornire" required>
           <Input
             inputMode="decimal"
@@ -42,7 +40,6 @@ export function FormPlayground() {
             trailing="lei"
           />
         </Field>
-
         <Field
           label="Procent donat"
           error="Alege un procent între 5 și 100."
@@ -50,7 +47,6 @@ export function FormPlayground() {
         >
           <Input defaultValue="120" inputMode="numeric" trailing="%" />
         </Field>
-
         <Field label="Categorie">
           <Select
             ariaLabel="Categorie"
@@ -64,12 +60,10 @@ export function FormPlayground() {
           />
         </Field>
       </div>
-
       <div className="flex flex-col gap-4">
         <Field label="Descriere" hint="Menționează starea, defectele și accesoriile.">
           <Textarea placeholder="Povestește-ne despre produs..." rows={5} />
         </Field>
-
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1.5 font-display text-sm font-bold text-ink-800">
             Metodă de livrare
@@ -91,7 +85,6 @@ export function FormPlayground() {
             onChange={() => setDelivery("curier")}
           />
         </fieldset>
-
         <Checkbox
           label="Sunt de acord cu termenii bid4"
           description="Inclusiv politica de escrow și de returnare."

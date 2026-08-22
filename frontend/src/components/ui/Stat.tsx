@@ -4,10 +4,6 @@ import { cn } from "@/lib/utils/cn";
 import type { Tone } from "@/lib/labels";
 import { IconBubble } from "./Card";
 
-/**
- * Impact numbers. Used on the homepage, the dashboards and the admin overview.
- * Values are always pre-formatted by the caller (money via lib/money).
- */
 export function Stat({
   label,
   value,
@@ -59,7 +55,6 @@ export function Stat({
   );
 }
 
-/** Borderless variant for hero bands where the background already carries tone. */
 export function StatInline({
   label,
   value,

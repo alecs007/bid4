@@ -7,22 +7,12 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import type { UserRole } from "@/lib/types";
 import { Button, ButtonLink, EmptyState, SkeletonStats } from "@/components/ui";
 
-/**
- * Client-side route protection.
- *
- * TODO(backend): this is a UX guard, not a security boundary — the real
- * enforcement is Spring Security on every endpoint. Once middleware can read
- * the JWT cookie, add a `proxy.ts` matcher for `/cont`, `/operator` and
- * `/admin` so unauthorised users never even get the HTML.
- */
 export function RouteGuard({
   children,
   roles,
-  /** Where to send anonymous visitors. */
   redirectTo = "/autentificare",
 }: {
   children: ReactNode;
-  /** Omit to require only that someone is signed in. */
   roles?: UserRole[];
   redirectTo?: string;
 }) {
@@ -78,22 +68,18 @@ export function RouteGuard({
   return <>{children}</>;
 }
 
-/** Any signed-in user. */
 export function RequireUser({ children }: { children: ReactNode }) {
   return <RouteGuard>{children}</RouteGuard>;
 }
 
-/** Staff moderation area: OPERATOR and ADMIN. */
 export function RequireOperator({ children }: { children: ReactNode }) {
   return <RouteGuard roles={["OPERATOR", "ADMIN"]}>{children}</RouteGuard>;
 }
 
-/** Platform administration: ADMIN only. */
 export function RequireAdmin({ children }: { children: ReactNode }) {
   return <RouteGuard roles={["ADMIN"]}>{children}</RouteGuard>;
 }
 
-/** Inline sign-in prompt for actions that need an account. */
 export function SignInPrompt({ message }: { message: string }) {
   const router = useRouter();
   return (

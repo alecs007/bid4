@@ -16,7 +16,6 @@ export default function CausesPage() {
       <h1 className="mb-4 font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
         Cauze
       </h1>
-
       <Suspense
         fallback={
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

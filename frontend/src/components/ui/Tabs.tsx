@@ -9,15 +9,9 @@ import { cn } from "@/lib/utils/cn";
 export interface SegmentOption<T extends string> {
   value: T;
   label: ReactNode;
-  /** Small count pill, e.g. how many orders sit in this state. */
   count?: number;
 }
 
-/**
- * Pill switcher for filters and small view toggles. Keyboard-accessible by
- * being real radio inputs under the hood would be heavier than needed here, so
- * it uses a tablist with roving buttons.
- */
 export function SegmentedControl<T extends string>({
   options,
   value,
@@ -86,7 +80,6 @@ export interface NavTabItem {
   count?: number;
 }
 
-/** Underlined link tabs for dashboard sections. Highlights the active route. */
 export function NavTabs({
   items,
   className,

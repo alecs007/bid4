@@ -3,15 +3,6 @@
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Pagination that always fits one row, phone included.
- *
- * The first and last page are always reachable, the current page always has
- * its neighbours, and the gaps collapse into an ellipsis. On small screens the
- * neighbours are hidden rather than wrapped, which keeps the control to seven
- * slots at most: ← 1 … 5 … 12 →
- */
-
 type Slot = number | "gap-start" | "gap-end";
 
 function buildSlots(page: number, totalPages: number): Slot[] {
@@ -48,7 +39,6 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   const slots = buildSlots(page, totalPages);
-  // Short ranges fit on a phone as they are; only long ones need trimming.
   const trimOnMobile = totalPages > 5;
   const go = (next: number) => onChange(Math.min(Math.max(next, 1), totalPages));
 
@@ -87,7 +77,6 @@ export function Pagination({
         }
 
         const isCurrent = slot === page;
-        // Neighbours are the first thing to go when the row gets tight.
         const isNeighbour =
           trimOnMobile && !isCurrent && slot !== 1 && slot !== totalPages;
 

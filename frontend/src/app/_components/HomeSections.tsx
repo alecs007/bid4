@@ -17,7 +17,6 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import { formatMoney } from "@/lib/money";
 
-/** A heading and its "see all" link. No explanatory subtitle. */
 function RowHeader({
   id,
   title,
@@ -47,19 +46,9 @@ function RowHeader({
   );
 }
 
-/**
- * The impact figures, as one line rather than a row of tiles.
- * The total is the story; the rest are supporting detail, so they are sized
- * accordingly instead of each getting its own card.
- */
 export function ImpactLine() {
   const { data } = useApi(() => getPlatformStats(), "platform-stats");
 
-  /**
-   * No skeleton here: the figures roll up from zero when they land. The row
-   * reserves its height and the number reserves its width, so nothing around
-   * it moves while it counts.
-   */
   return (
     <div className="flex min-h-[4.25rem] flex-wrap content-start items-baseline gap-x-6 gap-y-1 text-left sm:min-h-[2.75rem]">
       <p className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
@@ -90,7 +79,6 @@ export function ImpactLine() {
   );
 }
 
-/** Both homepage rows come from one call; each renders on its own. */
 function useFeatured() {
   const { user } = useAuth();
   return useApi(
@@ -206,7 +194,6 @@ export function TrendingCauses() {
   );
 }
 
-/** Category shortcuts, sized for a thumb on mobile. */
 export function CategoryRow({
   categories,
 }: {

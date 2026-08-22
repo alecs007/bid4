@@ -30,7 +30,6 @@ const STEPS = [
 export default function HomePage() {
   return (
     <main className="flex flex-col">
-      {/* Hero ---------------------------------------------------------- */}
       <section className="bg-white">
         <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pt-4 pb-8 sm:gap-8 sm:px-6 sm:pt-8 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:px-8 lg:pt-14 lg:pb-16">
           <div>
@@ -39,12 +38,10 @@ export default function HomePage() {
               <br />
               <span className="text-primary-600">Ajuți.</span>
             </h1>
-
             <p className="mt-3 max-w-lg text-ink-600 sm:mt-4 sm:text-lg">
               Cumperi lucruri care îți plac. O parte din preț ajunge la o cauză
               verificată, iar banii stau la noi până îți vine coletul.
             </p>
-
             <div className="mt-5 flex gap-2.5">
               <ButtonLink href="/licitatii" size="lg" className="flex-1 sm:flex-none">
                 Vezi licitațiile
@@ -58,12 +55,10 @@ export default function HomePage() {
                 Vezi cauzele
               </ButtonLink>
             </div>
-
             <div className="mt-6">
               <ImpactLine />
             </div>
           </div>
-
           <div className="order-first flex justify-center lg:order-none lg:justify-end">
             <div className="relative">
               <div
@@ -81,16 +76,11 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-10 sm:px-6 lg:gap-14 lg:px-8 lg:py-14">
         <EndingSoonRow />
-
         <CategoryRow categories={PRODUCT_CATEGORIES} />
-
         <PopularRow />
-
         <TrendingCauses />
-
         <section
           aria-labelledby="start-cause"
           className="overflow-hidden rounded-3xl bg-white ring-1 ring-edge"
@@ -124,8 +114,6 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-
-        {/* How it works ------------------------------------------------ */}
         <section aria-labelledby="how">
           <h2
             id="how"
@@ -133,7 +121,6 @@ export default function HomePage() {
           >
             Cum funcționează
           </h2>
-
           <ol className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             {STEPS.map((step) => (
               <li key={step.title} className="rounded-3xl bg-white ring-1 ring-edge p-5">
@@ -148,8 +135,6 @@ export default function HomePage() {
             ))}
           </ol>
         </section>
-
-        {/* Closing CTA ------------------------------------------------- */}
         <section className="rounded-3xl bg-white ring-1 ring-edge px-5 py-10 text-center sm:px-12">
           <Mascot mood="happy" size={80} className="mx-auto" />
           <h2 className="mt-3 font-display text-xl font-extrabold text-ink-900 sm:text-2xl">

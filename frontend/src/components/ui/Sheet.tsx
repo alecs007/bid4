@@ -5,14 +5,6 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * A bottom sheet: the mobile pattern for anything with more than a couple of
- * controls. It slides up over the page, scrolls internally, and keeps its
- * primary action pinned to the bottom where a thumb can reach it.
- *
- * Preferred over a dropdown on small screens, which traps content in a
- * cramped, awkwardly-positioned box.
- */
 export function Sheet({
   open,
   onClose,
@@ -67,7 +59,6 @@ export function Sheet({
         onClick={onClose}
         className="absolute inset-0 cursor-default bg-ink-900/40 animate-fade-in"
       />
-
       <div
         ref={panelRef}
         role="dialog"
@@ -95,7 +86,6 @@ export function Sheet({
             <Icons.close aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
-
         <div
           data-lenis-prevent
           className="min-h-0 flex-1 overflow-y-auto px-5 pb-4"

@@ -38,9 +38,7 @@ export function Avatar({
   name: string;
   src?: string;
   size?: AvatarSize;
-  /** Organisations get a squarer frame and a building glyph fallback. */
   accountType?: AccountType;
-  /** Green tick for verified organisers. */
   verified?: boolean;
   className?: string;
 }) {
@@ -84,7 +82,6 @@ export function Avatar({
   );
 }
 
-/** Overlapping avatars, e.g. "cine mai licitează aici". */
 export function AvatarStack({
   people,
   max = 4,

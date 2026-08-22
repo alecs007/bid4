@@ -6,10 +6,6 @@ import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 
-/**
- * Accessible dialog: Escape to close, backdrop click to close, focus moved in
- * on open and returned to the trigger on close, background scroll locked.
- */
 export function Modal({
   open,
   onClose,
@@ -73,7 +69,6 @@ export function Modal({
         onClick={onClose}
         className="absolute inset-0 cursor-default bg-ink-900/40 backdrop-blur-[2px]"
       />
-
       <div
         ref={panelRef}
         role="dialog"

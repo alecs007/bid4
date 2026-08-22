@@ -49,25 +49,6 @@ import {
   LuX,
 } from "react-icons/lu";
 
-/**
- * ============================================================================
- * ICON REGISTRY  —  the one place to swap in your own artwork
- * ============================================================================
- *
- * Every icon in the app is referenced through this file by MEANING, never by
- * library name. Components import `Icons.donation`, not `LuHeartHandshake`.
- *
- * TO REPLACE AN ICON WITH YOUR OWN SVG:
- *   1. Write a component in the "custom icons" section below, following the
- *      `LeafHeartIcon` template: accept `className`, use `currentColor` for
- *      every stroke and fill, and keep a 24x24 viewBox.
- *   2. Point the registry entry at it, e.g. `donation: LeafHeartIcon`.
- *   3. Done. Every screen that shows that icon updates at once.
- *
- * Sizing and colour are always applied by the consumer through `className`
- * (`h-5 w-5 text-primary-700`), so an icon must never hard-code either.
- */
-
 export interface IconProps {
   className?: string;
   "aria-hidden"?: boolean | "true" | "false";
@@ -76,13 +57,6 @@ export interface IconProps {
 
 export type Icon = ComponentType<IconProps>;
 
-/* ---------------------------------------------------------------------------
- * Custom icons
- *
- * `LeafHeartIcon` is the working template: copy its shape, replace the paths.
- * ------------------------------------------------------------------------ */
-
-/** bid4's own mark: a heart with a leaf sprout. Used for donation moments. */
 export function LeafHeartIcon({ className, ...props }: IconProps) {
   return (
     <svg
@@ -101,7 +75,6 @@ export function LeafHeartIcon({ className, ...props }: IconProps) {
   );
 }
 
-/** A parcel handed over. Nicer than a plain box for fulfilment moments. */
 export function ParcelIcon({ className, ...props }: IconProps) {
   return (
     <svg
@@ -122,15 +95,7 @@ export function ParcelIcon({ className, ...props }: IconProps) {
   );
 }
 
-/* ---------------------------------------------------------------------------
- * The registry
- *
- * Left column: what the icon MEANS in bid4.
- * Right column: what currently draws it. Replace freely.
- * ------------------------------------------------------------------------ */
-
 export const Icons = {
-  /* --- domain ---------------------------------------------------------- */
   auction: LuGavel,
   donation: LeafHeartIcon,
   cause: LuHeartHandshake,
@@ -148,12 +113,10 @@ export const Icons = {
   watchlist: LuBookmark,
   impact: LuSparkles,
 
-  /* --- time ------------------------------------------------------------ */
   clock: LuClock,
   urgent: LuFlame,
   calendar: LuCalendar,
 
-  /* --- feedback -------------------------------------------------------- */
   success: LuCircleCheck,
   error: LuCircleAlert,
   warning: LuTriangleAlert,
@@ -161,7 +124,6 @@ export const Icons = {
   help: LuCircleHelp,
   notification: LuBell,
 
-  /* --- actions --------------------------------------------------------- */
   add: LuPlus,
   edit: LuPencil,
   remove: LuTrash2,
@@ -178,7 +140,6 @@ export const Icons = {
   collapse: LuChevronUp,
   loading: LuLoaderCircle,
 
-  /* --- account --------------------------------------------------------- */
   settings: LuSettings,
   account: LuUser,
   menu: LuMenu,

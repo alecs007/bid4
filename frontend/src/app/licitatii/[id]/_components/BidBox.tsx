@@ -25,15 +25,6 @@ import type { AuctionDetail } from "@/lib/types";
 import { errorMessage } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Bidding, in two shapes from one source of truth.
- *
- * On a phone the price and the button live in a bar pinned to the bottom of
- * the screen, so the action is always a thumb away no matter how far the user
- * has scrolled. Tapping it opens a sheet with the amount. On desktop the same
- * content sits in the right column.
- */
-
 function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const { user } = useAuth();
   const toast = useToast();
@@ -119,7 +110,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   };
 }
 
-/** Amount field plus the quick steps, shared by the sheet and the desktop box. */
 function AmountForm({
   bidding,
   auction,
@@ -179,7 +169,6 @@ function AmountForm({
           );
         })}
       </div>
-
       <Button type="submit" size="lg" fullWidth loading={pending}>
         {bidding.isLeading ? "Mărește oferta" : "Licitează"}
       </Button>
@@ -187,10 +176,6 @@ function AmountForm({
   );
 }
 
-/**
- * How a finished auction reports itself: the hammer price, who took it, and
- * what the sale sent to the cause. The winner gets a route to their order.
- */
 function Result({
   auction,
   viewerId,
@@ -236,12 +221,10 @@ function Result({
         <Icons.success aria-hidden="true" className="h-4 w-4" />
         {viewerWon ? "Ai câștigat!" : "Vândut"}
       </p>
-
       <p className="mt-2 text-sm text-ink-500">Preț final</p>
       <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900">
         {formatMoney(auction.currentPrice)}
       </p>
-
       <dl className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-[15px]">
         <div className="flex items-center justify-between gap-3">
           <dt className="text-ink-500">Câștigător</dt>
@@ -286,7 +269,6 @@ export function BidBox({
 }: {
   auction: AuctionDetail;
   onChanged: () => void;
-  /** Pseudonymised name of the winning bidder, from the bid history. */
   winnerName?: string;
 }) {
   const bidding = useBidding(auction, onChanged);
@@ -306,7 +288,6 @@ export function BidBox({
     undo,
   } = bidding;
 
-  /* --- what to show in place of the form ------------------------------- */
   const blocker = !live ? (
     <p className="text-ink-600">
       {auction.status === "SCHEDULED"
@@ -348,14 +329,12 @@ export function BidBox({
     </div>
   );
 
-  /** Shown once the viewer holds the top bid. */
   const leadingPanel = isLeading ? (
     <div className="mt-4 flex flex-col gap-3">
       <p className="flex items-center gap-2 font-bold text-primary-800">
         <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
         Ești cel mai bun ofertant
       </p>
-
       <div className="flex gap-2">
         <Button
           size="lg"
@@ -393,7 +372,6 @@ export function BidBox({
     <>
       {celebrate > 0 ? <Confetti trigger={celebrate} count={30} /> : null}
 
-      {/* Desktop: the decision column ---------------------------------- */}
       <div className="hidden rounded-3xl bg-white ring-1 ring-edge p-5 lg:block">
         {priceBlock}
         {isLeading ? (
@@ -404,8 +382,6 @@ export function BidBox({
           </div>
         )}
       </div>
-
-      {/* Mobile: price inline, action pinned to the bottom -------------- */}
       <div className="rounded-3xl bg-white ring-1 ring-edge p-5 lg:hidden">{priceBlock}</div>
 
       {live && !isSeller ? (

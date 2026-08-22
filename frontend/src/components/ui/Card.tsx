@@ -3,16 +3,8 @@ import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { Tone } from "@/lib/labels";
 
-/**
- * Surfaces are white (or a warm neutral) with a ring — never a colour wash.
- * Colour enters a card through its content: a tinted icon chip, a badge, a
- * number. That keeps dense screens calm and stops tone from carrying meaning
- * it cannot reliably convey.
- */
 export interface CardProps extends ComponentPropsWithoutRef<"div"> {
-  /** `subtle` is a warm neutral for grouping inside an existing card. */
   surface?: "white" | "subtle";
-  /** Adds a hover lift. Use only when the whole card is clickable. */
   interactive?: boolean;
   padded?: boolean | "sm" | "lg" | false;
   as?: ElementType;
@@ -79,10 +71,6 @@ export function CardHeader({
   );
 }
 
-/**
- * A small round icon chip — the sanctioned way to bring colour into a card.
- * Chip-scale only; never stretch this into a background.
- */
 export function IconBubble({
   tone = "primary",
   size = "md",
@@ -125,7 +113,6 @@ export function IconBubble({
   );
 }
 
-/** Quiet label above a group of rows. Sentence case, never shouted. */
 export function SectionLabel({
   children,
   className,

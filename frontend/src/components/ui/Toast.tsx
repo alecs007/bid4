@@ -13,22 +13,12 @@ import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import type { Tone } from "@/lib/labels";
 
-/**
- * Toasts confirm that something happened: a bid landed, an order was
- * confirmed, a label downloaded, a cause was submitted. They are the standard
- * feedback channel for user actions — inline <Alert> stays for state that
- * belongs to the page itself.
- */
-
 export interface ToastOptions {
   title: string;
   description?: string;
   tone?: Tone;
-  /** Swap the default glyph; `Icons` in components/icons is the registry. */
   icon?: ReactNode;
-  /** Milliseconds on screen. Errors linger longer by default. */
   duration?: number;
-  /** One optional inline action, e.g. "Vezi comanda". */
   action?: { label: string; onClick: () => void };
 }
 
@@ -58,7 +48,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toast = useCallback((options: ToastOptions) => {
     sequence += 1;
     const id = `toast-${sequence}`;
-    // Keep the stack shallow: older toasts fall off the top.
     setToasts((current) => [...current.slice(-2), { ...options, id }]);
     return id;
   }, []);
@@ -91,8 +80,6 @@ export function useToast(): ToastApi {
   }
   return context;
 }
-
-/* -------------------------------------------------------------------------- */
 
 const CHIP_SOFT: Record<Tone, string> = {
   primary: "bg-primary-100 text-primary-900",
@@ -158,7 +145,6 @@ function ToastCard({
   const loud = tone === "danger" || tone === "warning" || tone === "sun";
   const [leaving, setLeaving] = useState(false);
 
-  // Both timers write state from a callback, never synchronously in the effect.
   useEffect(() => {
     const timeout = window.setTimeout(() => setLeaving(true), duration ?? 4500);
     return () => window.clearTimeout(timeout);
@@ -186,7 +172,6 @@ function ToastCard({
       >
         {icon ?? DEFAULT_ICONS[tone]}
       </span>
-
       <div className="min-w-0 flex-1">
         <p className="font-display font-bold text-ink-900">{title}</p>
         {description ? (
@@ -207,7 +192,6 @@ function ToastCard({
           </button>
         ) : null}
       </div>
-
       <button
         type="button"
         aria-label="Închide notificarea"

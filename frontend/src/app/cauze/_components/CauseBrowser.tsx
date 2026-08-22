@@ -74,7 +74,6 @@ export function CauseBrowser() {
           leading={<Icons.search aria-hidden="true" className="h-4 w-4" />}
         />
       </form>
-
       <div className="flex flex-wrap gap-2">
         {CAUSE_CATEGORIES.map((category) => {
           const active = categories.includes(category.id);

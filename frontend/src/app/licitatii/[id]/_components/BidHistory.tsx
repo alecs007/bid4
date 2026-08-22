@@ -8,7 +8,6 @@ import type { BidWithBidder } from "@/lib/types";
 import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
-/** How many bids the page shows before the rest move into the sheet. */
 const INLINE_COUNT = 3;
 
 function BidRow({
@@ -41,13 +40,6 @@ function BidRow({
   );
 }
 
-/**
- * Bid history.
- *
- * Only the leading few are on the page; everything else lives behind one tap
- * in a scrolling sheet, so an auction with a thousand bids costs the same
- * amount of page as one with three.
- */
 export function BidHistory({
   bids,
   loading,
@@ -110,7 +102,6 @@ export function BidHistory({
         onClose={() => setOpen(false)}
         title={`${bids.length} oferte`}
       >
-        {/* One scroll container; the sheet caps its own height. */}
         <ul className="divide-y divide-line">
           {bids.map((bid, index) => (
             <BidRow key={bid.id} bid={bid} leading={index === 0} />

@@ -2,12 +2,6 @@
 
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Sliders for bounded numeric ranges: price, donation share, anything where
- * the shape of the range matters more than the exact digit. Native range
- * inputs underneath, so keyboard and screen-reader support come for free.
- */
-
 const THUMB =
   "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 " +
   "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full " +
@@ -28,7 +22,6 @@ function percent(value: number, min: number, max: number): number {
   return ((value - min) / (max - min)) * 100;
 }
 
-/** Single-value slider. */
 export function Slider({
   value,
   min,
@@ -45,7 +38,6 @@ export function Slider({
   step?: number;
   onChange: (value: number) => void;
   label: string;
-  /** Renders the current value beside the label. */
   formatValue?: (value: number) => string;
   className?: string;
 }) {
@@ -57,7 +49,6 @@ export function Slider({
           {formatValue ? formatValue(value) : value}
         </span>
       </div>
-
       <div className="relative h-5">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink-200" />
         <div
@@ -79,7 +70,6 @@ export function Slider({
   );
 }
 
-/** Two-thumb slider for a min/max range. */
 export function RangeSlider({
   min,
   max,
@@ -110,7 +100,6 @@ export function RangeSlider({
           {format(low)} la {format(high)}
         </span>
       </div>
-
       <div className="relative h-5">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink-200" />
         <div
@@ -120,8 +109,6 @@ export function RangeSlider({
             right: `${100 - percent(high, min, max)}%`,
           }}
         />
-
-        {/* Both inputs overlay the track; only the thumbs take pointer events. */}
         <input
           type="range"
           min={min}

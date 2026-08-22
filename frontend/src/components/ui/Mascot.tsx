@@ -2,12 +2,6 @@ import { cn } from "@/lib/utils/cn";
 
 export type MascotMood = "happy" | "cheer" | "sad" | "thinking";
 
-/**
- * "Frunzel" — the bid4 mascot: a heart with a leaf sprout.
- *
- * Used sparingly: empty states, the winning moment, onboarding and the 404.
- * Never as decoration on dense data screens.
- */
 export function Mascot({
   mood = "happy",
   size = 120,
@@ -17,10 +11,8 @@ export function Mascot({
 }: {
   mood?: MascotMood;
   size?: number;
-  /** Gentle idle bob. Disabled automatically under prefers-reduced-motion. */
   floating?: boolean;
   className?: string;
-  /** Accessible name. Omit to keep the mascot purely decorative. */
   title?: string;
 }) {
   const ink = "#14401a";
@@ -35,7 +27,6 @@ export function Mascot({
       aria-hidden={title ? undefined : "true"}
       className={cn(floating && "animate-float", className)}
     >
-      {/* sprout */}
       <path
         d="M60 30 C60 20 62 12 67 6"
         stroke="#2f7a14"
@@ -51,23 +42,18 @@ export function Mascot({
         fill="#7fda3e"
         transform="rotate(-24 76 8)"
       />
-
-      {/* body */}
       <path
         d="M60 108 C18 80 6 56 6 40 C6 21 20 9 37 9 C48 9 56 15 60 24 C64 15 72 9 83 9 C100 9 114 21 114 40 C114 56 102 80 60 108 Z"
         fill="#58cc02"
       />
-      {/* soft top-light so the flat shape still feels round */}
       <path
         d="M37 9 C20 9 6 21 6 40 C6 46 8 53 12 61 C10 44 16 26 37 21 Z"
         fill="#7fda3e"
       />
-
-      {/* cheeks */}
       <ellipse cx="33" cy="66" rx="7" ry="5" fill="#ff9e85" opacity="0.85" />
       <ellipse cx="87" cy="66" rx="7" ry="5" fill="#ff9e85" opacity="0.85" />
 
-      {/* eyes */}
+      
       {mood === "cheer" ? (
         <>
           <path
@@ -94,7 +80,7 @@ export function Mascot({
         </>
       )}
 
-      {/* eyebrow, for the thinking mood */}
+      
       {mood === "thinking" ? (
         <path
           d="M68 34 L86 30"
@@ -104,7 +90,7 @@ export function Mascot({
         />
       ) : null}
 
-      {/* mouth */}
+      
       {mood === "sad" ? (
         <path
           d="M50 76 Q60 68 70 76"

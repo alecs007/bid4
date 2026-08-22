@@ -46,11 +46,6 @@ const STATUS_MAP: Record<StatusFilter, AuctionStatus[] | undefined> = {
   ENDED: ["SOLD", "ENDED", "UNSOLD"],
 };
 
-/**
- * The head of the page: the pictures on one side, who this is for and how far
- * along it is on the other. The gallery is the hero rather than a section of
- * its own further down.
- */
 function CauseHead({ cause }: { cause: CauseDetail }) {
   const frames = [cause.coverUrl, ...(cause.gallery ?? [])];
   const [active, setActive] = useState(0);
@@ -80,7 +75,7 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
           ) : null}
         </div>
 
-        {/* The strip scrolls within itself rather than widening the page. */}
+        
         {frames.length > 1 ? (
           <div
             data-lenis-prevent
@@ -113,13 +108,11 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
           </div>
         ) : null}
       </div>
-
       <div className="flex min-w-0 flex-col">
         <h1 className="font-display text-2xl leading-tight font-extrabold text-ink-900 sm:text-4xl">
           {cause.name}
         </h1>
         <p className="mt-2.5 text-ink-600">{cause.shortDescription}</p>
-
         <div className="mt-6 flex items-baseline justify-between gap-3">
           <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900 sm:text-4xl">
             {formatMoney(cause.raisedAmount, { compact: true })}
@@ -133,7 +126,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
             {Math.round(percent)}%
           </p>
         </div>
-
         <div
           role="progressbar"
           aria-valuenow={Math.round(percent)}
@@ -150,7 +142,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
             style={{ width: `${Math.min(100, percent)}%` }}
           />
         </div>
-
         <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[15px]">
           <div className="flex gap-1.5">
             <dt className="text-ink-500">Obiectiv</dt>
@@ -171,7 +162,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
             </dd>
           </div>
         </dl>
-
         <ButtonLink
           href={`/licitatii?causeId=${cause.id}`}
           size="lg"
@@ -241,7 +231,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
       <CauseHead cause={cause} />
-
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-8">
         <section className="min-w-0">
           <h2 className="mb-3 font-display text-xl font-extrabold text-ink-900">
@@ -251,7 +240,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
             {cause.story}
           </div>
         </section>
-
         <div className="flex min-w-0 flex-col gap-4">
           <section className="rounded-3xl bg-white p-5 ring-1 ring-edge">
             <div className="mb-3 flex items-center gap-2">
@@ -263,7 +251,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
                 Cauză verificată
               </h2>
             </div>
-
             <dl className="flex flex-col gap-2.5 text-[15px]">
               <div className="flex justify-between gap-3">
                 <dt className="shrink-0 text-ink-500">Entitate</dt>
@@ -297,7 +284,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
               </button>
             ) : null}
           </section>
-
           <Link
             href={`/profil/${cause.organizer.username}`}
             className="group rounded-3xl bg-white p-5 ring-1 ring-edge transition-transform hover:-translate-y-0.5"
@@ -327,7 +313,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
           </Link>
         </div>
       </div>
-
       <section aria-labelledby="cause-auctions">
         <h2
           id="cause-auctions"
@@ -335,7 +320,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
         >
           Licitații pentru cauză
         </h2>
-
         <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
           <div
             role="tablist"
@@ -360,7 +344,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
               </button>
             ))}
           </div>
-
           <div className="sm:ml-auto sm:w-56">
             <Select
               ariaLabel="Sortează"
@@ -371,7 +354,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
             />
           </div>
         </div>
-
         <AuctionGrid
           auctions={auctions?.items ?? []}
           loading={auctionsLoading}
@@ -391,7 +373,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
           }
         />
       </section>
-
       <Sheet
         open={docsOpen}
         onClose={() => setDocsOpen(false)}

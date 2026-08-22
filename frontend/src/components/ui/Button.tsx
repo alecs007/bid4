@@ -16,20 +16,12 @@ export type ButtonVariant =
 
 export type ButtonSize = "sm" | "md" | "lg" | "xl";
 
-/**
- * Chunky Duolingo-style button: a solid bottom edge that compresses on press.
- * The depth lives in the `btn-3d` utility (globals.css); each variant only
- * supplies its `--btn-edge` colour.
- *
- * Every solid variant pairs its surface with text at >= 4.5:1.
- */
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
     "bg-primary-600 text-white [--btn-edge:var(--color-primary-800)] hover:bg-primary-700",
   accent:
     "bg-accent-600 text-white [--btn-edge:var(--color-accent-800)] hover:bg-accent-700",
   sky: "bg-sky-600 text-white [--btn-edge:var(--color-sky-800)] hover:bg-sky-700",
-  // Yellow never carries white text — ink only.
   sun: "bg-sun-400 text-ink-900 [--btn-edge:var(--color-sun-600)] hover:bg-sun-300",
   danger:
     "bg-danger-600 text-white [--btn-edge:var(--color-danger-700)] hover:bg-danger-700",
@@ -62,7 +54,6 @@ interface CommonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
-  /** Square button for a single icon. Requires `aria-label`. */
   iconOnly?: boolean;
   loading?: boolean;
   leftIcon?: ReactNode;
@@ -145,7 +136,6 @@ export interface ButtonLinkProps
   extends CommonProps,
     Omit<ComponentPropsWithoutRef<typeof Link>, "children" | "className"> {}
 
-/** Same skin as `Button`, but it navigates. Use for real links, always. */
 export function ButtonLink({
   variant,
   size,

@@ -5,19 +5,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * A dropdown in the app's own clothes.
- *
- * The native `<select>` renders an OS menu that ignores every token in the
- * design system, so this is a listbox: a button that opens a themed panel.
- * Keyboard support matches the native control (arrows, Home/End, Enter,
- * Escape, and type-ahead is deliberately left out in favour of arrow keys).
- */
-
 export interface SelectOption<T extends string> {
   value: T;
   label: string;
-  /** Optional leading glyph, e.g. a category emoji. */
   prefix?: string;
 }
 

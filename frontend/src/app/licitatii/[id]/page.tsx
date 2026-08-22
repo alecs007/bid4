@@ -8,14 +8,6 @@ export const metadata: Metadata = {
     "Licitează pentru un obiect și trimite o parte din preț către o cauză verificată.",
 };
 
-/**
- * `params` is a Promise in this version of Next, so it must be awaited before
- * the id can be read.
- *
- * TODO(backend): once the API is live, fetch the auction here and pass it to
- * the client view as initial data, so the page can be server-rendered for
- * search engines and social previews.
- */
 export default async function AuctionPage({ params }: PageProps<"/licitatii/[id]">) {
   const { id } = await params;
 

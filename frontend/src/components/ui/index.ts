@@ -1,8 +1,3 @@
-/**
- * The bid4 design system. Feature code imports from `@/components/ui` only.
- * Anything used on more than one screen belongs here; one-offs stay colocated
- * with their feature.
- */
 export { Button, ButtonLink } from "./Button";
 export type { ButtonProps, ButtonLinkProps, ButtonVariant, ButtonSize } from "./Button";
 

@@ -36,39 +36,22 @@ const pad = (value: number) => String(value).padStart(2, "0");
 
 interface Segment {
   value: number;
-  /** Short unit shown next to the number. */
   short: string;
-  /** Full word, for the accessible label. */
   long: string;
 }
 
 export interface CountdownProps {
-  /** ISO instant the auction closes. */
   endTime: string;
-  /** Needed only when `showProgress` is on. */
   startTime?: string;
   size?: "lg" | "md" | "sm";
-  /** Prefix copy. Hidden at size "sm". */
   label?: string;
   endedLabel?: string;
   onEnd?: () => void;
-  /** Thin bar showing how much of the auction window is left. */
   showProgress?: boolean;
-  /** Bump when anti-sniping pushes `endTime` out; the timer flashes. */
   extensionCount?: number;
   className?: string;
 }
 
-/**
- * Live per-second countdown.
- *
- * One continuous line of numerals with quiet unit letters, rather than digits
- * boxed up one per unit: it reads as a single quantity of time, keeps its
- * rhythm as units drop away, and sits comfortably inside a card.
- *
- * Server and client render at different instants, so each numeral carries
- * `suppressHydrationWarning`; the first client tick reconciles them.
- */
 export function Countdown({
   endTime,
   startTime,
@@ -86,11 +69,6 @@ export function Countdown({
   );
   const urgency = urgencyOf(totalSeconds);
 
-  /**
-   * `flash` is derived: state only records which extension we finished
-   * celebrating, and it is written from a timer callback, never synchronously
-   * inside the effect.
-   */
   const [celebrated, setCelebrated] = useState(extensionCount);
   const flash = celebrated !== extensionCount;
 
@@ -114,7 +92,6 @@ export function Countdown({
     );
   }
 
-  /* Show at most three units: days drop the seconds, hours drop the days. */
   const segments: Segment[] =
     days > 0
       ? [
@@ -148,11 +125,6 @@ export function Countdown({
     sm: "text-xs",
   } as const;
 
-  /**
-   * How much of the auction window is left, derived from the ticking value
-   * rather than from a fresh clock read: the bar then updates with the digits,
-   * and render stays pure.
-   */
   const remainingPercent = (() => {
     if (!startTime) return 0;
     const windowSeconds =
@@ -179,8 +151,6 @@ export function Countdown({
 
       <div
         role="timer"
-        // The label names a moving quantity, so it mismatches on hydration
-        // exactly like the digits do.
         suppressHydrationWarning
         aria-label={`${label}: ${spoken}`}
         className={cn(
@@ -218,7 +188,6 @@ export function Countdown({
           aria-hidden="true"
         >
           <div
-            // The width is time-derived; same hydration story as the digits.
             suppressHydrationWarning
             className={cn(
               "h-full rounded-full transition-[width] duration-1000 ease-linear",
@@ -232,10 +201,6 @@ export function Countdown({
   );
 }
 
-/**
- * One-line variant for cards and table rows: an icon, then the two largest
- * units. Never wraps, never shifts width as the seconds tick.
- */
 export function CountdownInline({
   endTime,
   onEnd,

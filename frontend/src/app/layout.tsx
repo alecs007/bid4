@@ -8,10 +8,6 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
 
-/**
- * Nunito carries body/UI text, Baloo 2 carries display headings.
- * `latin-ext` is REQUIRED — Romanian diacritics (ă î â ș ț) live in that subset.
- */
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin", "latin-ext"],

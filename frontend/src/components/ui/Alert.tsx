@@ -4,14 +4,6 @@ import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import type { Tone } from "@/lib/labels";
 
-/**
- * A message on a plain white surface.
- *
- * Emphasis comes from the icon chip, not from the container: quiet tones get a
- * tinted chip, the two that must not be missed get a solid one. No colour
- * wash, no coloured rules, so a column of alerts still reads as a column.
- */
-
 const CHIP_SOFT: Record<Tone, string> = {
   primary: "bg-primary-100 text-primary-900",
   accent: "bg-accent-100 text-accent-900",
@@ -55,13 +47,11 @@ export function Alert({
 }: {
   tone?: Tone;
   title?: ReactNode;
-  /** Swap in any icon; `Icons` in components/icons is the registry. */
   icon?: ReactNode;
   action?: ReactNode;
   children?: ReactNode;
   className?: string;
 }) {
-  // The states a user must not scroll past get the loudest chip available.
   const loud = tone === "danger" || tone === "warning" || tone === "sun";
 
   return (
@@ -80,7 +70,6 @@ export function Alert({
       >
         {icon ?? DEFAULT_ICONS[tone]}
       </span>
-
       <div className="min-w-0 flex-1">
         {title ? (
           <p className="font-display font-bold text-ink-900">{title}</p>

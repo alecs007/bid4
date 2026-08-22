@@ -21,11 +21,9 @@ export function ProgressBar({
   label,
   className,
 }: {
-  /** 0–100. Clamped defensively. */
   value: number;
   tone?: Tone;
   size?: "sm" | "md" | "lg";
-  /** Accessible name, e.g. "Progres către obiectiv". */
   label?: string;
   className?: string;
 }) {
@@ -56,10 +54,6 @@ export function ProgressBar({
   );
 }
 
-/**
- * The cause-page hero number: how much has been raised out of the goal.
- * Reaching 100% is a celebratory moment, so it gets its own treatment.
- */
 export function GoalProgress({
   raised,
   goal,

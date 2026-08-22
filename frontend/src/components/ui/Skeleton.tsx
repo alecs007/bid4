@@ -1,9 +1,5 @@
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Loading placeholders. The mock layer deliberately waits 220–700 ms so these
- * are visible during development instead of flashing past.
- */
 export function Skeleton({ className }: { className?: string }) {
   return (
     <span
@@ -32,7 +28,6 @@ export function SkeletonText({
   );
 }
 
-/** Matches the footprint of an auction card so the grid does not jump. */
 export function SkeletonAuctionCard() {
   return (
     <div className="rounded-3xl bg-white ring-1 ring-edge p-2">
@@ -83,11 +78,6 @@ export function SkeletonRows({ count = 5 }: { count?: number }) {
   );
 }
 
-/**
- * Detail-page skeleton. Its geometry matches the real auction page exactly
- * (square gallery, chips, title, bid box, actions), so content replaces it
- * without the layout jumping.
- */
 export function SkeletonDetail() {
   return (
     <div
@@ -104,7 +94,6 @@ export function SkeletonDetail() {
             ))}
           </div>
         </div>
-
         <div className="flex flex-col gap-4">
           <div>
             <div className="mb-2 flex gap-2">
@@ -114,16 +103,13 @@ export function SkeletonDetail() {
             <Skeleton className="h-8 w-full" />
             <Skeleton className="mt-2 h-8 w-2/3" />
           </div>
-
           <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="mt-2 h-9 w-40" />
             <Skeleton className="mt-5 h-14 w-full rounded-2xl" />
             <Skeleton className="mt-3 h-13 w-full rounded-2xl" />
           </div>
-
           <Skeleton className="h-14 w-full rounded-2xl" />
-
           <div className="flex gap-2">
             <Skeleton className="h-11 flex-1 rounded-2xl" />
             <Skeleton className="h-11 flex-1 rounded-2xl" />
@@ -134,7 +120,6 @@ export function SkeletonDetail() {
   );
 }
 
-/** Stat-tile row skeleton for dashboards. */
 export function SkeletonStats({ count = 4 }: { count?: number }) {
   return (
     <div
@@ -158,10 +143,6 @@ export function SkeletonStats({ count = 4 }: { count?: number }) {
   );
 }
 
-/**
- * Fades content in when it replaces a skeleton, so the swap reads as one
- * motion instead of a hard cut. Pair every Suspense boundary with this.
- */
 export function Reveal({
   children,
   delayMs = 0,

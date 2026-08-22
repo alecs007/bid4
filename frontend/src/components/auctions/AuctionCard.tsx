@@ -13,14 +13,6 @@ import type { AuctionDetail } from "@/lib/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The listing card.
- *
- * The image is inset inside the card with its own radius, so the corners stay
- * consistent all the way round instead of the picture bleeding into the edge.
- * The whole card is clickable through a stretched link on the title, which
- * leaves the watch button free to sit on top without nesting controls.
- */
 export function AuctionCard({
   auction,
   className,
@@ -69,16 +61,10 @@ export function AuctionCard({
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
         />
-
-        {/* Donation share: the one number worth interrupting the picture for. */}
         <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-sm font-extrabold text-primary-800 backdrop-blur-sm">
           <Icons.donation aria-hidden="true" className="h-4 w-4" />
           {auction.donationPercent}%
         </span>
-
-        {/* The cause rides the bottom of the picture: visible at a glance,
-            and it costs the card no extra height. "#bid4 <cauza>" is the
-            brand pun said out loud: bid for. */}
         <span className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-lg bg-white/95 py-1 pr-2 pl-1 backdrop-blur-sm">
           <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-md bg-ink-100">
             <Image
@@ -95,7 +81,6 @@ export function AuctionCard({
             <span className="text-ink-700">{auction.cause.name}</span>
           </span>
         </span>
-
         <button
           type="button"
           onClick={handleWatch}
@@ -115,7 +100,6 @@ export function AuctionCard({
           />
         </button>
       </div>
-
       <div className="flex flex-1 flex-col px-2 pt-2 pb-1.5">
         <Link
           href={`/licitatii/${auction.id}`}
@@ -125,7 +109,6 @@ export function AuctionCard({
             {auction.product.title}
           </span>
         </Link>
-
         <div className="mt-auto flex items-end justify-between gap-1.5 pt-2.5">
           <span className="numeric shrink-0 font-display text-xl leading-none font-extrabold tracking-tight whitespace-nowrap text-ink-900 sm:text-2xl">
             {formatMoney(auction.currentPrice, { compact: true })}
@@ -153,7 +136,6 @@ export function AuctionCard({
   );
 }
 
-/** Grid + skeletons, so every listing surface loads the same way. */
 export function AuctionGrid({
   auctions,
   loading,
@@ -167,7 +149,6 @@ export function AuctionGrid({
   columns?: 3 | 4;
   emptyState?: React.ReactNode;
 }) {
-  // Two across on phones: a shopper should see several items without scrolling.
   const gridClass = cn(
     "grid grid-cols-2 gap-3 sm:gap-4",
     columns === 4 ? "lg:grid-cols-4" : "md:grid-cols-3",
