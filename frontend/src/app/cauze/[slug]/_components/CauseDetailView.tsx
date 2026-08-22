@@ -208,7 +208,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-10">
+    <div className="animate-fade-up flex flex-col gap-8 sm:gap-10">
       <CauseHead cause={cause} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-8">
         <section className="min-w-0">

@@ -146,7 +146,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   );
 
   return (
-    <div className="flex flex-col gap-4 pb-24 lg:pb-0">
+    <div className="animate-fade-up flex flex-col gap-4 pb-24 lg:pb-0">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0">
           <Gallery

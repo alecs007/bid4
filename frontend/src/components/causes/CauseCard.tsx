@@ -6,14 +6,17 @@ import { Skeleton } from "@/components/ui";
 import { CAUSE_CATEGORIES } from "@/lib/config";
 import { formatMoney, progressPercent } from "@/lib/money";
 import type { CauseDetail } from "@/lib/types";
+import { revealDelay } from "@/lib/utils/reveal";
 import { cn } from "@/lib/utils/cn";
 
 export function CauseCard({
   cause,
   className,
+  style,
 }: {
   cause: CauseDetail;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const category = CAUSE_CATEGORIES.find((item) => item.id === cause.category);
   const percent = progressPercent(cause.raisedAmount, cause.goalAmount);
@@ -25,6 +28,7 @@ export function CauseCard({
         "group relative flex flex-col rounded-3xl bg-white ring-1 ring-edge p-2 transition-transform duration-200 hover:-translate-y-0.5",
         className,
       )}
+      style={style}
     >
       <div className="relative aspect-4/3 w-full overflow-hidden rounded-2xl bg-ink-100">
         <Image
@@ -147,9 +151,14 @@ export function CauseGrid({
   if (causes.length === 0) return <>{emptyState}</>;
 
   return (
-    <div className={cn(grid, "animate-fade-in")}>
-      {causes.map((cause) => (
-        <CauseCard key={cause.id} cause={cause} />
+    <div className={grid}>
+      {causes.map((cause, index) => (
+        <CauseCard
+          key={cause.id}
+          cause={cause}
+          className="animate-fade-up"
+          style={revealDelay(index)}
+        />
       ))}
     </div>
   );

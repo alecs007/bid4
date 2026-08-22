@@ -371,55 +371,23 @@
   pointer-events: none;
 }
 
-/* Old leaves quickly so it stops competing for attention; new arrives a beat
-   later and more gently. Blur hides the pixel interpolation mid-flight. */
+/* Opacity only — see PageTransition. The two curves are complements, so the
+   sum stays close to 1 through the crossfade and the screen never dips. */
 ::view-transition-old(.page-exit) {
-  animation: 130ms ease-in both page-leave;
+  animation: 200ms cubic-bezier(0.4, 0, 1, 1) both page-leave;
 }
 
 ::view-transition-new(.page-enter) {
-  animation: 260ms var(--ease-out-soft) 90ms both page-arrive;
+  animation: 240ms cubic-bezier(0, 0, 0.2, 1) both page-arrive;
 }
 
 @keyframes page-leave {
   to {
     opacity: 0;
-    transform: translateY(-6px);
-    filter: blur(2px);
   }
 }
 
 @keyframes page-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-    filter: blur(3px);
-  }
-}
-
-/* Skeleton to content, in place. The group animation is off so a page that
-   settles a pixel taller does not stretch its own snapshot on the way in, and
-   because the skeletons are built to the size of what replaces them, what is
-   left reads as one dissolve. */
-::view-transition-group(.page-reveal) {
-  animation: none;
-}
-
-::view-transition-old(.page-reveal) {
-  animation: 140ms ease-in both reveal-out;
-}
-
-::view-transition-new(.page-reveal) {
-  animation: 240ms var(--ease-out-soft) 80ms both reveal-in;
-}
-
-@keyframes reveal-out {
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes reveal-in {
   from {
     opacity: 0;
   }

@@ -1,10 +1,16 @@
 import { ViewTransition } from "react";
 
 /**
- * Wraps the root element of every `page.tsx`. A route change plays exactly two
- * beats and no more: the old page fades out and up, the new one fades in from
- * below with its skeleton, and when the data lands the skeleton crossfades
- * into the content in place (`update`).
+ * Wraps the root element of every `page.tsx`: one page dissolves into the next.
+ *
+ * Opacity only, deliberately. A view transition replaces the page with a
+ * snapshot clipped to the viewport, so moving or blurring that snapshot drags
+ * its cut edge into view on any page taller than the screen. Motion belongs on
+ * real elements, which is where the content reveal does it.
+ *
+ * The reveal itself is not a view transition at all: a page-wide crossfade
+ * dips the whole screen's opacity for a change that is usually confined to one
+ * grid. Components animate their own content in instead.
  *
  * It belongs on the pages themselves, not on the layout. A layout persists
  * across navigations, so a boundary there never sees an enter/exit pair — and
@@ -17,12 +23,7 @@ import { ViewTransition } from "react";
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
   return (
-    <ViewTransition
-      enter="page-enter"
-      exit="page-exit"
-      update="page-reveal"
-      default="none"
-    >
+    <ViewTransition enter="page-enter" exit="page-exit" default="none">
       {children}
     </ViewTransition>
   );

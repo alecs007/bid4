@@ -11,14 +11,17 @@ import { AUCTION_STATUS } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { revealDelay } from "@/lib/utils/reveal";
 import { cn } from "@/lib/utils/cn";
 
 export function AuctionCard({
   auction,
   className,
+  style,
 }: {
   auction: AuctionDetail;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const { user } = useAuth();
   const toast = useToast();
@@ -51,6 +54,7 @@ export function AuctionCard({
         "group relative flex flex-col rounded-3xl bg-white ring-1 ring-edge p-2 transition-transform duration-200 hover:-translate-y-0.5",
         className,
       )}
+      style={style}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink-100">
         <Image
@@ -167,9 +171,14 @@ export function AuctionGrid({
   if (auctions.length === 0) return <>{emptyState}</>;
 
   return (
-    <div className={cn(gridClass, "animate-fade-in")}>
-      {auctions.map((auction) => (
-        <AuctionCard key={auction.id} auction={auction} />
+    <div className={gridClass}>
+      {auctions.map((auction, index) => (
+        <AuctionCard
+          key={auction.id}
+          auction={auction}
+          className="animate-fade-up"
+          style={revealDelay(index)}
+        />
       ))}
     </div>
   );
