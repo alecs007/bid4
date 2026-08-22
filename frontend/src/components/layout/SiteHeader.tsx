@@ -24,6 +24,66 @@ const ACCOUNT_LINKS = [
   { href: "/cont/setari", label: "Setări" },
 ];
 
+/**
+ * Three bars of different lengths, which fold into a cross when the menu is
+ * open: the top and bottom bars slide to the middle and rotate, the short one
+ * in between fades out.
+ */
+function MenuToggle({ open }: { open: boolean }) {
+  const bar =
+    "h-[2px] rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1.1)]";
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-5 w-5 flex-col items-start justify-center gap-[3px]"
+    >
+      <span className={cn(bar, open ? "w-5 translate-y-[5px] rotate-45" : "w-5")} />
+      <span className={cn(bar, open ? "w-0 opacity-0" : "w-3")} />
+      <span
+        className={cn(bar, open ? "w-5 -translate-y-[5px] -rotate-45" : "w-3.5")}
+      />
+    </span>
+  );
+}
+
+/**
+ * A header dropdown. Both panels stay mounted so they can animate out as well
+ * as in — `visibility` is in the transition list on purpose, since it holds at
+ * `visible` for the whole duration when going the other way, and it takes the
+ * closed panel's links out of the tab order.
+ */
+function Panel({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute inset-x-0 top-full origin-top bg-white px-4 pt-1 pb-4 shadow-sm transition-[opacity,transform,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:px-6 lg:hidden",
+        open
+          ? "visible translate-y-0 opacity-100"
+          : "invisible -translate-y-2 opacity-0",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Header icon buttons carry a soft accent while their panel is open. */
+function iconButton(active: boolean) {
+  return cn(
+    "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
+    active
+      ? "bg-primary-50 text-primary-700"
+      : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
+  );
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
@@ -72,6 +132,8 @@ export function SiteHeader() {
     close();
   };
 
+  const panelOpen = openPanel === "nav" || openPanel === "search";
+
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
@@ -99,13 +161,9 @@ export function SiteHeader() {
           onClick={() => toggle("nav")}
           aria-label={openPanel === "nav" ? "Închide meniul" : "Meniu"}
           aria-expanded={openPanel === "nav"}
-          className="-ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-700 transition hover:bg-ink-100 hover:text-ink-900 lg:hidden"
+          className={cn("-ml-2 lg:hidden", iconButton(openPanel === "nav"))}
         >
-          {openPanel === "nav" ? (
-            <Icons.close aria-hidden="true" className="h-5 w-5" />
-          ) : (
-            <Icons.menu aria-hidden="true" className="h-5 w-5" />
-          )}
+          <MenuToggle open={openPanel === "nav"} />
         </button>
         <Logo size="sm" className="shrink-0 lg:hidden" />
         <Logo size="md" className="hidden shrink-0 lg:inline-flex" />
@@ -144,11 +202,17 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => toggle("search")}
-            aria-label="Caută"
+            aria-label={
+              openPanel === "search" ? "Închide căutarea" : "Caută"
+            }
             aria-expanded={openPanel === "search"}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-700 transition hover:bg-ink-100 hover:text-ink-900 lg:hidden"
+            className={cn("lg:hidden", iconButton(openPanel === "search"))}
           >
-            <Icons.search aria-hidden="true" className="h-5 w-5" />
+            {openPanel === "search" ? (
+              <Icons.close aria-hidden="true" className="h-5 w-5" />
+            ) : (
+              <Icons.search aria-hidden="true" className="h-5 w-5" />
+            )}
           </button>
 
           {status === "loading" ? (
@@ -169,7 +233,7 @@ export function SiteHeader() {
                   aria-expanded={openPanel === "account"}
                   aria-haspopup="menu"
                   aria-label="Contul meu"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-ink-100"
+                  className={iconButton(openPanel === "account")}
                 >
                   <Avatar
                     name={user.displayName}
@@ -232,67 +296,66 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {openPanel === "search" || openPanel === "nav" ? (
-        <>
-          <button
-            type="button"
-            aria-label="Închide"
-            onClick={close}
-            className="fixed inset-0 top-14 -z-10 cursor-default bg-ink-900/20 sm:top-16 lg:hidden"
-          />
-          <div className="absolute inset-x-0 top-full origin-top animate-panel-in bg-white px-4 pt-1 pb-4 shadow-sm sm:px-6 lg:hidden">
-            {openPanel === "search" ? (
-              <form onSubmit={search} role="search">
-                {searchField}
-              </form>
-            ) : (
-              <nav aria-label="Navigare" className="flex flex-col gap-0.5">
-                {NAV.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "rounded-xl px-3 py-2.5 font-display text-base font-bold transition",
-                      isActive(item.href)
-                        ? "bg-primary-50 text-primary-800"
-                        : "text-ink-800 hover:bg-ink-50",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+      <button
+        type="button"
+        aria-label="Închide"
+        onClick={close}
+        tabIndex={panelOpen ? 0 : -1}
+        className={cn(
+          "fixed inset-0 top-14 -z-10 cursor-default bg-ink-900/20 transition-[opacity,visibility] duration-[260ms] sm:top-16 lg:hidden",
+          panelOpen ? "visible opacity-100" : "invisible opacity-0",
+        )}
+      />
 
-                <Link
-                  href="/cont/cauze/noua"
-                  className="mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 px-3 py-3"
-                >
-                  <Icons.donation
-                    aria-hidden="true"
-                    className="h-5 w-5 shrink-0 text-primary-700"
-                  />
-                  <span className="min-w-0 flex flex-col">
-                    <span className="font-display font-bold text-primary-900">
-                      Strânge fonduri
-                    </span>
-                    <span className="text-sm text-primary-900/80">
-                      Deschide o cauză
-                    </span>
-                  </span>
-                </Link>
+      <Panel open={openPanel === "search"}>
+        <form onSubmit={search} role="search">
+          {searchField}
+        </form>
+      </Panel>
 
-                {user ? (
-                  <ButtonLink
-                    href="/cont/anunturi/nou"
-                    className="mt-2 sm:hidden"
-                  >
-                    Listează un produs
-                  </ButtonLink>
-                ) : null}
-              </nav>
-            )}
-          </div>
-        </>
-      ) : null}
+      <Panel open={openPanel === "nav"}>
+        <nav aria-label="Navigare" className="flex flex-col gap-0.5">
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive(item.href) ? "page" : undefined}
+              className={cn(
+                "rounded-xl px-3 py-2.5 font-display text-base font-bold transition",
+                isActive(item.href)
+                  ? "text-primary-700"
+                  : "text-ink-800 hover:text-ink-900",
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+
+          <Link
+            href="/cont/cauze/noua"
+            className="mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 px-3 py-3"
+          >
+            <Icons.donation
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 text-primary-700"
+            />
+            <span className="flex min-w-0 flex-col">
+              <span className="font-display font-bold text-primary-900">
+                Strânge fonduri
+              </span>
+              <span className="text-sm text-primary-900/80">
+                Deschide o cauză
+              </span>
+            </span>
+          </Link>
+
+          {user ? (
+            <ButtonLink href="/cont/anunturi/nou" className="mt-2 sm:hidden">
+              Listează un produs
+            </ButtonLink>
+          ) : null}
+        </nav>
+      </Panel>
     </header>
   );
 }
