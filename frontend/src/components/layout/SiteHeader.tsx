@@ -30,18 +30,25 @@ const ACCOUNT_LINKS = [
  * in between fades out.
  */
 function MenuToggle({ open }: { open: boolean }) {
+  // 2px bars in a 20px box: the same weight and size as the lucide icons
+  // beside it in the header, so the row reads as one set.
   const bar =
     "h-[2px] rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1.1)]";
 
+  // Bars sit 4px apart, which puts the outer two 6px either side of the middle
+  // — exactly how far they travel to cross.
   return (
     <span
       aria-hidden="true"
-      className="flex h-5 w-5 flex-col items-start justify-center gap-[3px]"
+      className="flex h-5 w-5 flex-col items-start justify-center gap-[4px]"
     >
-      <span className={cn(bar, open ? "w-5 translate-y-[5px] rotate-45" : "w-5")} />
-      <span className={cn(bar, open ? "w-0 opacity-0" : "w-3")} />
+      <span className={cn(bar, open ? "w-5 translate-y-[6px] rotate-45" : "w-5")} />
+      <span className={cn(bar, open ? "w-0 opacity-0" : "w-[11px]")} />
       <span
-        className={cn(bar, open ? "w-5 -translate-y-[5px] -rotate-45" : "w-3.5")}
+        className={cn(
+          bar,
+          open ? "w-5 -translate-y-[6px] -rotate-45" : "w-[15px]",
+        )}
       />
     </span>
   );
@@ -74,12 +81,17 @@ function Panel({
   );
 }
 
-/** Header icon buttons carry a soft accent while their panel is open. */
-function iconButton(active: boolean) {
+/**
+ * Header icon buttons. While their panel is open they hold the same tint they
+ * take on hover — the state is worth marking, but a close button is not a
+ * brand moment, so it stays in ink.
+ */
+function iconButton(active: boolean, size = "h-10 w-10") {
   return cn(
-    "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
+    "inline-flex shrink-0 items-center justify-center rounded-xl transition",
+    size,
     active
-      ? "bg-primary-50 text-primary-700"
+      ? "bg-ink-100 text-ink-900"
       : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
   );
 }
@@ -161,7 +173,10 @@ export function SiteHeader() {
           onClick={() => toggle("nav")}
           aria-label={openPanel === "nav" ? "Închide meniul" : "Meniu"}
           aria-expanded={openPanel === "nav"}
-          className={cn("-ml-2 lg:hidden", iconButton(openPanel === "nav"))}
+          className={cn(
+            "-ml-1.5 lg:hidden",
+            iconButton(openPanel === "nav", "h-9 w-9"),
+          )}
         >
           <MenuToggle open={openPanel === "nav"} />
         </button>
@@ -206,7 +221,10 @@ export function SiteHeader() {
               openPanel === "search" ? "Închide căutarea" : "Caută"
             }
             aria-expanded={openPanel === "search"}
-            className={cn("lg:hidden", iconButton(openPanel === "search"))}
+            className={cn(
+              "lg:hidden",
+              iconButton(openPanel === "search", "h-9 w-9"),
+            )}
           >
             {openPanel === "search" ? (
               <Icons.close aria-hidden="true" className="h-5 w-5" />
@@ -333,7 +351,7 @@ export function SiteHeader() {
 
           <Link
             href="/cont/cauze/noua"
-            className="mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 px-3 py-3"
+            className="group mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 px-3 py-3 transition hover:bg-primary-100"
           >
             <Icons.donation
               aria-hidden="true"
@@ -344,9 +362,13 @@ export function SiteHeader() {
                 Strânge fonduri
               </span>
               <span className="text-sm text-primary-900/80">
-                Deschide o cauză
+                Pornește o cauză
               </span>
             </span>
+            <Icons.forward
+              aria-hidden="true"
+              className="ml-auto h-4 w-4 shrink-0 text-primary-700 transition-transform group-hover:translate-x-0.5"
+            />
           </Link>
 
           {user ? (
