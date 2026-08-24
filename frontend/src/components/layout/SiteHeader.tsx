@@ -70,7 +70,7 @@ function Panel({
   return (
     <div
       className={cn(
-        "absolute inset-x-0 top-full origin-top bg-white px-4 pt-1 pb-4 shadow-sm transition-[opacity,transform,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:px-6 lg:hidden",
+        "absolute inset-x-0 top-full origin-top bg-white px-4 pt-1 pb-4 shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:px-6 lg:hidden",
         open
           ? "visible translate-y-0 opacity-100"
           : "invisible -translate-y-2 opacity-0",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
@@ -44,6 +44,9 @@ const SORTS: { value: AuctionSort; label: string }[] = [
 
 const STATUS_FILTERS: AuctionStatus[] = ["LIVE", "SCHEDULED", "SOLD", "UNSOLD"];
 
+/** The sticky header the quick bar tucks under: h-14 on phones, h-16 from sm. */
+const HEADER_HEIGHT = 64;
+
 const PRICE_MIN = 0;
 const PRICE_MAX = 500_000;
 const PRICE_STEP = 5_000;
@@ -80,6 +83,33 @@ export function AuctionBrowser() {
   const { user } = useAuth();
 
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Measured off the toolbar's own position rather than a fixed scroll offset,
+  // so it stays right however tall the rows above it end up being. One rect
+  // read per scroll event, no layout written back, and React drops the render
+  // when the answer has not changed.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+
+    const measure = () =>
+      setStuck(toolbar.getBoundingClientRect().bottom < HEADER_HEIGHT);
+
+    // Not called straight away: a page restored mid-scroll needs the first
+    // reading, but a setState in an effect body is a cascade.
+    const initial = window.setTimeout(measure, 0);
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure, { passive: true });
+
+    return () => {
+      window.clearTimeout(initial);
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   const q = params.get("q") ?? "";
   const sort = (params.get("sort") as AuctionSort | null) ?? "ENDING_SOON";
@@ -264,23 +294,52 @@ export function AuctionBrowser() {
     </div>
   );
 
+  const filterButton = (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={() => setSheetOpen(true)}
+      leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4" />}
+    >
+      Filtre
+      {activeCount > 0 ? (
+        <span className="numeric ml-1 rounded-md bg-primary-600 px-1.5 text-xs text-white">
+          {activeCount}
+        </span>
+      ) : null}
+    </Button>
+  );
+
+  const sortSelect = (
+    <Select
+      ariaLabel="Sortează"
+      size="sm"
+      value={sort}
+      options={SORTS}
+      onChange={(next) =>
+        update((params) => params.set("sort", next || "ENDING_SOON"))
+      }
+    />
+  );
+
   return (
     <>
       {/* The title shares the row with the sort control on desktop; on
           narrower screens it takes the line above them. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div ref={toolbarRef} className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
           Licitații
         </h1>
         {/* On a phone the field takes the line under the controls; from `sm`
-            up it sits beside them. Keyed on `q`, so a search coming from the
-            header lands in the box too. */}
+            up it sits beside them, and on a wide screen it joins the sort
+            control on the right rather than crowding the title. Keyed on `q`,
+            so a search coming from the header lands in the box too. */}
         <SearchField
           key={q}
           term={q}
           label="Caută în licitații"
           placeholder="Caută o licitație"
-          className="order-last w-full sm:order-none sm:w-64"
+          className="order-last w-full sm:order-none sm:w-64 lg:ml-auto"
           /* Sized to the sort control it shares the row with. */
           inputClassName="h-10 rounded-xl"
           onSearch={(value) =>
@@ -290,30 +349,24 @@ export function AuctionBrowser() {
             })
           }
         />
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setSheetOpen(true)}
-          leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4" />}
-          className="lg:hidden"
-        >
-          Filtre
-          {activeCount > 0 ? (
-            <span className="numeric ml-1 rounded-md bg-primary-600 px-1.5 text-xs text-white">
-              {activeCount}
-            </span>
-          ) : null}
-        </Button>
-        <div className="ml-auto w-44 sm:w-56">
-          <Select
-            ariaLabel="Sortează"
-            size="sm"
-            value={sort}
-            options={SORTS}
-            onChange={(next) =>
-              update((params) => params.set("sort", next || "ENDING_SOON"))
-            }
-          />
+        <div className="lg:hidden">{filterButton}</div>
+        <div className="ml-auto w-44 sm:w-56 lg:ml-0">{sortSelect}</div>
+      </div>
+
+      {/* Once the toolbar scrolls away on a phone, the same two controls slide
+          back in under the header, so filtering never means scrolling up. */}
+      <div
+        aria-hidden={!stuck}
+        className={cn(
+          "fixed inset-x-0 top-14 z-30 border-b border-line bg-white/95 px-4 py-2 backdrop-blur-sm transition-[opacity,translate,visibility] duration-300 ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-16 sm:px-6 lg:hidden",
+          stuck
+            ? "visible translate-y-0 opacity-100"
+            : "invisible -translate-y-full opacity-0",
+        )}
+      >
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
+          {filterButton}
+          <div className="ml-auto w-44">{sortSelect}</div>
         </div>
       </div>
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
@@ -321,7 +374,9 @@ export function AuctionBrowser() {
           <div className="sticky top-24">
             {/* No "Filtre" heading here: the controls say what they are, and
                 the rail then starts level with the results. */}
-            <div className="rounded-3xl bg-white ring-1 ring-edge p-5">{filters}</div>
+            <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
+              {filters}
+            </div>
             {activeCount > 0 ? (
               <button
                 type="button"
@@ -402,7 +457,7 @@ export function AuctionBrowser() {
         footer={
           <>
             <Button variant="secondary" fullWidth onClick={clearAll}>
-              Șterge tot
+              Resetează
             </Button>
             <Button fullWidth onClick={() => setSheetOpen(false)}>
               Arată {data?.total ?? 0}
