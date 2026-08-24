@@ -60,7 +60,7 @@ export function AuctionBrowserSkeleton() {
               <div className="flex flex-col gap-7">
                 <div>
                   <Skeleton className="mb-2.5 h-5 w-16" />
-                  <Skeleton className="h-12 w-full rounded-xl" />
+                  <Skeleton className="h-10 w-full rounded-xl" />
                 </div>
 
                 <FilterGroup labelWidth="w-20">

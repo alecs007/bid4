@@ -210,6 +210,7 @@ export function AuctionBrowser() {
         <p className="mb-2.5 text-sm font-bold text-ink-700">Cauză</p>
         <Select
           ariaLabel="Cauză"
+          size="sm"
           value={causeId ?? ""}
           placeholder="Toate cauzele"
           searchable
@@ -347,7 +348,6 @@ export function AuctionBrowser() {
           label="Caută în licitații"
           placeholder="Caută o licitație"
           className="order-last w-full sm:order-none sm:w-64 lg:ml-auto"
-          /* Sized to the sort control it shares the row with. */
           inputClassName="h-10 rounded-xl"
           onSearch={(value) =>
             update((next) => {
@@ -360,8 +360,6 @@ export function AuctionBrowser() {
         <div className="ml-auto w-44 sm:w-56 lg:ml-0">{sortSelect}</div>
       </div>
 
-      {/* Once the toolbar scrolls away on a phone, the same two controls slide
-          back in under the header, so filtering never means scrolling up. */}
       <div
         aria-hidden={!stuck}
         className={cn(
@@ -379,8 +377,6 @@ export function AuctionBrowser() {
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
           <div className="sticky top-24">
-            {/* No "Filtre" heading here: the controls say what they are, and
-                the rail then starts level with the results. */}
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
               {filters}
             </div>
@@ -451,8 +447,6 @@ export function AuctionBrowser() {
               }}
             />
           ) : (
-            /* Hold the pagination's place so the page does not grow under the
-               user when the first results land. */
             <div className="mt-8 h-10" />
           )}
         </div>
@@ -467,7 +461,7 @@ export function AuctionBrowser() {
               Resetează
             </Button>
             <Button fullWidth onClick={() => setSheetOpen(false)}>
-              Arată {data?.total ?? 0}
+              Afisează {data?.total ?? 0}
             </Button>
           </>
         }

@@ -193,8 +193,11 @@ export function Select<T extends string>({
             "absolute z-30 mt-1.5 w-full min-w-max rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line animate-pop-in",
           )}
         >
+          {/* The filter box is quiet on purpose: it sits inside an already-open
+              menu, so a filled box and a brand-coloured focus ring would shout
+              over the options it exists to narrow. */}
           {searchable ? (
-            <div className="mb-1.5 flex h-10 items-center gap-2 rounded-xl bg-ink-100 px-3 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500">
+            <div className="mb-1.5 flex h-10 items-center gap-2 rounded-xl px-3 ring-1 ring-line transition focus-within:ring-ink-300">
               <Icons.search
                 aria-hidden="true"
                 className="h-4 w-4 shrink-0 text-ink-500"
