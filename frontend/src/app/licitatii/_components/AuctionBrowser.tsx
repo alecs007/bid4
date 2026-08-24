@@ -216,8 +216,6 @@ export function AuctionBrowser() {
           searchable
           searchPlaceholder="Caută o cauză"
           clearLabel="Toate cauzele"
-          /* Alphabetical, in Romanian collation: the list is long enough that
-             order is the only way to find something by eye. */
           options={[...(causes ?? [])]
             .sort((a, b) => a.name.localeCompare(b.name, "ro"))
             .map((cause) => ({
@@ -332,16 +330,11 @@ export function AuctionBrowser() {
 
   return (
     <>
-      {/* The title shares the row with the sort control on desktop; on
-          narrower screens it takes the line above them. */}
       <div ref={toolbarRef} className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
           Licitații
         </h1>
-        {/* On a phone the field takes the line under the controls; from `sm`
-            up it sits beside them, and on a wide screen it joins the sort
-            control on the right rather than crowding the title. Keyed on `q`,
-            so a search coming from the header lands in the box too. */}
+
         <SearchField
           key={q}
           term={q}
