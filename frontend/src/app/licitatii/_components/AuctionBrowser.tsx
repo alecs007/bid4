@@ -44,7 +44,6 @@ const SORTS: { value: AuctionSort; label: string }[] = [
 
 const STATUS_FILTERS: AuctionStatus[] = ["LIVE", "SCHEDULED", "SOLD", "UNSOLD"];
 
-/** The sticky header the quick bar tucks under: h-14 on phones, h-16 from sm. */
 const HEADER_HEIGHT = 64;
 
 const PRICE_MIN = 0;
@@ -84,10 +83,6 @@ export function AuctionBrowser() {
 
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Measured off the toolbar's own position rather than a fixed scroll offset,
-  // so it stays right however tall the rows above it end up being. One rect
-  // read per scroll event, no layout written back, and React drops the render
-  // when the answer has not changed.
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
 
@@ -98,8 +93,6 @@ export function AuctionBrowser() {
     const measure = () =>
       setStuck(toolbar.getBoundingClientRect().bottom < HEADER_HEIGHT);
 
-    // Not called straight away: a page restored mid-scroll needs the first
-    // reading, but a setState in an effect body is a cascade.
     const initial = window.setTimeout(measure, 0);
     window.addEventListener("scroll", measure, { passive: true });
     window.addEventListener("resize", measure, { passive: true });
@@ -316,6 +309,25 @@ export function AuctionBrowser() {
     </Button>
   );
 
+  // Always rendered, never hidden: a control that disappears when it has
+  // nothing to do leaves people wondering where it went. Grey when there is
+  // nothing to reset, red when there is.
+  const resetButton = (
+    <button
+      type="button"
+      onClick={clearAll}
+      disabled={activeCount === 0}
+      className={cn(
+        "rounded-lg text-sm font-bold transition",
+        activeCount > 0
+          ? "text-danger-600 hover:text-danger-700"
+          : "cursor-not-allowed text-ink-400",
+      )}
+    >
+      Resetează
+    </button>
+  );
+
   const sortSelect = (
     <Select
       ariaLabel="Sortează"
@@ -371,17 +383,14 @@ export function AuctionBrowser() {
         <aside className="hidden min-w-0 lg:block">
           <div className="sticky top-24">
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
+              <div className="mb-5 flex items-center justify-between gap-2 border-b border-line pb-4">
+                <h2 className="font-display text-lg font-extrabold text-ink-900">
+                  Filtre
+                </h2>
+                {resetButton}
+              </div>
               {filters}
             </div>
-            {activeCount > 0 ? (
-              <button
-                type="button"
-                onClick={clearAll}
-                className="mt-3 text-sm font-bold text-danger-600 transition hover:text-danger-700"
-              >
-                Șterge filtrele
-              </button>
-            ) : null}
           </div>
         </aside>
         <div className="min-w-0">
@@ -450,11 +459,16 @@ export function AuctionBrowser() {
         title="Filtre"
         footer={
           <>
-            <Button variant="secondary" fullWidth onClick={clearAll}>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={clearAll}
+              disabled={activeCount === 0}
+            >
               Resetează
             </Button>
             <Button fullWidth onClick={() => setSheetOpen(false)}>
-              Afisează {data?.total ?? 0}
+              Afișează {data?.total ?? 0}
             </Button>
           </>
         }

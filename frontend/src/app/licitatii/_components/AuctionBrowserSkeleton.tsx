@@ -57,6 +57,10 @@ export function AuctionBrowserSkeleton() {
         <aside className="hidden min-w-0 lg:block">
           <div className="sticky top-24">
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
+              <div className="mb-5 flex items-center justify-between gap-2 border-b border-line pb-4">
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-5 w-20" />
+              </div>
               <div className="flex flex-col gap-7">
                 <div>
                   <Skeleton className="mb-2.5 h-5 w-16" />
