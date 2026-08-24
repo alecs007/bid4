@@ -1,16 +1,14 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
 
-import { Icons } from "@/components/icons";
 import { CauseGrid } from "@/components/causes/CauseCard";
 import {
   Button,
   ButtonLink,
   EmptyState,
   ErrorState,
-  Input,
+  SearchField,
   Skeleton,
 } from "@/components/ui";
 import { listCauses } from "@/lib/api/causes";
@@ -25,7 +23,6 @@ export function CauseBrowser() {
 
   const q = params.get("q") ?? "";
   const categories = params.getAll("category");
-  const [draft, setDraft] = useState(q);
 
   const { data, loading, error, reload } = useApi(
     () =>
@@ -54,28 +51,27 @@ export function CauseBrowser() {
     });
 
   return (
-    <div className="flex flex-col gap-6">
-      <form
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          update((next) => {
-            const value = draft.trim();
-            if (value) next.set("q", value);
-            else next.delete("q");
-          });
-        }}
-        className="max-w-lg"
-      >
-        <Input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
+          Cauze
+        </h1>
+        <SearchField
+          key={q}
+          term={q}
+          label="Caută în cauze"
           placeholder="Caută o cauză"
-          aria-label="Caută cauze"
-          leading={<Icons.search aria-hidden="true" className="h-4 w-4" />}
+          className="ml-auto w-full sm:w-72"
+          onSearch={(value) =>
+            update((next) => {
+              if (value) next.set("q", value);
+              else next.delete("q");
+            })
+          }
         />
-      </form>
-      <div className="flex flex-wrap gap-2">
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
         {CAUSE_CATEGORIES.map((category) => {
           const active = categories.includes(category.id);
           return (
@@ -98,13 +94,15 @@ export function CauseBrowser() {
         })}
       </div>
 
-      {loading ? (
-        <Skeleton className="h-5 w-40" />
-      ) : (
-        <p className="text-sm text-ink-600">
-          {countRo(data?.length ?? 0, "cauză verificată", "cauze verificate")}
-        </p>
-      )}
+      <div className="mb-3 hidden h-5 sm:block">
+        {loading ? (
+          <Skeleton className="h-5 w-40" />
+        ) : (
+          <p className="text-sm text-ink-500">
+            {countRo(data?.length ?? 0, "cauză verificată", "cauze verificate")}
+          </p>
+        )}
+      </div>
 
       {error ? (
         <ErrorState
@@ -128,6 +126,6 @@ export function CauseBrowser() {
           }
         />
       )}
-    </div>
+    </>
   );
 }

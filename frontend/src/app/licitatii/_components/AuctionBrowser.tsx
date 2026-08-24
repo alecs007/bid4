@@ -207,6 +207,24 @@ export function AuctionBrowser() {
   const filters = (
     <div className="flex flex-col gap-7">
       <div>
+        <p className="mb-2.5 text-sm font-bold text-ink-700">Cauză</p>
+        <Select
+          ariaLabel="Cauză"
+          value={causeId ?? ""}
+          placeholder="Toate cauzele"
+          options={(causes ?? []).map((cause) => ({
+            value: cause.id,
+            label: cause.name,
+          }))}
+          onChange={(next) =>
+            update((params) => {
+              if (next) params.set("causeId", next);
+              else params.delete("causeId");
+            })
+          }
+        />
+      </div>
+      <div>
         <p className="mb-2.5 text-sm font-bold text-ink-700">Categorie</p>
         <div className="flex flex-wrap gap-2">
           {PRODUCT_CATEGORIES.map((category) => (
@@ -217,32 +235,6 @@ export function AuctionBrowser() {
             >
               <span aria-hidden="true">{category.emoji}</span>
               {category.label}
-            </Chip>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="mb-2.5 text-sm font-bold text-ink-700">Stare</p>
-        <div className="flex flex-wrap gap-2">
-          <Chip
-            active={endingSoon}
-            onClick={() =>
-              update((next) => {
-                if (endingSoon) next.delete("endingSoon");
-                else next.set("endingSoon", "1");
-              })
-            }
-          >
-            <Icons.urgent aria-hidden="true" className="h-4 w-4" />
-            Sub 24h
-          </Chip>
-          {STATUS_FILTERS.map((status) => (
-            <Chip
-              key={status}
-              active={statuses.includes(status)}
-              onClick={() => toggleValue("status", status)}
-            >
-              {AUCTION_STATUS[status].label}
             </Chip>
           ))}
         </div>
@@ -274,22 +266,30 @@ export function AuctionBrowser() {
         />
       </div>
       <div>
-        <p className="mb-2.5 text-sm font-bold text-ink-700">Cauză</p>
-        <Select
-          ariaLabel="Cauză"
-          value={causeId ?? ""}
-          placeholder="Toate cauzele"
-          options={(causes ?? []).map((cause) => ({
-            value: cause.id,
-            label: cause.name,
-          }))}
-          onChange={(next) =>
-            update((params) => {
-              if (next) params.set("causeId", next);
-              else params.delete("causeId");
-            })
-          }
-        />
+        <p className="mb-2.5 text-sm font-bold text-ink-700">Stare</p>
+        <div className="flex flex-wrap gap-2">
+          <Chip
+            active={endingSoon}
+            onClick={() =>
+              update((next) => {
+                if (endingSoon) next.delete("endingSoon");
+                else next.set("endingSoon", "1");
+              })
+            }
+          >
+            <Icons.urgent aria-hidden="true" className="h-4 w-4" />
+            Sub 24h
+          </Chip>
+          {STATUS_FILTERS.map((status) => (
+            <Chip
+              key={status}
+              active={statuses.includes(status)}
+              onClick={() => toggleValue("status", status)}
+            >
+              {AUCTION_STATUS[status].label}
+            </Chip>
+          ))}
+        </div>
       </div>
     </div>
   );

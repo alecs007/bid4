@@ -58,6 +58,11 @@ export function AuctionBrowserSkeleton() {
           <div className="sticky top-24">
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
               <div className="flex flex-col gap-7">
+                <div>
+                  <Skeleton className="mb-2.5 h-5 w-16" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+
                 <FilterGroup labelWidth="w-20">
                   {PRODUCT_CATEGORIES.map((category) => (
                     <ChipGhost
@@ -67,6 +72,10 @@ export function AuctionBrowserSkeleton() {
                     />
                   ))}
                 </FilterGroup>
+
+                {/* The two sliders: label and track share one 48px row. */}
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-12 w-full rounded-xl" />
 
                 <FilterGroup labelWidth="w-14">
                   <ChipGhost emoji="⏰" label="Sub 24h" />
@@ -79,15 +88,6 @@ export function AuctionBrowserSkeleton() {
                     ),
                   )}
                 </FilterGroup>
-
-                {/* The two sliders: label and track share one 48px row. */}
-                <Skeleton className="h-12 w-full rounded-xl" />
-                <Skeleton className="h-12 w-full rounded-xl" />
-
-                <div>
-                  <Skeleton className="mb-2.5 h-5 w-16" />
-                  <Skeleton className="h-12 w-full rounded-xl" />
-                </div>
               </div>
             </div>
           </div>

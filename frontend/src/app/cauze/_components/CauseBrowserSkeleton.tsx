@@ -16,10 +16,15 @@ const PUBLIC_CAUSE_COUNT = 10;
  */
 export function CauseBrowserSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
-      <Skeleton className="h-12 w-full max-w-lg rounded-2xl" />
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
+          Cauze
+        </h1>
+        <Skeleton className="ml-auto h-12 w-full rounded-2xl sm:w-72" />
+      </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         {CAUSE_CATEGORIES.map((category) => (
           <span
             key={category.id}
@@ -32,7 +37,9 @@ export function CauseBrowserSkeleton() {
         ))}
       </div>
 
-      <Skeleton className="h-5 w-40" />
+      <div className="mb-3 hidden h-5 sm:block">
+        <Skeleton className="h-5 w-40" />
+      </div>
 
       <div
         role="status"
@@ -43,6 +50,6 @@ export function CauseBrowserSkeleton() {
           <SkeletonCauseCard key={index} />
         ))}
       </div>
-    </div>
+    </>
   );
 }
