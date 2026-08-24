@@ -1,11 +1,21 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
 import { Icons } from "@/components/icons";
 
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 
+/**
+ * Dialogs render into `document.body` rather than where they are written.
+ *
+ * A page's own wrapper carries a filling opacity animation, which makes it a
+ * stacking context for good — so a `z-50` overlay inside it still loses to the
+ * `z-40` header outside it. Portalling puts the dialog back in the root
+ * context, where its z-index means what it says.
+ */
 export function Modal({
   open,
   onClose,
@@ -53,7 +63,7 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const sizes = {
     sm: "max-w-md",
@@ -61,7 +71,7 @@ export function Modal({
     lg: "max-w-2xl",
   } as const;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
@@ -113,6 +123,7 @@ export function Modal({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

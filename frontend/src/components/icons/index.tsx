@@ -16,7 +16,7 @@ import {
   LuDownload,
   LuFileText,
   LuFlame,
-  LuGavel,
+  LuHandCoins,
   LuHeartHandshake,
   LuImage,
   LuInfo,
@@ -97,7 +97,8 @@ export function ParcelIcon({ className, ...props }: IconProps) {
 }
 
 export const Icons = {
-  auction: LuGavel,
+  // A hand offering coins, not a courtroom gavel: bidding here is giving.
+  auction: LuHandCoins,
   donation: LeafHeartIcon,
   cause: LuHeartHandshake,
   parcel: ParcelIcon,

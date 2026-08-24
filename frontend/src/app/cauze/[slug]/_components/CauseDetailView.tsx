@@ -18,7 +18,6 @@ import {
 } from "@/components/ui";
 import { listAuctions } from "@/lib/api/auctions";
 import { getCause } from "@/lib/api/causes";
-import { CAUSE_CATEGORIES } from "@/lib/config";
 import { formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
@@ -51,7 +50,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
   const frames = [cause.coverUrl, ...(cause.gallery ?? [])];
   const [active, setActive] = useState(0);
 
-  const category = CAUSE_CATEGORIES.find((item) => item.id === cause.category);
   const percent = progressPercent(cause.raisedAmount, cause.goalAmount);
   const reached = percent >= 100;
 
@@ -68,12 +66,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
           />
-          {category ? (
-            <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1 text-sm font-bold text-ink-800 backdrop-blur-sm">
-              <span aria-hidden="true">{category.emoji}</span>
-              {category.label}
-            </span>
-          ) : null}
         </div>
 
         {frames.length > 1 ? (

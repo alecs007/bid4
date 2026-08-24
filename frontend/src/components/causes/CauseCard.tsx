@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { Icons } from "@/components/icons";
 import { Skeleton } from "@/components/ui";
-import { CAUSE_CATEGORIES } from "@/lib/config";
 import { formatMoney, progressPercent } from "@/lib/money";
 import type { CauseDetail } from "@/lib/types";
 import { revealDelay } from "@/lib/utils/reveal";
@@ -18,7 +17,6 @@ export function CauseCard({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const category = CAUSE_CATEGORIES.find((item) => item.id === cause.category);
   const percent = progressPercent(cause.raisedAmount, cause.goalAmount);
   const reached = percent >= 100;
 
@@ -52,13 +50,6 @@ export function CauseCard({
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-900/85 via-ink-900/35 to-transparent"
         />
-
-        {category ? (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1 text-sm font-bold text-ink-800 backdrop-blur-sm">
-            <span aria-hidden="true">{category.emoji}</span>
-            {category.label}
-          </span>
-        ) : null}
 
         {cause.activeAuctionCount > 0 ? (
           <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-2.5 py-1 text-sm font-bold text-white">
