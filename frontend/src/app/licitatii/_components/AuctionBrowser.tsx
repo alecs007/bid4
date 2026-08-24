@@ -212,10 +212,17 @@ export function AuctionBrowser() {
           ariaLabel="Cauză"
           value={causeId ?? ""}
           placeholder="Toate cauzele"
-          options={(causes ?? []).map((cause) => ({
-            value: cause.id,
-            label: cause.name,
-          }))}
+          searchable
+          searchPlaceholder="Caută o cauză"
+          clearLabel="Toate cauzele"
+          /* Alphabetical, in Romanian collation: the list is long enough that
+             order is the only way to find something by eye. */
+          options={[...(causes ?? [])]
+            .sort((a, b) => a.name.localeCompare(b.name, "ro"))
+            .map((cause) => ({
+              value: cause.id,
+              label: cause.name,
+            }))}
           onChange={(next) =>
             update((params) => {
               if (next) params.set("causeId", next);
