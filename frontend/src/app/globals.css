@@ -367,6 +367,16 @@
   animation: var(--animate-shimmer);
 }
 
+/* A rail the user drives with arrows or by dragging: the scrollbar would be a
+   third control saying the same thing, and a permanent line under the cards. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Tabular, non-jumping digits — essential for countdowns and money. */
 @utility numeric {
   font-variant-numeric: tabular-nums;

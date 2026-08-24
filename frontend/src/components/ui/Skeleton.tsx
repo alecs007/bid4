@@ -269,10 +269,10 @@ export function SkeletonDetail() {
       </div>
 
       {/* The "more like this" rail the loaded page ends on. */}
-      <div className="mt-2">
-        <div className="mb-4 flex items-baseline justify-between gap-3">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-5 w-32" />
+      <div className="mt-6 sm:mt-8">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-9 w-24 rounded-xl" />
         </div>
         <div className="-mx-4 flex gap-3 overflow-hidden px-4 pb-1 sm:mx-0 sm:gap-4 sm:px-0">
           {Array.from({ length: 6 }).map((_, index) => (

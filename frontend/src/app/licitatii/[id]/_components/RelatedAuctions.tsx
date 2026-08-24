@@ -7,8 +7,11 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import { revealDelay } from "@/lib/utils/reveal";
 
-/** One card's width in the rail — two and a bit fit on a phone. */
-const CARD = "w-40 shrink-0 snap-start sm:w-52";
+/**
+ * Two across on a phone, at exactly the width the auctions grid gives them —
+ * the rail's own content width less the gap between the pair.
+ */
+const CARD = "w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-52";
 
 /**
  * "More like this" under an auction: same cause first, then the same kind of
@@ -34,7 +37,7 @@ export function RelatedAuctions({
   if (!loading && (!data || data.length === 0)) return null;
 
   return (
-    <section aria-labelledby="related" className="mt-2">
+    <section aria-labelledby="related" className="mt-6 sm:mt-8">
       <CardRail
         ariaLabel="Licitații asemănătoare"
         heading={
@@ -42,7 +45,7 @@ export function RelatedAuctions({
             id="related"
             className="min-w-0 font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
           >
-            Și acestea au nevoie de tine
+            Alte licitații
           </h2>
         }
         action={

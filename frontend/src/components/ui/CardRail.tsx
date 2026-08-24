@@ -5,12 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
+/** Past this, the pointer was dragging the rail rather than clicking a card. */
+const DRAG_THRESHOLD_PX = 4;
+
 /**
- * A horizontal rail of cards: swipe on a phone, arrows on a pointer.
+ * A horizontal rail of cards, driven by its arrows or by dragging it — never
+ * by a scrollbar, which is hidden. Touch keeps the native swipe; a mouse or
+ * pen gets grab-and-pull instead.
  *
- * The arrows only appear once there is something off-screen to reach, and each
- * one disables itself at its end — a control that scrolls nowhere is worse
- * than no control. `data-lenis-prevent` keeps the smooth-scroll wrapper from
+ * The arrows show only once there is something off-screen to reach, and each
+ * disables itself at its end: a control that scrolls nowhere is worse than no
+ * control. `data-lenis-prevent` keeps the smooth-scroll wrapper from
  * swallowing the horizontal gesture.
  */
 export function CardRail({
@@ -58,7 +63,52 @@ export function CardRail({
     const rail = railRef.current;
     if (!rail) return;
     // Just under a full view, so the card at the edge stays as an anchor.
-    rail.scrollBy({ left: direction * rail.clientWidth * 0.8, behavior: "smooth" });
+    rail.scrollBy({
+      left: direction * rail.clientWidth * 0.8,
+      behavior: "smooth",
+    });
+  };
+
+  /* ---- grab and pull, for pointers that have no swipe ------------------- */
+
+  const drag = useRef({ active: false, startX: 0, startLeft: 0, moved: false });
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Touch already scrolls the rail natively, and better than we could.
+    if (event.pointerType === "touch") return;
+    const rail = railRef.current;
+    if (!rail) return;
+
+    drag.current = {
+      active: true,
+      startX: event.clientX,
+      startLeft: rail.scrollLeft,
+      moved: false,
+    };
+    rail.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = railRef.current;
+    if (!drag.current.active || !rail) return;
+
+    const travelled = event.clientX - drag.current.startX;
+    if (Math.abs(travelled) > DRAG_THRESHOLD_PX) drag.current.moved = true;
+    rail.scrollLeft = drag.current.startLeft - travelled;
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current.active) return;
+    drag.current.active = false;
+    railRef.current?.releasePointerCapture(event.pointerId);
+  };
+
+  // A drag that ends over a card would otherwise open it.
+  const onClickCapture = (event: React.MouseEvent) => {
+    if (!drag.current.moved) return;
+    event.preventDefault();
+    event.stopPropagation();
+    drag.current.moved = false;
   };
 
   const arrow = (direction: 1 | -1) => {
@@ -70,7 +120,7 @@ export function CardRail({
         disabled={!enabled}
         aria-label={direction === -1 ? "Înapoi" : "Înainte"}
         className={cn(
-          "hidden h-9 w-9 items-center justify-center rounded-xl bg-white ring-1 ring-edge transition md:inline-flex",
+          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-edge transition",
           enabled
             ? "text-ink-700 hover:ring-ink-300"
             : "cursor-not-allowed text-ink-300",
@@ -108,7 +158,17 @@ export function CardRail({
         data-lenis-prevent
         role="group"
         aria-label={ariaLabel}
-        className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:gap-4 sm:px-0"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onClickCapture={onClickCapture}
+        className={cn(
+          // scroll-pl matches the padding: without it the first card snaps
+          // past it, and the rail opens looking nudged to the right.
+          "no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 select-none sm:mx-0 sm:scroll-pl-0 sm:gap-4 sm:px-0",
+          scrollable && "cursor-grab active:cursor-grabbing",
+        )}
       >
         {children}
       </div>
