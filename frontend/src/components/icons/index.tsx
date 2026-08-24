@@ -11,13 +11,13 @@ import {
   LuCircleAlert,
   LuCircleCheck,
   LuCircleHelp,
-  LuClock,
   LuCreditCard,
   LuDownload,
   LuFileText,
   LuFlame,
   LuHandCoins,
   LuHeartHandshake,
+  LuHourglass,
   LuImage,
   LuInfo,
   LuListFilter,
@@ -115,7 +115,9 @@ export const Icons = {
   watchlist: LuBookmark,
   impact: LuSparkles,
 
-  clock: LuClock,
+  // An hourglass, not a clock face: what matters is the time left, and every
+  // interface already has a clock in it.
+  clock: LuHourglass,
   urgent: LuFlame,
   calendar: LuCalendar,
 

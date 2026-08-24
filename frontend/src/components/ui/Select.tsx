@@ -194,7 +194,7 @@ export function Select<T extends string>({
           )}
         >
           {searchable ? (
-            <div className="flex items-center gap-2 border-b border-line px-2.5 pt-1 pb-2">
+            <div className="mb-1.5 flex h-10 items-center gap-2 rounded-xl bg-ink-100 px-3 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500">
               <Icons.search
                 aria-hidden="true"
                 className="h-4 w-4 shrink-0 text-ink-500"

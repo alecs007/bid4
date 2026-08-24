@@ -156,17 +156,24 @@ function ToastCard({
     return () => window.clearTimeout(timeout);
   }, [leaving, id, onDismiss]);
 
+  // A toast that is only a title is one line shorter than its own icon, so
+  // topping everything out leaves the text riding high. Only stack when there
+  // is something under the title to stack against.
+  const stacked = Boolean(description || action);
+
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
       className={cn(
-        "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl bg-white p-4 shadow-sm",
+        "pointer-events-auto flex w-full max-w-sm gap-3 rounded-2xl bg-white p-4 shadow-sm",
+        stacked ? "items-start" : "items-center",
         leaving ? "animate-toast-out" : "animate-toast-in",
       )}
     >
       <span
         className={cn(
-          "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+          stacked && "mt-0.5",
           loud ? CHIP_SOLID[tone] : CHIP_SOFT[tone],
         )}
       >
@@ -196,7 +203,10 @@ function ToastCard({
         type="button"
         aria-label="Închide notificarea"
         onClick={() => setLeaving(true)}
-        className="-mt-1 -mr-1 shrink-0 rounded-xl p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+        className={cn(
+          "-mr-1 shrink-0 rounded-xl p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700",
+          stacked && "-mt-1",
+        )}
       >
         <Icons.close aria-hidden="true" className="h-4 w-4" />
       </button>
