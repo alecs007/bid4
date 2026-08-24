@@ -276,7 +276,11 @@ export function SiteHeader() {
           </button>
 
           {status === "loading" ? (
-            <Skeleton className="h-10 w-10 rounded-xl" />
+            /* Shaped like the sign-in button rather than an avatar: the
+               session is only known on the client, and most visits resolve to
+               signed out — so this footprint is the one that usually stays,
+               and nothing shifts when it does. */
+            <Skeleton className="h-9 w-28 rounded-2xl" />
           ) : user ? (
             <>
               <ButtonLink
