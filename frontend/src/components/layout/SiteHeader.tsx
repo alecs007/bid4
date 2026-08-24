@@ -42,7 +42,9 @@ function MenuToggle({ open }: { open: boolean }) {
       aria-hidden="true"
       className="flex h-5 w-5 flex-col items-start justify-center gap-[4px]"
     >
-      <span className={cn(bar, open ? "w-5 translate-y-[6px] rotate-45" : "w-5")} />
+      <span
+        className={cn(bar, open ? "w-5 translate-y-[6px] rotate-45" : "w-5")}
+      />
       <span className={cn(bar, open ? "w-0 opacity-0" : "w-[11px]")} />
       <span
         className={cn(
@@ -77,6 +79,64 @@ function Panel({
       )}
     >
       {children}
+    </div>
+  );
+}
+
+/**
+ * The header's search box. Rendered twice — once for the wide layout, once
+ * inside the phone panel — so it is a component rather than a shared element:
+ * each copy needs its own input, and the panel's needs the caret.
+ */
+function HeaderSearch({
+  value,
+  onChange,
+  focused = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  /** Takes the caret when the panel it lives in opens. */
+  focused?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!focused) return;
+
+    // The panel leaves `visibility: hidden` in the same commit, and a browser
+    // will not focus an element it still computes as hidden. Rather than
+    // guess how long that takes to settle, ask until it takes — a couple of
+    // frames at most, and it stops the moment the caret lands.
+    let tries = 0;
+    let timer = 0;
+
+    const attempt = () => {
+      const input = ref.current;
+      if (!input) return;
+      input.focus();
+      if (document.activeElement !== input && tries++ < 10) {
+        timer = window.setTimeout(attempt, 30);
+      }
+    };
+
+    attempt();
+    return () => window.clearTimeout(timer);
+  }, [focused]);
+
+  return (
+    <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-ink-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500">
+      <Icons.search
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-ink-500"
+      />
+      <input
+        ref={ref}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Caută pe bid4..."
+        aria-label="Caută pe bid4..."
+        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none"
+      />
     </div>
   );
 }
@@ -149,22 +209,6 @@ export function SiteHeader() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  const searchField = (
-    <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-ink-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500">
-      <Icons.search
-        aria-hidden="true"
-        className="h-4 w-4 shrink-0 text-ink-500"
-      />
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Caută cauze sau licitații"
-        aria-label="Caută licitații"
-        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none"
-      />
-    </div>
-  );
-
   return (
     <header className="sticky top-0 z-40 bg-white">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
@@ -211,15 +255,13 @@ export function SiteHeader() {
           role="search"
           className="ml-auto hidden w-64 lg:block"
         >
-          {searchField}
+          <HeaderSearch value={query} onChange={setQuery} />
         </form>
         <div className="ml-auto flex items-center gap-1 lg:ml-3">
           <button
             type="button"
             onClick={() => toggle("search")}
-            aria-label={
-              openPanel === "search" ? "Închide căutarea" : "Caută"
-            }
+            aria-label={openPanel === "search" ? "Închide căutarea" : "Caută"}
             aria-expanded={openPanel === "search"}
             className={cn(
               "lg:hidden",
@@ -327,7 +369,11 @@ export function SiteHeader() {
 
       <Panel open={openPanel === "search"}>
         <form onSubmit={search} role="search">
-          {searchField}
+          <HeaderSearch
+            value={query}
+            onChange={setQuery}
+            focused={openPanel === "search"}
+          />
         </form>
       </Panel>
 

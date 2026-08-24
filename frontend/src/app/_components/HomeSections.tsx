@@ -99,8 +99,6 @@ export function ImpactLine() {
             className="text-primary-600"
           />
         ) : (
-          // The odometer mounts showing these same zeros and rolls up from
-          // them, so the swap is invisible and the sentence never reflows.
           <span aria-hidden="true" className="numeric text-primary-300">
             {RAISED_PLACEHOLDER}
           </span>
@@ -155,7 +153,9 @@ export function EndingSoonRow() {
           emptyState={
             <EmptyState
               title="Nimic pe final acum"
-              action={<ButtonLink href="/licitatii">Vezi licitațiile</ButtonLink>}
+              action={
+                <ButtonLink href="/licitatii">Vezi licitațiile</ButtonLink>
+              }
               compact
             />
           }
@@ -180,7 +180,9 @@ export function PopularRow() {
             <EmptyState
               title="Nicio licitație activă"
               action={
-                <ButtonLink href="/cont/anunturi/nou">Listează un produs</ButtonLink>
+                <ButtonLink href="/cont/anunturi/nou">
+                  Listează un produs
+                </ButtonLink>
               }
               compact
             />
@@ -221,7 +223,9 @@ export function TrendingCauses() {
           emptyState={
             <EmptyState
               title="Nicio cauză activă"
-              action={<ButtonLink href="/cont/cauze/noua">Propune o cauză</ButtonLink>}
+              action={
+                <ButtonLink href="/cont/cauze/noua">Propune o cauză</ButtonLink>
+              }
               compact
             />
           }
