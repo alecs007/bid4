@@ -48,6 +48,7 @@ export function AuctionBrowserSkeleton() {
         <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
           Licitații
         </h1>
+        <Skeleton className="order-last h-10 w-full rounded-xl sm:order-none sm:w-64" />
         <Skeleton className="h-10 w-28 rounded-2xl lg:hidden" />
         <Skeleton className="ml-auto h-10 w-44 rounded-xl sm:w-56" />
       </div>

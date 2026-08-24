@@ -23,6 +23,8 @@ import type {
 } from "@/lib/types";
 import { PUBLIC_CAUSE_STATUSES } from "@/lib/types";
 
+import { matchesSearch } from "@/lib/utils/search";
+
 import { http } from "./http";
 
 export interface CauseFilters {
@@ -66,13 +68,11 @@ export async function listCauses(
         ? filters.category.includes(cause.category)
         : true,
     )
-    .filter((cause) => {
-      if (!filters.q) return true;
-      const needle = filters.q.trim().toLowerCase();
-      return `${cause.name} ${cause.shortDescription}`
-        .toLowerCase()
-        .includes(needle);
-    })
+    .filter((cause) =>
+      filters.q
+        ? matchesSearch(`${cause.name} ${cause.shortDescription}`, filters.q)
+        : true,
+    )
     .map(toCauseDetail)
     .sort((a, b) => b.raisedAmount - a.raisedAmount);
 }

@@ -13,6 +13,7 @@ import {
   RangeSlider,
   Pagination,
   Select,
+  SearchField,
   Sheet,
   Skeleton,
   Slider,
@@ -29,6 +30,7 @@ import { formatMoney } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import type { AuctionSort, AuctionStatus } from "@/lib/types";
+import { countRo } from "@/lib/utils/plural";
 import { cn } from "@/lib/utils/cn";
 
 const SORTS: { value: AuctionSort; label: string }[] = [
@@ -270,6 +272,24 @@ export function AuctionBrowser() {
         <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
           Licitații
         </h1>
+        {/* On a phone the field takes the line under the controls; from `sm`
+            up it sits beside them. Keyed on `q`, so a search coming from the
+            header lands in the box too. */}
+        <SearchField
+          key={q}
+          term={q}
+          label="Caută în licitații"
+          placeholder="Caută o licitație"
+          className="order-last w-full sm:order-none sm:w-64"
+          /* Sized to the sort control it shares the row with. */
+          inputClassName="h-10 rounded-xl"
+          onSearch={(value) =>
+            update((next) => {
+              if (value) next.set("q", value);
+              else next.delete("q");
+            })
+          }
+        />
         <Button
           variant="secondary"
           size="sm"
@@ -306,7 +326,7 @@ export function AuctionBrowser() {
               <button
                 type="button"
                 onClick={clearAll}
-                className="mt-3 text-sm font-bold text-primary-700 hover:text-primary-800"
+                className="mt-3 text-sm font-bold text-danger-600 transition hover:text-danger-700"
               >
                 Șterge filtrele
               </button>
@@ -319,7 +339,8 @@ export function AuctionBrowser() {
               <Skeleton className="h-5 w-32" />
             ) : (
               <p className="text-sm text-ink-500">
-                {data?.total ?? 0} rezultate{q ? ` pentru „${q}”` : ""}
+                {countRo(data?.total ?? 0, "rezultat", "rezultate")}
+                {q ? ` pentru „${q}”` : ""}
               </p>
             )}
           </div>

@@ -10,6 +10,7 @@ export type { Crumb } from "./Breadcrumbs";
 export { AnimatedNumber } from "./AnimatedNumber";
 
 export { Field, Input, Textarea, Checkbox, RadioCard } from "./Field";
+export { SearchField } from "./SearchField";
 export { Select } from "./Select";
 export type { SelectOption } from "./Select";
 

@@ -3,6 +3,8 @@ import { delay, getWorld, maybeFailRead, notFound } from "@/lib/mock/store";
 import { publicUserById } from "@/lib/mock/join";
 import type { Auction, ID, Page, Product, PublicUser } from "@/lib/types";
 
+import { matchesSearch } from "@/lib/utils/search";
+
 import { http } from "./http";
 
 /**
@@ -73,9 +75,7 @@ export async function listProducts(
     )
     .filter((product) =>
       filters.q
-        ? `${product.title} ${product.description}`
-            .toLowerCase()
-            .includes(filters.q.trim().toLowerCase())
+        ? matchesSearch(`${product.title} ${product.description}`, filters.q)
         : true,
     )
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));

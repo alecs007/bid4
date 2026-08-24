@@ -16,6 +16,7 @@ import {
 import { listCauses } from "@/lib/api/causes";
 import { CAUSE_CATEGORIES } from "@/lib/config";
 import { useApi } from "@/lib/hooks/useApi";
+import { countRo } from "@/lib/utils/plural";
 import { cn } from "@/lib/utils/cn";
 
 export function CauseBrowser() {
@@ -101,7 +102,7 @@ export function CauseBrowser() {
         <Skeleton className="h-5 w-40" />
       ) : (
         <p className="text-sm text-ink-600">
-          {data?.length ?? 0} {data?.length === 1 ? "cauză" : "cauze"} verificate
+          {countRo(data?.length ?? 0, "cauză verificată", "cauze verificate")}
         </p>
       )}
 

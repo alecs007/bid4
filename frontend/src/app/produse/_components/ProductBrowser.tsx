@@ -1,22 +1,21 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
 
-import { Icons } from "@/components/icons";
 import { ProductGrid } from "@/components/products/ProductCard";
 import {
   Button,
   ButtonLink,
   EmptyState,
   ErrorState,
-  Input,
   Pagination,
+  SearchField,
   Skeleton,
 } from "@/components/ui";
 import { listProducts } from "@/lib/api/products";
 import { PAGINATION, PRODUCT_CATEGORIES, type ProductCategoryId } from "@/lib/config";
 import { useApi } from "@/lib/hooks/useApi";
+import { countRo } from "@/lib/utils/plural";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -31,8 +30,6 @@ export function ProductBrowser() {
   const q = params.get("q") ?? "";
   const categories = params.getAll("category") as ProductCategoryId[];
   const page = Number(params.get("page") ?? 1);
-
-  const [draft, setDraft] = useState(q);
 
   const { data, loading, error, reload } = useApi(
     () =>
@@ -66,7 +63,6 @@ export function ProductBrowser() {
     });
 
   const clearAll = () => {
-    setDraft("");
     router.replace("/produse", { scroll: false });
   };
 
@@ -76,26 +72,19 @@ export function ProductBrowser() {
         <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
           Produse
         </h1>
-        <form
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
+        <SearchField
+          key={q}
+          term={q}
+          label="Caută în produse"
+          placeholder="Caută un produs"
+          className="ml-auto w-full sm:w-72"
+          onSearch={(value) =>
             update((next) => {
-              const value = draft.trim();
               if (value) next.set("q", value);
               else next.delete("q");
-            });
-          }}
-          className="ml-auto w-full sm:w-72"
-        >
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Caută un produs"
-            aria-label="Caută produse"
-            leading={<Icons.search aria-hidden="true" className="h-4 w-4" />}
-          />
-        </form>
+            })
+          }
+        />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -126,7 +115,8 @@ export function ProductBrowser() {
           <Skeleton className="h-5 w-32" />
         ) : (
           <p className="text-sm text-ink-500">
-            {data?.total ?? 0} produse{q ? ` pentru „${q}”` : ""}
+            {countRo(data?.total ?? 0, "produs", "produse")}
+            {q ? ` pentru „${q}”` : ""}
           </p>
         )}
       </div>

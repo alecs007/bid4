@@ -22,6 +22,8 @@ import type {
   Page,
 } from "@/lib/types";
 
+import { matchesSearch } from "@/lib/utils/search";
+
 import { http } from "./http";
 
 /**
@@ -135,10 +137,8 @@ export async function listAuctions(
         }
       }
       if (filters.q) {
-        const needle = filters.q.trim().toLowerCase();
-        const haystack =
-          `${auction.product.title} ${auction.product.description} ${auction.cause.name}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
+        const haystack = `${auction.product.title} ${auction.product.description} ${auction.cause.name}`;
+        if (!matchesSearch(haystack, filters.q)) return false;
       }
       return true;
     });
