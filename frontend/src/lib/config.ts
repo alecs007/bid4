@@ -204,6 +204,24 @@ export const FEATURED = {
   TRENDING_CAUSES_COUNT: 3,
 } as const;
 
+/**
+ * "More like this" on an auction page. Cause outweighs everything else: the
+ * reason someone is on a bid4 listing is more often the cause behind it than
+ * the object in front of it.
+ */
+export const RELATED = {
+  WEIGHT_SAME_CAUSE: 10,
+  WEIGHT_SAME_CATEGORY: 5,
+  WEIGHT_SAME_SELLER: 2,
+  /** Awarded in full at an identical price, tapering to nothing at 4x. */
+  WEIGHT_PRICE_PROXIMITY: 2,
+  /** Breaks ties towards what is worth acting on now. */
+  WEIGHT_URGENCY: 1,
+  COUNT: 10,
+  /** Below this the row is not worth swiping, so it is topped up. */
+  MIN_COUNT: 6,
+} as const;
+
 export const PAGINATION = {
   DEFAULT_PAGE_SIZE: 12,
   MAX_PAGE_SIZE: 60,

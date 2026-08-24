@@ -26,6 +26,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
 import { BidBox } from "./BidBox";
+import { RelatedAuctions } from "./RelatedAuctions";
 import { BidHistory } from "./BidHistory";
 
 function Block({
@@ -311,6 +312,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </Link>
         </div>
       </div>
+      <RelatedAuctions
+        auctionId={auction.id}
+        causeName={auction.cause.name}
+        causeSlug={auction.cause.slug}
+      />
+
       <Sheet
         open={feesOpen}
         onClose={() => setFeesOpen(false)}

@@ -2,6 +2,7 @@ export { Button, ButtonLink } from "./Button";
 export type { ButtonProps, ButtonLinkProps, ButtonVariant, ButtonSize } from "./Button";
 
 export { Card, CardHeader, IconBubble, SectionLabel } from "./Card";
+export { CardRail } from "./CardRail";
 export { Badge, StatusBadge, DonationBadge, MetaChip } from "./Badge";
 export { Alert } from "./Alert";
 export { Gallery } from "./Gallery";

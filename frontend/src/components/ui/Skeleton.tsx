@@ -267,6 +267,21 @@ export function SkeletonDetail() {
           </SkeletonCard>
         </div>
       </div>
+
+      {/* The "more like this" rail the loaded page ends on. */}
+      <div className="mt-2">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+        <div className="-mx-4 flex gap-3 overflow-hidden px-4 pb-1 sm:mx-0 sm:gap-4 sm:px-0">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="w-40 shrink-0 sm:w-52">
+              <SkeletonAuctionCard />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

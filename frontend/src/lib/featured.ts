@@ -1,4 +1,4 @@
-import { AUCTION, FEATURED } from "@/lib/config";
+import { AUCTION, FEATURED, RELATED } from "@/lib/config";
 import { progressPercent } from "@/lib/money";
 import type { Auction, Cause } from "@/lib/types";
 
@@ -124,4 +124,93 @@ export function pickTrendingCauses(
     .sort((a, b) => b.score - a.score)
     .slice(0, count)
     .map((entry) => entry.cause);
+}
+
+/* ---------------------------------------------------------------------------
+ * "More like this", on an auction page
+ * ------------------------------------------------------------------------ */
+
+/** 1 at the same price, tapering to 0 as one is four times the other. */
+function priceProximity(a: number, b: number): number {
+  if (a <= 0 || b <= 0) return 0;
+  const ratio = a > b ? a / b : b / a;
+  return Math.max(0, 1 - (ratio - 1) / 3);
+}
+
+/**
+ * How much another auction has in common with this one. Cause first, then the
+ * kind of object, then who is selling it and roughly what it costs.
+ */
+export function relatedScore(
+  subject: Auction,
+  candidate: Auction & { product: { category: string } },
+  subjectCategory: string,
+  now = Date.now(),
+): number {
+  let score = 0;
+
+  if (candidate.causeId === subject.causeId) score += RELATED.WEIGHT_SAME_CAUSE;
+  if (candidate.product.category === subjectCategory) {
+    score += RELATED.WEIGHT_SAME_CATEGORY;
+  }
+  if (candidate.sellerId === subject.sellerId) {
+    score += RELATED.WEIGHT_SAME_SELLER;
+  }
+
+  score +=
+    RELATED.WEIGHT_PRICE_PROXIMITY *
+    priceProximity(subject.currentPrice, candidate.currentPrice);
+  score += RELATED.WEIGHT_URGENCY * urgencyFactor(candidate, now);
+
+  return score;
+}
+
+/**
+ * The auctions worth showing under this one: live, not this one, best match
+ * first.
+ *
+ * Qualifying is separate from ranking. An auction earns its place by sharing
+ * the cause, the kind of object, or the seller — price and urgency only decide
+ * the order among those. Otherwise a row of "related" listings fills up with
+ * whatever happens to cost about the same, which relates to nothing.
+ */
+export function pickRelated<
+  T extends Auction & { product: { category: string } },
+>(
+  subject: T,
+  auctions: T[],
+  count = RELATED.COUNT,
+  now = Date.now(),
+): T[] {
+  const others = auctions.filter(
+    (auction) => auction.id !== subject.id && isLive(auction, now),
+  );
+
+  const matched = others
+    .filter(
+      (auction) =>
+        auction.causeId === subject.causeId ||
+        auction.product.category === subject.product.category ||
+        auction.sellerId === subject.sellerId,
+    )
+    .map((auction) => ({
+      auction,
+      score: relatedScore(subject, auction, subject.product.category, now),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, count)
+    .map((entry) => entry.auction);
+
+  if (matched.length >= RELATED.MIN_COUNT) return matched;
+
+  // Too few genuine matches to fill a row. Rather than loosen what counts as
+  // related, top up with what is worth seeing anyway — the real matches keep
+  // the front of the row.
+  const taken = new Set(matched.map((auction) => auction.id));
+  const filler = others
+    .filter((auction) => !taken.has(auction.id))
+    .sort((a, b) => popularityScore(b, now) - popularityScore(a, now))
+    .slice(0, RELATED.MIN_COUNT - matched.length);
+
+  return [...matched, ...filler];
 }

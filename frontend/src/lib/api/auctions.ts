@@ -1,5 +1,5 @@
 import { AUCTION, PAGINATION, USE_MOCK } from "@/lib/config";
-import { pickEndingSoon, pickPopular } from "@/lib/featured";
+import { pickEndingSoon, pickPopular, pickRelated } from "@/lib/featured";
 import { toAuctionDetail } from "@/lib/mock/join";
 import { productGallery } from "@/lib/mock/images";
 import {
@@ -190,6 +190,29 @@ export async function getFeaturedAuctions(viewerId?: ID): Promise<{
     endingSoon: pickEndingSoon(details),
     popular: pickPopular(details),
   };
+}
+
+/** GET /auctions/{id}/related — "more like this", under an auction. */
+export async function listRelatedAuctions(
+  auctionId: ID,
+  viewerId?: ID,
+): Promise<AuctionDetail[]> {
+  if (!USE_MOCK) {
+    return http<AuctionDetail[]>(`/auctions/${auctionId}/related`);
+  }
+
+  await delay();
+  maybeFailRead("recomandările");
+  const world = getWorld();
+
+  const details = world.auctions
+    .map((auction) => toAuctionDetail(auction, viewerId))
+    .filter((item): item is AuctionDetail => item !== null);
+
+  const subject = details.find((auction) => auction.id === auctionId);
+  if (!subject) return [];
+
+  return pickRelated(subject, details);
 }
 
 /** GET /users/me/auctions — the seller's own listings, any status. */
