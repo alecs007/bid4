@@ -5,6 +5,10 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * Cover image with a thumbnail rail under it. Shared by the auction and the
+ * product page, which show the same photographs from either side.
+ */
 export function Gallery({
   images,
   alt,

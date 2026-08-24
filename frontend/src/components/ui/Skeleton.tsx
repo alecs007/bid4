@@ -349,6 +349,118 @@ export function SkeletonCauseDetail() {
   );
 }
 
+/** Full `/produse/[id]` page: gallery, price card, cause and seller, blocks. */
+export function SkeletonProductDetail() {
+  return (
+    <div role="status" aria-label="Se încarcă" className="flex flex-col gap-4">
+      <Skeleton className="h-5 w-64" />
+
+      <div className={DETAIL_GRID}>
+        <div className="flex min-w-0 flex-col gap-3">
+          <Skeleton className="aspect-4/3 w-full rounded-3xl" />
+          <div className="flex gap-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-20 w-20 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <div>
+            <div className="mb-2 flex gap-2">
+              <Skeleton className="h-7 w-32 rounded-lg" />
+              <Skeleton className="h-7 w-24 rounded-lg" />
+            </div>
+            <Skeleton className="h-[38px] w-4/5" />
+          </div>
+
+          <SkeletonCard>
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-7 w-32" />
+              </div>
+              <Skeleton className="h-7 w-24 rounded-lg" />
+            </div>
+            <Skeleton className="mt-5 h-13 w-full rounded-2xl" />
+          </SkeletonCard>
+
+          <SkeletonCard className="flex items-center gap-3">
+            <Skeleton className="h-5 w-5 shrink-0 rounded-md" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-5 w-2/3" />
+            </div>
+          </SkeletonCard>
+
+          <SkeletonCard>
+            <Skeleton className="mb-3 h-5 w-20" />
+            <SkeletonPersonRow />
+          </SkeletonCard>
+        </div>
+      </div>
+
+      <div className={DETAIL_GRID}>
+        <SkeletonCard>
+          <Skeleton className="mb-3 h-7 w-32" />
+          <SkeletonParagraph lines={4} />
+        </SkeletonCard>
+
+        <SkeletonCard>
+          <Skeleton className="mb-3 h-7 w-24" />
+          <div className="flex flex-col gap-2.5">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex justify-between gap-3">
+                <Skeleton className="h-[23px] w-24" />
+                <Skeleton className="h-[23px] w-28" />
+              </div>
+            ))}
+          </div>
+        </SkeletonCard>
+      </div>
+    </div>
+  );
+}
+
+/** Full `/profil/[username]` page: header, three stats, a grid of listings. */
+export function SkeletonProfile() {
+  return (
+    <div
+      role="status"
+      aria-label="Se încarcă"
+      className="flex flex-col gap-6 sm:gap-8"
+    >
+      <Skeleton className="h-5 w-48" />
+
+      <SkeletonCard className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+        <Skeleton className="h-24 w-24 shrink-0 rounded-full" />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="mt-1 h-5 w-full max-w-2xl" />
+        </div>
+      </SkeletonCard>
+
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <SkeletonCard key={index} className="flex items-start gap-3">
+            <Skeleton className="h-11 w-11 rounded-2xl" />
+            <div className="flex-1">
+              <Skeleton className="mb-2 h-8 w-24" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </SkeletonCard>
+        ))}
+      </div>
+
+      <div>
+        <Skeleton className="mb-4 h-11 w-64 rounded-2xl" />
+        <SkeletonGrid count={4} />
+      </div>
+    </div>
+  );
+}
+
 export function SkeletonStats({ count = 4 }: { count?: number }) {
   return (
     <div

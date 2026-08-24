@@ -8,6 +8,7 @@ import { Icons } from "@/components/icons";
 import {
   Avatar,
   Breadcrumbs,
+  Gallery,
   Button,
   ButtonLink,
   ErrorState,
@@ -26,7 +27,6 @@ import { useApi } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
 import { BidBox } from "./BidBox";
 import { BidHistory } from "./BidHistory";
-import { Gallery } from "./Gallery";
 
 function Block({
   title,

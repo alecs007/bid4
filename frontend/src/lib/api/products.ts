@@ -15,6 +15,7 @@ export interface ProductWithContext extends Product {
   seller: PublicUser;
   auction?: Auction;
   causeName: string;
+  causeSlug: string;
 }
 
 export interface ProductFilters {
@@ -34,6 +35,7 @@ function withContext(product: Product): ProductWithContext {
     seller: publicUserById(product.sellerId),
     auction,
     causeName: cause?.name ?? "Cauză bid4",
+    causeSlug: cause?.slug ?? "",
   };
 }
 
