@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Icons } from "@/components/icons";
 import { ButtonLink, IconBubble, Mascot } from "@/components/ui";
 import { PRODUCT_CATEGORIES } from "@/lib/config";
@@ -33,7 +35,7 @@ export default function HomePage() {
     <PageTransition>
       <main className="flex flex-col">
         <section className="bg-white">
-          <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pt-4 pb-8 sm:gap-8 sm:px-6 sm:pt-8 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:px-8 lg:pt-14 lg:pb-16">
+          <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pt-4 pb-8 sm:px-6 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8 lg:pt-14 lg:pb-16">
             <div>
               <h1 className="font-display text-[2.1rem] leading-[1.05] font-extrabold text-ink-900 sm:text-5xl lg:text-6xl">
                 Licitezi. Câștigi.
@@ -41,11 +43,15 @@ export default function HomePage() {
                 <span className="text-primary-600">Ajuți.</span>
               </h1>
               <p className="mt-3 max-w-lg text-ink-600 sm:mt-4 sm:text-lg">
-                Cumperi lucruri care îți plac. O parte din preț ajunge la o cauză
-                verificată, iar banii stau la noi până îți vine coletul.
+                Cumperi lucruri care îți plac. O parte din preț ajunge la o
+                cauză verificată, iar banii stau la noi până îți vine coletul.
               </p>
               <div className="mt-5 flex gap-2.5">
-                <ButtonLink href="/cauze" size="lg" className="flex-1 sm:flex-none">
+                <ButtonLink
+                  href="/cauze"
+                  size="lg"
+                  className="flex-1 sm:flex-none"
+                >
                   Vezi cauzele
                 </ButtonLink>
                 <ButtonLink
@@ -61,20 +67,15 @@ export default function HomePage() {
                 <ImpactLine />
               </div>
             </div>
-            <div className="order-first flex justify-center lg:order-none lg:justify-end">
-              <div className="relative">
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 -z-10 rounded-full bg-primary-100/60 blur-2xl"
-                />
-                <Mascot mood="cheer" size={132} floating className="sm:hidden" />
-                <Mascot
-                  mood="cheer"
-                  size={280}
-                  floating
-                  className="hidden sm:block"
-                />
-              </div>
+            <div className="relative order-first aspect-video w-full lg:order-none">
+              <Image
+                src="/images/hero-illustration.webp"
+                alt="Mascota bid4 ține o cutie cu donații, lângă haine și lucruri pregătite de trimis."
+                fill
+                priority
+                sizes="(min-width: 1024px) 560px, 100vw"
+                className="object-contain"
+              />
             </div>
           </div>
         </section>
@@ -125,7 +126,10 @@ export default function HomePage() {
             </h2>
             <ol className="grid gap-3 sm:grid-cols-3 sm:gap-4">
               {STEPS.map((step) => (
-                <li key={step.title} className="rounded-3xl bg-white ring-1 ring-edge p-5">
+                <li
+                  key={step.title}
+                  className="rounded-3xl bg-white ring-1 ring-edge p-5"
+                >
                   <IconBubble tone="primary" size="md">
                     <step.icon aria-hidden="true" className="h-5 w-5" />
                   </IconBubble>
