@@ -33,10 +33,10 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-9 gap-1.5 px-4 text-sm [--btn-depth:3px]",
-  md: "h-11 gap-2 px-5 text-[15px]",
-  lg: "h-13 gap-2.5 px-7 text-base",
-  xl: "h-15 gap-3 px-9 text-lg [--btn-depth:5px]",
+  sm: "h-9 gap-1.5 px-3 text-sm sm:px-4 [--btn-depth:3px]",
+  md: "h-11 gap-2 px-4 text-[15px] sm:px-5",
+  lg: "h-13 gap-2.5 px-5 text-base sm:px-7",
+  xl: "h-15 gap-3 px-7 text-lg sm:px-9 [--btn-depth:5px]",
 };
 
 const ICON_SIZES: Record<ButtonSize, string> = {
@@ -47,7 +47,7 @@ const ICON_SIZES: Record<ButtonSize, string> = {
 };
 
 const BASE =
-  "btn-3d relative inline-flex select-none items-center justify-center rounded-2xl font-display font-extrabold tracking-wide " +
+  "btn-3d relative inline-flex select-none items-center justify-center rounded-2xl font-display font-extrabold tracking-wide whitespace-nowrap " +
   "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50";
 
 interface CommonProps {

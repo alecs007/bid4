@@ -43,9 +43,9 @@ export default function HomePage() {
                 prin <span className="text-primary-600">licitații.</span>
               </h1>
               <p className="mt-3 max-w-lg text-ink-600 sm:mt-4 sm:text-lg">
-                Cumperi lucruri care îți plac, iar o parte din preț susține o
-                cauză verificată. Plata rămâne protejată până când coletul
-                ajunge la tine.
+                Cumperi sau vinzi, o parte din bani vor ajunge la cauze care au
+                nevoie de sprijin. Fiecare licitație e o șansă în plus pentru
+                cineva care are nevoie.
               </p>
               <div className="mt-5 flex gap-2.5">
                 <ButtonLink href="/cauze" size="lg">
@@ -55,7 +55,7 @@ export default function HomePage() {
                   href="/licitatii"
                   variant="secondary"
                   size="lg"
-                  className="flex-1 sm:flex-none"
+                  className="flex-1 sm:flex-none whitespace-nowrap"
                 >
                   Vezi licitațiile
                 </ButtonLink>

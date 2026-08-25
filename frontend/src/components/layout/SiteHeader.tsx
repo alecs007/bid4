@@ -143,7 +143,7 @@ function HeaderSearch({
 }
 
 const CATEGORY_TILE =
-  "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[15px] font-bold ring-1 transition";
+  "flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-[15px] font-bold whitespace-nowrap ring-1 transition sm:gap-2.5 sm:px-3";
 
 /**
  * The auction categories as tiles, so the menu reads as a set of destinations
@@ -162,8 +162,8 @@ function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
           "bg-canvas text-primary-800 ring-edge hover:bg-white hover:ring-primary-300",
         )}
       >
-        <Icons.auction aria-hidden="true" className="h-4.5 w-4.5" />
-        Toate licitațiile
+        <Icons.auction aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
+        <span className="truncate">Toate licitațiile</span>
       </Link>
 
       {PRODUCT_CATEGORIES.map((category) => (
@@ -177,10 +177,10 @@ function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
             "bg-canvas text-ink-800 ring-edge hover:bg-white hover:ring-ink-300",
           )}
         >
-          <span aria-hidden="true" className="text-lg">
+          <span aria-hidden="true" className="shrink-0 text-lg">
             {category.emoji}
           </span>
-          {category.label}
+          <span className="truncate">{category.label}</span>
         </Link>
       ))}
     </div>
@@ -325,7 +325,7 @@ export function SiteHeader() {
               aria-expanded={openPanel === "auctions"}
               aria-haspopup="true"
               className={cn(
-                "inline-flex items-center gap-1 rounded-xl px-3 py-2 font-display text-[15px] font-bold transition",
+                "inline-flex items-center gap-1 rounded-xl px-3 py-2 font-display text-[15px] font-bold whitespace-nowrap transition",
                 isActive("/licitatii") || openPanel === "auctions"
                   ? "text-primary-700"
                   : "text-ink-700 hover:text-ink-900",
@@ -361,7 +361,7 @@ export function SiteHeader() {
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
               className={cn(
-                "rounded-xl px-3 py-2 font-display text-[15px] font-bold transition",
+                "rounded-xl px-3 py-2 font-display text-[15px] font-bold whitespace-nowrap transition",
                 isActive(item.href)
                   ? "text-primary-700"
                   : "text-ink-700 hover:text-ink-900",
@@ -372,7 +372,7 @@ export function SiteHeader() {
           ))}
           <Link
             href="/cont/cauze/noua"
-            className="ml-1 inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-display text-[15px] font-bold text-primary-700 transition hover:bg-primary-50"
+            className="ml-1 inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-display text-[15px] font-bold whitespace-nowrap text-primary-700 transition hover:bg-primary-50"
           >
             <Icons.donation aria-hidden="true" className="h-4 w-4" />
             Strânge fonduri
@@ -590,7 +590,7 @@ export function SiteHeader() {
 
           {user ? (
             <ButtonLink href="/cont/anunturi/nou" className="mt-2 sm:hidden">
-              Vinde acum
+              Vinde pe bid4
             </ButtonLink>
           ) : null}
         </nav>
