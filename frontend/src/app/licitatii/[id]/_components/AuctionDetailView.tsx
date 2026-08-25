@@ -83,8 +83,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   }
 
   const refresh = () => setNonce((value) => value + 1);
-  const showsMobileBidBar =
-    auction.status === "LIVE" && user?.id !== auction.sellerId;
   const category = PRODUCT_CATEGORIES.find(
     (item) => item.id === auction.product.category,
   );
@@ -150,13 +148,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   );
 
   return (
-    <div
-      className={cn(
-        "animate-reveal flex flex-col gap-4",
-        // Room for the fixed bid bar, and only when there is one.
-        showsMobileBidBar && "pb-24 lg:pb-0",
-      )}
-    >
+    <div className="animate-reveal flex flex-col gap-4">
       <Breadcrumbs
         items={[
           { label: "Acasă", href: "/" },

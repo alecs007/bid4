@@ -382,3 +382,11 @@
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
+/* A bar fixed to the bottom of the viewport covers the end of the document, so
+   the page reserves its height — down here, not above the footer. */
+@media (width < 64rem) {
+  body:has([data-bottom-bar]) {
+    padding-bottom: 5rem;
+  }
+}

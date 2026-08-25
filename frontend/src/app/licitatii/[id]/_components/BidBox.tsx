@@ -294,7 +294,7 @@ export function BidBox({
     <p className="text-ink-600">Este anunțul tău.</p>
   ) : !user ? (
     <ButtonLink href="/autentificare" size="lg" fullWidth>
-      Intră în cont
+      Licitează acum
     </ButtonLink>
   ) : !eligibility.canBid ? (
     <div className="flex flex-col gap-2">
@@ -379,7 +379,10 @@ export function BidBox({
       </div>
 
       {live && !isSeller ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden">
+        <div
+          data-bottom-bar
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden"
+        >
           <div className="mx-auto max-w-7xl">
             {isLeading ? (
               <>
@@ -432,7 +435,7 @@ export function BidBox({
                     setSheetOpen(true);
                   }}
                 >
-                  Licitează
+                  Licitează acum
                 </Button>
               </div>
             )}
