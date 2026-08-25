@@ -723,10 +723,12 @@ export function buildCatalog(): CatalogSeed {
     let currentPrice = startingPrice;
     const auctionBids: Bid[] = [];
 
+    let step = 0;
     for (let index = 0; index < bidCount; index += 1) {
       // Bidders sometimes jump more than the minimum, like real people do.
-      const jump = index % 4 === 3 ? 2 : 1;
-      const amount = startingPrice + increment * (index + jump);
+      // Cumulative, or the jump collides with the next bid's amount.
+      step += index % 4 === 3 ? 2 : 1;
+      const amount = startingPrice + increment * step;
       const bidderId =
         index === bidCount - 1 && seed.winnerId
           ? seed.winnerId
@@ -756,17 +758,23 @@ export function buildCatalog(): CatalogSeed {
       currentPrice = amount;
     }
 
-    if (auctionBids.length > 0) {
-      const last = auctionBids[auctionBids.length - 1]!;
+    // One offer per bidder per listing. The pool repeats on long histories,
+    // so keep only each bidder's latest and let the count follow it.
+    const latest = new Map<string, Bid>();
+    auctionBids.forEach((bid) => latest.set(bid.bidderId, bid));
+    const keptBids = auctionBids.filter((bid) => latest.get(bid.bidderId) === bid);
+
+    if (keptBids.length > 0) {
+      const last = keptBids[keptBids.length - 1]!;
       last.status =
         seed.status === "SOLD" ? "WON" : seed.status === "LIVE" ? "WINNING" : "LOST";
       if (seed.status === "UNSOLD") {
-        auctionBids.forEach((bid) => {
+        keptBids.forEach((bid) => {
           bid.status = "LOST";
         });
       }
     }
-    bids.push(...auctionBids);
+    bids.push(...keptBids);
 
     /* --- auction ------------------------------------------------------- */
     const reservePrice = seed.reserveLei ? lei(seed.reserveLei) : undefined;
@@ -786,7 +794,7 @@ export function buildCatalog(): CatalogSeed {
       antiSnipeSeconds: AUCTION.DEFAULT_ANTI_SNIPE_SECONDS,
       status: seed.status,
       winnerId: seed.status === "SOLD" ? seed.winnerId : undefined,
-      bidCount,
+      bidCount: keptBids.length,
       watcherCount: 3 + ((listingIndex * 7) % 41),
       extensionCount: 0,
     });

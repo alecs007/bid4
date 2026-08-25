@@ -165,6 +165,12 @@ export async function placeBid(
     );
   }
 
+  // One offer per bidder per listing: raising replaces your previous bid
+  // instead of stacking a second row onto the history.
+  world.bids = world.bids.filter(
+    (bid) => !(bid.auctionId === auction.id && bid.bidderId === bidderId),
+  );
+
   // Everyone else's bids drop to OUTBID.
   world.bids
     .filter((bid) => bid.auctionId === auction.id)
@@ -197,7 +203,9 @@ export async function placeBid(
 
   world.bids.push(bid);
   auction.currentPrice = payload.amount;
-  auction.bidCount += 1;
+  auction.bidCount = world.bids.filter(
+    (item) => item.auctionId === auction.id,
+  ).length;
   commit();
 
   return { bid, auction, extendedBySeconds };

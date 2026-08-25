@@ -159,7 +159,7 @@ export const MOCK = {
   SIMULATION_WINDOW_SECONDS: 1800,
   /** localStorage key + schema version. Bump to invalidate a stale world. */
   STORAGE_KEY: "bid4.world",
-  SCHEMA_VERSION: 2,
+  SCHEMA_VERSION: 3,
   /**
    * Seeded auctions are dated relative to the moment the world was created,
    * so a world left in localStorage for a day ends up with everything closed.
