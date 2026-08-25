@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { withRedirect } from "@/lib/auth/form";
 import type { UserRole } from "@/lib/types";
 import { Button, ButtonLink, EmptyState, SkeletonStats } from "@/components/ui";
 
@@ -18,14 +19,16 @@ export function RouteGuard({
 }) {
   const { user, status } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const allowed = user !== null && (!roles || roles.includes(user.role));
+  const signIn = withRedirect(redirectTo, pathname);
 
   useEffect(() => {
     if (status === "anonymous") {
-      router.replace(redirectTo);
+      router.replace(signIn);
     }
-  }, [status, router, redirectTo]);
+  }, [status, router, signIn]);
 
   if (status === "loading") {
     return (
@@ -42,7 +45,7 @@ export function RouteGuard({
           mood="thinking"
           title="Trebuie să fii autentificat"
           description="Intră în cont ca să continui."
-          action={<ButtonLink href={redirectTo}>Autentifică-te</ButtonLink>}
+          action={<ButtonLink href={signIn}>Autentifică-te</ButtonLink>}
         />
       </div>
     );
@@ -82,14 +85,20 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 
 export function SignInPrompt({ message }: { message: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   return (
     <div className="flex flex-col gap-3 rounded-2xl bg-white ring-1 ring-edge p-4">
       <p className="text-sm text-ink-700">{message}</p>
       <div className="flex gap-2">
-        <Button onClick={() => router.push("/autentificare")}>
+        <Button
+          onClick={() => router.push(withRedirect("/autentificare", pathname))}
+        >
           Autentifică-te
         </Button>
-        <ButtonLink href="/inregistrare" variant="secondary">
+        <ButtonLink
+          href={withRedirect("/inregistrare", pathname)}
+          variant="secondary"
+        >
           Creează cont
         </ButtonLink>
       </div>
