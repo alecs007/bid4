@@ -82,7 +82,7 @@ export function Countdown({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-md bg-ink-50 px-2 py-1 text-xs font-bold text-ink-600",
+          "inline-flex items-center gap-1 rounded-md bg-ink-50 px-2 py-1 text-xs font-bold text-ink-600",
           className,
         )}
       >
@@ -138,7 +138,7 @@ export function Countdown({
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       {size !== "sm" ? (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <Glyph
             aria-hidden="true"
             className={cn("h-3.5 w-3.5", LABEL_TONE[urgency])}
@@ -236,7 +236,7 @@ export function CountdownInline({
     <span
       suppressHydrationWarning
       className={cn(
-        "numeric inline-flex items-center gap-1.5 text-sm font-extrabold",
+        "numeric inline-flex items-center gap-1 text-sm font-extrabold",
         NUMBER_TONE[urgency],
         className,
       )}

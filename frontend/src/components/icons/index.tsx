@@ -19,7 +19,6 @@ import {
   LuFlame,
   LuHandCoins,
   LuHeartHandshake,
-  LuHourglass,
   LuImage,
   LuInfo,
   LuListFilter,
@@ -42,6 +41,7 @@ import {
   LuSparkles,
   LuStar,
   LuTrash2,
+  LuTimer,
   LuTriangleAlert,
   LuTruck,
   LuUpload,
@@ -73,7 +73,12 @@ export function LeafHeartIcon({ className, ...props }: IconProps) {
       {...props}
     >
       <path d="M12 20.5C7 17 3.5 13.8 3.5 10.4A4.4 4.4 0 0 1 8 6c1.7 0 3.2 1 4 2.4C12.8 7 14.3 6 16 6a4.4 4.4 0 0 1 4.5 4.4c0 3.4-3.5 6.6-8.5 10.1Z" />
-      <path d="M12 8.4c0-2 .8-3.7 2.4-4.9" />
+      {/* Filled, because an outlined leaf this small closes up. */}
+      <path
+        d="M12.3 5.2Q12.9 1.7 16.4 1.4 15.9 4.9 12.3 5.2Z"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
   );
 }
@@ -117,9 +122,9 @@ export const Icons = {
   watchlist: LuBookmark,
   impact: LuSparkles,
 
-  // An hourglass, not a clock face: what matters is the time left, and every
+  // A stopwatch, not a clock face: what matters is the time left, and every
   // interface already has a clock in it.
-  clock: LuHourglass,
+  clock: LuTimer,
   urgent: LuFlame,
   calendar: LuCalendar,
 
