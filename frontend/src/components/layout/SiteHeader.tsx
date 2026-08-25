@@ -283,14 +283,12 @@ export function SiteHeader() {
             <Skeleton className="h-9 w-28 rounded-2xl" />
           ) : user ? (
             <>
-              <ButtonLink
-                href="/cont/anunturi/nou"
-                size="sm"
-                className="hidden sm:inline-flex"
-              >
+              <ButtonLink href="/cont/anunturi/nou" size="sm">
                 Listează
               </ButtonLink>
-              <div className="relative" ref={accountRef}>
+              {/* flex, or the inline-level button picks up a line box and the
+                  avatar rides 2px above the other controls. */}
+              <div className="relative flex" ref={accountRef}>
                 <button
                   type="button"
                   onClick={() => toggle("account")}
@@ -310,7 +308,7 @@ export function SiteHeader() {
                 {openPanel === "account" ? (
                   <div
                     role="menu"
-                    className="absolute right-0 mt-2 w-56 animate-pop-in rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line"
+                    className="absolute top-full right-0 mt-2 w-56 animate-pop-in rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line"
                   >
                     <p className="truncate px-2.5 pt-1.5 pb-2 font-display font-bold text-ink-900">
                       {user.displayName}
@@ -344,7 +342,7 @@ export function SiteHeader() {
                         await logout();
                         router.push("/");
                       }}
-                      className="mt-1 block w-full rounded-xl border-t border-line px-2.5 pt-2.5 pb-2 text-left text-[15px] font-semibold text-ink-600 transition hover:text-ink-900"
+                      className="mt-1 block w-full border-t border-line px-2.5 pt-2.5 pb-2 text-left text-[15px] font-semibold text-ink-600 transition hover:text-ink-900"
                     >
                       Ieși din cont
                     </button>
