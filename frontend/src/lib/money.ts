@@ -45,7 +45,12 @@ export function parseLeiInput(raw: string): Bani | null {
     // Romanian: dots group thousands, comma is the decimal separator.
     normalised = cleaned.replace(/\./g, "").replace(",", ".");
   } else if (lastDot > lastComma) {
-    normalised = cleaned.replace(/,/g, "");
+    // "25.000" is how ro-RO prints twenty-five thousand, and it is what people
+    // paste back in. Dots in pure three-digit groups group; anything else is a
+    // decimal point.
+    normalised = /^\d{1,3}(\.\d{3})+$/.test(cleaned)
+      ? cleaned.replace(/\./g, "")
+      : cleaned.replace(/,/g, "");
   } else {
     normalised = cleaned;
   }

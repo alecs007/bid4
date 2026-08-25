@@ -20,19 +20,17 @@ function BidRow({
   className?: string;
 }) {
   return (
-    <li className={cn("flex items-center gap-3 py-2.5", className)}>
+    <li className={cn("flex items-center gap-2.5 py-2", className)}>
       <Avatar
         name={bid.bidderDisplayName}
         src={bid.bidderAvatarUrl}
-        size="sm"
+        size="xs"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-bold text-ink-900">
+        <p className="truncate text-sm font-bold text-ink-900">
           {bid.bidderDisplayName}
         </p>
-        <p className="text-sm text-ink-500">
-          {formatRelativeRo(bid.createdAt)}
-        </p>
+        <p className="text-xs text-ink-500">{formatRelativeRo(bid.createdAt)}</p>
       </div>
       <span
         className={cn(
@@ -61,7 +59,7 @@ export function BidHistory({
 
   if (!bids || bids.length === 0) {
     return (
-      <p className="text-ink-500">
+      <p className="text-sm text-ink-500">
         Nicio ofertă încă. Pornește de la {formatMoney(startingPrice)}.
       </p>
     );
@@ -82,9 +80,9 @@ export function BidHistory({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-2 text-sm font-bold text-primary-700 hover:text-primary-800"
+          className="mt-1.5 text-sm font-bold text-primary-700 hover:text-primary-800"
         >
-          Vezi toate licitațiile ({bids.length})
+          Vezi toate ofertele ({bids.length})
         </button>
       ) : null}
 

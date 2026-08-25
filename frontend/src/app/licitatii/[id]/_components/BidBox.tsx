@@ -8,7 +8,9 @@ import {
   Button,
   ButtonLink,
   Confetti,
-  Countdown,
+  CountdownBar,
+  CountdownBoard,
+  Modal,
   Sheet,
   useToast,
 } from "@/components/ui";
@@ -19,8 +21,10 @@ import {
   placeBid,
   retractBid,
 } from "@/lib/api/bids";
+import { ORDER } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { formatMoney, parseLeiInput } from "@/lib/money";
+import { formatDateTimeRo } from "@/lib/utils/date";
 import type { AuctionDetail } from "@/lib/types";
 import { errorMessage } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
@@ -193,7 +197,7 @@ function Result({
 
   if (!sold) {
     return (
-      <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
+      <div className="p-4">
         <p className="flex items-center gap-2 font-display text-lg font-extrabold text-ink-900">
           <Icons.clock aria-hidden="true" className="h-5 w-5 text-ink-400" />
           Licitația s-a încheiat
@@ -212,10 +216,7 @@ function Result({
 
   return (
     <div
-      className={cn(
-        "rounded-3xl p-5",
-        viewerWon ? "bg-primary-50" : "bg-white",
-      )}
+      className={cn("p-4", viewerWon && "bg-primary-50")}
     >
       <p className="flex items-center gap-2 text-sm font-bold text-success-700">
         <Icons.success aria-hidden="true" className="h-4 w-4" />
@@ -270,6 +271,7 @@ export function BidBox({
   const bidding = useBidding(auction, onChanged);
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const live = auction.status === "LIVE";
 
   const {
@@ -306,22 +308,13 @@ export function BidBox({
   ) : null;
 
   const priceBlock = (
-    <div className="flex items-end justify-between gap-4">
-      <div>
-        <p className="text-sm text-ink-500">
-          {auction.bidCount > 0 ? "Oferta curentă" : "Preț de pornire"}
-        </p>
-        <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900">
-          {formatMoney(auction.currentPrice, { compact: true })}
-        </p>
-      </div>
-      {live ? (
-        <Countdown
-          endTime={auction.endTime}
-          extensionCount={auction.extensionCount}
-          className="items-end"
-        />
-      ) : null}
+    <div>
+      <p className="text-sm text-ink-500">
+        {auction.bidCount > 0 ? "Oferta curentă" : "Preț de pornire"}
+      </p>
+      <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900">
+        {formatMoney(auction.currentPrice, { compact: true })}
+      </p>
     </div>
   );
 
@@ -364,18 +357,41 @@ export function BidBox({
     <>
       {celebrate > 0 ? <Confetti trigger={celebrate} count={30} /> : null}
 
-      <div className="hidden rounded-3xl bg-white ring-1 ring-edge p-5 lg:block">
+      <div className="border-b border-line px-5 pt-4 pb-3">
+        <p className="flex items-center gap-1.5 text-xs text-ink-500">
+          <Icons.calendar aria-hidden="true" className="h-3.5 w-3.5" />
+          Publicată {formatDateTimeRo(auction.startTime)}
+        </p>
+      </div>
+
+      {live ? (
+        <div className="hidden border-b border-line px-5 py-4 lg:block">
+          <CountdownBoard
+            endTime={auction.endTime}
+            startTime={auction.startTime}
+            extensionCount={auction.extensionCount}
+          />
+        </div>
+      ) : null}
+
+      <div className="px-5 py-5">
         {priceBlock}
+
         {isLeading ? (
-          leadingPanel
+          <div className="hidden lg:block">{leadingPanel}</div>
         ) : (
-          <div className="mt-5">
+          <div className="mt-4 hidden lg:block">
             {blocker ?? <AmountForm bidding={bidding} auction={auction} />}
+            <button
+              type="button"
+              onClick={() => setRulesOpen(true)}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
+            >
+              <Icons.help aria-hidden="true" className="h-4 w-4" />
+              Cum funcționează licitarea
+            </button>
           </div>
         )}
-      </div>
-      <div className="rounded-3xl bg-white ring-1 ring-edge p-5 lg:hidden">
-        {priceBlock}
       </div>
 
       {live && !isSeller ? (
@@ -384,6 +400,12 @@ export function BidBox({
           className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden"
         >
           <div className="mx-auto max-w-7xl">
+            <CountdownBar
+              endTime={auction.endTime}
+              startTime={auction.startTime}
+              className="mb-2.5"
+            />
+
             {isLeading ? (
               <>
                 <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-primary-800">
@@ -391,10 +413,7 @@ export function BidBox({
                     aria-hidden="true"
                     className="h-4 w-4 shrink-0"
                   />
-                  Ești cel mai bun ofertant cu{" "}
-                  <span className="numeric">
-                    {formatMoney(auction.currentPrice, { compact: true })}
-                  </span>
+                  Ești cel mai bun ofertant
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -443,6 +462,73 @@ export function BidBox({
         </div>
       ) : null}
 
+      <Modal
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        title="Cum funcționează licitarea"
+      >
+        <ul className="flex flex-col gap-3.5 text-[15px] text-ink-700">
+          <li className="flex gap-3">
+            <Icons.auction
+              aria-hidden="true"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0 text-ink-400"
+            />
+            <span>
+              Oferta minimă este prețul curent plus pasul de licitare, acum{" "}
+              <strong className="numeric text-ink-900">
+                {formatMoney(auction.bidIncrement, { compact: true })}
+              </strong>
+              . Poți oferi și mai mult dacă vrei să descurajezi alți ofertanți.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <Icons.payment
+              aria-hidden="true"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0 text-ink-400"
+            />
+            <span>
+              Cardul nu este debitat când licitezi. Plata se face o singură
+              dată, după ce câștigi.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <Icons.clock
+              aria-hidden="true"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0 text-ink-400"
+            />
+            <span>
+              O ofertă plasată în ultimele{" "}
+              <strong className="text-ink-900">
+                {Math.round(auction.antiSnipeSeconds / 60)} minute
+              </strong>{" "}
+              prelungește licitația cu același interval, ca nimeni să nu câștige
+              pe ultima secundă.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <Icons.refresh
+              aria-hidden="true"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0 text-ink-400"
+            />
+            <span>
+              Poți avea o singură ofertă activă pe un anunț. Dacă licitezi din
+              nou, oferta veche este înlocuită.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <Icons.escrow
+              aria-hidden="true"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0 text-ink-400"
+            />
+            <span>
+              Dacă alți ofertanți te depășesc, nu plătești nimic. Dacă câștigi,
+              ai {ORDER.CONFIRMATION_HOURS} de ore să confirmi comanda, iar banii
+              stau la bid4 până confirmi că ai primit coletul.
+            </span>
+          </li>
+        </ul>
+      </Modal>
+
       <Sheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
@@ -456,6 +542,17 @@ export function BidBox({
               onDone={() => setSheetOpen(false)}
             />
           )}
+          <button
+            type="button"
+            onClick={() => {
+              setSheetOpen(false);
+              setRulesOpen(true);
+            }}
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
+          >
+            <Icons.help aria-hidden="true" className="h-4 w-4" />
+            Cum funcționează licitarea
+          </button>
           <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
             <Icons.escrow
               aria-hidden="true"

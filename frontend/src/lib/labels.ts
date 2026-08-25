@@ -9,8 +9,11 @@
 import type {
   AccountType,
   AuctionStatus,
+  BeneficiaryType,
   BidStatus,
+  CauseEvidenceType,
   CauseStatus,
+  GuardianRelation,
   DeliveryMethodType,
   DisputeReason,
   DisputeStatus,
@@ -171,6 +174,32 @@ export const PRODUCT_CONDITION: Record<ProductCondition, string> = {
   VERY_GOOD: "Stare foarte bună",
   GOOD: "Stare bună",
   USED: "Folosit",
+};
+
+export const BENEFICIARY_TYPE: Record<BeneficiaryType, string> = {
+  INDIVIDUAL: "Persoană fizică",
+  MINOR: "Minor",
+  NGO: "Organizație / ONG",
+};
+
+export const GUARDIAN_RELATION: Record<GuardianRelation, string> = {
+  PARENT: "Părinte",
+  GRANDPARENT: "Bunic / bunică",
+  SIBLING: "Frate / soră major",
+  LEGAL_GUARDIAN: "Tutore legal desemnat",
+  OTHER: "Altă situație",
+};
+
+export const EVIDENCE_TYPE: Record<CauseEvidenceType, string> = {
+  MEDICAL_RECORD: "Documente medicale",
+  MEDICAL_LETTER: "Scrisoare medicală",
+  TREATMENT_QUOTE: "Deviz de tratament",
+  SOCIAL_REPORT: "Anchetă socială",
+  INCOME_PROOF: "Adeverință de venit",
+  SCHOOL_PROOF: "Adeverință de la școală",
+  VET_RECORD: "Documente veterinare",
+  DAMAGE_PROOF: "Dovada pagubei",
+  OTHER: "Alt document",
 };
 
 export const DELIVERY_METHOD_TYPE: Record<DeliveryMethodType, string> = {

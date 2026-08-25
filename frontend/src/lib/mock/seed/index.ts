@@ -1,6 +1,7 @@
 import type {
   Bid,
   Cause,
+  CauseDraftRecord,
   DeliveryMethod,
   Dispute,
   ID,
@@ -38,6 +39,8 @@ export interface World {
   disputes: Dispute[];
   /** auctionIds the user follows. */
   watchlist: { userId: ID; auctionId: ID }[];
+  /** Half-finished cause applications, one per organiser. */
+  causeDrafts: CauseDraftRecord[];
 }
 
 export function createWorld(): World {
@@ -81,5 +84,6 @@ export function createWorld(): World {
     invoices,
     disputes,
     watchlist,
+    causeDrafts: [],
   };
 }

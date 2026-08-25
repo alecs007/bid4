@@ -68,6 +68,34 @@ export const ACCOUNT = {
 } as const;
 
 /* ---------------------------------------------------------------------------
+ * Causes — proposal, verification and the ceiling before it completes
+ * ------------------------------------------------------------------------ */
+
+export const CAUSE = {
+  /**
+   * What a cause may raise while staff are still checking it. The organiser is
+   * told the number up front rather than discovering it at the ceiling.
+   *
+   * TODO(backend): enforced server-side when releasing escrow, not here.
+   */
+  UNVERIFIED_CAP: 5_000 * LEU,
+  MIN_GOAL: 500 * LEU,
+  MAX_GOAL: 500_000 * LEU,
+  /** A cause with no evidence cannot be approved, so it cannot be submitted. */
+  MIN_DOCUMENTS: 1,
+  MAX_DOCUMENTS: 12,
+  MAX_GALLERY_IMAGES: 6,
+  MAX_UPLOAD_MB: 8,
+  SHORT_DESCRIPTION_MAX: 160,
+  STORY_MIN: 200,
+  STORY_MAX: 4_000,
+  /** What the organiser is promised on the success screen. */
+  REVIEW_HOURS: 48,
+  MIN_BENEFICIARY_AGE: 0,
+  MAX_MINOR_AGE: 17,
+} as const;
+
+/* ---------------------------------------------------------------------------
  * Auctions
  * ------------------------------------------------------------------------ */
 
@@ -193,6 +221,17 @@ export const PRODUCT_CATEGORIES = [
   { id: "jucarii", label: "Jucării", emoji: "🧩" },
   { id: "colectii", label: "Colecții", emoji: "🏆" },
   { id: "bijuterii", label: "Bijuterii", emoji: "💍" },
+] as const;
+
+/** Every județ plus the capital, for beneficiary addresses. */
+export const ROMANIAN_COUNTIES = [
+  "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani",
+  "Brașov", "Brăila", "București", "Buzău", "Caraș-Severin", "Călărași",
+  "Cluj", "Constanța", "Covasna", "Dâmbovița", "Dolj", "Galați", "Giurgiu",
+  "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov", "Maramureș",
+  "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj",
+  "Sibiu", "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea",
+  "Vrancea",
 ] as const;
 
 export type CauseCategoryId = (typeof CAUSE_CATEGORIES)[number]["id"];

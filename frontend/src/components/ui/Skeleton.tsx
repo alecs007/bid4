@@ -180,113 +180,124 @@ export function SkeletonDetail() {
     <div
       role="status"
       aria-label="Se încarcă"
-      className="flex flex-col gap-4 pb-24 lg:pb-0"
+      className="animate-fade-in flex flex-col gap-6"
     >
-      {/* The breadcrumb trail the loaded page puts here. */}
       <Skeleton className="h-5 w-64" />
 
-      <div className={DETAIL_GRID}>
-        <div className="flex min-w-0 flex-col gap-3">
-          <Skeleton className="aspect-4/3 w-full rounded-3xl" />
-          <div className="flex gap-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-20 rounded-2xl" />
-            ))}
+      <div className="grid gap-x-12 gap-y-7 lg:grid-cols-[minmax(0,1fr)_21rem]">
+        {/* title above the photographs on a desktop, under them on a phone */}
+        <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
+          <div className="order-2 lg:order-1">
+            <Skeleton className="h-9 w-4/5" />
+            <div className="mt-2 flex gap-2">
+              <Skeleton className="h-5 w-28 rounded-lg" />
+              <Skeleton className="h-5 w-20 rounded-lg" />
+              <Skeleton className="h-5 w-24 rounded-lg" />
+            </div>
+          </div>
+
+          <div className="order-1 flex gap-3 lg:order-2">
+            <div className="hidden w-16 shrink-0 flex-col gap-2 lg:flex">
+              <Skeleton className="h-8 w-8 self-center rounded-xl" />
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="aspect-square w-full rounded-2xl" />
+              ))}
+            </div>
+            <Skeleton className="aspect-4/3 min-w-0 flex-1 rounded-2xl" />
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
+        {/* the one panel: clock, price, cause, bids, costs, payment */}
+        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+          <div className="divide-y divide-line rounded-xl bg-white ring-1 ring-edge">
+            <div className="px-5 pt-4 pb-3">
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <div className="hidden px-5 py-4 lg:block">
+              <div className="flex justify-between gap-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="flex flex-1 flex-col items-center gap-1.5">
+                    <Skeleton className="h-6 w-9" />
+                    <Skeleton className="h-3 w-7" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="mt-2.5 h-1 w-full rounded-full" />
+            </div>
+            <div className="px-5 py-5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-2 h-8 w-32" />
+              {/* the quick amounts, the field, the button and the rules link */}
+              <div className="mt-4 hidden gap-2 lg:flex">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Skeleton key={index} className="h-10 flex-1 rounded-xl" />
+                ))}
+              </div>
+              <Skeleton className="mt-3 hidden h-12 w-full rounded-2xl lg:block" />
+              <Skeleton className="mt-2 hidden h-13 w-full rounded-2xl lg:block" />
+              <Skeleton className="mt-3 hidden h-5 w-44 lg:block" />
+            </div>
+            <div className="flex items-center gap-3 px-5 py-4.5">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            </div>
+            <div className="px-5 py-4.5">
+              <Skeleton className="mb-3 h-4 w-40" />
+              <SkeletonBidRows />
+              {/* the "vezi toate ofertele" line the loaded panel ends on */}
+              <Skeleton className="mt-1.5 h-4 w-32" />
+            </div>
+            <div className="px-5 py-4.5">
+              <Skeleton className="mb-2.5 h-4 w-24" />
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-2/3" />
+              </div>
+              <Skeleton className="mt-3 h-4 w-36" />
+            </div>
+            <div className="px-5 py-4.5">
+              <Skeleton className="mb-2 h-4 w-32" />
+              <div className="flex gap-1.5">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Skeleton key={index} className="h-6 w-16 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* description, details, seller */}
+        <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">
           <div>
-            <div className="mb-2 flex gap-2">
-              <Skeleton className="h-7 w-28 rounded-lg" />
-              <Skeleton className="h-7 w-20 rounded-lg" />
-            </div>
-            <Skeleton className="h-[38px] w-4/5" />
-          </div>
-
-          <SkeletonCard>
-            <div className="flex items-end justify-between gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-7 w-32" />
-              </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-7 w-24" />
-              </div>
-            </div>
-            {/* On phones the bid form lives in the fixed bottom bar instead. */}
-            <Skeleton className="mt-5 hidden h-13 w-full rounded-2xl lg:block" />
-          </SkeletonCard>
-
-          <Skeleton className="h-12 w-full rounded-2xl" />
-
-          <div className="flex gap-2">
-            <Skeleton className="h-11 flex-1 rounded-2xl" />
-            <Skeleton className="h-11 flex-1 rounded-2xl" />
-          </div>
-        </div>
-      </div>
-
-      <div className={DETAIL_GRID}>
-        <div className="flex min-w-0 flex-col gap-4">
-          <SkeletonCard>
-            <Skeleton className="mb-3 h-7 w-32" />
+            <Skeleton className="mb-3 h-6 w-28" />
             <SkeletonParagraph lines={3} />
-            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4">
+          </div>
+          <div className="border-t border-line pt-5">
+            <Skeleton className="mb-3 h-6 w-20" />
+            <div className="grid gap-x-8 sm:grid-cols-2">
               {Array.from({ length: 2 }).map((_, index) => (
-                <div key={index} className="flex flex-col gap-2">
-                  <Skeleton className="h-4 w-16" />
+                <div key={index} className="flex flex-col gap-2 border-b border-line py-2.5">
+                  <Skeleton className="h-3 w-16" />
                   <Skeleton className="h-5 w-24" />
                 </div>
               ))}
             </div>
-          </SkeletonCard>
-
-          <SkeletonCard>
-            <Skeleton className="mb-3 h-7 w-24" />
-            <SkeletonBidRows />
-          </SkeletonCard>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-4">
-          <SkeletonCard>
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-14 w-14 rounded-2xl" />
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </div>
-            <Skeleton className="mt-4 h-2 w-full rounded-full" />
-          </SkeletonCard>
-
-          <SkeletonCard>
-            <Skeleton className="mb-3 h-5 w-20" />
+          </div>
+          <div className="border-t border-line pt-5">
+            <Skeleton className="mb-3 h-6 w-28" />
             <SkeletonPersonRow />
-          </SkeletonCard>
-        </div>
-      </div>
-
-      {/* The "more like this" rail the loaded page ends on. */}
-      <div className="mt-6 sm:mt-8">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-9 w-24 rounded-xl" />
-        </div>
-        <div className="-mx-4 flex gap-3 overflow-hidden px-4 pb-1 sm:mx-0 sm:gap-4 sm:px-0">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="w-40 shrink-0 sm:w-52">
-              <SkeletonAuctionCard />
-            </div>
-          ))}
+            <Skeleton className="mt-3 h-16 w-full rounded-2xl" />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/** Full `/cauze/[slug]` page: hero, story, verification, its auctions. */
 export function SkeletonCauseDetail() {
   return (
     <div

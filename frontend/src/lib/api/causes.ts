@@ -1,4 +1,4 @@
-import { USE_MOCK } from "@/lib/config";
+import { CAUSE, USE_MOCK } from "@/lib/config";
 import { toCauseDetail } from "@/lib/mock/join";
 import { causeCover, causeGallery, causeImage } from "@/lib/mock/images";
 import {
@@ -15,10 +15,14 @@ import { pickTrendingCauses } from "@/lib/featured";
 import { slugify, uniqueSlug } from "@/lib/utils/slug";
 import type {
   Cause,
+  CauseApplicationDraft,
+  CauseApplicationPayload,
   CauseDetail,
-  CauseDraftPayload,
+  CauseDocument,
+  CauseDraftRecord,
   CauseStatus,
   ID,
+  UploadedFileRef,
   UserRole,
 } from "@/lib/types";
 import { PUBLIC_CAUSE_STATUSES } from "@/lib/types";
@@ -115,11 +119,46 @@ export async function listMyCauses(userId: ID): Promise<CauseDetail[]> {
 }
 
 /**
+ * The identity paperwork, restated as the document list an operator already
+ * knows how to read. The application keeps each file where it belongs — an ID
+ * next to the person it identifies — and the review queue wants one list.
+ */
+function validationDocuments(
+  payload: CauseApplicationPayload,
+  causeId: ID,
+  now: string,
+): CauseDocument[] {
+  const entries: { kind: CauseDocument["kind"]; file?: UploadedFileRef }[] = [
+    { kind: "ID_DOCUMENT", file: payload.beneficiary.idDocumentRef },
+    { kind: "ID_DOCUMENT", file: payload.guardian?.idDocumentRef },
+    { kind: "OTHER", file: payload.guardian?.guardianshipProofRef },
+    { kind: "STATUTE", file: payload.ngo?.statuteDocRef },
+    { kind: "ID_DOCUMENT", file: payload.ngo?.representativeIdRef },
+  ];
+
+  return entries
+    .filter((entry): entry is { kind: CauseDocument["kind"]; file: UploadedFileRef } =>
+      Boolean(entry.file),
+    )
+    .map((entry, index) => ({
+      id: `${causeId}_kyc_${index}`,
+      kind: entry.kind,
+      fileName: entry.file.fileName,
+      fileUrl: entry.file.fileRef,
+      sizeBytes: entry.file.sizeBytes,
+      uploadedAt: now,
+    }));
+}
+
+/**
  * POST /causes — any USER may propose a cause; it still needs staff approval.
- * `submit` decides between saving a draft and entering the operator queue.
+ * `submit` decides between parking a draft and entering the operator queue.
+ *
+ * TODO(backend): the server re-validates everything here. Nothing a browser
+ * says about identity may be trusted, least of all that a document was seen.
  */
 export async function createCause(
-  payload: CauseDraftPayload,
+  payload: CauseApplicationPayload,
   organizerId: ID,
   submit: boolean,
 ): Promise<CauseDetail> {
@@ -134,16 +173,25 @@ export async function createCause(
   const world = getWorld();
 
   if (!payload.name.trim()) badRequest("Cauza are nevoie de un nume.");
-  if (payload.goalAmount <= 0) badRequest("Obiectivul trebuie să fie mai mare de 0.");
-  if (submit && payload.validation.documents.length === 0) {
+  if (payload.goalAmount <= 0) {
+    badRequest("Obiectivul trebuie să fie mai mare de 0.");
+  }
+  if (submit && payload.documents.length < CAUSE.MIN_DOCUMENTS) {
     badRequest(
-      "Încarcă cel puțin un document de verificare înainte de trimitere.",
+      "Încarcă cel puțin un document justificativ înainte de trimitere.",
       "DOCUMENTS_REQUIRED",
+    );
+  }
+  if (submit && payload.beneficiaryType === "MINOR" && !payload.guardian) {
+    badRequest(
+      "O cauză pentru un minor are nevoie de un tutore legal verificat.",
+      "GUARDIAN_REQUIRED",
     );
   }
 
   const id = nextId("cau");
   const now = new Date().toISOString();
+
   const cause: Cause = {
     id,
     name: payload.name.trim(),
@@ -154,29 +202,128 @@ export async function createCause(
     shortDescription: payload.shortDescription,
     story: payload.story,
     category: payload.category,
-    imageUrl: payload.imageUrl ?? causeImage(id, payload.category),
-    coverUrl: causeCover(id, payload.category),
-    gallery: causeGallery(id, payload.category),
+    imageUrl: payload.coverImage?.previewUrl ?? causeImage(id, payload.category),
+    coverUrl: payload.coverImage?.previewUrl ?? causeCover(id, payload.category),
+    gallery: payload.gallery.length
+      ? payload.gallery.map((image) => image.previewUrl ?? image.fileRef)
+      : causeGallery(id, payload.category),
+
     organizerId,
     status: submit ? "PENDING_APPROVAL" : "DRAFT",
     validation: {
-      ...payload.validation,
-      documents: payload.validation.documents.map((document, index) => ({
-        ...document,
-        id: `${id}_doc_${index}`,
-        uploadedAt: now,
-      })),
+      legalName: payload.ngo?.legalName ?? payload.beneficiary.fullName,
+      registrationNumber: payload.ngo?.registrationNumber ?? "",
+      representativeName:
+        payload.ngo?.representativeName ??
+        payload.guardian?.fullName ??
+        payload.beneficiary.fullName,
+      contactEmail: payload.beneficiary.contactEmail,
+      contactPhone: payload.beneficiary.contactPhone,
+      payoutAccountRef: payload.payout.iban ?? "",
+      documents: validationDocuments(payload, id, now),
     },
+
+    beneficiaryType: payload.beneficiaryType,
+    beneficiary: payload.beneficiary,
+    guardian: payload.guardian,
+    ngo: payload.ngo,
+    documents: payload.documents.map((document, index) => ({
+      ...document,
+      id: `${id}_doc_${index}`,
+    })),
+    payout: payload.payout,
+    verification: {
+      status: submit ? "PENDING_APPROVAL" : "UNVERIFIED",
+      cap: CAUSE.UNVERIFIED_CAP,
+    },
+    consents: { ...payload.consents, acceptedAt: now },
+
     goalAmount: payload.goalAmount,
     raisedAmount: 0,
     supporterCount: 0,
+    deadline: payload.deadline,
     createdAt: now,
     submittedAt: submit ? now : undefined,
   };
 
   world.causes.push(cause);
+  world.causeDrafts = world.causeDrafts.filter(
+    (draft) => draft.organizerId !== organizerId,
+  );
   commit();
   return toCauseDetail(cause);
+}
+
+/**
+ * POST /causes/draft — the wizard parks its state here after every step, so a
+ * closed tab costs nothing. One open draft per organiser, which is why this
+ * upserts rather than appends.
+ */
+export async function saveDraftCause(
+  data: CauseApplicationDraft,
+  step: number,
+  organizerId: ID,
+): Promise<CauseDraftRecord> {
+  if (!USE_MOCK) {
+    return http<CauseDraftRecord>("/causes/draft", {
+      method: "POST",
+      body: { data, step },
+    });
+  }
+
+  const world = getWorld();
+  const now = new Date().toISOString();
+  const existing = world.causeDrafts.find(
+    (draft) => draft.organizerId === organizerId,
+  );
+
+  if (existing) {
+    existing.data = data;
+    existing.step = Math.max(existing.step, step);
+    existing.updatedAt = now;
+    commit();
+    return existing;
+  }
+
+  const record: CauseDraftRecord = {
+    id: nextId("cdr"),
+    organizerId,
+    step,
+    data,
+    updatedAt: now,
+  };
+  world.causeDrafts.push(record);
+  commit();
+  return record;
+}
+
+/** GET /causes/draft — what to resume, if anything. */
+export async function getMyCauseDraft(
+  organizerId: ID,
+): Promise<CauseDraftRecord | null> {
+  if (!USE_MOCK) {
+    return http<CauseDraftRecord | null>("/causes/draft");
+  }
+
+  await delay();
+  const world = getWorld();
+  return (
+    world.causeDrafts.find((draft) => draft.organizerId === organizerId) ?? null
+  );
+}
+
+/** DELETE /causes/draft */
+export async function discardCauseDraft(organizerId: ID): Promise<void> {
+  if (!USE_MOCK) {
+    await http<void>("/causes/draft", { method: "DELETE" });
+    return;
+  }
+
+  const world = getWorld();
+  world.causeDrafts = world.causeDrafts.filter(
+    (draft) => draft.organizerId !== organizerId,
+  );
+  commit();
 }
 
 /** POST /causes/{id}/submit — moves a draft into the approval queue. */

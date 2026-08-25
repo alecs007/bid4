@@ -1,6 +1,12 @@
 import type { CauseCategoryId } from "@/lib/config";
 import { lei } from "@/lib/money";
-import type { Cause, CauseStatus } from "@/lib/types";
+import { CAUSE } from "@/lib/config";
+import type {
+  BeneficiaryType,
+  Cause,
+  CauseStatus,
+  VerificationStatus,
+} from "@/lib/types";
 import { isoAgo } from "@/lib/utils/date";
 import { causeCover, causeGallery, causeImage } from "../images";
 
@@ -30,7 +36,20 @@ interface CauseSeed {
   website?: string;
   iban: string;
   rejectionReason?: string;
+  /** Most seeded causes are run by organisations; a few are not. */
+  beneficiaryType?: BeneficiaryType;
+  county?: string;
+  city?: string;
 }
+
+const VERIFICATION_OF: Record<CauseStatus, VerificationStatus> = {
+  DRAFT: "UNVERIFIED",
+  PENDING_APPROVAL: "PENDING_APPROVAL",
+  APPROVED: "APPROVED",
+  ACTIVE: "APPROVED",
+  REJECTED: "REJECTED",
+  SUSPENDED: "APPROVED",
+};
 
 const SEEDS: CauseSeed[] = [
   {
@@ -439,6 +458,39 @@ export function buildCauses(): Cause[] {
                   uploadedAt: isoAgo(seed.createdDaysAgo, "days"),
                 },
               ],
+      },
+      beneficiaryType: seed.beneficiaryType ?? "NGO",
+      beneficiary: {
+        fullName: seed.representative,
+        contactEmail: seed.email,
+        contactPhone: seed.phone,
+        county: seed.county ?? "București",
+        city: seed.city ?? "București",
+      },
+      ngo:
+        (seed.beneficiaryType ?? "NGO") === "NGO"
+          ? {
+              legalName: seed.legalName,
+              registrationNumber: seed.cui,
+              representativeName: seed.representative,
+            }
+          : undefined,
+      documents: [],
+      payout: {
+        method:
+          (seed.beneficiaryType ?? "NGO") === "NGO"
+            ? "STRIPE_NGO"
+            : "STRIPE_INDIVIDUAL",
+        iban: seed.iban,
+        stripeOnboarded: seed.status !== "DRAFT",
+      },
+      verification: {
+        status: VERIFICATION_OF[seed.status],
+        cap:
+          VERIFICATION_OF[seed.status] === "APPROVED"
+            ? undefined
+            : CAUSE.UNVERIFIED_CAP,
+        rejectionReason: seed.rejectionReason,
       },
       goalAmount: lei(seed.goalLei),
       raisedAmount: lei(seed.raisedLei),

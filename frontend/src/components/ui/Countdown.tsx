@@ -246,3 +246,142 @@ export function CountdownInline({
     </span>
   );
 }
+
+/**
+ * Four cells and a line: days, hours, minutes, seconds, counting down, with
+ * the auction's remaining share of its own window under them. No label — the
+ * numbers are the label.
+ */
+export function CountdownBoard({
+  endTime,
+  startTime,
+  extensionCount = 0,
+  className,
+}: {
+  endTime: string;
+  startTime?: string;
+  extensionCount?: number;
+  className?: string;
+}) {
+  const { days, hours, minutes, seconds, totalSeconds, isOver } = useCountdown(
+    endTime,
+    {},
+  );
+  const urgency = urgencyOf(totalSeconds);
+
+  const remainingPercent = (() => {
+    if (!startTime) return 0;
+    const windowSeconds = (Date.parse(endTime) - Date.parse(startTime)) / 1000;
+    if (!Number.isFinite(windowSeconds) || windowSeconds <= 0) return 0;
+    return Math.min(100, Math.max(0, (totalSeconds / windowSeconds) * 100));
+  })();
+
+  if (isOver) return null;
+
+  const cells: { value: number; label: string }[] = [
+    { value: days, label: "zile" },
+    { value: hours, label: "ore" },
+    { value: minutes, label: "min" },
+    { value: seconds, label: "sec" },
+  ];
+
+  return (
+    <div className={cn("flex flex-col gap-2.5", className)}>
+      <div
+        role="timer"
+        suppressHydrationWarning
+        aria-label={`Timp rămas: ${days} zile, ${hours} ore, ${minutes} minute`}
+        className="grid grid-cols-4 divide-x divide-line"
+      >
+        {cells.map((cell) => (
+          <div key={cell.label} className="px-1 text-center">
+            <p
+              suppressHydrationWarning
+              className={cn(
+                "numeric font-display text-2xl leading-none font-extrabold",
+                NUMBER_TONE[urgency],
+              )}
+            >
+              {pad(cell.value)}
+            </p>
+            <p className="mt-1 text-[11px] text-ink-500">{cell.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="h-1 w-full overflow-hidden rounded-full bg-ink-100">
+        <div
+          suppressHydrationWarning
+          className={cn(
+            "h-full rounded-full transition-[width] duration-1000 ease-linear",
+            BAR_TONE[urgency],
+          )}
+          style={{ width: `${remainingPercent.toFixed(2)}%` }}
+        />
+      </div>
+
+      {extensionCount > 0 ? (
+        <p className="text-xs font-bold text-sun-700">
+          Prelungită de {extensionCount} ori
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * One line and a rule, for the strip above the phone's action bar: how long is
+ * left, and how much of the auction's window that is.
+ */
+export function CountdownBar({
+  endTime,
+  startTime,
+  className,
+}: {
+  endTime: string;
+  startTime?: string;
+  className?: string;
+}) {
+  const { days, hours, minutes, seconds, totalSeconds, isOver } = useCountdown(
+    endTime,
+    {},
+  );
+  const urgency = urgencyOf(totalSeconds);
+
+  const remainingPercent = (() => {
+    if (!startTime) return 0;
+    const windowSeconds = (Date.parse(endTime) - Date.parse(startTime)) / 1000;
+    if (!Number.isFinite(windowSeconds) || windowSeconds <= 0) return 0;
+    return Math.min(100, Math.max(0, (totalSeconds / windowSeconds) * 100));
+  })();
+
+  if (isOver) return null;
+
+  const left =
+    days > 0
+      ? `${days}z ${hours}h ${pad(minutes)}m`
+      : hours > 0
+        ? `${hours}h ${pad(minutes)}m ${pad(seconds)}s`
+        : `${pad(minutes)}m ${pad(seconds)}s`;
+
+  return (
+    <div className={cn("flex flex-col gap-1", className)}>
+      <p
+        suppressHydrationWarning
+        className={cn("text-center text-xs font-bold", LABEL_TONE[urgency])}
+      >
+        Se închide în <span className="numeric">{left}</span>
+      </p>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-ink-100">
+        <div
+          suppressHydrationWarning
+          className={cn(
+            "h-full rounded-full transition-[width] duration-1000 ease-linear",
+            BAR_TONE[urgency],
+          )}
+          style={{ width: `${remainingPercent.toFixed(2)}%` }}
+        />
+      </div>
+    </div>
+  );
+}

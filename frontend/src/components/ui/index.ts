@@ -5,7 +5,9 @@ export { Card, CardHeader, IconBubble, SectionLabel } from "./Card";
 export { CardRail } from "./CardRail";
 export { Badge, StatusBadge, DonationBadge, MetaChip } from "./Badge";
 export { Alert } from "./Alert";
+export { InfoHint } from "./InfoHint";
 export { Gallery } from "./Gallery";
+export { Lightbox } from "./Lightbox";
 export { Breadcrumbs } from "./Breadcrumbs";
 export type { Crumb } from "./Breadcrumbs";
 export { AnimatedNumber } from "./AnimatedNumber";
@@ -42,9 +44,17 @@ export { Pagination } from "./Pagination";
 export { Sheet } from "./Sheet";
 export { Slider, RangeSlider } from "./Slider";
 export { SegmentedControl, NavTabs } from "./Tabs";
+export { Stepper } from "./Stepper";
+export type { StepperStep } from "./Stepper";
+export { FileUpload, FileUploadGrid } from "./FileUpload";
 export type { SegmentOption, NavTabItem } from "./Tabs";
 
-export { Countdown, CountdownInline } from "./Countdown";
+export {
+  Countdown,
+  CountdownInline,
+  CountdownBoard,
+  CountdownBar,
+} from "./Countdown";
 export type { CountdownProps } from "./Countdown";
 
 export { FeeBreakdown } from "./FeeBreakdown";
