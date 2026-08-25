@@ -69,7 +69,7 @@ export default function HomePage() {
             </div>
             <div className="relative order-first aspect-video w-full lg:order-none">
               <Image
-                src="/images/hero-illustration.webp"
+                src="/images/hero-mascot.avif"
                 alt="Mascota bid4 ține o cutie cu donații, lângă haine și lucruri pregătite de trimis."
                 fill
                 priority
