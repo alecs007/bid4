@@ -2,6 +2,15 @@ import { cn } from "@/lib/utils/cn";
 
 export type MascotMood = "happy" | "cheer" | "sad" | "thinking";
 
+const INK = "#14401a";
+
+const BROWS: Record<MascotMood, readonly [string, string]> = {
+  happy: ["M40 41 Q46 37 52 40", "M80 41 Q74 37 68 40"],
+  cheer: ["M39 38 Q46 33 53 37", "M81 38 Q74 33 67 37"],
+  sad: ["M40 43 Q46 40 53 38", "M80 43 Q74 40 67 38"],
+  thinking: ["M40 41 Q46 37 52 40", "M80 36 Q74 32 68 35"],
+};
+
 export function Mascot({
   mood = "happy",
   size = 120,
@@ -15,7 +24,7 @@ export function Mascot({
   className?: string;
   title?: string;
 }) {
-  const ink = "#14401a";
+  const [browLeft, browRight] = BROWS[mood];
 
   return (
     <svg
@@ -27,45 +36,51 @@ export function Mascot({
       aria-hidden={title ? undefined : "true"}
       className={cn(floating && "animate-float", className)}
     >
+      <path d="M59 29 Q62.6 12.6 79 9 Q75.4 25.4 59 29 Z" fill="#7fda3e" />
+
       <path
-        d="M60 30 C60 20 62 12 67 6"
-        stroke="#2f7a14"
-        strokeWidth="5"
+        d="M60 109 C34.8 89.3 12 69.6 12 49 C12 32.2 22.2 22 35.6 22 C46.6 22 55.3 27 60 35 C64.7 27 73.4 22 84.4 22 C97.8 22 108 32.2 108 49 C108 69.6 85.2 89.3 60 109 Z"
+        fill="#58cc02"
+      />
+      <ellipse
+        cx="30"
+        cy="36"
+        rx="12"
+        ry="7.5"
+        fill="#7fda3e"
+        opacity="0.55"
+        transform="rotate(-30 30 36)"
+      />
+      <ellipse cx="31" cy="70" rx="8" ry="5" fill="#7fda3e" opacity="0.5" />
+      <ellipse cx="89" cy="70" rx="8" ry="5" fill="#7fda3e" opacity="0.5" />
+
+      <path
+        d={browLeft}
+        stroke={INK}
+        strokeWidth="3.2"
         strokeLinecap="round"
         fill="none"
       />
-      <ellipse
-        cx="76"
-        cy="8"
-        rx="12"
-        ry="7"
-        fill="#7fda3e"
-        transform="rotate(-24 76 8)"
-      />
       <path
-        d="M60 108 C18 80 6 56 6 40 C6 21 20 9 37 9 C48 9 56 15 60 24 C64 15 72 9 83 9 C100 9 114 21 114 40 C114 56 102 80 60 108 Z"
-        fill="#58cc02"
+        d={browRight}
+        stroke={INK}
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        fill="none"
       />
-      <path
-        d="M37 9 C20 9 6 21 6 40 C6 46 8 53 12 61 C10 44 16 26 37 21 Z"
-        fill="#7fda3e"
-      />
-      <ellipse cx="33" cy="66" rx="7" ry="5" fill="#ff9e85" opacity="0.85" />
-      <ellipse cx="87" cy="66" rx="7" ry="5" fill="#ff9e85" opacity="0.85" />
 
-      
       {mood === "cheer" ? (
         <>
           <path
-            d="M36 50 Q44 41 52 50"
-            stroke={ink}
+            d="M38 58 Q46 48 54 58"
+            stroke={INK}
             strokeWidth="6"
             strokeLinecap="round"
             fill="none"
           />
           <path
-            d="M68 50 Q76 41 84 50"
-            stroke={ink}
+            d="M82 58 Q74 48 66 58"
+            stroke={INK}
             strokeWidth="6"
             strokeLinecap="round"
             fill="none"
@@ -73,39 +88,36 @@ export function Mascot({
         </>
       ) : (
         <>
-          <ellipse cx="44" cy="48" rx="7" ry="8" fill={ink} />
-          <ellipse cx="76" cy="48" rx="7" ry="8" fill={ink} />
-          <circle cx="41.5" cy="45" r="2.6" fill="#ffffff" />
-          <circle cx="73.5" cy="45" r="2.6" fill="#ffffff" />
+          <ellipse cx="46" cy="56" rx="8" ry="9.5" fill={INK} />
+          <ellipse cx="74" cy="56" rx="8" ry="9.5" fill={INK} />
+          <circle cx="43" cy="52" r="3" fill="#ffffff" />
+          <circle cx="71" cy="52" r="3" fill="#ffffff" />
         </>
       )}
 
-      
-      {mood === "thinking" ? (
+      {mood === "cheer" ? (
+        <path d="M45 73 Q60 95 75 73 Z" fill={INK} />
+      ) : mood === "sad" ? (
         <path
-          d="M68 34 L86 30"
-          stroke={ink}
-          strokeWidth="4"
+          d="M48 84 Q60 74 72 84"
+          stroke={INK}
+          strokeWidth="5.5"
           strokeLinecap="round"
+          fill="none"
         />
-      ) : null}
-
-      
-      {mood === "sad" ? (
+      ) : mood === "thinking" ? (
         <path
-          d="M50 76 Q60 68 70 76"
-          stroke={ink}
+          d="M50 80 L68 77"
+          stroke={INK}
           strokeWidth="5"
           strokeLinecap="round"
           fill="none"
         />
-      ) : mood === "cheer" ? (
-        <path d="M46 64 Q60 84 74 64 Z" fill={ink} />
       ) : (
         <path
-          d="M48 66 Q60 79 72 66"
-          stroke={ink}
-          strokeWidth="5"
+          d="M46 76 Q60 90 74 76"
+          stroke={INK}
+          strokeWidth="5.5"
           strokeLinecap="round"
           fill="none"
         />
