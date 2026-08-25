@@ -26,11 +26,7 @@ import {
   SHIPPING,
   SHIPPING_PRICES,
 } from "@/lib/config";
-import {
-  ACCOUNT_TYPE,
-  AUCTION_STATUS,
-  PRODUCT_CONDITION,
-} from "@/lib/labels";
+import { ACCOUNT_TYPE, AUCTION_STATUS, PRODUCT_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
@@ -90,6 +86,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   const toast = useToast();
   const [nonce, setNonce] = useState(0);
   const [feesOpen, setFeesOpen] = useState(false);
+  const [watchOverride, setWatchOverride] = useState<boolean | null>(null);
 
   const {
     data: auction,
@@ -124,19 +121,31 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     finalPrice: auction.currentPrice,
     donationPercent: auction.donationPercent,
   });
+  const watched = watchOverride ?? Boolean(auction.isWatched);
   const causePercent = progressPercent(
     auction.cause.raisedAmount,
     auction.cause.goalAmount,
   );
 
+  /** The icon turns on the tap; the request only confirms it, or undoes it. */
   const handleWatch = async () => {
     if (!user) {
       toast.info("Intră în cont ca să salvezi licitații.");
       return;
     }
-    const result = await toggleWatch(auction.id, user.id);
-    toast.success(result.watched ? "Salvată" : "Scoasă din listă");
-    refresh();
+
+    const next = !watched;
+    setWatchOverride(next);
+    if (next) toast.success("Adăugat la salvate", auction.product.title);
+
+    try {
+      const result = await toggleWatch(auction.id, user.id);
+      setWatchOverride(result.watched);
+      refresh();
+    } catch {
+      setWatchOverride(!next);
+      toast.error("Licitația nu a putut fi salvată.");
+    }
   };
 
   const share = async () => {
@@ -151,20 +160,31 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     } catch {}
   };
 
+  /**
+   * A white chip while they float over the photograph on a phone, a hover
+   * surface once they sit beside the title on a desktop. Saving animates the
+   * same way as on a card — the icon fills, nothing else moves.
+   */
+  const actionButton =
+    "inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 ring-1 ring-edge backdrop-blur-sm transition duration-200 active:scale-90 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none lg:hover:bg-ink-100";
+
   const actions = (
     <>
       <button
         type="button"
         onClick={handleWatch}
-        aria-label={auction.isWatched ? "Salvată" : "Salvează"}
-        aria-pressed={auction.isWatched}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-ink-600 ring-1 ring-edge backdrop-blur-sm transition hover:text-ink-900 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none"
+        aria-label={watched ? "Salvată" : "Salvează"}
+        aria-pressed={watched}
+        className={cn(
+          actionButton,
+          watched ? "text-primary-600" : "text-ink-600 hover:text-ink-900",
+        )}
       >
         <Icons.watchlist
           aria-hidden="true"
           className={cn(
-            "h-5 w-5",
-            auction.isWatched && "fill-current text-primary-600",
+            "h-5 w-5 fill-transparent transition-[fill,transform] duration-200",
+            watched && "scale-110 fill-current",
           )}
         />
       </button>
@@ -172,7 +192,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         type="button"
         onClick={share}
         aria-label="Distribuie"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-ink-600 ring-1 ring-edge backdrop-blur-sm transition hover:text-ink-900 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none"
+        className={cn(actionButton, "text-ink-600 hover:text-ink-900")}
       >
         <Icons.share aria-hidden="true" className="h-5 w-5" />
       </button>
@@ -328,9 +348,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 <InfoHint label="Ce include protecția cumpărătorului">
                   {FEES.BUYER_TAX_PERCENT}% din prețul final, între{" "}
                   {formatMoney(FEES.BUYER_TAX_MIN, { compact: true })} și{" "}
-                  {formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}. Ține banii
-                  la bid4 până confirmi coletul și acoperă disputele deschise în{" "}
-                  {ORDER.DISPUTE_WINDOW_HOURS} de ore de la livrare.
+                  {formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}. Ține
+                  banii la bid4 până confirmi coletul și acoperă disputele
+                  deschise în {ORDER.DISPUTE_WINDOW_HOURS} de ore de la livrare.
                 </InfoHint>
               </div>
               <div className="flex items-start gap-2.5 py-1.5">
@@ -342,13 +362,15 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   Livrare {SHIPPING.COURIER_NAME}
                 </span>
                 <span className="numeric shrink-0 font-bold text-ink-900">
-                  de la {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })}
+                  de la{" "}
+                  {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })}
                 </span>
                 <InfoHint label="Cum se calculează livrarea">
                   {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })} la
-                  Easybox, {formatMoney(SHIPPING_PRICES.HOME_COURIER, { compact: true })}{" "}
-                  cu livrare la adresă. Alegi metoda la finalizarea comenzii, iar
-                  AWB-ul se generează automat după plată.
+                  Easybox,{" "}
+                  {formatMoney(SHIPPING_PRICES.HOME_COURIER, { compact: true })}{" "}
+                  cu livrare la adresă. Alegi metoda la finalizarea comenzii,
+                  iar AWB-ul se generează automat după plată.
                 </InfoHint>
               </div>
               <button

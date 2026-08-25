@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Icons } from "@/components/icons";
-import { CountdownInline, SkeletonAuctionCard, useToast } from "@/components/ui";
+import {
+  CountdownInline,
+  SkeletonAuctionCard,
+  useToast,
+} from "@/components/ui";
 import { toggleWatch } from "@/lib/api/auctions";
 import { AUCTION_STATUS } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
@@ -26,25 +30,34 @@ export function AuctionCard({
   const { user } = useAuth();
   const toast = useToast();
 
-  const [watched, setWatched] = useState(Boolean(auction.isWatched));
-  const [pending, setPending] = useState(false);
+  const [override, setOverride] = useState<boolean | null>(null);
+  const watched = override ?? Boolean(auction.isWatched);
 
   const live = auction.status === "LIVE";
   const cover = auction.product.images[0] ?? "";
 
+  /**
+   * The icon turns before the request leaves: saving is the viewer's decision,
+   * not the server's opinion of it. The answer only confirms — or, if the call
+   * fails, puts the icon back where it was.
+   */
   const handleWatch = async () => {
     if (!user) {
       toast.info("Intră în cont ca să salvezi licitații.");
       return;
     }
-    setPending(true);
+
+    const next = !watched;
+    setOverride(next);
+    // Only the save is worth announcing; removing one speaks for itself.
+    if (next) toast.success("Adăugat la salvate", auction.product.title);
+
     try {
       const result = await toggleWatch(auction.id, user.id);
-      setWatched(result.watched);
+      setOverride(result.watched);
     } catch {
-      toast.error("Nu am putut salva licitația.");
-    } finally {
-      setPending(false);
+      setOverride(!next);
+      toast.error("Licitația nu a putut fi salvată.");
     }
   };
 
@@ -88,19 +101,22 @@ export function AuctionCard({
         <button
           type="button"
           onClick={handleWatch}
-          disabled={pending}
           aria-pressed={watched}
           aria-label={watched ? "Scoate din listă" : "Salvează în listă"}
           className={cn(
-            "absolute top-2.5 right-2.5 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg backdrop-blur-sm transition",
-            watched
-              ? "bg-accent-600 text-white"
-              : "bg-white/95 text-ink-500 hover:text-ink-900",
+            "absolute top-2.5 right-2.5 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 backdrop-blur-sm",
+            "transition duration-200 active:scale-90",
+            watched ? "text-primary-600" : "text-ink-500 hover:text-ink-900",
           )}
         >
           <Icons.watchlist
             aria-hidden="true"
-            className={cn("h-[18px] w-[18px]", watched && "fill-current")}
+            /* fill-transparent, not the svg's own fill="none": a colour can be
+               animated to another colour, `none` cannot. */
+            className={cn(
+              "h-[18px] w-[18px] fill-transparent transition-[fill,transform] duration-200",
+              watched && "scale-110 fill-current",
+            )}
           />
         </button>
       </div>
@@ -160,7 +176,11 @@ export function AuctionGrid({
 
   if (loading) {
     return (
-      <div role="status" aria-label="Se încarcă licitațiile" className={gridClass}>
+      <div
+        role="status"
+        aria-label="Se încarcă licitațiile"
+        className={gridClass}
+      >
         {Array.from({ length: skeletonCount }).map((_, index) => (
           <SkeletonAuctionCard key={index} />
         ))}
