@@ -212,9 +212,9 @@ export const DELIVERY_METHOD_TYPE: Record<DeliveryMethodType, string> = {
 /** "acum 3 minute" style helpers live in lib/utils/date.ts — labels stay here. */
 export const COPY = {
   escrowExplainer:
-    "Banii tăi sunt păstrați în siguranță de bid4 și sunt trimiși mai departe abia după ce confirmi că ai primit produsul.",
+    "Plata este păstrată de bid4 și eliberată abia după ce confirmi că ai primit produsul.",
   donationExplainer:
-    "Procentul ales de vânzător din prețul final merge direct către cauza verificată, imediat ce comanda este finalizată.",
+    "Procentul stabilit de vânzător din prețul final ajunge la cauza verificată imediat ce comanda este finalizată.",
   bidGateExplainer:
-    "Ca să poți licita, ai nevoie de un card salvat și de o metodă de livrare implicită. Așa comanda pleacă instant când câștigi.",
+    "Pentru a licita ai nevoie de un card salvat și de o metodă de livrare implicită, astfel încât comanda să pornească imediat ce câștigi.",
 } as const;

@@ -425,7 +425,7 @@ export async function rejectCause(
   assertStaff(role);
   if (!reason.trim()) {
     badRequest(
-      "Scrie un motiv, ca organizatorul să știe ce are de corectat.",
+      "Adaugă un motiv, pentru ca organizatorul să știe ce are de corectat.",
     );
   }
 
@@ -453,7 +453,7 @@ export async function setCauseStatus(
   }
 
   await delay();
-  if (role !== "ADMIN") forbidden("Doar administratorii pot face asta.");
+  if (role !== "ADMIN") forbidden("Această acțiune este permisă doar administratorilor.");
 
   const world = getWorld();
   const cause = world.causes.find((item) => item.id === causeId);

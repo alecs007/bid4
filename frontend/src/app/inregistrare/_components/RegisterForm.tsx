@@ -62,22 +62,22 @@ export function RegisterForm() {
     const found: Partial<Record<FieldName, string>> = {};
 
     if (displayName.trim().length < ACCOUNT.MIN_DISPLAY_NAME_LENGTH) {
-      found.displayName = "Scrie numele sub care vrei să apari.";
+      found.displayName = "Alege numele sub care vei apărea.";
     } else if (displayName.trim().length > ACCOUNT.MAX_DISPLAY_NAME_LENGTH) {
       found.displayName = `Cel mult ${ACCOUNT.MAX_DISPLAY_NAME_LENGTH} de caractere.`;
     }
 
     if (isOrganization) {
       if (!orgLegalName.trim()) {
-        found.orgLegalName = "Scrie denumirea legală a organizației.";
+        found.orgLegalName = "Completează denumirea legală a organizației.";
       }
       if (!orgRegistrationNumber.trim()) {
-        found.orgRegistrationNumber = "Scrie codul de înregistrare (CUI).";
+        found.orgRegistrationNumber = "Completează codul de înregistrare (CUI).";
       }
     }
 
     if (!email.trim()) {
-      found.email = "Scrie adresa de email.";
+      found.email = "Introdu adresa de email.";
     } else if (!EMAIL_PATTERN.test(email.trim())) {
       found.email = "Adresa de email nu pare validă.";
     }
@@ -118,7 +118,7 @@ export function RegisterForm() {
       });
       toast.success(
         `Bine ai venit, ${user.displayName.split(" ")[0]}!`,
-        "Adaugă un card și o adresă de livrare ca să poți licita.",
+        "Adaugă un card și o adresă de livrare pentru a putea licita.",
       );
       router.replace(destination);
     } catch (error) {
@@ -157,7 +157,7 @@ export function RegisterForm() {
 
         <Field
           label="Tip de cont"
-          hint="Amândouă pot licita, vinde și propune cauze. Diferă doar datele cerute la validarea unei cauze."
+          hint="Ambele pot licita, vinde și propune cauze. Diferă doar documentele cerute la verificarea unei cauze."
         >
           <div className="grid gap-2 sm:grid-cols-2">
             <RadioCard
@@ -184,7 +184,7 @@ export function RegisterForm() {
         <Field
           label="Nume afișat"
           error={errors.displayName}
-          hint="Așa te vor vedea ceilalți pe bid4."
+          hint="Numele apare pe anunțuri, oferte și profil."
         >
           <Input
             name="displayName"
@@ -262,7 +262,7 @@ export function RegisterForm() {
             checked={acceptedTerms}
             onChange={(event) => setAcceptedTerms(event.target.checked)}
             label="Sunt de acord cu termenii și cu politica de confidențialitate."
-            description="Banii stau în escrow până confirmi coletul, iar donația pleacă spre cauză imediat după."
+            description="Plata rămâne protejată până confirmi coletul, iar donația pleacă spre cauză imediat după."
           />
           {errors.acceptedTerms ? (
             <p

@@ -73,7 +73,7 @@ export function checkBidEligibility(userId?: ID): BidEligibility {
       canBid: false,
       hasCard: false,
       hasDelivery: false,
-      reason: "Autentifică-te ca să poți licita.",
+      reason: "Autentifică-te pentru a licita.",
     };
   }
 
@@ -91,7 +91,7 @@ export function checkBidEligibility(userId?: ID): BidEligibility {
       canBid: false,
       hasCard,
       hasDelivery,
-      reason: "Adaugă un card și o metodă de livrare ca să poți licita.",
+      reason: "Adaugă un card și o metodă de livrare pentru a licita.",
     };
   }
   if (!hasCard) {
@@ -99,7 +99,7 @@ export function checkBidEligibility(userId?: ID): BidEligibility {
       canBid: false,
       hasCard,
       hasDelivery,
-      reason: "Adaugă un card salvat ca să poți licita.",
+      reason: "Adaugă un card salvat pentru a licita.",
     };
   }
   if (!hasDelivery) {
@@ -107,7 +107,7 @@ export function checkBidEligibility(userId?: ID): BidEligibility {
       canBid: false,
       hasCard,
       hasDelivery,
-      reason: "Alege o metodă de livrare implicită ca să poți licita.",
+      reason: "Alege o metodă de livrare implicită pentru a licita.",
     };
   }
   return { canBid: true, hasCard, hasDelivery };

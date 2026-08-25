@@ -81,7 +81,7 @@ export async function http<T>(
       code: errorBody?.code ?? "HTTP_ERROR",
       message:
         errorBody?.message ??
-        "A apărut o problemă de conexiune. Mai încearcă o dată.",
+        "A apărut o problemă de conexiune. Încearcă din nou în câteva momente.",
       fieldErrors: errorBody?.fieldErrors,
     });
   }

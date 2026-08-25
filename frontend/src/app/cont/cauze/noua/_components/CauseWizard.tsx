@@ -150,7 +150,7 @@ export function CauseWizard() {
       if (invalid !== null) goTo(invalid);
       toast.error(
         "Mai lipsește ceva",
-        "Am marcat câmpurile care au nevoie de atenție.",
+        "Am marcat câmpurile care necesită atenție.",
       );
       return;
     }
@@ -212,7 +212,7 @@ export function CauseWizard() {
             </Button>
           }
         >
-          Poți continua de unde ai rămas. Nimic nu se trimite până nu apeși tu.
+          Poți continua de unde ai rămas. Nimic nu se trimite fără confirmarea ta.
         </Alert>
       ) : null}
 

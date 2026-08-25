@@ -8,7 +8,7 @@ import { RegisterFormSkeleton } from "./_components/RegisterFormSkeleton";
 export const metadata: Metadata = {
   title: "Cont nou",
   description:
-    "Creează-ți contul bid4: licitezi, vinzi și trimiți o parte din fiecare vânzare către o cauză verificată.",
+    "Creează-ți contul bid4: licitezi, vinzi și direcționezi o parte din fiecare vânzare către o cauză verificată.",
 };
 
 export default function RegisterPage() {

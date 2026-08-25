@@ -64,7 +64,7 @@ export function StepSummary({
     <div className="flex flex-col gap-4">
       <StepHeader
         title="Verifică tot, apoi trimite"
-        lead="După trimitere nu mai poți schimba datele până când un operator se uită peste ele."
+        lead="După trimitere, datele nu mai pot fi modificate până la finalizarea verificării."
       />
 
       <Section title="Tipul cauzei" onEdit={() => onEdit(0)}>
@@ -195,9 +195,9 @@ export function StepSummary({
       </Section>
 
       <Alert tone="sky" title="Ce urmează">
-        Trimiterea o pune în coada de verificare. Un operator se uită peste acte
-        în aproximativ {CAUSE.REVIEW_HOURS} de ore și îți scrie pe email fie că
-        e aprobată, fie ce mai lipsește.
+        Cauza intră în coada de verificare. Un operator analizează documentele în
+        aproximativ {CAUSE.REVIEW_HOURS} de ore și îți scrie pe email rezultatul
+        sau ce mai este necesar.
       </Alert>
     </div>
   );

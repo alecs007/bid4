@@ -35,7 +35,7 @@ export function StepGoal({ draft, set, errors }: StepProps) {
     <div className="flex flex-col gap-5">
       <StepHeader
         title="Obiectiv și încasare"
-        lead="Cât ai nevoie și unde ajung banii după ce o licitație se încheie."
+        lead="Suma necesară și contul în care ajung fondurile după încheierea unei licitații."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -58,7 +58,7 @@ export function StepGoal({ draft, set, errors }: StepProps) {
           label="Termen limită"
           optionalLabel
           error={errors["goal.deadline"]}
-          hint="Dacă situația are un termen real — o operație, un început de an școlar."
+          hint="Completează-l dacă situația are un termen real: o intervenție medicală, începutul anului școlar."
         >
           <Input
             type="date"
@@ -82,9 +82,9 @@ export function StepGoal({ draft, set, errors }: StepProps) {
             Contul în care primești fondurile
           </p>
           <p className="mt-1 text-sm text-ink-600">
-            Banii stau în escrow la bid4 până cumpărătorul confirmă coletul, apoi
-            partea donată pleacă spre acest cont. Pentru sume mari, eliberarea se
-            face în tranșe, pe baza dovezilor de utilizare.
+            Plata rămâne la bid4 până când cumpărătorul confirmă coletul, apoi partea
+            donată ajunge în acest cont. Pentru sume mari, eliberarea se face în
+            tranșe, pe baza dovezilor de utilizare.
           </p>
         </div>
 
@@ -119,8 +119,8 @@ export function StepGoal({ draft, set, errors }: StepProps) {
             </span>
             <span className="block text-xs text-ink-600">
               {draft.payout.stripeOnboarded
-                ? "Poți primi fonduri după aprobarea cauzei."
-                : "Verificarea identității se face la Stripe, nu la noi."}
+                ? "Vei putea primi fonduri după aprobarea cauzei."
+                : "Verificarea identității se realizează prin Stripe."}
             </span>
           </span>
 

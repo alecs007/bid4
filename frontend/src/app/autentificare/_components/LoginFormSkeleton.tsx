@@ -4,7 +4,7 @@ export function LoginFormSkeleton() {
   return (
     <AuthShell
       title="Bine ai revenit"
-      description="Intră în cont ca să licitezi, să vinzi și să urmărești cauzele tale."
+      description="Intră în cont pentru a licita, a vinde și a urmări cauzele pe care le susții."
     >
       <AuthFieldsSkeleton fields={2} />
     </AuthShell>

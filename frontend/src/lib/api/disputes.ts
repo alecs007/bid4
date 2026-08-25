@@ -166,7 +166,7 @@ export async function resolveDispute(
   await delay();
   if (role !== "OPERATOR" && role !== "ADMIN") forbidden("Nu ai drepturi.");
   if (!payload.resolutionNote.trim()) {
-    badRequest("Scrie o motivare. Ambele părți o vor vedea.");
+    badRequest("Adaugă o motivare. Ambele părți o vor putea consulta.");
   }
 
   const world = getWorld();

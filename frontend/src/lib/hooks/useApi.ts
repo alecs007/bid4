@@ -13,7 +13,7 @@ export interface ApiState<T> {
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error && error.message) return error.message;
-  return "A apărut o problemă. Mai încearcă o dată.";
+  return "A apărut o problemă. Încearcă din nou în câteva momente.";
 }
 
 /**

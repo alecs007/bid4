@@ -94,7 +94,7 @@ const fullName = (message: string) =>
     .trim()
     .min(3, message)
     .refine((value) => value.split(/\s+/).length >= 2, {
-      error: "Scrie numele complet, nu doar prenumele.",
+      error: "Completează numele și prenumele.",
     });
 
 /** Romanian mobile or landline, written however people actually write it. */
@@ -130,13 +130,13 @@ function beneficiaryStep(type: BeneficiaryType) {
   const base = {
     fullName: fullName(
       type === "MINOR"
-        ? "Scrie numele complet al copilului."
-        : "Scrie numele complet al beneficiarului.",
+        ? "Completează numele complet al copilului."
+        : "Completează numele complet al beneficiarului.",
     ),
     contactEmail: z.email("Adresa de email nu pare validă."),
     contactPhone: phone,
     county: required("Alege județul."),
-    city: required("Scrie localitatea."),
+    city: required("Completează localitatea."),
   };
 
   if (type === "MINOR") {
@@ -147,7 +147,7 @@ function beneficiaryStep(type: BeneficiaryType) {
         age: z
           .string()
           .trim()
-          .min(1, "Scrie vârsta copilului.")
+          .min(1, "Completează vârsta copilului.")
           .refine((value) => /^\d{1,2}$/.test(value), {
             error: "Vârsta se scrie în ani împliniți.",
           })
@@ -161,7 +161,7 @@ function beneficiaryStep(type: BeneficiaryType) {
         idDocument: fileRef.optional(),
       }),
       guardian: z.object({
-        fullName: fullName("Scrie numele complet al tutorelui."),
+        fullName: fullName("Completează numele complet al tutorelui."),
         relationToMinor: z.enum(
           ["PARENT", "GRANDPARENT", "SIBLING", "LEGAL_GUARDIAN", "OTHER"],
           { error: "Alege relația cu minorul." },
@@ -177,12 +177,12 @@ function beneficiaryStep(type: BeneficiaryType) {
     return z.object({
       beneficiary: z.object(base),
       ngo: z.object({
-        legalName: required("Scrie denumirea legală a organizației."),
+        legalName: required("Completează denumirea legală a organizației."),
         registrationNumber: z
           .string()
           .trim()
           .regex(/^(RO)?[0-9]{2,10}$/, "CUI invalid (ex. RO12345678)."),
-        representativeName: fullName("Scrie numele reprezentantului legal."),
+        representativeName: fullName("Completează numele reprezentantului legal."),
         statuteDoc: requiredFile("Încarcă statutul organizației."),
         representativeId: requiredFile("Încarcă actul de identitate al reprezentantului."),
       }),
@@ -203,14 +203,14 @@ const storyStep = z.object({
       .string()
       .trim()
       .min(6, "Titlul are nevoie de cel puțin 6 caractere.")
-      .max(80, "Titlul e prea lung. Ține-l sub 80 de caractere."),
+      .max(80, "Titlul depășește 80 de caractere."),
     category: z.enum(categoryIds as [string, ...string[]], {
       error: "Alege o categorie.",
     }),
     shortDescription: z
       .string()
       .trim()
-      .min(30, "Scrie o descriere scurtă de cel puțin 30 de caractere.")
+      .min(30, "Descrierea scurtă are nevoie de cel puțin 30 de caractere.")
       .max(
         CAUSE.SHORT_DESCRIPTION_MAX,
         `Descrierea scurtă are maximum ${CAUSE.SHORT_DESCRIPTION_MAX} de caractere.`,
@@ -220,10 +220,10 @@ const storyStep = z.object({
       .trim()
       .min(
         CAUSE.STORY_MIN,
-        `Povestea are nevoie de cel puțin ${CAUSE.STORY_MIN} de caractere ca să fie de ajutor.`,
+        `Povestea are nevoie de cel puțin ${CAUSE.STORY_MIN} de caractere.`,
       )
       .max(CAUSE.STORY_MAX, `Povestea depășește ${CAUSE.STORY_MAX} de caractere.`),
-    location: required("Scrie unde se întâmplă (oraș, județ)."),
+    location: required("Completează localitatea și județul."),
     coverImage: requiredFile("Alege o imagine de copertă."),
   }),
 });
@@ -247,12 +247,12 @@ const evidenceStep = z.object({
           { error: "Alege tipul documentului." },
         ),
         file: requiredFile("Încarcă fișierul."),
-        note: z.string().max(200, "Nota e prea lungă.").optional(),
+        note: z.string().max(200, "Nota depășește 200 de caractere.").optional(),
       }),
     )
     .min(
       CAUSE.MIN_DOCUMENTS,
-      "Fără cel puțin un document, cauza nu poate fi aprobată.",
+      "Cauza nu poate fi aprobată fără cel puțin un document justificativ.",
     )
     .max(CAUSE.MAX_DOCUMENTS, `Maximum ${CAUSE.MAX_DOCUMENTS} documente.`),
 });
@@ -263,7 +263,7 @@ const goalStep = z.object({
       .string()
       .trim()
       .refine((value) => parseLeiInput(value) !== null, {
-        error: "Scrie o sumă validă, în lei.",
+        error: "Introdu o sumă validă, în lei.",
       })
       .refine((value) => (parseLeiInput(value) ?? 0) >= CAUSE.MIN_GOAL, {
         error: `Obiectivul minim este ${CAUSE.MIN_GOAL / 100} lei.`,
@@ -280,7 +280,7 @@ const goalStep = z.object({
   payout: z.object({
     iban,
     stripeOnboarded: z.literal(true, {
-      error: "Conectează contul de încasare ca să poți primi fonduri.",
+      error: "Conectează contul de încasare pentru a putea primi fonduri.",
     }),
   }),
 });
@@ -292,10 +292,10 @@ function consentsStep(type: BeneficiaryType) {
         error: "Confirmă că informațiile și documentele sunt reale.",
       }),
       controlledRelease: z.literal(true, {
-        error: "Acordul privind eliberarea controlată a fondurilor e necesar.",
+        error: "Acordul privind eliberarea controlată a fondurilor este obligatoriu.",
       }),
       terms: z.literal(true, {
-        error: "Trebuie să accepți termenii și politica de confidențialitate.",
+        error: "Acceptarea termenilor și a politicii de confidențialitate este obligatorie.",
       }),
       guardianAuthority:
         type === "MINOR"

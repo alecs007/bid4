@@ -32,7 +32,7 @@ export function StepConsents({ draft, set, errors }: StepProps) {
     <div className="flex flex-col gap-5">
       <StepHeader
         title="Declarații"
-        lead="Ultimul pas înainte de rezumat. Citește-le — sunt scurte și contează."
+        lead="Ultimul pas înainte de rezumat. Sunt scurte și au greutate juridică."
       />
 
       <div className="flex flex-col gap-4">
@@ -55,7 +55,7 @@ export function StepConsents({ draft, set, errors }: StepProps) {
               setConsent({ controlledRelease: event.target.checked })
             }
             label="Sunt de acord ca fondurile să fie eliberate controlat."
-            description="Pentru sume mari, banii vin în tranșe, iar bid4 poate cere dovezi de utilizare între ele."
+            description="Pentru sume mari, fondurile sunt eliberate în tranșe, iar bid4 poate solicita dovezi de utilizare între ele."
           />
           <ConsentError message={errors["consents.controlledRelease"]} />
         </div>
@@ -79,18 +79,17 @@ export function StepConsents({ draft, set, errors }: StepProps) {
             checked={draft.consents.terms}
             onChange={(event) => setConsent({ terms: event.target.checked })}
             label="Accept Termenii și Condițiile și Politica de confidențialitate."
-            description="Documentele de identitate se păstrează separat de partea publică a platformei și se șterg după perioada legală."
+            description="Documentele de identitate sunt stocate separat de partea publică a platformei și sunt șterse după perioada legală."
           />
           <ConsentError message={errors["consents.terms"]} />
         </div>
       </div>
 
-      <Alert tone="sky" title="Ce facem noi și ce nu putem promite">
-        bid4 verifică actele și povestea cât de bine poate, în limita
-        documentelor primite, și ține banii în escrow până ajung la destinație.
-        Suntem intermediar între tine și cei care licitează: nu garantăm un
-        rezultat medical sau social și nu suntem parte în relația ta cu
-        furnizorii de servicii.
+      <Alert tone="sky" title="Rolul bid4 în acest proces">
+        bid4 verifică actele și povestea în limita documentelor primite și
+        păstrează fondurile până când ajung la destinație. Suntem intermediarul
+        dintre tine și cei care licitează: nu garantăm un rezultat medical sau
+        social și nu suntem parte în relația ta cu furnizorii de servicii.
       </Alert>
     </div>
   );

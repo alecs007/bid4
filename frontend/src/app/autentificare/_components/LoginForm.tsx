@@ -43,10 +43,10 @@ export function LoginForm() {
     event.preventDefault();
 
     const found: typeof errors = {};
-    if (!email.trim()) found.email = "Scrie adresa de email.";
+    if (!email.trim()) found.email = "Introdu adresa de email.";
     else if (!EMAIL_PATTERN.test(email.trim()))
       found.email = "Adresa de email nu pare validă.";
-    if (!password) found.password = "Scrie parola.";
+    if (!password) found.password = "Introdu parola.";
 
     setErrors(found);
     if (found.email || found.password) return;
@@ -66,10 +66,10 @@ export function LoginForm() {
     <AuthShell
       title="Bine ai revenit"
       aside={<SeedAccounts onSignedIn={(account) => arrive(account.displayName)} />}
-      description="Intră în cont ca să licitezi, să vinzi și să urmărești cauzele tale."
+      description="Intră în cont pentru a licita, a vinde și a urmări cauzele pe care le susții."
       footer={
         <>
-          Nu ai cont?{" "}
+          Nu ai încă un cont?{" "}
           <Link
             href="/inregistrare"
             className="font-bold text-primary-700 underline underline-offset-4"

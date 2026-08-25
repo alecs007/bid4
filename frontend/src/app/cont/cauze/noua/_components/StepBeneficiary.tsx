@@ -157,7 +157,7 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
         {!isMinor && !isNgo ? (
           <FileUpload
             label="Act de identitate (CI)"
-            hint="O fotografie clară sau un scan. Verificăm doar numele și valabilitatea."
+            hint="O fotografie clară sau un scan. Verificăm numele și valabilitatea documentului."
             required
             value={draft.beneficiary.idDocument}
             onChange={(file?: UploadedFileRef) =>
@@ -240,7 +240,7 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
 
           <FileUpload
             label="Dovada calității de tutore"
-            hint="Certificat de naștere al copilului, hotărâre judecătorească sau dispoziție de plasament."
+            hint="Certificatul de naștere al copilului, o hotărâre judecătorească sau o dispoziție de plasament."
             required
             value={draft.guardian.guardianshipProof}
             onChange={(file?: UploadedFileRef) =>
@@ -304,7 +304,7 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
 
           <FileUpload
             label="Statutul organizației"
-            hint="Statutul și, dacă îl ai, certificatul de înregistrare fiscală."
+            hint="Statutul și, dacă există, certificatul de înregistrare fiscală."
             required
             value={draft.ngo.statuteDoc}
             onChange={(file?: UploadedFileRef) => setNgo({ statuteDoc: file })}

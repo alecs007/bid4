@@ -427,7 +427,7 @@ export function AuctionBrowser() {
                       <Button onClick={clearAll}>Șterge filtrele</Button>
                     ) : (
                       <ButtonLink href="/cont/anunturi/nou">
-                        Listează un produs
+                        Vinde acum
                       </ButtonLink>
                     )
                   }

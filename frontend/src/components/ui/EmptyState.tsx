@@ -46,8 +46,8 @@ export function EmptyState({
 }
 
 export function ErrorState({
-  title = "Nu am putut încărca datele",
-  description = "A apărut o problemă de conexiune. Mai încearcă o dată.",
+  title = "Datele nu au putut fi încărcate",
+  description = "A apărut o problemă de conexiune. Încearcă din nou în câteva momente.",
   action,
   className,
 }: {

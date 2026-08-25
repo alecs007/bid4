@@ -44,7 +44,7 @@ export function SeedAccounts({
         Conturi demo
       </p>
       <p className="mt-0.5 text-xs text-ink-600">
-        Doar în development. Parola tuturor este{" "}
+        Disponibile doar în development. Parola comună este{" "}
         <span className="font-bold">{DEMO_PASSWORD}</span>.
       </p>
 

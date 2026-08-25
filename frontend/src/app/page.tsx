@@ -16,17 +16,17 @@ const STEPS = [
   {
     icon: Icons.auction,
     title: "Licitezi",
-    body: "Vezi din prima cât din preț ajunge la cauză.",
+    body: "Fiecare anunț arată din prima cât din preț ajunge la cauză.",
   },
   {
     icon: Icons.escrow,
-    title: "Plătești în siguranță",
-    body: "Banii rămân la bid4 până confirmi că ai primit coletul.",
+    title: "Plătești protejat",
+    body: "Plata rămâne la bid4 până confirmi că ai primit coletul.",
   },
   {
     icon: Icons.donation,
-    title: "Ajutorul pleacă",
-    body: "Donația ajunge la cauză, vânzătorul își primește partea.",
+    title: "Ajutorul ajunge",
+    body: "Donația pleacă spre cauză, iar vânzătorul își primește partea.",
   },
 ];
 
@@ -38,21 +38,18 @@ export default function HomePage() {
           <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pt-4 pb-8 sm:px-6 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8 lg:pt-14 lg:pb-16">
             <div>
               <h1 className="font-display text-[2.1rem] leading-[1.05] font-extrabold text-ink-900 sm:text-5xl lg:text-6xl">
-                Licitezi. Câștigi.
+                Schimbă destine
                 <br />
-                <span className="text-primary-600">Ajuți.</span>
+                prin <span className="text-primary-600">licitații.</span>
               </h1>
               <p className="mt-3 max-w-lg text-ink-600 sm:mt-4 sm:text-lg">
-                Cumperi lucruri care îți plac. O parte din preț ajunge la o
-                cauză verificată, iar banii stau la noi până îți vine coletul.
+                Cumperi lucruri care îți plac, iar o parte din preț susține o
+                cauză verificată. Plata rămâne protejată până când coletul
+                ajunge la tine.
               </p>
               <div className="mt-5 flex gap-2.5">
-                <ButtonLink
-                  href="/cauze"
-                  size="lg"
-                  className="flex-1 sm:flex-none"
-                >
-                  Vezi cauzele
+                <ButtonLink href="/cauze" size="lg">
+                  Descoperă cauzele
                 </ButtonLink>
                 <ButtonLink
                   href="/licitatii"
@@ -95,12 +92,13 @@ export default function HomePage() {
                   id="start-cause"
                   className="font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
                 >
-                  Strângi fonduri pentru o cauză?
+                  Ai o cauză care are nevoie de sprijin?
                 </h2>
                 <p className="mt-1.5 text-ink-600">
-                  Un tratament, un adăpost de animale, o școală fără bibliotecă,
-                  un sat lovit de inundații sau de cutremur. Deschizi cauza, o
-                  verificăm în 48 de ore, apoi oricine poate licita pentru ea.
+                  Un tratament, un adăpost de animale, o școală fără bibliotecă
+                  sau o comunitate lovită de calamitate. Deschizi cauza, o
+                  verificăm în 48 de ore, apoi oricine poate licita în sprijinul
+                  ei.
                 </p>
                 <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
                   <ButtonLink href="/cont/cauze/noua" size="lg">
@@ -111,7 +109,7 @@ export default function HomePage() {
                     variant="secondary"
                     size="lg"
                   >
-                    Cum se verifică
+                    Vezi cum verificăm
                   </ButtonLink>
                 </div>
               </div>
@@ -144,14 +142,15 @@ export default function HomePage() {
           <section className="rounded-3xl bg-white ring-1 ring-edge px-5 py-10 text-center sm:px-12">
             <Mascot mood="happy" size={80} className="mx-auto" />
             <h2 className="mt-3 font-display text-xl font-extrabold text-ink-900 sm:text-2xl">
-              Ai ceva de care nu mai ai nevoie?
+              Ai lucruri care merită o a doua viață?
             </h2>
             <p className="mx-auto mt-1.5 max-w-md text-ink-600">
-              Alegi cauza și cât donezi. De plată și de livrare ne ocupăm noi.
+              Alegi cauza și procentul donat. De plată, livrare și transferul
+              banilor ne ocupăm noi.
             </p>
             <div className="mt-5 flex justify-center">
               <ButtonLink href="/cont/anunturi/nou" size="lg">
-                Listează un produs
+                Vinde acum
               </ButtonLink>
             </div>
           </section>

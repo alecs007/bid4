@@ -34,7 +34,7 @@ export function StepStory({ draft, set, errors }: StepProps) {
     <div className="flex flex-col gap-5">
       <StepHeader
         title="Povestea cauzei"
-        lead="Scrie ca unui om, nu ca unei instituții. Concret bate emoționant: cine, ce s-a întâmplat, la ce ajută banii."
+        lead="Scrie firesc și concret: cine este beneficiarul, ce s-a întâmplat și la ce vor fi folosite fondurile."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -83,7 +83,7 @@ export function StepStory({ draft, set, errors }: StepProps) {
         label="Descriere scurtă"
         required
         error={errors["story.shortDescription"]}
-        hint="O propoziție-două. Asta se vede pe carduri, înainte ca cineva să deschidă cauza."
+        hint="Una sau două propoziții. Apar pe carduri, înainte ca vizitatorul să deschidă cauza."
       >
         <div className="flex flex-col gap-1">
           <Textarea
@@ -107,7 +107,7 @@ export function StepStory({ draft, set, errors }: StepProps) {
         label="Povestea completă"
         required
         error={errors["story.story"]}
-        hint="Ce s-a întâmplat, unde sunteți acum, ce urmează și cât costă. Sumele și datele concrete conving mai mult decât adjectivele."
+        hint="Ce s-a întâmplat, unde vă aflați acum, ce urmează și cât costă. Sumele și datele verificabile conving mai mult decât adjectivele."
       >
         <div className="flex flex-col gap-1">
           <Textarea
@@ -124,7 +124,7 @@ export function StepStory({ draft, set, errors }: StepProps) {
 
       <FileUpload
         label="Imagine de copertă"
-        hint="O fotografie reală, luminoasă. Evită pozele descărcate de pe internet — se văd."
+        hint="O fotografie reală și luminoasă. Evită imaginile preluate de pe internet."
         accept="image/*"
         required
         value={draft.story.coverImage}
@@ -134,12 +134,12 @@ export function StepStory({ draft, set, errors }: StepProps) {
 
       <FileUploadGrid
         label="Galerie"
-        hint="Opțional. Câteva fotografii care arată situația sau ce s-a făcut până acum."
+        hint="Opțional. Câteva fotografii care arată situația sau rezultatele de până acum."
         values={draft.story.gallery}
         onChange={(gallery) => setStory({ gallery })}
       />
 
-      <Alert tone="sun" title="Scrie doar ce poți dovedi">
+      <Alert tone="sun" title="Include doar ce poate fi dovedit">
         La pasul următor îți cerem documentele care susțin povestea. Dacă ceva
         de aici nu poate fi dovedit, mai bine nu îl scrie — operatorii resping
         cauzele care nu se potrivesc cu actele.

@@ -17,7 +17,7 @@ const CHOICES: {
     id: "INDIVIDUAL",
     label: "Persoană fizică",
     description:
-      "Un adult care are nevoie de ajutor — tratament, o situație grea, o pierdere. Banii ajung la el, după verificarea identității.",
+      "Un adult care are nevoie de sprijin: un tratament, o pierdere, o situație dificilă. Fondurile ajung la el după verificarea identității.",
     icon: "account",
   },
   {
@@ -31,7 +31,7 @@ const CHOICES: {
     id: "NGO",
     label: "Organizație / ONG",
     description:
-      "O asociație sau fundație înregistrată. Cerem statutul, CUI-ul și reprezentantul legal.",
+      "O asociație sau o fundație înregistrată. Solicităm statutul, CUI-ul și datele reprezentantului legal.",
     icon: "organization",
   },
 ];
@@ -44,7 +44,7 @@ export function StepType({ draft, set, errors }: StepProps) {
     <div>
       <StepHeader
         title="Pentru cine strângi fonduri?"
-        lead="De asta depinde ce documente îți cerem mai departe. Alege cu grijă — poți schimba, dar o iei puțin de la capăt."
+        lead="Alegerea stabilește ce documente îți vom cere mai departe. O poți schimba oricând, însă va trebui să reiei câțiva pași."
       />
 
       <div

@@ -352,7 +352,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
               }
               action={
                 <ButtonLink href="/cont/anunturi/nou">
-                  Listează un produs
+                  Vinde acum
                 </ButtonLink>
               }
               compact

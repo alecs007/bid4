@@ -7,9 +7,9 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Platformă",
     links: [
-      { href: "/licitatii", label: "Licitații active" },
+      { href: "/licitatii", label: "Licitații în desfășurare" },
       { href: "/cauze", label: "Cauze verificate" },
-      { href: "/produse", label: "Catalog produse" },
+      { href: "/produse", label: "Catalog" },
       { href: "/cum-functioneaza", label: "Cum funcționează" },
     ],
   },
@@ -17,8 +17,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Contul tău",
     links: [
       { href: "/cont", label: "Panoul meu" },
-      { href: "/cont/anunturi/nou", label: "Listează un produs" },
-      { href: "/cont/cauze/noua", label: "Propune o cauză" },
+      { href: "/cont/anunturi/nou", label: "Vinde acum" },
+      { href: "/cont/cauze/noua", label: "Deschide o cauză" },
       { href: "/cont/comenzi", label: "Comenzile mele" },
     ],
   },
@@ -27,7 +27,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/cum-functioneaza", label: "Întrebări frecvente" },
       { href: "/cum-functioneaza#livrare", label: "Livrare și Easybox" },
-      { href: "/cum-functioneaza#escrow", label: "Cum sunt protejați banii" },
+      { href: "/cum-functioneaza#escrow", label: "Cum sunt protejate plățile" },
       { href: "/cum-functioneaza#comisioane", label: "Comisioane" },
     ],
   },
@@ -41,9 +41,9 @@ export function SiteFooter() {
           <div>
             <Logo size="md" href={null} />
             <p className="mt-3 max-w-sm text-ink-600">
-              Licitezi pentru lucruri care îți plac, iar o parte din preț ajunge
-              la o cauză verificată. Simplu, transparent, cu banii ținuți în
-              siguranță până când coletul ajunge la tine.
+              Licitezi pentru lucruri care îți plac, iar o parte din preț susține o
+              cauză verificată. Transparent de la prima ofertă, cu plata
+              protejată până când coletul ajunge la tine.
             </p>
             <div className="mt-5 flex items-center gap-3">
               <Mascot mood="happy" size={52} />

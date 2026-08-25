@@ -58,11 +58,11 @@ export function StepEvidence({ draft, set, errors }: StepProps) {
     <div className="flex flex-col gap-5">
       <StepHeader
         title="Dovezile"
-        lead="Documentele nu ajung niciodată public. Le vede doar echipa care verifică — și fără ele cauza nu poate fi aprobată."
+        lead="Documentele nu devin publice: le consultă exclusiv echipa de verificare. Fără ele, cauza nu poate fi aprobată."
       />
 
       {suggestions.length ? (
-        <Alert tone="sky" title="Ce ne-ar ajuta cel mai mult aici">
+        <Alert tone="sky" title="Documente utile pentru această categorie">
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {suggestions.map((type) => (
               <li key={type}>
@@ -167,7 +167,7 @@ export function StepEvidence({ draft, set, errors }: StepProps) {
 
       <Alert tone="warning" title="Fără dovezi, cauza nu poate fi aprobată">
         Ai nevoie de cel puțin {CAUSE.MIN_DOCUMENTS} document. Operatorii verifică
-        dacă actele se potrivesc cu povestea și cu persoana care primește banii.
+        dacă actele corespund poveștii și persoanei care primește fondurile.
       </Alert>
     </div>
   );

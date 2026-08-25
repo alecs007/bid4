@@ -48,7 +48,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
     if (!user) return false;
     const parsed = parseLeiInput(amount);
     if (parsed === null) {
-      setError("Scrie o sumă validă.");
+      setError("Introdu o sumă validă.");
       return false;
     }
     if (parsed < minimum) {
@@ -204,7 +204,7 @@ function Result({
         </p>
         <p className="mt-1.5 text-ink-600">
           {auction.bidCount === 0
-            ? "Nu a fost plasată nicio ofertă pentru acest produs."
+            ? "Licitația s-a încheiat fără nicio ofertă."
             : "Prețul minim al licitației nu a fost atins."}
         </p>
         <ButtonLink href="/licitatii" variant="secondary" className="mt-4">
@@ -293,7 +293,7 @@ export function BidBox({
         : "Licitația s-a încheiat."}
     </p>
   ) : isSeller ? (
-    <p className="text-ink-600">Este anunțul tău.</p>
+    <p className="text-ink-600">Acesta este anunțul tău.</p>
   ) : !user ? (
     <ButtonLink href="/autentificare" size="lg" fullWidth>
       Licitează acum

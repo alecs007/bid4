@@ -11,13 +11,13 @@ const TIMELINE = [
   {
     icon: "check" as const,
     title: "Trimisă",
-    body: "Am primit cauza și documentele. Nimic nu e public deocamdată.",
+    body: "Am primit cauza și documentele. Deocamdată nimic nu este public.",
     done: true,
   },
   {
     icon: "secure" as const,
     title: "Verificare",
-    body: `Un operator compară actele cu povestea. Durează în jur de ${CAUSE.REVIEW_HOURS} de ore și îți scriem pe email.`,
+    body: `Un operator compară actele cu povestea. Durează aproximativ ${CAUSE.REVIEW_HOURS} de ore, iar rezultatul ajunge pe email.`,
     done: false,
   },
   {
@@ -29,7 +29,7 @@ const TIMELINE = [
   {
     icon: "donation" as const,
     title: "Primești fonduri",
-    body: "Vânzătorii îți pot alege cauza. Banii stau în escrow până ajunge coletul, apoi partea donată pleacă spre tine.",
+    body: "Vânzătorii îți pot alege cauza. Plata rămâne protejată până la livrarea coletului, apoi partea donată ajunge la tine.",
     done: false,
   },
 ];
@@ -45,9 +45,9 @@ export function SubmittedScreen({ cause }: { cause: CauseDetail }) {
           Cauza ta a fost trimisă spre verificare
         </h1>
         <p className="mx-auto mt-2 max-w-lg text-ink-600">
-          <strong className="text-ink-900">{cause.name}</strong> așteaptă acum un
-          operator. Îți scriem pe {cause.validation.contactEmail} imediat ce am
-          verificat actele.
+          <strong className="text-ink-900">{cause.name}</strong> este în curs de
+          verificare. Îți scriem pe {cause.validation.contactEmail} imediat ce
+          analizăm documentele.
         </p>
       </div>
 

@@ -106,9 +106,10 @@ export function ImpactLine() {
         strânși până acum
       </p>
       <p className="text-base text-ink-500">
-        <Count value={data?.causeCount ?? null} /> cauze
+        <Count value={data?.causeCount ?? null} /> cauze susținute
         <span className="mx-2 text-ink-300">·</span>
-        <Count value={data?.liveAuctionCount ?? null} /> licitații acum
+        <Count value={data?.liveAuctionCount ?? null} /> licitații în
+        desfășurare
       </p>
     </div>
   );
@@ -128,10 +129,10 @@ export function EndingSoonRow() {
   if (error) {
     return (
       <ErrorState
-        title="Nu am putut încărca licitațiile"
+        title="Licitațiile nu au putut fi încărcate"
         action={
           <Button variant="secondary" onClick={reload}>
-            Încearcă din nou
+            Reîncarcă
           </Button>
         }
       />
@@ -143,7 +144,7 @@ export function EndingSoonRow() {
       <section aria-labelledby="ending-soon">
         <RowHeader
           id="ending-soon"
-          title="Se termină curând"
+          title="Se încheie curând"
           href="/licitatii?endingSoon=1"
         />
         <AuctionGrid
@@ -152,9 +153,11 @@ export function EndingSoonRow() {
           skeletonCount={4}
           emptyState={
             <EmptyState
-              title="Nimic pe final acum"
+              title="Nicio licitație aproape de final"
               action={
-                <ButtonLink href="/licitatii">Vezi licitațiile</ButtonLink>
+                <ButtonLink href="/licitatii">
+                  Explorează licitațiile
+                </ButtonLink>
               }
               compact
             />
@@ -178,11 +181,9 @@ export function PopularRow() {
           skeletonCount={8}
           emptyState={
             <EmptyState
-              title="Nicio licitație activă"
+              title="Nicio licitație în desfășurare"
               action={
-                <ButtonLink href="/cont/anunturi/nou">
-                  Listează un produs
-                </ButtonLink>
+                <ButtonLink href="/cont/anunturi/nou">Vinde acum</ButtonLink>
               }
               compact
             />
@@ -209,10 +210,10 @@ export function TrendingCauses() {
 
       {error ? (
         <ErrorState
-          title="Nu am putut încărca cauzele"
+          title="Cauzele nu au putut fi încărcate"
           action={
             <Button variant="secondary" onClick={reload}>
-              Încearcă din nou
+              Reîncarcă
             </Button>
           }
         />
@@ -222,9 +223,11 @@ export function TrendingCauses() {
           loading={loading}
           emptyState={
             <EmptyState
-              title="Nicio cauză activă"
+              title="Nicio cauză activă momentan"
               action={
-                <ButtonLink href="/cont/cauze/noua">Propune o cauză</ButtonLink>
+                <ButtonLink href="/cont/cauze/noua">
+                  Deschide o cauză
+                </ButtonLink>
               }
               compact
             />
