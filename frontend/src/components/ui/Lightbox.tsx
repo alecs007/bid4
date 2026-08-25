@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Icons } from "@/components/icons";
+import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 
 const ZOOM = 2.4;
@@ -55,6 +56,7 @@ export function Lightbox({
     };
     root.style.overflow = "hidden";
     if (scrollbar > 0) document.body.style.paddingRight = `${scrollbar}px`;
+    setPageScrollLocked(true);
     closeRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -68,6 +70,7 @@ export function Lightbox({
       document.removeEventListener("keydown", onKeyDown);
       root.style.overflow = previous.overflow;
       document.body.style.paddingRight = previous.paddingRight;
+      setPageScrollLocked(false);
     };
   }, [go, index, onClose]);
 

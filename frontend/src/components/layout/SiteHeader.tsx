@@ -6,13 +6,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
 import { Avatar, ButtonLink, Logo, Skeleton } from "@/components/ui";
+import { PRODUCT_CATEGORIES } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 
 const NAV = [
   { href: "/licitatii", label: "Licitații" },
   { href: "/cauze", label: "Cauze" },
-  { href: "/produse", label: "Produse" },
 ];
 
 const ACCOUNT_LINKS = [
@@ -72,7 +73,7 @@ function Panel({
   return (
     <div
       className={cn(
-        "absolute inset-x-0 top-full origin-top bg-white px-4 pt-1 pb-4 shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:px-6 lg:hidden",
+        "absolute inset-x-0 top-full origin-top border-t border-slate-50 bg-white px-4 pt-3 pb-4 shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:px-6 lg:hidden",
         open
           ? "visible translate-y-0 opacity-100"
           : "invisible -translate-y-2 opacity-0",
@@ -141,6 +142,51 @@ function HeaderSearch({
   );
 }
 
+const CATEGORY_TILE =
+  "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[15px] font-bold ring-1 transition";
+
+/**
+ * The auction categories as tiles, so the menu reads as a set of destinations
+ * rather than a list of words. "Toate licitațiile" is one of them, tinted so
+ * it reads as the way out of the categories rather than another category.
+ */
+function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      <Link
+        href="/licitatii"
+        role="menuitem"
+        onClick={onNavigate}
+        className={cn(
+          CATEGORY_TILE,
+          "bg-canvas text-primary-800 ring-edge hover:bg-white hover:ring-primary-300",
+        )}
+      >
+        <Icons.auction aria-hidden="true" className="h-4.5 w-4.5" />
+        Toate licitațiile
+      </Link>
+
+      {PRODUCT_CATEGORIES.map((category) => (
+        <Link
+          key={category.id}
+          href={`/licitatii?category=${category.id}`}
+          role="menuitem"
+          onClick={onNavigate}
+          className={cn(
+            CATEGORY_TILE,
+            "bg-canvas text-ink-800 ring-edge hover:bg-white hover:ring-ink-300",
+          )}
+        >
+          <span aria-hidden="true" className="text-lg">
+            {category.emoji}
+          </span>
+          {category.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Header icon buttons. While their panel is open they hold the same tint they
  * take on hover — the state is worth marking, but a close button is not a
@@ -163,12 +209,12 @@ export function SiteHeader() {
 
   const [panel, setPanel] = useState<{
     path: string;
-    which: "nav" | "account" | "search" | null;
+    which: "nav" | "account" | "search" | "auctions" | null;
   }>({ path: pathname, which: null });
 
   const openPanel = panel.path === pathname ? panel.which : null;
   const close = () => setPanel({ path: pathname, which: null });
-  const toggle = (which: "nav" | "account" | "search") =>
+  const toggle = (which: "nav" | "account" | "search" | "auctions") =>
     setPanel((current) => ({
       path: pathname,
       which:
@@ -176,6 +222,7 @@ export function SiteHeader() {
     }));
 
   const [query, setQuery] = useState("");
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -195,6 +242,48 @@ export function SiteHeader() {
     };
   }, [openPanel, pathname]);
 
+  // Hovering the categories opens them; leaving either the trigger or the
+  // panel closes them, after a beat so the pointer can cross the gap.
+  const hoverTimer = useRef(0);
+  const openAuctions = () => {
+    window.clearTimeout(hoverTimer.current);
+    setPanel({ path: pathname, which: "auctions" });
+  };
+  const closeAuctions = () => {
+    window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = window.setTimeout(
+      () =>
+        setPanel((current) =>
+          current.which === "auctions"
+            ? { path: pathname, which: null }
+            : current,
+        ),
+      120,
+    );
+  };
+
+  // A panel hanging off the header should not slide away from it, so the page
+  // behind it holds still. The scrollbar's width is paid back to <body> to
+  // keep the header from jumping sideways as it disappears.
+  const panelIsOpen = openPanel === "nav" || openPanel === "search";
+  useEffect(() => {
+    if (!panelIsOpen) return;
+    const root = document.documentElement;
+    const scrollbar = window.innerWidth - root.clientWidth;
+    const previous = {
+      overflow: root.style.overflow,
+      paddingRight: document.body.style.paddingRight,
+    };
+    root.style.overflow = "hidden";
+    if (scrollbar > 0) document.body.style.paddingRight = `${scrollbar}px`;
+    setPageScrollLocked(true);
+    return () => {
+      root.style.overflow = previous.overflow;
+      document.body.style.paddingRight = previous.paddingRight;
+      setPageScrollLocked(false);
+    };
+  }, [panelIsOpen]);
+
   const search = (event: React.FormEvent) => {
     event.preventDefault();
     const trimmed = query.trim();
@@ -203,8 +292,6 @@ export function SiteHeader() {
     );
     close();
   };
-
-  const panelOpen = openPanel === "nav" || openPanel === "search";
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -227,7 +314,48 @@ export function SiteHeader() {
         <Logo size="sm" className="shrink-0 lg:hidden" />
         <Logo size="md" className="hidden shrink-0 lg:inline-flex" />
         <nav aria-label="Navigare principală" className="ml-3 hidden lg:flex">
-          {NAV.map((item) => (
+          <div
+            className="relative"
+            onMouseEnter={openAuctions}
+            onMouseLeave={closeAuctions}
+          >
+            <button
+              type="button"
+              onClick={() => toggle("auctions")}
+              aria-expanded={openPanel === "auctions"}
+              aria-haspopup="true"
+              className={cn(
+                "inline-flex items-center gap-1 rounded-xl px-3 py-2 font-display text-[15px] font-bold transition",
+                isActive("/licitatii") || openPanel === "auctions"
+                  ? "text-primary-700"
+                  : "text-ink-700 hover:text-ink-900",
+              )}
+            >
+              Licitații
+              <Icons.expand
+                aria-hidden="true"
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  openPanel === "auctions" && "rotate-180",
+                )}
+              />
+            </button>
+
+            {/* Two columns of categories, hanging off the word they belong to. */}
+            <div
+              role="menu"
+              className={cn(
+                "absolute top-full left-0 z-10 mt-1 w-[30rem] rounded-2xl bg-white p-2 shadow-sm ring-1 ring-line transition-[opacity,translate,visibility] duration-200 ease-[cubic-bezier(0.2,0.7,0.3,1)]",
+                openPanel === "auctions"
+                  ? "visible translate-y-0 opacity-100"
+                  : "invisible -translate-y-1 opacity-0",
+              )}
+            >
+              <CategoryTiles onNavigate={close} />
+            </div>
+          </div>
+
+          {NAV.filter((item) => item.href !== "/licitatii").map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -284,7 +412,7 @@ export function SiteHeader() {
           ) : user ? (
             <>
               <ButtonLink href="/cont/anunturi/nou" size="sm">
-                Listează
+                Vinde acum
               </ButtonLink>
               {/* flex, or the inline-level button picks up a line box and the
                   avatar rides 2px above the other controls. */}
@@ -362,10 +490,10 @@ export function SiteHeader() {
         type="button"
         aria-label="Închide"
         onClick={close}
-        tabIndex={panelOpen ? 0 : -1}
+        tabIndex={panelIsOpen ? 0 : -1}
         className={cn(
           "fixed inset-0 top-14 -z-10 cursor-default bg-ink-900/20 transition-[opacity,visibility] duration-[260ms] sm:top-16 lg:hidden",
-          panelOpen ? "visible opacity-100" : "invisible opacity-0",
+          panelIsOpen ? "visible opacity-100" : "invisible opacity-0",
         )}
       />
 
@@ -381,7 +509,44 @@ export function SiteHeader() {
 
       <Panel open={openPanel === "nav"}>
         <nav aria-label="Navigare" className="flex flex-col gap-0.5">
-          {NAV.map((item) => (
+          <button
+            type="button"
+            onClick={() => setCategoriesOpen((current) => !current)}
+            aria-expanded={categoriesOpen}
+            className={cn(
+              "flex items-center justify-between rounded-xl px-3 py-2.5 font-display text-base font-bold transition",
+              isActive("/licitatii")
+                ? "text-primary-700"
+                : "text-ink-800 hover:text-ink-900",
+            )}
+          >
+            Licitații
+            <Icons.expand
+              aria-hidden="true"
+              className={cn(
+                "h-4 w-4 text-ink-400 transition-transform duration-300",
+                categoriesOpen && "rotate-180",
+              )}
+            />
+          </button>
+
+          {/* 0fr to 1fr: the rows animate, so the panel grows rather than jumps */}
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows,opacity] duration-[320ms] ease-[cubic-bezier(0.2,0.7,0.3,1)]",
+              categoriesOpen
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0",
+            )}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="px-1 pt-1 pb-2">
+                <CategoryTiles onNavigate={close} />
+              </div>
+            </div>
+          </div>
+
+          {NAV.filter((item) => item.href !== "/licitatii").map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -414,7 +579,7 @@ export function SiteHeader() {
                 Strânge fonduri
               </span>
               <span className="text-sm leading-tight text-primary-900/80">
-                Pornește o cauză
+                Deschide o cauză
               </span>
             </span>
             <Icons.forward
@@ -425,7 +590,7 @@ export function SiteHeader() {
 
           {user ? (
             <ButtonLink href="/cont/anunturi/nou" className="mt-2 sm:hidden">
-              Listează un produs
+              Vinde acum
             </ButtonLink>
           ) : null}
         </nav>

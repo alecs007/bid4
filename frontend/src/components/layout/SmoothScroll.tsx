@@ -5,6 +5,18 @@ import "lenis/dist/lenis.css";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+/**
+ * The running instance, kept at module scope so an overlay can freeze the page
+ * behind it. Lenis drives the scroll itself, so `overflow: hidden` on the root
+ * stops the scrollbar without stopping the wheel.
+ */
+let instance: Lenis | null = null;
+
+export function setPageScrollLocked(locked: boolean): void {
+  if (locked) instance?.stop();
+  else instance?.start();
+}
+
 export function SmoothScroll() {
   const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);
@@ -23,6 +35,7 @@ export function SmoothScroll() {
       syncTouch: false,
     });
     lenisRef.current = lenis;
+    instance = lenis;
 
     let frame = 0;
     const raf = (time: number) => {
@@ -40,6 +53,7 @@ export function SmoothScroll() {
       cancelAnimationFrame(frame);
       lenis.destroy();
       lenisRef.current = null;
+      instance = null;
     };
   }, []);
 

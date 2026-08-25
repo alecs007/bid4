@@ -59,7 +59,7 @@
      A true neutral grey, not a warm beige. Surfaces are white and sit on a
      slightly darker canvas, which separates them without a single border. */
   --color-canvas: #f7f9f8; /* app background: near-white, a hint of green    */
-  --color-line: #edefee;   /* hairline, only where a divider is genuinely
+  --color-line: #edefee; /* hairline, only where a divider is genuinely
                               needed inside a surface                        */
   /* At this brightness a pure-white card would vanish, so surfaces carry the
      faintest edge: readable, but not a line anyone would call a border. */
@@ -95,10 +95,12 @@
   --color-danger-700: #a81f1f;
 
   /* ---- Typography -------------------------------------------------------- */
-  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
-  --font-display: var(--font-baloo), var(--font-nunito), ui-rounded,
-    ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    var(--font-nunito), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-display:
+    var(--font-baloo), var(--font-nunito), ui-rounded, ui-sans-serif, system-ui,
+    sans-serif;
 
   /* ---- Radii: rounded everything ---------------------------------------- */
   --radius-xl: 0.875rem;
