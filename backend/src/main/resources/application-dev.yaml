@@ -5,12 +5,39 @@
 
 bid4:
   dev:
-    # Creates the four demo accounts, but only into an empty database. See
-    # DevDataSeeder for the guards.
+    # Creates the four demo accounts, but only into an empty database, and then
+    # a catalogue for them. See DevDataSeeder and DevCatalogSeeder for the guards.
     seed: true
 
 logging:
+  pattern:
+    # Every line carries the request id, which is also the X-Request-Id header on
+    # the response. That is what turns "it failed" into one grep: the id from the
+    # browser's network tab finds every line the request produced, across threads.
+    # Lines with no request behind them — startup, scheduled work — read "boot".
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%X{requestId:-boot}]){faint} %clr(%-38.38logger{0}){cyan} %clr(:){faint} %m%n%wEx"
+
   level:
+    root: INFO
+
+    # Our own code down to DEBUG: the refusals are logged there, and a refusal
+    # you cannot see is the one you end up guessing about.
+    ro.bid4.backend: DEBUG
+
+    # One line per HTTP call — method, path, status, duration, caller. DEBUG for
+    # the ordinary ones; the filter itself raises anything failing or slow.
+    ro.bid4.backend.http: DEBUG
+
     # The statements Hibernate actually sends. Invaluable when a query is doing
     # something other than what the method name suggests.
     org.hibernate.SQL: DEBUG
+    # Uncomment to see the values bound into those statements. Off by default:
+    # it is the single noisiest setting here, and it prints personal data.
+    # org.hibernate.orm.jdbc.bind: TRACE
+
+    # Which migrations ran, and what the schema validator made of the result.
+    org.flywaydb.core.internal.command: DEBUG
+
+    # Why a request was refused before it reached a controller. The commonest
+    # dev question — "why is this 401" — is answered here and nowhere else.
+    org.springframework.security.web.FilterChainProxy: DEBUG

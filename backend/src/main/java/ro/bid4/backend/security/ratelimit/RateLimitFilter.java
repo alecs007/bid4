@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.filter.OncePerRequestFilter;
 import ro.bid4.backend.common.error.ErrorCode;
+import ro.bid4.backend.common.web.RateLimitAttributes;
 
 /**
  * Charges every request before it reaches a controller.
@@ -45,7 +46,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
 
     RateLimitPolicy policy = policyFor(request);
-    RateLimitDecision decision = rateLimiter.charge(policy, identityOf(request));
+    String caller = identityOf(request);
+    // Left on the request so anything later — the development request log —
+    // reuses this answer rather than working out its own and disagreeing.
+    request.setAttribute(RateLimitAttributes.CALLER, caller);
+
+    RateLimitDecision decision = rateLimiter.charge(policy, caller);
 
     response.setHeader("X-RateLimit-Limit", Long.toString(decision.limit()));
     response.setHeader("X-RateLimit-Remaining", Long.toString(decision.remaining()));

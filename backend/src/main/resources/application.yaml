@@ -47,6 +47,12 @@ spring:
 
   data:
     redis:
+      # Redis is a rate-limit bucket store and nothing else here. Left on, Spring
+      # Data scans every JPA repository looking for Redis ones and logs a warning
+      # per repository explaining how to make it one — fourteen lines of advice
+      # about a feature this application does not use.
+      repositories:
+        enabled: false
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
