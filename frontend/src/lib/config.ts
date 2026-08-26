@@ -16,7 +16,7 @@ export const USE_MOCK: boolean = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
 
 /** Spring Boot dev server default. */
 export const API_BASE: string =
-  process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080/api";
+  process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
 /** Dev-only affordances (role switcher, seed-account quick login). */
 export const SHOW_DEV_TOOLS: boolean =

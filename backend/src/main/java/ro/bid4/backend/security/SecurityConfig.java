@@ -57,7 +57,7 @@ public class SecurityConfig {
     http
         // No cookie-backed session exists to forge a request against, and the
         // one cookie there is — the refresh token — is SameSite=Strict and
-        // scoped to /api/auth. See AuthController.
+        // scoped to /auth. See AuthController.
         .csrf(AbstractHttpConfigurer::disable)
         .cors(Customizer.withDefaults())
         .sessionManagement(

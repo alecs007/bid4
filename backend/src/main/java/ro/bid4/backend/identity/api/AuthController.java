@@ -24,7 +24,7 @@ import ro.bid4.backend.identity.api.dto.UserResponse;
 import ro.bid4.backend.identity.service.AuthService;
 
 /**
- * The four endpoints frontend/src/lib/api/auth.ts calls.
+ * The endpoints frontend/src/lib/api/auth.ts calls.
  *
  * <p>The access token is returned in the body, because that is what the frontend puts in the
  * Authorization header. The refresh token never appears in a body: it is set as an httpOnly cookie,
@@ -108,7 +108,7 @@ public class AuthController {
         // from another site simply does not carry this cookie. The frontend is
         // same-site with the API, so its own calls are unaffected.
         .sameSite("Strict")
-        .path(http.getContextPath() + "/auth");
+        .path("/auth");
   }
 
   private static String clientIp(HttpServletRequest request) {
