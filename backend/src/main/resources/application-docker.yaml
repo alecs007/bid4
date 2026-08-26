@@ -1,0 +1,12 @@
+# Inside compose the infrastructure answers to its service name rather than to
+# localhost. Everything else is inherited from application.yaml.
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+  data:
+    redis:
+      host: redis
+
+bid4:
+  storage:
+    endpoint: http://minio:9000

@@ -1,3 +1,117 @@
 spring:
   application:
-    name: backend
+    name: bid4-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:bid4}
+    username: ${POSTGRES_USER:bid4}
+    password: ${POSTGRES_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+      leak-detection-threshold: 30000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Hibernate may only check that it agrees.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 30
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        query:
+          # A query with no ceiling is a denial-of-service primitive.
+          in_clause_parameter_padding: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-disabled: true
+    validate-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 24MB
+
+server:
+  port: 8080
+  shutdown: graceful
+  error:
+    # An error response says what went wrong in our own words, never in the
+    # framework's: stack traces and binding details are a map of the internals.
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  max-http-request-header-size: 16KB
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+    connection-timeout: 5s
+    max-http-form-post-size: 256KB
+    max-swallow-size: 2MB
+
+management:
+  endpoints:
+    access:
+      # A ceiling, not a default: no endpoint can be raised past read-only by a
+      # later property, an env var or a careless profile.
+      default: none
+      max-permitted: read-only
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      access: read-only
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
+
+bid4:
+  jwt:
+    # HMAC-SHA256. Injected from the environment; the app refuses to start
+    # without it outside the dev profile.
+    secret: ${BID4_JWT_SECRET:}
+    issuer: bid4
+    access-token-ttl: 15m
+    refresh-token-ttl: 30d
+  cors:
+    allowed-origins: ${BID4_CORS_ORIGINS:http://localhost:3000}
+  storage:
+    endpoint: http://${MINIO_HOST:localhost}:${MINIO_PORT:9000}
+    access-key: ${MINIO_ROOT_USER:}
+    secret-key: ${MINIO_ROOT_PASSWORD:}
+    public-bucket: ${MINIO_BUCKET_PUBLIC:bid4-public}
+    private-bucket: ${MINIO_BUCKET_PRIVATE:bid4-private}
+    # Imagery is linked from pages that stay open; identity documents are not.
+    public-url-ttl: 12h
+    private-url-ttl: 5m
+
+logging:
+  level:
+    root: INFO
+    ro.bid4.backend: INFO
