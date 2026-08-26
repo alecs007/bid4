@@ -20,6 +20,7 @@ import type {
   ID,
   PlaceBidPayload,
   PlaceBidResult,
+  User,
 } from "@/lib/types";
 
 import { http } from "./http";
@@ -67,8 +68,15 @@ export interface BidEligibility {
  * TODO(backend): the real flow also confirms a Stripe SetupIntent for the saved
  * card before accepting the bid.
  */
-export function checkBidEligibility(userId?: ID): BidEligibility {
-  if (!userId) {
+/**
+ * The gate: a bid is a commitment to pay, so the card and the delivery method
+ * must already exist. Read off the session user, which carries both flags, so
+ * this answers the same way against the mock layer and against the API — and
+ * the server enforces it again either way, because a gate only the UI knows
+ * about is not a gate.
+ */
+export function checkBidEligibility(user?: User | null): BidEligibility {
+  if (!user) {
     return {
       canBid: false,
       hasCard: false,
@@ -77,14 +85,8 @@ export function checkBidEligibility(userId?: ID): BidEligibility {
     };
   }
 
-  const world = getWorld();
-  const user = world.users.find((item) => item.id === userId);
-  const hasCard = Boolean(
-    user?.hasPaymentMethod && world.cards.some((card) => card.userId === userId),
-  );
-  const hasDelivery = world.deliveryMethods.some(
-    (method) => method.userId === userId && method.isDefault,
-  );
+  const hasCard = Boolean(user.hasPaymentMethod);
+  const hasDelivery = Boolean(user.defaultDeliveryMethodId);
 
   if (!hasCard && !hasDelivery) {
     return {
@@ -152,7 +154,9 @@ export async function placeBid(
     forbidden("Nu poți licita la propriul anunț.");
   }
 
-  const eligibility = checkBidEligibility(bidderId);
+  const eligibility = checkBidEligibility(
+    world.users.find((item) => item.id === bidderId),
+  );
   if (!eligibility.canBid) {
     badRequest(eligibility.reason ?? "Nu poți licita încă.", "BID_NOT_ALLOWED");
   }
@@ -177,11 +181,17 @@ export async function placeBid(
       bid.status = "OUTBID";
     });
 
+  // The seller's final price ends it outright, and at that price rather than at
+  // whatever was typed — the same rule the server applies.
+  const boughtNow =
+    auction.buyNowPrice !== undefined && payload.amount >= auction.buyNowPrice;
+  const price = boughtNow ? auction.buyNowPrice! : payload.amount;
+
   const msLeft = Date.parse(auction.endTime) - Date.now();
   const windowMs = auction.antiSnipeSeconds * 1000;
   let extendedBySeconds: number | undefined;
 
-  if (msLeft > 0 && msLeft <= windowMs) {
+  if (!boughtNow && msLeft > 0 && msLeft <= windowMs) {
     auction.endTime = new Date(
       Date.parse(auction.endTime) + windowMs,
     ).toISOString();
@@ -193,20 +203,36 @@ export async function placeBid(
     id: nextId("bid"),
     auctionId: auction.id,
     bidderId,
-    amount: payload.amount,
+    amount: price,
     createdAt: new Date().toISOString(),
-    status: "WINNING",
+    status: boughtNow ? "WON" : "WINNING",
     triggeredExtension: extendedBySeconds !== undefined,
   };
 
   world.bids.push(bid);
-  auction.currentPrice = payload.amount;
+  auction.currentPrice = price;
   auction.bidCount = world.bids.filter(
     (item) => item.auctionId === auction.id,
   ).length;
+
+  if (boughtNow) {
+    world.bids
+      .filter((item) => item.auctionId === auction.id && item.id !== bid.id)
+      .forEach((item) => {
+        item.status = "LOST";
+      });
+    auction.status = "SOLD";
+    auction.winnerId = bidderId;
+    auction.endTime = new Date().toISOString();
+  }
   commit();
 
-  return { bid, auction, extendedBySeconds };
+  return {
+    bid,
+    auction,
+    extendedBySeconds,
+    boughtNow: boughtNow || undefined,
+  };
 }
 
 export interface MyBidSummary {
@@ -267,21 +293,16 @@ export interface RetractEligibility {
 
 /** Whether the signed-in user may pull back their current top bid. */
 export function checkRetractEligibility(
-  auction: { id: ID; status: string; endTime: string },
+  auction: Pick<AuctionDetail, "status" | "endTime" | "viewerBidStatus">,
   viewerId?: ID,
 ): RetractEligibility {
   if (!viewerId) return { canRetract: false };
   if (auction.status !== "LIVE") {
     return { canRetract: false, reason: "Licitația s-a încheiat." };
   }
-
-  const world = getWorld();
-  const auctionBids = world.bids
-    .filter((bid) => bid.auctionId === auction.id)
-    .sort((a, b) => b.amount - a.amount);
-
-  const top = auctionBids[0];
-  if (!top || top.bidderId !== viewerId) {
+  // Where the viewer stands already travels with the auction, so this needs no
+  // second source of truth and works identically against the API.
+  if (auction.viewerBidStatus !== "WINNING") {
     return { canRetract: false };
   }
 

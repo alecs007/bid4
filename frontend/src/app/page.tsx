@@ -38,7 +38,7 @@ export default function HomePage() {
           <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pt-4 pb-8 sm:px-6 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8 lg:pt-14 lg:pb-16">
             <div>
               <h1 className="font-display text-[2.1rem] leading-[1.05] font-extrabold text-ink-900 sm:text-5xl lg:text-6xl">
-                Schimbă destine
+                Schimbă planeta
                 <br />
                 prin <span className="text-primary-600">licitații.</span>
               </h1>

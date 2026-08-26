@@ -58,6 +58,12 @@ export interface Auction {
   bidIncrement: Bani;
   /** Hidden from buyers; only "rezerva a fost atinsă" is shown. */
   reservePrice?: Bani;
+  /**
+   * The price that ends the auction outright. Public, unlike the reserve — an
+   * offer nobody can take without being told the number. Absent when the seller
+   * named none.
+   */
+  buyNowPrice?: Bani;
 
   startTime: ISODateString;
   endTime: ISODateString;
@@ -125,6 +131,11 @@ export interface PlaceBidResult {
   auction: Auction;
   /** Set when the bid triggered anti-snipe, so the UI can celebrate it. */
   extendedBySeconds?: number;
+  /**
+   * Set when the offer reached `buyNowPrice` and took the item there and then.
+   * The auction in the same response is already SOLD.
+   */
+  boughtNow?: boolean;
 }
 
 /** Everything the seller supplies. The rest is derived or assigned on create. */
@@ -143,7 +154,7 @@ export type CreateAuctionPayload = Pick<
   | "startTime"
   | "endTime"
   | "antiSnipeSeconds"
-> & { reservePrice?: Bani };
+> & { reservePrice?: Bani; buyNowPrice?: Bani };
 
 export interface AuctionFilters {
   q?: string;

@@ -39,7 +39,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(0);
 
-  const eligibility = checkBidEligibility(user?.id);
+  const eligibility = checkBidEligibility(user);
   const retract = checkRetractEligibility(auction, user?.id);
   const isSeller = user?.id === auction.sellerId;
   const isLeading = auction.viewerBidStatus === "WINNING";
@@ -51,7 +51,13 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
       setError("Introdu o sumă validă.");
       return false;
     }
-    if (parsed < minimum) {
+    // The final price is checked first, exactly as the server does: with a large
+    // increment it can sit below the next valid raise, and refusing it here
+    // would put the "cumpără acum" button out of reach of its own price.
+    const takesItOutright =
+      auction.buyNowPrice !== undefined && parsed >= auction.buyNowPrice;
+
+    if (!takesItOutright && parsed < minimum) {
       setError(`Minim ${formatMoney(minimum)}.`);
       return false;
     }
@@ -64,7 +70,12 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
         user.id,
       );
       setCelebrate((value) => value + 1);
-      if (result.extendedBySeconds) {
+      if (result.boughtNow) {
+        toast.success(
+          "Ai cumpărat acum",
+          `Licitația s-a încheiat la ${formatMoney(result.auction.currentPrice)}.`,
+        );
+      } else if (result.extendedBySeconds) {
         toast.toast({
           title: "Ofertă plasată, timp prelungit",
           description: `Licitația s-a prelungit cu ${result.extendedBySeconds} de secunde.`,
@@ -176,6 +187,16 @@ function AmountForm({
       <Button type="submit" size="lg" fullWidth loading={pending}>
         {bidding.isLeading ? "Mărește oferta" : "Licitează"}
       </Button>
+
+      {auction.buyNowPrice ? (
+        <button
+          type="button"
+          onClick={() => setAmount(String(auction.buyNowPrice! / 100))}
+          className="rounded-xl border-2 border-dashed border-primary-300 py-2.5 text-sm font-bold text-primary-700 transition hover:border-primary-500 hover:bg-primary-50"
+        >
+          Cumpără acum la {formatMoney(auction.buyNowPrice)}
+        </button>
+      ) : null}
     </form>
   );
 }
