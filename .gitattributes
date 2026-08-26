@@ -1,0 +1,21 @@
+# Line endings are LF everywhere, in the index and in the working tree.
+#
+# Without this, a machine with core.autocrlf=true checks out CRLF, and Spotless
+# — which is pinned to UNIX so the Docker build and CI agree — then fails every
+# Java file locally. eol=lf overrides autocrlf on checkout, so all three see the
+# same bytes.
+* text=auto eol=lf
+
+# Windows scripts are the exception: cmd.exe needs CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
