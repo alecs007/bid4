@@ -43,9 +43,8 @@ export default function HomePage() {
                 prin <span className="text-primary-600">licitații.</span>
               </h1>
               <p className="mt-3 max-w-lg text-ink-600 sm:mt-4 sm:text-lg">
-                Cumperi sau vinzi, o parte din bani vor ajunge la cauze care au
-                nevoie de sprijin. Fiecare licitație e o șansă în plus pentru
-                cineva care are nevoie.
+                Cumperi sau vinzi, o parte din banii tăi vor ajunge la o cauză
+                care are nevoie de sprijin. Alege să fii parte din schimbare.
               </p>
               <div className="mt-5 flex gap-2.5">
                 <ButtonLink href="/cauze" size="lg">
