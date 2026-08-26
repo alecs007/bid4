@@ -4,9 +4,15 @@ spring:
 
   config:
     # The repo-root .env is already KEY=VALUE, which is properties syntax, so
-    # running from an IDE picks up the same secrets compose uses. Optional: in
-    # a container the file is absent and the environment supplies them instead.
-    import: optional:file:../.env[.properties]
+    # running from an IDE picks up the same secrets compose uses.
+    #
+    # Both paths are tried because the working directory differs by launcher:
+    # IntelliJ runs from the repository root, `mvnw spring-boot:run` from
+    # backend/. Optional, so a container — where the environment supplies these
+    # instead — skips both without complaint.
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:bid4}
