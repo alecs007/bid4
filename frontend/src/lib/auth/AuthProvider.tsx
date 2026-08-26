@@ -104,9 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   );
 
+  /**
+   * Creates the account without signing in. The address is unconfirmed at this
+   * point, so there is no session to adopt — the caller goes to their inbox.
+   */
   const register = useCallback(
-    async (payload: RegisterPayload) => adopt(await authApi.register(payload)),
-    [adopt],
+    async (payload: RegisterPayload) => authApi.register(payload),
+    [],
   );
 
   const switchAccount = useCallback(

@@ -16,9 +16,10 @@ import {
   RadioCard,
   useToast,
 } from "@/components/ui";
+import { resendVerification } from "@/lib/api/auth";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { EMAIL_PATTERN, safeRedirect } from "@/lib/auth/form";
-import { ACCOUNT } from "@/lib/config";
+import { ACCOUNT, USE_MOCK } from "@/lib/config";
 import { errorMessage } from "@/lib/hooks/useApi";
 import { ApiError, type AccountType } from "@/lib/types";
 
@@ -51,6 +52,10 @@ export function RegisterForm() {
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  /** Set once the account exists and the confirmation link is on its way. */
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(
+    null,
+  );
 
   const isOrganization = accountType === "ORGANIZATION";
 
@@ -116,11 +121,17 @@ export function RegisterForm() {
           : undefined,
         acceptedTerms,
       });
-      toast.success(
-        `Bine ai venit, ${user.displayName.split(" ")[0]}!`,
-        "Adaugă un card și o adresă de livrare pentru a putea licita.",
-      );
-      router.replace(destination);
+      // The mock world has no post, so a mock account is usable immediately.
+      // Against the real backend the address has to be confirmed first.
+      if (USE_MOCK) {
+        toast.success(
+          `Bine ai venit, ${user.displayName.split(" ")[0]}!`,
+          "Adaugă un card și o adresă de livrare pentru a putea licita.",
+        );
+        router.replace(destination);
+        return;
+      }
+      setAwaitingConfirmation(user.email);
     } catch (error) {
       if (error instanceof ApiError && error.code === "EMAIL_TAKEN") {
         setErrors({ email: error.message });
@@ -130,6 +141,10 @@ export function RegisterForm() {
       setPending(false);
     }
   };
+
+  if (awaitingConfirmation) {
+    return <ConfirmationPending email={awaitingConfirmation} />;
+  }
 
   return (
     <AuthShell
@@ -279,6 +294,65 @@ export function RegisterForm() {
           Creează contul
         </Button>
       </form>
+    </AuthShell>
+  );
+}
+
+/**
+ * What replaces the form once the account exists. The address is unconfirmed,
+ * so there is nowhere to send the reader except their inbox.
+ */
+function ConfirmationPending({ email }: { email: string }) {
+  const toast = useToast();
+  const [sending, setSending] = useState(false);
+
+  const resend = async () => {
+    setSending(true);
+    try {
+      await resendVerification(email);
+      toast.success(
+        "Am trimis linkul din nou",
+        "Verifică inbox-ul, inclusiv folderul de spam.",
+      );
+    } catch (error) {
+      toast.error("Nu am putut trimite linkul", errorMessage(error));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <AuthShell
+      mood="happy"
+      title="Confirmă adresa de email"
+      description={`Am trimis un link la ${email}. Deschide-l ca să îți poți folosi contul.`}
+      footer={
+        <>
+          Ai confirmat deja?{" "}
+          <Link
+            href="/autentificare"
+            className="font-bold text-primary-700 underline underline-offset-4"
+          >
+            Intră în cont
+          </Link>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Alert tone="sky" title="Linkul este valabil 24 de ore">
+          Fără confirmare, contul nu poate fi folosit. Dacă nu găsești mesajul,
+          caută și în folderul de spam.
+        </Alert>
+        <Button
+          variant="secondary"
+          size="lg"
+          fullWidth
+          loading={sending}
+          onClick={resend}
+        >
+          Trimite linkul din nou
+        </Button>
+      </div>
     </AuthShell>
   );
 }

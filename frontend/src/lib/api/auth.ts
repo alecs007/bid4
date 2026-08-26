@@ -69,17 +69,16 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   return session;
 }
 
-/** POST /auth/register */
-export async function register(
-  payload: RegisterPayload,
-): Promise<AuthSession> {
+/**
+ * POST /auth/register
+ *
+ * Returns the account and no session: the address is unconfirmed, so there is
+ * nothing to sign in to yet. The real backend mails a link; the mock world has
+ * no post, so a mock account is usable straight away.
+ */
+export async function register(payload: RegisterPayload): Promise<User> {
   if (!USE_MOCK) {
-    const session = await http<AuthSession>("/auth/register", {
-      method: "POST",
-      body: payload,
-    });
-    writeToken(session.token);
-    return session;
+    return http<User>("/auth/register", { method: "POST", body: payload });
   }
 
   await delay();
@@ -123,10 +122,28 @@ export async function register(
 
   world.users.push(user);
   commit();
+  return user;
+}
 
-  const session = mockSession(user);
-  writeToken(session.token);
-  return session;
+/** POST /auth/verify — redeems the link from the confirmation message. */
+export async function verifyEmail(token: string): Promise<void> {
+  if (!USE_MOCK) {
+    await http<void>("/auth/verify", { method: "POST", body: { token } });
+    return;
+  }
+  await delay();
+}
+
+/** POST /auth/resend-verification — always succeeds, so it reveals no accounts. */
+export async function resendVerification(email: string): Promise<void> {
+  if (!USE_MOCK) {
+    await http<void>("/auth/resend-verification", {
+      method: "POST",
+      body: { email },
+    });
+    return;
+  }
+  await delay();
 }
 
 /** GET /auth/me — called on boot to restore a session. */
