@@ -1,0 +1,32 @@
+package ro.bid4.backend.identity.repo;
+
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import ro.bid4.backend.identity.domain.UserAccount;
+
+/**
+ * Spring Data derives the SQL from the method name and always binds parameters, which is why no
+ * query in this project concatenates user input into a statement.
+ */
+public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
+
+  Optional<UserAccount> findByEmail(String email);
+
+  Optional<UserAccount> findByUsername(String username);
+
+  boolean existsByEmail(String email);
+
+  boolean existsByUsername(String username);
+
+  /**
+   * Half of the gate that unlocks bidding. A native EXISTS rather than an entity we do not
+   * otherwise need yet; the parameter is still bound, so it is no more injectable than derived SQL.
+   */
+  @Query(
+      value = "select exists(select 1 from payment_methods where user_id = :userId)",
+      nativeQuery = true)
+  boolean hasPaymentMethod(@Param("userId") UUID userId);
+}
