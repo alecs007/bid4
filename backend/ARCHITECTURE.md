@@ -16,10 +16,13 @@ wider.
 | `minio`    | Object storage: imagery and identity documents | 127.0.0.1:9000 |
 | `backend`  | This service (profile `app`)                   | 127.0.0.1:8080 |
 
-The API is served under `/api` (`server.servlet.context-path`), which is what
-`NEXT_PUBLIC_API_BASE` already points at. Actuator answers on port 8081 instead,
-and compose does not publish it — health and metrics are unreachable from off the
-host by construction rather than by remembering to secure a path.
+The API is served from the root: `POST /auth/login`, not `/api/auth/login`.
+The prefix bought nothing once actuator moved off this port, and every path
+reads shorter without it. `NEXT_PUBLIC_API_BASE` is `http://localhost:8080`.
+
+Actuator answers on port 8081, which compose does not publish — health and
+metrics are unreachable from off the host by construction rather than by
+remembering to secure a path.
 
 Every published port binds to `127.0.0.1`, so the databases are reachable from
 this machine and from the compose network and never from the LAN. The default
@@ -110,6 +113,34 @@ Flyway, `src/main/resources/db/migration`, forward-only. `clean` is disabled.
 | `V4`    | orders, tracking events, invoices, disputes                       | to do  |
 | `V5`    | seed data for development                                         | to do  |
 
+## Continuous integration
+
+Three path-filtered workflows in `.github/workflows`.
+
+| Workflow      | Runs on                          | What it does |
+| ------------- | -------------------------------- | ------------ |
+| `backend.yml` | `backend/**`, `docker-compose.yml` | `./mvnw verify` on JDK 21 — Spotless, then 22 tests against a real Postgres and Redis via Testcontainers, so Flyway migrates on every push. A second job builds the container image without pushing it. |
+| `frontend.yml`| `frontend/**`                     | `tsc --noEmit`, `eslint --max-warnings=1`, `next build`. |
+| `security.yml`| everything, plus weekly           | Trivy filesystem scan: known CVEs in `pom.xml` and `pnpm-lock.yaml`, and secrets that reached the tree. |
+
+Every workflow declares `permissions: contents: read` and escalates only where
+it must, and every one cancels the run it supersedes.
+
+**CodeQL was removed.** It analysed both languages correctly — 4 Java files, 140
+TypeScript files — and then failed on every run at the upload step, because
+publishing results requires GitHub code scanning, which on a *private*
+repository is part of GitHub Advanced Security. Nothing in the workflow could
+have fixed that. If this repository ever becomes public, code scanning is free
+and CodeQL is worth restoring: one workflow file with `languages:
+java-kotlin, javascript-typescript`, `build-mode: autobuild` for Java and
+`none` for TypeScript, and `security-events: write`.
+
+Trivy needs none of that and covers the failure modes that are more likely in
+practice anyway — a dependency with a published CVE, or a key that reached the
+tree. `ignore-unfixed` is set, because a finding with no released fix is not
+something a build can act on and failing on it only teaches people to ignore the
+job.
+
 ## Decisions worth knowing
 
 - **JWT via Spring Security's resource server**, not jjwt. Nimbus arrives with the
@@ -147,7 +178,7 @@ Flyway, `src/main/resources/db/migration`, forward-only. `clean` is disabled.
 
 - **The access token is in the body, the refresh token is a cookie.** The frontend
   puts `token` in the Authorization header, so that half must be readable. The
-  refresh half is httpOnly, `SameSite=Strict` and scoped to `/api/auth`, so a
+  refresh half is httpOnly, `SameSite=Strict` and scoped to `/auth`, so a
   script that manages to run on the page can borrow a 15-minute token but cannot
   take the 30-day one. SameSite=Strict is also what stands in for CSRF protection
   on `/auth/refresh`: a cross-site POST simply does not carry the cookie.

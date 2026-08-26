@@ -182,6 +182,10 @@
 				<artifactId>spotless-maven-plugin</artifactId>
 				<version>${spotless.version}</version>
 				<configuration>
+					<!-- Pinned, not inherited. Spotless defaults to reading .gitattributes,
+					     which on a machine with core.autocrlf=true means CRLF — and the
+					     Docker build has no .git, expects LF, and fails every file. -->
+					<lineEndings>UNIX</lineEndings>
 					<java>
 						<googleJavaFormat>
 							<style>GOOGLE</style>

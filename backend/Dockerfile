@@ -4,9 +4,13 @@ FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /build
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw -B -DskipTests dependency:go-offline
+RUN chmod +x mvnw
 COPY src/ src/
-RUN ./mvnw -B -DskipTests package && mv target/*.jar app.jar
+# A cache mount keeps the Maven repository between builds. Without it every
+# build re-downloads the whole dependency tree, which is minutes each time; with
+# it a source change rebuilds in seconds.
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw -B -q -DskipTests package && mv target/*.jar app.jar
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 # wget is the health check; the JRE image has no curl.
