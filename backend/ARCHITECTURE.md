@@ -106,9 +106,18 @@ Flyway, `src/main/resources/db/migration`, forward-only. `clean` is disabled.
 
 - **JWT via Spring Security's resource server**, not jjwt. Nimbus arrives with the
   starter and the verification path is the framework's, not ours.
-- **Rate limiting is a Redis Lua token bucket written here**, not Bucket4j. It is
-  about sixty lines, it is atomic, and it does not pin a Lettuce version against
-  the one Boot manages.
+- **Rate limiting is Bucket4j over Redis.** Bucket4j declares Lettuce 6.1.8 at
+  `provided` scope while Boot supplies 7.5.2, a major version ahead, which is a
+  binary-compatibility risk that no compiler catches. It was measured rather than
+  assumed: `Bucket4jRedisCompatibilityTest` drives a real bucket against a real
+  Redis and stays in the suite as the canary for the next upgrade. The library
+  earns its place on `ConsumptionProbe` alone — remaining tokens and nanos-to-refill
+  are what `X-RateLimit-Remaining` and `Retry-After` are built from, and that
+  arithmetic is the part worth not hand-rolling.
+- **Not the `com.giffing` Bucket4j Spring Boot starter**, which targets Boot 3.
+  The library is used directly.
+- **No Lettuce connection pool.** Lettuce is thread-safe and multiplexes every
+  command over one connection; a pool only adds commons-pool2 and overhead.
 - **No springdoc yet.** The published 2.x line targets Spring Framework 6; this is
   on 7. The API contract is documented by the frontend and by the Postman
   collection until a compatible release lands.
