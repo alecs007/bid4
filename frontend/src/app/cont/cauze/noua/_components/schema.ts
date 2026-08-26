@@ -66,10 +66,6 @@ export const STEPS = [
 
 export type StepId = (typeof STEPS)[number]["id"];
 
-/* -------------------------------------------------------------------------- */
-/* Pieces                                                                     */
-/* -------------------------------------------------------------------------- */
-
 const fileShape = {
   fileName: z.string(),
   fileRef: z.string(),
@@ -81,8 +77,8 @@ const fileShape = {
 const fileRef = z.object(fileShape);
 
 /**
- * A missing file is a missing object, so the message belongs on the object
- * itself — a refinement never runs on a key that was never filled in.
+ * A missing file is a missing object, so the message belongs on the object: a
+ * refinement never runs on a key that was never filled in.
  */
 const requiredFile = (message: string) => z.object(fileShape, { error: message });
 
@@ -115,10 +111,6 @@ const iban = z
   });
 
 const categoryIds = CAUSE_CATEGORIES.map((item) => item.id);
-
-/* -------------------------------------------------------------------------- */
-/* Per-step schemas                                                           */
-/* -------------------------------------------------------------------------- */
 
 const typeStep = z.object({
   beneficiaryType: z.enum(["INDIVIDUAL", "MINOR", "NGO"], {
@@ -307,16 +299,9 @@ function consentsStep(type: BeneficiaryType) {
   });
 }
 
-/* -------------------------------------------------------------------------- */
-/* Running them                                                               */
-/* -------------------------------------------------------------------------- */
-
 export type StepErrors = Record<string, string>;
 
-/**
- * Errors keyed by the field's path in the draft — `beneficiary.fullName` — so
- * a step can look up its own fields without knowing how they were validated.
- */
+/** Keyed by the field's path in the draft — `beneficiary.fullName`. */
 function collect(issues: z.core.$ZodIssue[]): StepErrors {
   const errors: StepErrors = {};
   for (const issue of issues) {
@@ -370,10 +355,6 @@ export function firstInvalidStep(draft: CauseApplicationDraft): number | null {
   }
   return null;
 }
-
-/* -------------------------------------------------------------------------- */
-/* Draft → payload                                                            */
-/* -------------------------------------------------------------------------- */
 
 export function toPayload(
   draft: CauseApplicationDraft,

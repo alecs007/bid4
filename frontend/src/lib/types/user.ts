@@ -2,13 +2,9 @@ import type { Bani } from "@/lib/config";
 import type { ID, ISODateString } from "./common";
 
 /**
- * ONE end-user role. An individual and an organisation are both `USER` and have
- * identical permissions — "Organizația X" can buy a lamp today and open a cause
- * next week from the same account. `accountType` only changes what the profile
- * shows and which fields the cause-validation form asks for.
- *
- * OPERATOR = staff moderation (causes, orders, disputes).
- * ADMIN    = strict superset of OPERATOR + users, roles, settings, reports.
+ * ONE end-user role. An individual and an organisation are both `USER` with
+ * identical permissions; `accountType` only changes what the profile shows and
+ * which fields cause validation asks for. ADMIN is a strict superset of OPERATOR.
  */
 export type UserRole = "USER" | "OPERATOR" | "ADMIN";
 
@@ -66,8 +62,6 @@ export type PublicUser = Pick<
   | "totalRaised"
 >;
 
-/* -------------------------------------------------------------------------- */
-
 export type DeliveryMethodType = "EASYBOX" | "HOME_COURIER";
 
 export interface DeliveryMethod {
@@ -98,14 +92,9 @@ export interface HomeAddress {
   details?: string;
 }
 
-/* -------------------------------------------------------------------------- */
-
 export type CardBrand = "visa" | "mastercard" | "amex" | "other";
 
-/**
- * Mirrors what Stripe safely exposes about a saved card. We never hold a PAN;
- * the real thing is a PaymentMethod id attached to the customer.
- */
+/** Never a PAN — the real thing is a PaymentMethod id attached to the customer. */
 export interface PaymentMethodCard {
   id: ID;
   userId: ID;
@@ -116,8 +105,6 @@ export interface PaymentMethodCard {
   holderName: string;
   isDefault: boolean;
 }
-
-/* -------------------------------------------------------------------------- */
 
 export interface AuthSession {
   user: User;

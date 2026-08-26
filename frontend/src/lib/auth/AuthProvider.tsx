@@ -20,12 +20,9 @@ import type {
 } from "@/lib/types";
 
 /**
- * Mock authentication with the shape real JWT auth will have.
- *
- * Today: the signed-in user id is kept in localStorage and re-read on boot via
- * `auth.me(id)`. After the swap, `auth.me()` calls `GET /auth/me` with the
- * bearer token that `lib/api/http.ts` already attaches — and nothing in this
- * file needs to change beyond dropping the stored id argument.
+ * Mock auth with the shape real JWT auth will have. After the swap `auth.me()`
+ * calls `GET /auth/me` with the bearer token `lib/api/http.ts` already attaches,
+ * and nothing here changes beyond dropping the stored id argument.
  */
 
 const USER_KEY = "bid4.userId";
@@ -65,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
 
-  // Restore the session on boot. All state writes happen after an await, so
-  // the effect never triggers a synchronous cascade.
+  // All state writes happen after an await, so the effect never triggers a
+  // synchronous cascade.
   useEffect(() => {
     let cancelled = false;
 

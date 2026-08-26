@@ -1,11 +1,9 @@
 /**
- * Folds text down to what a search should actually compare: lowercase, no
- * diacritics. Romanian is typed both ways — "bicicleta" has to find
- * "Bicicletă" — and nobody adds the marks in a search box.
+ * Romanian is typed both ways — "bicicleta" has to find "Bicicletă" — and nobody
+ * adds the marks in a search box.
  *
  * TODO(backend): the real query needs the same folding, e.g. Postgres
- * `unaccent(lower(...))` on both the column and the term, or a generated
- * column indexed for it.
+ * `unaccent(lower(...))` on both the column and the term.
  */
 export function foldForSearch(value: string): string {
   return value

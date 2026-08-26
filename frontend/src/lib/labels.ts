@@ -1,9 +1,6 @@
 /**
- * Every enum value the user can see, in Romanian, with the visual tone the
- * design system should paint it in. Code stays English; humans read Romanian.
- *
- * Adding a status to a union without adding it here is a compile error, which
- * is exactly what we want.
+ * Every user-visible enum value in Romanian, with its tone. Adding a status to a
+ * union without adding it here is a compile error, which is the point.
  */
 
 import type {
@@ -39,8 +36,6 @@ export interface StatusMeta {
   /** Optional one-line explanation shown in tooltips and timelines. */
   hint?: string;
 }
-
-/* -------------------------------------------------------------------------- */
 
 export const AUCTION_STATUS: Record<AuctionStatus, StatusMeta> = {
   DRAFT: { label: "Ciornă", tone: "neutral" },
@@ -207,9 +202,6 @@ export const DELIVERY_METHOD_TYPE: Record<DeliveryMethodType, string> = {
   HOME_COURIER: "Curier la adresă",
 };
 
-/* -------------------------------------------------------------------------- */
-
-/** "acum 3 minute" style helpers live in lib/utils/date.ts — labels stay here. */
 export const COPY = {
   escrowExplainer:
     "Plata este păstrată de bid4 și eliberată abia după ce confirmi că ai primit produsul.",

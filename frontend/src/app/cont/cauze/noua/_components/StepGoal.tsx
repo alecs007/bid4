@@ -74,8 +74,7 @@ export function StepGoal({ draft, set, errors }: StepProps) {
         </p>
       ) : null}
 
-      {/* --- payout ------------------------------------------------------ */}
-
+      {/* Payout */}
       <div className="flex flex-col gap-4 rounded-2xl bg-ink-50 p-4">
         <div>
           <p className="font-display text-sm font-extrabold text-ink-700">

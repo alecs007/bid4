@@ -25,9 +25,8 @@ export const PUBLIC_CAUSE_STATUSES: readonly CauseStatus[] = [
 ];
 
 /**
- * Who the money is for. A cause may be raised for a private person, which is
- * why identity sits at the centre of this model rather than at its edge: an
- * NGO can be checked against a public register, a person cannot.
+ * A cause may be raised for a private person, which is why identity sits at the
+ * centre of this model: an NGO can be checked against a register, a person cannot.
  */
 export type BeneficiaryType = "INDIVIDUAL" | "MINOR" | "NGO";
 
@@ -39,11 +38,8 @@ export type GuardianRelation =
   | "OTHER";
 
 /**
- * A file the organiser attached. `fileRef` is the handle the backend will
- * store; `previewUrl` is an object URL that only lives for this session.
- *
- * TODO(backend): POST /uploads returns the ref. Today the ref is minted in the
- * browser and no bytes leave it.
+ * TODO(backend): POST /uploads returns `fileRef`. Today it is minted in the
+ * browser, `previewUrl` is an object URL, and no bytes leave the page.
  */
 export interface UploadedFileRef {
   fileName: string;
@@ -212,9 +208,8 @@ export interface CauseDetail extends Cause {
 }
 
 /**
- * The wizard's own shape: every field a string or a file ref, so a
- * half-finished application survives a reload and a JSON round trip. The zod
- * schemas in the wizard turn this into the payload below.
+ * The wizard's own shape: every field a string or a file ref, so a half-finished
+ * application survives a reload and a JSON round trip.
  */
 export interface CauseApplicationDraft {
   beneficiaryType?: BeneficiaryType;

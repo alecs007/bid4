@@ -38,11 +38,6 @@ function Block({
   );
 }
 
-/**
- * A product seen as an object rather than as a running auction: what it is,
- * what condition it is in, who is selling it and for which cause. The auction
- * is one card among those, linking through to the place you can actually bid.
- */
 export function ProductDetailView({ productId }: { productId: string }) {
   const { data: product, loading, error } = useApi(
     () => getProduct(productId),

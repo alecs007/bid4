@@ -15,8 +15,7 @@ export default function CausesPage() {
   return (
     <PageTransition>
       <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-        {/* The title lives in the browser so it can share a row with the
-            search field; the skeleton renders the same heading. */}
+        {/* The title lives in the browser, so it can share a row with the search field. */}
         <Suspense fallback={<CauseBrowserSkeleton />}>
           <CauseBrowser />
         </Suspense>

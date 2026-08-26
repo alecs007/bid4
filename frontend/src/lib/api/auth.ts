@@ -148,10 +148,7 @@ export async function logout(): Promise<void> {
   writeToken(null);
 }
 
-/**
- * Dev-only: jump straight into a seed account without typing a password.
- * There is no backend counterpart — the role switcher is stripped in prod.
- */
+/** Dev-only: no backend counterpart — the role switcher is stripped in prod. */
 export async function loginAsSeedAccount(userId: string): Promise<AuthSession> {
   await delay();
   const world = getWorld();

@@ -6,9 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 /**
- * The running instance, kept at module scope so an overlay can freeze the page
- * behind it. Lenis drives the scroll itself, so `overflow: hidden` on the root
- * stops the scrollbar without stopping the wheel.
+ * Kept at module scope so an overlay can freeze the page behind it. Lenis drives
+ * the scroll, so `overflow: hidden` on the root stops the bar but not the wheel.
  */
 let instance: Lenis | null = null;
 
@@ -58,12 +57,8 @@ export function SmoothScroll() {
   }, []);
 
   /**
-   * Land every new page at the top, before the first paint of that page —
-   * `useLayoutEffect` rather than `useEffect`, so the view transition snapshots
-   * a page that is already scrolled up instead of one that jumps afterwards.
-   *
-   * Lenis owns the scroll position while it is running, so telling only the
-   * window to scroll would be undone on its next frame.
+   * `useLayoutEffect`, so a new page is at the top before its first paint. Lenis
+   * owns the scroll position, so moving the window alone is undone next frame.
    */
   useLayoutEffect(() => {
     if (previousPath.current === pathname) return;

@@ -1,13 +1,9 @@
 /**
- * bid4 — single source of truth for every business constant.
+ * Every fee, cap, timing and threshold belongs here — nothing in the app may
+ * hard-code one. `/admin/setari` renders this object.
  *
- * Nothing in the app may hard-code a fee, cap, timing or threshold: it belongs
- * here. `/admin/setari` renders this object, and when the Spring Boot backend
- * lands these values are served by `GET /config/platform` so staff can tune
- * them without a redeploy.
- *
- * TODO(backend): replace the literals below with a cached fetch of
- * `GET /config/platform` (returns exactly this shape).
+ * TODO(backend): replace the literals with a cached fetch of
+ * `GET /config/platform`, which returns exactly this shape.
  */
 
 /** Integer minor units of RON. 1 leu = 100 bani. Money is NEVER a float. */
@@ -15,15 +11,7 @@ export type Bani = number;
 
 export const LEU: Bani = 100;
 
-/* ---------------------------------------------------------------------------
- * Environment / integration flags
- * ------------------------------------------------------------------------ */
-
-/**
- * The single switch that swaps the mock layer for the real backend.
- * `NEXT_PUBLIC_USE_MOCK=false` + `NEXT_PUBLIC_API_BASE=...` and every function
- * in `lib/api/*` starts talking HTTP instead of returning seed data.
- */
+/** The single switch that swaps the mock layer for the real backend. */
 export const USE_MOCK: boolean = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
 
 /** Spring Boot dev server default. */
@@ -35,19 +23,12 @@ export const SHOW_DEV_TOOLS: boolean =
   process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS !== "false" &&
   process.env.NODE_ENV !== "production";
 
-/* ---------------------------------------------------------------------------
- * Fees & the money split — mirrored by the backend fee service
- * ------------------------------------------------------------------------ */
-
 export const FEES = {
   /** Buyer-side platform tax: 5% of the hammer price, clamped to [5, 50] lei. */
   BUYER_TAX_PERCENT: 5,
   BUYER_TAX_MIN: 5 * LEU,
   BUYER_TAX_MAX: 50 * LEU,
-  /**
-   * Seller-side fee: 2% of the seller's share (i.e. of what is left after the
-   * donation). Donating 100% therefore costs the seller exactly nothing.
-   */
+  /** 2% of the seller's share, so donating 100% costs the seller nothing. */
   SELLER_FEE_PERCENT: 2,
 } as const;
 
@@ -57,25 +38,15 @@ export const SHIPPING_PRICES = {
   HOME_COURIER: 2299 as Bani,
 } as const;
 
-/* ---------------------------------------------------------------------------
- * Accounts
- * ------------------------------------------------------------------------ */
-
 export const ACCOUNT = {
   MIN_PASSWORD_LENGTH: 8,
   MIN_DISPLAY_NAME_LENGTH: 2,
   MAX_DISPLAY_NAME_LENGTH: 60,
 } as const;
 
-/* ---------------------------------------------------------------------------
- * Causes — proposal, verification and the ceiling before it completes
- * ------------------------------------------------------------------------ */
-
 export const CAUSE = {
   /**
-   * What a cause may raise while staff are still checking it. The organiser is
-   * told the number up front rather than discovering it at the ceiling.
-   *
+   * What a cause may raise while staff are still checking it.
    * TODO(backend): enforced server-side when releasing escrow, not here.
    */
   UNVERIFIED_CAP: 5_000 * LEU,
@@ -94,10 +65,6 @@ export const CAUSE = {
   MIN_BENEFICIARY_AGE: 0,
   MAX_MINOR_AGE: 17,
 } as const;
-
-/* ---------------------------------------------------------------------------
- * Auctions
- * ------------------------------------------------------------------------ */
 
 export const AUCTION = {
   /** A bid inside this window pushes `endTime` out by the same amount. */
@@ -130,10 +97,6 @@ export const DONATION = {
   HERO_PERCENT: 75,
 } as const;
 
-/* ---------------------------------------------------------------------------
- * Orders, escrow & fulfilment timings
- * ------------------------------------------------------------------------ */
-
 export const ORDER = {
   /** Winner has 24h to confirm delivery details before we auto-confirm. */
   CONFIRMATION_HOURS: 24,
@@ -158,10 +121,6 @@ export const SHIPPING = {
   MAX_WEIGHT_GRAMS: 15_000,
 } as const;
 
-/* ---------------------------------------------------------------------------
- * Mock behaviour — makes skeletons and error states visible in development
- * ------------------------------------------------------------------------ */
-
 export const MOCK = {
   /** Simulated network latency window, in ms. */
   MIN_LATENCY_MS: 220,
@@ -171,34 +130,24 @@ export const MOCK = {
   /** Probability that a mocked card charge is declined. */
   PAYMENT_FAILURE_RATE: 0.12,
 
-  /**
-   * Accelerated fulfilment clock. The real flow takes days; in the mock world
-   * an order walks its whole timeline in a couple of minutes so the tracking
-   * page can actually be watched moving.
-   */
+  /** Accelerated clock: an order walks its whole timeline in a couple of minutes. */
   AUTO_PAYMENT_DELAY_SECONDS: 8,
   AUTO_LABEL_DELAY_SECONDS: 6,
   COURIER_STEP_SECONDS: 40,
   /**
-   * Only orders touched within this window keep moving on the accelerated
-   * clock. Seeded history stays exactly where it was put, so the dashboards
-   * always show every order state — including the genuinely transient ones.
+   * Only orders touched within this window keep moving. Seeded history stays
+   * where it was put, so the dashboards show every order state.
    */
   SIMULATION_WINDOW_SECONDS: 1800,
   /** localStorage key + schema version. Bump to invalidate a stale world. */
   STORAGE_KEY: "bid4.world",
   SCHEMA_VERSION: 3,
   /**
-   * Seeded auctions are dated relative to the moment the world was created,
-   * so a world left in localStorage for a day ends up with everything closed.
-   * Past this age it is reseeded, which keeps the demo alive.
+   * Seeded auctions are dated from when the world was created, so an old world
+   * ends up with everything closed. Past this age it is reseeded.
    */
   MAX_WORLD_AGE_HOURS: 8,
 } as const;
-
-/* ---------------------------------------------------------------------------
- * Taxonomies (Romanian labels — these are user-facing)
- * ------------------------------------------------------------------------ */
 
 export const CAUSE_CATEGORIES = [
   { id: "medical", label: "Sănătate", emoji: "🩺" },
@@ -237,10 +186,6 @@ export const ROMANIAN_COUNTIES = [
 export type CauseCategoryId = (typeof CAUSE_CATEGORIES)[number]["id"];
 export type ProductCategoryId = (typeof PRODUCT_CATEGORIES)[number]["id"];
 
-/* ---------------------------------------------------------------------------
- * Homepage "featured" scoring — implemented for real in lib/featured.ts
- * ------------------------------------------------------------------------ */
-
 export const FEATURED = {
   /** Weights of the popularity score: bids, watchers, urgency, donation share. */
   WEIGHT_BIDS: 3,
@@ -253,11 +198,7 @@ export const FEATURED = {
   TRENDING_CAUSES_COUNT: 3,
 } as const;
 
-/**
- * "More like this" on an auction page. Cause outweighs everything else: the
- * reason someone is on a bid4 listing is more often the cause behind it than
- * the object in front of it.
- */
+/** "More like this": the cause outweighs the object, because it usually is the reason. */
 export const RELATED = {
   WEIGHT_SAME_CAUSE: 10,
   WEIGHT_SAME_CATEGORY: 5,

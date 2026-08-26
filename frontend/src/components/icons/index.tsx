@@ -104,7 +104,6 @@ export function ParcelIcon({ className, ...props }: IconProps) {
 }
 
 export const Icons = {
-  // A hand offering coins, not a courtroom gavel: bidding here is giving.
   auction: LuHandCoins,
   donation: LeafHeartIcon,
   cause: LuHeartHandshake,
@@ -122,8 +121,6 @@ export const Icons = {
   watchlist: LuBookmark,
   impact: LuSparkles,
 
-  // A stopwatch, not a clock face: what matters is the time left, and every
-  // interface already has a clock in it.
   clock: LuTimer,
   urgent: LuFlame,
   calendar: LuCalendar,

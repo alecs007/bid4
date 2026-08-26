@@ -3,11 +3,8 @@ import { progressPercent } from "@/lib/money";
 import type { Auction, Cause } from "@/lib/types";
 
 /**
- * The homepage's editorial logic, implemented for real rather than hard-coded.
- *
- * "Popular" balances four signals so the row never fills with one kind of
- * listing: activity (bids), interest (watchers), urgency (time left) and
- * generosity (donation share). The weights live in `lib/config.ts`.
+ * "Popular" balances four signals so the row never fills with one kind of listing:
+ * bids, watchers, time left and donation share. The weights are in `lib/config.ts`.
  */
 
 /** 1 when the auction is closing right now, 0 outside the ending-soon window. */
@@ -60,10 +57,7 @@ export function pickEndingSoon<T extends Auction>(
     .slice(0, count);
 }
 
-/**
- * Highest score first, with one listing per seller so the row does not become
- * a single seller's shop window.
- */
+/** Highest score first, one listing per seller so the row is not one shop window. */
 export function pickPopular<T extends Auction>(
   auctions: T[],
   count = FEATURED.POPULAR_COUNT,
@@ -92,10 +86,7 @@ export function pickPopular<T extends Auction>(
   return picked;
 }
 
-/**
- * Trending causes: the ones with live listings, closest to a milestone, so the
- * homepage nudges toward finishing something rather than starting everything.
- */
+/** Causes with live listings, closest to a milestone: finish something, not start everything. */
 export function pickTrendingCauses(
   causes: Cause[],
   auctions: Auction[],
@@ -126,10 +117,6 @@ export function pickTrendingCauses(
     .map((entry) => entry.cause);
 }
 
-/* ---------------------------------------------------------------------------
- * "More like this", on an auction page
- * ------------------------------------------------------------------------ */
-
 /** 1 at the same price, tapering to 0 as one is four times the other. */
 function priceProximity(a: number, b: number): number {
   if (a <= 0 || b <= 0) return 0;
@@ -137,10 +124,6 @@ function priceProximity(a: number, b: number): number {
   return Math.max(0, 1 - (ratio - 1) / 3);
 }
 
-/**
- * How much another auction has in common with this one. Cause first, then the
- * kind of object, then who is selling it and roughly what it costs.
- */
 export function relatedScore(
   subject: Auction,
   candidate: Auction & { product: { category: string } },
@@ -166,13 +149,8 @@ export function relatedScore(
 }
 
 /**
- * The auctions worth showing under this one: live, not this one, best match
- * first.
- *
- * Qualifying is separate from ranking. An auction earns its place by sharing
- * the cause, the kind of object, or the seller — price and urgency only decide
- * the order among those. Otherwise a row of "related" listings fills up with
- * whatever happens to cost about the same, which relates to nothing.
+ * Qualifying is separate from ranking. An auction earns its place by sharing the
+ * cause, the kind of object, or the seller; price and urgency only order those.
  */
 export function pickRelated<
   T extends Auction & { product: { category: string } },
@@ -203,9 +181,8 @@ export function pickRelated<
 
   if (matched.length >= RELATED.MIN_COUNT) return matched;
 
-  // Too few genuine matches to fill a row. Rather than loosen what counts as
-  // related, top up with what is worth seeing anyway — the real matches keep
-  // the front of the row.
+  // Too few genuine matches to fill a row: top up rather than loosen what counts
+  // as related. The real matches keep the front.
   const taken = new Set(matched.map((auction) => auction.id));
   const filler = others
     .filter((auction) => !taken.has(auction.id))

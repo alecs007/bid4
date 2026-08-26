@@ -2,15 +2,11 @@ import type { CauseCategoryId, ProductCategoryId } from "@/lib/config";
 import { CAUSE_CATEGORIES, PRODUCT_CATEGORIES } from "@/lib/config";
 
 /**
- * Branded placeholder imagery, generated as SVG data URIs.
+ * Placeholder imagery as SVG data URIs: no network, no image hosts, and a
+ * placeholder that can never contradict its listing. Deterministic in its seed.
  *
- * No network, no next.config image hosts, no offline breakage, and — unlike
- * random stock photos — a placeholder can never contradict its listing. Every
- * image is deterministic in its seed, so the same auction always looks the same.
- *
- * TODO(backend): once uploads exist, `imageUrl` / `images[]` carry real object
- * storage URLs and these helpers are only used as the fallback for a missing
- * image. The call sites already read the field, not the helper.
+ * TODO(backend): once uploads exist these are only the fallback for a missing
+ * image — the call sites already read the field, not the helper.
  */
 
 /** Stable 32-bit hash so a seed always maps to the same colours. */
@@ -88,8 +84,6 @@ function tile({
 
   return svgToDataUri(svg);
 }
-
-/* -------------------------------------------------------------------------- */
 
 const PRODUCT_GLYPHS = new Map(
   PRODUCT_CATEGORIES.map((category) => [category.id, category.emoji]),

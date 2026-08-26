@@ -3,15 +3,10 @@ import { PAGINATION, PRODUCT_CATEGORIES } from "@/lib/config";
 import { AUCTION_STATUS } from "@/lib/labels";
 
 /**
- * Everything `<AuctionBrowser>` renders below the page title, as placeholders.
- *
- * Used both by `loading.tsx` (the server fallback for the route) and by the
- * page's own Suspense fallback, so whichever one the router reaches for, the
- * frame on screen is the same and nothing moves when the browser takes over.
- *
- * The filter chips come from the same static config as the real ones and are
- * rendered with their labels invisible: same widths, so the rail wraps to the
- * same number of rows.
+ * Used by `loading.tsx` and by the page's own Suspense fallback, so whichever the
+ * router reaches for, nothing moves when the browser takes over. The filter chips
+ * come from the same config, rendered with their labels invisible: same widths,
+ * so the rail wraps to the same number of rows.
  */
 
 function ChipGhost({ emoji, label }: { emoji?: string; label: string }) {

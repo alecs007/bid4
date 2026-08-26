@@ -57,8 +57,6 @@ export function CauseWizard() {
 
   const topRef = useRef<HTMLDivElement>(null);
 
-  /* --- resume ---------------------------------------------------------- */
-
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -86,8 +84,6 @@ export function CauseWizard() {
     };
   }, [user]);
 
-  /* --- draft, saved between steps rather than on every keystroke -------- */
-
   const persist = useCallback(
     async (next: CauseApplicationDraft, reached: number) => {
       if (!user) return;
@@ -102,8 +98,8 @@ export function CauseWizard() {
     [user],
   );
 
-  // Steps save on the way out, but a tab closed mid-sentence should not cost
-  // the sentence, so typing settles into a save too.
+  // Steps save on the way out; typing settles into a save too, so a tab closed
+  // mid-sentence does not cost the sentence.
   useEffect(() => {
     if (loading || !user) return;
     const timeout = window.setTimeout(() => {

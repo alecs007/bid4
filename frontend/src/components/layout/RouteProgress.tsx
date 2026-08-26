@@ -13,10 +13,8 @@ const FINISH_MS = 260;
 type Phase = "idle" | "loading" | "done";
 
 /**
- * Thin progress bar under the header for navigations that take long enough to
- * notice. Next exposes pending state per-link (`useLinkStatus`), which cannot
- * see clicks elsewhere in the tree, so this listens for internal link clicks
- * and back/forward instead, and closes out when the pathname actually changes.
+ * Next's `useLinkStatus` only sees its own link, so this listens for internal link
+ * clicks and back/forward instead, and closes out when the pathname changes.
  */
 export function RouteProgress() {
   const pathname = usePathname();
@@ -111,8 +109,7 @@ export function RouteProgress() {
 }
 
 /**
- * The bar creeps toward 90% while loading, then runs to full and fades. Plain
- * transitions rather than keyframes: a navigation that lands early interpolates
+ * Transitions rather than keyframes: a navigation that lands early interpolates
  * from wherever the creep had got to instead of jumping to the end.
  */
 function Bar({ done }: { done: boolean }) {

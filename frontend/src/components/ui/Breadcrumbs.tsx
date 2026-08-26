@@ -9,13 +9,6 @@ export interface Crumb {
   href?: string;
 }
 
-/**
- * The trail above a detail page: Acasă › Cauze › this cause.
- *
- * One line, always: the ancestors keep their full labels and the current page
- * truncates, since it is the one carrying a title of unknown length and it is
- * repeated as the heading right below anyway.
- */
 export function Breadcrumbs({
   items,
   className,

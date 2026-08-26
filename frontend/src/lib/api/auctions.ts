@@ -27,11 +27,8 @@ import { matchesSearch } from "@/lib/utils/search";
 import { http } from "./http";
 
 /**
- * Auctions.
- *
- * TODO(backend): the live price and bid count should arrive over the WebSocket
- * channel Spring already has on the classpath (`/ws/auctions/{id}`), with these
- * REST calls used for the initial load only.
+ * TODO(backend): live price and bid count should arrive over the WebSocket channel
+ * (`/ws/auctions/{id}`), with these REST calls used for the initial load only.
  */
 
 function paginate<T>(items: T[], page = 1, pageSize: number): Page<T> {

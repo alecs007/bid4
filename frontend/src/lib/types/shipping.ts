@@ -20,10 +20,6 @@ export interface ShippingParty {
   addressLines: string[];
 }
 
-/**
- * Everything `<ShippingLabel>` needs to draw a print-accurate label, and
- * everything `lib/pdf/label.ts` needs to render that label to PDF.
- */
 export interface ShippingLabelData {
   awb: string;
   courier: string;

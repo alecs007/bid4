@@ -9,12 +9,8 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 
 /**
- * Dialogs render into `document.body` rather than where they are written.
- *
- * A page's own wrapper carries a filling opacity animation, which makes it a
- * stacking context for good — so a `z-50` overlay inside it still loses to the
- * `z-40` header outside it. Portalling puts the dialog back in the root
- * context, where its z-index means what it says.
+ * Portalled to `document.body`: the page wrapper's opacity animation makes it a
+ * stacking context, so a `z-50` overlay inside it loses to the `z-40` header.
  */
 export function Modal({
   open,

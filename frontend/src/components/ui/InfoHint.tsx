@@ -5,11 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * A question mark that explains itself: hovered on a mouse, tapped on a phone.
- * The icon is always there rather than appearing on hover, because a hint
- * nobody can see on a touchscreen is not a hint.
- */
+/** Always visible rather than on hover: a hint nobody can see on a touchscreen is none. */
 export function InfoHint({
   label,
   children,

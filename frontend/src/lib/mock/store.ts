@@ -8,23 +8,15 @@ import { CACHE_KEYS, invalidateCache } from "@/lib/api/cache";
 import { createWorld, type World } from "./seed";
 
 /**
- * The mock backend's memory.
+ * One module-level world, hydrated from localStorage so a placed bid survives a
+ * refresh; on the server it is rebuilt per process, which is fine because every
+ * mutable screen fetches through a client component.
  *
- * One module-level world, hydrated from localStorage in the browser so a
- * placed bid survives a refresh. On the server it is rebuilt per process —
- * which is fine, because every mutable screen fetches through a client
- * component (see the note in README).
- *
- * `syncWorld()` runs before every read and every write: it walks the clock
- * forward, so auctions open and close and parcels move on their own.
+ * `syncWorld()` runs before every read and write, walking the clock forward.
  */
 
 let world: World | null = null;
 let lastSync = 0;
-
-/* ---------------------------------------------------------------------------
- * Persistence
- * ------------------------------------------------------------------------ */
 
 interface PersistedWorld {
   version: number;
@@ -104,10 +96,6 @@ export function commit(): void {
   persist();
 }
 
-/* ---------------------------------------------------------------------------
- * Latency and failure simulation
- * ------------------------------------------------------------------------ */
-
 export function delay(): Promise<void> {
   const span = MOCK.MAX_LATENCY_MS - MOCK.MIN_LATENCY_MS;
   const ms = MOCK.MIN_LATENCY_MS + Math.random() * span;
@@ -146,10 +134,6 @@ export function nextId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${sequence.toString(36)}`;
 }
 
-/* ---------------------------------------------------------------------------
- * Helpers shared with the api layer
- * ------------------------------------------------------------------------ */
-
 export { snapshotDelivery, shippingPriceFor } from "./delivery";
 
 export function makeAwb(): string {
@@ -176,9 +160,7 @@ export function pushEvent(
   order.status = status;
 }
 
-/* ---------------------------------------------------------------------------
- * The clock: everything that happens without a user pressing anything
- * ------------------------------------------------------------------------ */
+// The clock: everything that happens without a user pressing anything.
 
 function secondsSince(iso: string | undefined): number {
   if (!iso) return Number.POSITIVE_INFINITY;
@@ -189,10 +171,7 @@ function lastEventAt(order: Order): string | undefined {
   return order.trackingEvents[order.trackingEvents.length - 1]?.at;
 }
 
-/**
- * Releases escrow: the donation reaches the cause, the seller gets their net,
- * bid4 keeps its fees. This is the single place where `raisedAmount` moves.
- */
+/** Releases escrow. The single place where `raisedAmount` moves. */
 function releaseFunds(current: World, order: Order): void {
   const cause = current.causes.find((item) => item.id === order.causeId);
   if (cause) {
@@ -325,10 +304,7 @@ function chargeOrder(current: World, order: Order): void {
   );
 }
 
-/**
- * Walks the whole world forward to `now`. Cheap and idempotent: it only ever
- * moves things that are genuinely due, and it is throttled to once a second.
- */
+/** Idempotent and throttled to once a second: it only moves what is genuinely due. */
 export function syncWorld(force = false): void {
   if (!world) return;
   const now = Date.now();
@@ -337,7 +313,7 @@ export function syncWorld(force = false): void {
   const current = world;
   let changed = false;
 
-  /* --- auctions ------------------------------------------------------- */
+  // Auctions
   for (const auction of current.auctions) {
     if (auction.status === "SCHEDULED" && now >= Date.parse(auction.startTime)) {
       auction.status = "LIVE";
@@ -350,14 +326,12 @@ export function syncWorld(force = false): void {
     }
   }
 
-  /* --- orders --------------------------------------------------------- */
+  // Orders
   for (const order of current.orders) {
     const sinceLastEvent = secondsSince(lastEventAt(order));
     /**
-     * Seeded orders are history: their last event is hours old, so they are
-     * left alone. Only orders the user has just acted on ride the accelerated
-     * courier clock. Deadline-driven transitions below are exempt — those are
-     * real timers, not simulation.
+     * Seeded orders are history and are left alone; only orders just acted on
+     * ride the accelerated clock. Deadline-driven transitions below are exempt.
      */
     const isLiveSimulation = sinceLastEvent < MOCK.SIMULATION_WINDOW_SECONDS;
 

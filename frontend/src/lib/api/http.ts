@@ -4,12 +4,8 @@ import { ApiError, type ApiErrorBody } from "@/lib/types";
 /**
  * The single fetch wrapper used when `NEXT_PUBLIC_USE_MOCK=false`.
  *
- * Every `lib/api/*` function branches on USE_MOCK and calls this in the real
- * path, so switching to the Spring Boot backend never touches a component.
- *
- * TODO(backend): the token below is a mock string today. Once Spring Security
- * issues real JWTs, this is already the right place — add refresh handling and
- * a 401 -> redirect-to-login hook here, nowhere else.
+ * TODO(backend): the token is a mock string today. Add refresh handling and the
+ * 401 -> redirect-to-login hook here, nowhere else.
  */
 
 const TOKEN_KEY = "bid4.token";

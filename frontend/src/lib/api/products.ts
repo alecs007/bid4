@@ -7,11 +7,7 @@ import { matchesSearch } from "@/lib/utils/search";
 
 import { http } from "./http";
 
-/**
- * The product catalogue: the same items as `/licitatii`, but browsed as
- * objects rather than as running auctions. A product always belongs to exactly
- * one auction in this model.
- */
+/** The same items as `/licitatii`, browsed as objects. One product, one auction. */
 
 export interface ProductWithContext extends Product {
   seller: PublicUser;

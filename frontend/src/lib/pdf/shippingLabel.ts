@@ -4,14 +4,11 @@ import type { ShippingLabelData } from "@/lib/types";
 import { formatDateTimeRo } from "@/lib/utils/date";
 
 /**
- * Client-side AWB label renderer — the PDF twin of <ShippingLabel />.
+ * The PDF twin of <ShippingLabel />, in millimetres on a 100 x 150 mm thermal
+ * label. Change one and change the other.
  *
- * Layout is expressed in millimetres on a 100 x 150 mm thermal label, matching
- * the on-screen component's proportions 1:1. If you change one, change both.
- *
- * TODO(backend): once Sameday Easybox is wired up, `lib/api/shipping.ts` will
- * return a real, courier-issued label PDF and this becomes a preview-only
- * fallback for development.
+ * TODO(backend): once Sameday Easybox is wired up the courier issues the real
+ * label PDF and this becomes a development fallback.
  */
 
 const W = 100;
@@ -20,9 +17,8 @@ const M = 6; // left/right margin
 const RIGHT = W - M;
 
 /**
- * jsPDF's built-in fonts are WinAnsi-encoded and have no glyphs for ă î â ș ț.
- * Rather than embedding a ~300 KB TTF into the bundle for a thermal label, we
- * transliterate — which is what courier labels do in practice anyway.
+ * jsPDF's built-in fonts are WinAnsi-encoded and have no glyphs for ă î â ș ț, so
+ * transliterate rather than embed a ~300 KB TTF into the bundle.
  */
 function pdfText(value: string): string {
   return value
@@ -99,11 +95,7 @@ export function buildLabelFileName(data: ShippingLabelData): string {
   return `eticheta-${data.orderReference}-${data.awb}.pdf`;
 }
 
-/**
- * Renders the label to a jsPDF document.
- * `qrDataUrl` is a PNG data URL — grab it from the <ShippingLabel> canvas via
- * `canvas.toDataURL("image/png")`.
- */
+/** `qrDataUrl` is a PNG data URL from the <ShippingLabel> canvas, via `toDataURL`. */
 export function renderShippingLabel(
   data: ShippingLabelData,
   qrDataUrl: string,
@@ -114,7 +106,7 @@ export function renderShippingLabel(
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, "F");
 
-  /* -- Header ------------------------------------------------------------- */
+  // Header
   drawLogo(doc, M, 4.5, 8);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
@@ -131,7 +123,7 @@ export function renderShippingLabel(
   doc.setTextColor(0);
   solid(doc, 15, 0.8);
 
-  /* -- Destination headline ------------------------------------------------ */
+  // Destination headline
   const isEasybox = data.deliveryType === "EASYBOX";
   ctx.y = 20;
   caption(ctx, isEasybox ? "Easybox destinatie" : "Livrare la adresa");
@@ -147,7 +139,7 @@ export function renderShippingLabel(
   }
   dashed(doc, 37);
 
-  /* -- Recipient + QR ------------------------------------------------------ */
+  // Recipient + QR
   ctx.y = 42;
   caption(ctx, "Destinatar");
   ctx.y = 46.5;
@@ -166,7 +158,7 @@ export function renderShippingLabel(
   doc.text("SCANEAZA LA LOCKER", RIGHT - 13.5, 70, { align: "center" });
   doc.setTextColor(0);
 
-  /* -- AWB band ------------------------------------------------------------ */
+  // AWB band
   doc.setFillColor(243, 243, 241);
   doc.rect(0, 73, W, 15, "F");
   ctx.y = 78.5;
@@ -180,7 +172,7 @@ export function renderShippingLabel(
   doc.text(pdfText(data.awb), W / 2, 85.5, { align: "center" });
   solid(doc, 88, 0.8);
 
-  /* -- Sender -------------------------------------------------------------- */
+  // Sender
   ctx.y = 94;
   caption(ctx, "Expeditor");
   ctx.y = 98.5;
@@ -193,7 +185,7 @@ export function renderShippingLabel(
   body(ctx, data.sender.phone, M, 7.5, "normal", "courier");
   dashed(doc, 116);
 
-  /* -- Parcel details ------------------------------------------------------ */
+  // Parcel details
   const columns = [M, M + 32, M + 62];
   const details: [string, string][] = [
     ["Comanda", data.orderReference],
@@ -208,7 +200,7 @@ export function renderShippingLabel(
   );
   dashed(doc, 129);
 
-  /* -- Contents ------------------------------------------------------------ */
+  // Contents
   ctx.y = 134;
   caption(ctx, "Continut");
   ctx.y = 138;
@@ -217,7 +209,7 @@ export function renderShippingLabel(
   const titleLines = doc.splitTextToSize(pdfText(data.productTitle), RIGHT - M);
   doc.text(titleLines.slice(0, 2), M, ctx.y);
 
-  /* -- Impact footer -------------------------------------------------------- */
+  // Impact footer
   solid(doc, 141, 0.8);
   if (data.donationNote) {
     doc.setFont("helvetica", "bold");

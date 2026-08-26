@@ -309,9 +309,8 @@ export function AuctionBrowser() {
     </Button>
   );
 
-  // Always rendered, never hidden: a control that disappears when it has
-  // nothing to do leaves people wondering where it went. Grey when there is
-  // nothing to reset, red when there is.
+  // Always rendered: a control that disappears when it has nothing to do leaves
+  // people wondering where it went. Grey with nothing to reset, red with something.
   const resetButton = (
     <button
       type="button"

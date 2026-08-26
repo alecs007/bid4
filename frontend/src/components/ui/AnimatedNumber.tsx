@@ -4,26 +4,17 @@ import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
-/** U+200B zero-width space and U+00A0 no-break space, named so they are
-    visible in the source rather than being invisible literals. */
+/** Zero-width space and no-break space, named so they are not invisible literals. */
 const ZERO_WIDTH = "​";
 const NBSP = " ";
 
-/**
- * Every character — digit or not — sits in a box exactly one line tall, so the
- * rolling digits, the thousands separator and the " lei" suffix all share one
- * baseline. Nothing here relies on inline baseline alignment, which is what
- * made an odometer built out of `align-bottom` spans sit too high.
- */
+// Inline baseline alignment sat the odometer too high, so every character gets a
+// box exactly one line tall instead.
 const SLOT = "block h-[1lh] leading-[1lh]";
 
 /** One extra pass through 0–9 before the digit settles: it reads as a spin. */
 const SPINS = 1;
-/**
- * Where the counter rests before it rolls: the smallest number of the same
- * width — 1.000 for a four-digit sum, 100.000 for a six-digit one. Leading
- * zeros would read as a broken number rather than as a counter about to run.
- */
+/** Rests at the smallest number of the same width: leading zeros read as broken. */
 const START_LEADING_DIGIT = 1;
 const START_DIGIT = 0;
 const STRIP = Array.from({ length: (SPINS + 1) * 10 }, (_, index) => index % 10);
@@ -50,8 +41,7 @@ function DigitSlot({
   durationMs: number;
   delayMs: number;
 }) {
-  // Always forward: from `startDigit` on the first pass to `digit` on the
-  // second, so every slot travels between one and nineteen steps.
+  // Always forward: one to nineteen steps per slot.
   const offset = settled ? SPINS * 10 + digit : startDigit;
 
   return (
@@ -78,29 +68,17 @@ function DigitSlot({
   );
 }
 
-/**
- * One rendering of one formatted string. Mounted fresh whenever the string
- * changes — which is how the digits start at the resting number and roll up
- * rather than animating backwards.
- *
- * `animate: false` paints the digits where they belong straight away, for
- * figures that should simply be read rather than counted up to.
- */
 function Odometer({ text, animate }: { text: string; animate: boolean }) {
   const [rolling, setRolling] = useState(!animate);
 
   useEffect(() => {
     if (!animate) return;
-    // Two frames: the first paints the strip at zero, the second starts the
-    // transition. One frame is not enough — the browser would coalesce both
-    // styles into a single computation and skip the animation entirely.
+    // Two frames: with one the browser coalesces both styles and skips the animation.
     let second = 0;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => setRolling(true));
     });
-    // A hidden or background tab never runs those frames, and a number frozen
-    // at its resting value would be plainly wrong. The timer settles it either
-    // way.
+    // A hidden tab never runs those frames; the timer settles the number either way.
     const fallback = window.setTimeout(() => setRolling(true), FALLBACK_MS);
     return () => {
       cancelAnimationFrame(first);
@@ -117,8 +95,7 @@ function Odometer({ text, animate }: { text: string; animate: boolean }) {
 
   return (
     <span className="inline-flex">
-      {/* Zero-width anchor: gives the flex row a real first-line baseline so
-          the odometer aligns with the sentence around it. */}
+      {/* Zero-width anchor: gives the flex row a real first-line baseline. */}
       <span aria-hidden="true" className={SLOT}>
         {ZERO_WIDTH}
       </span>
@@ -131,14 +108,12 @@ function Odometer({ text, animate }: { text: string; animate: boolean }) {
               aria-hidden="true"
               className={SLOT}
             >
-              {/* A plain space would collapse inside a flex row — the reason
-                  the " lei" suffix used to sit flush against the number. */}
+              {/* A plain space collapses inside a flex row. */}
               {character === " " ? NBSP : character}
             </span>
           );
         }
 
-        // Digits further right settle later, the way a mechanical counter does.
         const fromRight = lastDigit - index;
         return (
           <DigitSlot
@@ -161,18 +136,7 @@ function Odometer({ text, animate }: { text: string; animate: boolean }) {
   );
 }
 
-/**
- * Odometer for impact numbers: digits roll up into place, the separators and
- * the currency suffix stay put.
- *
- * Mount it only once the real figure is known. Every digit of that figure is
- * rendered from the first frame — resting at 1.000 (or 100.000, or whatever
- * the smallest number of that width is) before it rolls — so the number
- * occupies its final width immediately and the text around it never reflows.
- *
- * With `animateOnMount={false}` the first figure is shown as-is and only later
- * changes roll: right for small counts that are read, not watched.
- */
+/** Mount only once the real figure is known: it takes its final width on the first frame. */
 export function AnimatedNumber({
   value,
   format,
@@ -188,8 +152,7 @@ export function AnimatedNumber({
 }) {
   const text = format(value);
 
-  // State initialised once and never set: it holds the string this component
-  // mounted with, so anything after that counts as a change.
+  // Set once and never updated: it holds the string this component mounted with.
   const [firstText] = useState(text);
   const animate = animateOnMount || text !== firstText;
 

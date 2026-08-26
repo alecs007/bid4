@@ -2,11 +2,8 @@ import { Skeleton, SkeletonGrid } from "@/components/ui";
 import { PAGINATION, PRODUCT_CATEGORIES } from "@/lib/config";
 
 /**
- * Everything `<ProductBrowser>` renders, as placeholders. Shared by the route's
- * Suspense fallback so the frame never changes when the browser takes over.
- *
- * The category chips are the real ones with their labels hidden, which keeps
- * their widths — and so the row's wrapping — identical.
+ * Shared by the route's Suspense fallback so the frame never changes. The category
+ * chips are the real ones with their labels hidden, which keeps the row's wrapping.
  */
 export function ProductBrowserSkeleton() {
   return (

@@ -17,11 +17,8 @@ export interface PlatformStats {
 }
 
 /**
- * Platform totals move slowly, so they are cached for the session rather than
- * refetched every time someone lands on the homepage.
- *
- * TODO(backend): serve this with a Cache-Control header and drop the local
- * cache; the shape and call site stay the same.
+ * TODO(backend): serve this with a Cache-Control header and drop the local cache;
+ * the shape and the call site stay the same.
  */
 const STATS_TTL_MS = 5 * 60_000;
 
@@ -131,8 +128,6 @@ export async function getUserStats(userId: ID): Promise<UserDashboardStats> {
       world.users.find((user) => user.id === userId)?.totalRaised ?? 0,
   };
 }
-
-/* -------------------------------------------------------------------------- */
 
 export interface AdminStats {
   platformRevenue: Bani;

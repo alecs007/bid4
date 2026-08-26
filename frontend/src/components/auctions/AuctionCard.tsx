@@ -36,11 +36,7 @@ export function AuctionCard({
   const live = auction.status === "LIVE";
   const cover = auction.product.images[0] ?? "";
 
-  /**
-   * The icon turns before the request leaves: saving is the viewer's decision,
-   * not the server's opinion of it. The answer only confirms — or, if the call
-   * fails, puts the icon back where it was.
-   */
+  /** The icon turns before the request leaves; a failed call puts it back. */
   const handleWatch = async () => {
     if (!user) {
       toast.info("Intră în cont ca să salvezi licitații.");
@@ -111,8 +107,7 @@ export function AuctionCard({
         >
           <Icons.watchlist
             aria-hidden="true"
-            /* fill-transparent, not the svg's own fill="none": a colour can be
-               animated to another colour, `none` cannot. */
+            /* fill-transparent, not fill="none": a colour animates to a colour, `none` cannot. */
             className={cn(
               "h-[18px] w-[18px] fill-transparent transition-[fill,transform] duration-200",
               watched && "scale-110 fill-current",

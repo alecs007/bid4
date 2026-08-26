@@ -28,9 +28,8 @@ export function CauseCard({
       )}
       style={style}
     >
-      {/* The whole card is the target. It cannot be the title's own overlay,
-          the way the auction card does it: the title sits inside the caption,
-          which is positioned, so the overlay would stop at the caption. */}
+      {/* The whole card is the target. Not the title's own overlay, the way the
+          auction card does it: the title sits inside a positioned caption. */}
       <Link
         href={`/cauze/${cause.slug}`}
         aria-label={cause.name}

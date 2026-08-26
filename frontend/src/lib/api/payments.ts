@@ -13,20 +13,13 @@ import type { CardBrand, ID, PaymentMethodCard } from "@/lib/types";
 import { http } from "./http";
 
 /**
- * Payments.
+ * TODO(backend): the real flow is Stripe Connect and nothing here ever sees a card
+ * number — a SetupIntent client secret confirmed in the browser with Elements, of
+ * which we store only the PaymentMethod id, charged off-session when an auction
+ * closes; plus a hosted onboarding URL for sellers and cause organisers.
  *
- * TODO(backend): the real flow is Stripe Connect, and nothing below ever sees
- * a card number:
- *   1. `createSetupIntent()` -> POST /payments/setup-intent returns a client
- *      secret; the browser confirms it with Stripe Elements, so the PAN never
- *      touches bid4. We only store the resulting PaymentMethod id.
- *   2. The saved method is charged off-session when an auction closes
- *      (see lib/api/orders.ts).
- *   3. `startPayoutOnboarding()` -> POST /payments/connect/onboarding returns
- *      the Stripe-hosted onboarding URL for sellers and cause organisers.
- *
- * The mock below fabricates a card from the last four digits only, precisely
- * because storing anything more would be wrong even in a demo.
+ * The mock fabricates a card from the last four digits only, precisely because
+ * storing anything more would be wrong even in a demo.
  */
 
 /** GET /users/me/payment-methods */

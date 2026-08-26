@@ -5,11 +5,9 @@ import type { ID, Invoice, InvoiceFilters, UserRole } from "@/lib/types";
 import { http } from "./http";
 
 /**
- * Invoices and receipts.
- *
  * TODO(backend): PDFs are generated server-side (the platform fee invoice is a
- * fiscal document) and served from object storage behind a signed URL. Here
- * `pdfUrl` is a mock path and the UI renders a printable HTML view instead.
+ * fiscal document) and served from storage behind a signed URL. Here `pdfUrl` is
+ * a mock path and the UI renders a printable HTML view instead.
  */
 
 /** GET /users/me/invoices */

@@ -18,11 +18,7 @@ import { useApi } from "@/lib/hooks/useApi";
 import { countRo } from "@/lib/utils/plural";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The catalogue: the same objects as `/licitatii`, browsed as things rather
- * than as running auctions. Filters stay in the URL, so a filtered catalogue
- * is a link someone can send.
- */
+/** Filters stay in the URL, so a filtered catalogue is a link someone can send. */
 export function ProductBrowser() {
   const router = useRouter();
   const params = useSearchParams();

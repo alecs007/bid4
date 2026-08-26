@@ -3,11 +3,7 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The lockup file carries ~10% empty canvas above and below the artwork, so
- * the box is drawn taller than the logo reads: these heights land the visible
- * logo on the mark sizes the header and footer were built around.
- */
+/** The lockup carries ~10% empty canvas, so the box is drawn taller than it reads. */
 const HEIGHTS = { sm: 33, md: 40, lg: 55 } as const;
 const LOGO_RATIO = 1024 / 426;
 

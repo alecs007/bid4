@@ -1,19 +1,10 @@
 /**
- * bid4 — decimal-safe money.
- *
- * Every amount in this app is an INTEGER number of bani (RON minor units).
- * Floats never touch money: `0.1 + 0.2` problems become rounding bugs that
- * show up as a 1-ban mismatch between the buyer's total and the seller payout.
- *
- * The backend is expected to serialise amounts the same way (a `long` of minor
- * units), so DTOs map across without a conversion layer.
+ * Every amount is an INTEGER number of bani. Floats never touch money: they turn
+ * into a 1-ban mismatch between the buyer's total and the seller payout. The
+ * backend serialises the same way, so DTOs map across without a conversion.
  */
 
 import { FEES, LEU, type Bani } from "@/lib/config";
-
-/* ---------------------------------------------------------------------------
- * Conversions
- * ------------------------------------------------------------------------ */
 
 /** `lei(12.5)` → 1250 bani. Rounds half-up at the ban. */
 export function lei(amount: number): Bani {
@@ -26,9 +17,8 @@ export function toLei(amount: Bani): number {
 }
 
 /**
- * Parse user input in Romanian or English notation.
- * Accepts "1.250,50", "1250,50", "1250.50", "1 250,50 lei". Returns null when
- * the text is not a usable amount, so callers can show a field error.
+ * Accepts "1.250,50", "1250,50", "1250.50", "1 250,50 lei". Returns null when the
+ * text is not a usable amount, so callers can show a field error.
  */
 export function parseLeiInput(raw: string): Bani | null {
   const cleaned = raw
@@ -45,9 +35,8 @@ export function parseLeiInput(raw: string): Bani | null {
     // Romanian: dots group thousands, comma is the decimal separator.
     normalised = cleaned.replace(/\./g, "").replace(",", ".");
   } else if (lastDot > lastComma) {
-    // "25.000" is how ro-RO prints twenty-five thousand, and it is what people
-    // paste back in. Dots in pure three-digit groups group; anything else is a
-    // decimal point.
+    // "25.000" is how ro-RO prints twenty-five thousand: dots in pure
+    // three-digit groups group, anything else is a decimal point.
     normalised = /^\d{1,3}(\.\d{3})+$/.test(cleaned)
       ? cleaned.replace(/\./g, "")
       : cleaned.replace(/,/g, "");
@@ -60,10 +49,6 @@ export function parseLeiInput(raw: string): Bani | null {
   if (!Number.isFinite(value) || value < 0) return null;
   return lei(value);
 }
-
-/* ---------------------------------------------------------------------------
- * Formatting
- * ------------------------------------------------------------------------ */
 
 const roFormatter = new Intl.NumberFormat("ro-RO", {
   minimumFractionDigits: 2,
@@ -122,10 +107,6 @@ export function formatPercent(percent: number): string {
   )}%`;
 }
 
-/* ---------------------------------------------------------------------------
- * Integer arithmetic helpers
- * ------------------------------------------------------------------------ */
-
 /** Exact percentage of an integer amount, rounded half-up to the ban. */
 export function percentOf(amount: Bani, percent: number): Bani {
   return Math.round((amount * percent) / 100);
@@ -144,11 +125,6 @@ export function progressPercent(raised: Bani, goal: Bani): number {
   if (goal <= 0) return 0;
   return Math.min(100, Math.max(0, (raised / goal) * 100));
 }
-
-/* ---------------------------------------------------------------------------
- * THE fee split — one implementation, used by the auction page, the order
- * confirmation, order detail, seller dashboard and admin reports.
- * ------------------------------------------------------------------------ */
 
 export interface FeeBreakdown {
   /** Hammer price — what the winning bid was. */
@@ -181,16 +157,7 @@ export interface ComputeFeesInput {
   shipping?: Bani;
 }
 
-/**
- * Rules (identical to the backend's FeeService):
- *   buyerTax        = clamp(finalPrice * 5%, 5 lei, 50 lei)
- *   donationAmount  = finalPrice * donationPercent/100
- *   sellerShare     = finalPrice − donationAmount
- *   sellerFee       = sellerShare * 2%
- *   sellerNet       = sellerShare − sellerFee
- *   buyerTotal      = finalPrice + buyerTax + shipping
- *   platformRevenue = buyerTax + sellerFee
- */
+/** Identical to the backend's FeeService. */
 export function computeFees({
   finalPrice,
   donationPercent,

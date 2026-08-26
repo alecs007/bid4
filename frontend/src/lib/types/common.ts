@@ -1,7 +1,3 @@
-/**
- * Primitives shared by every DTO. Kept deliberately dumb so the shapes can be
- * generated from the Spring Boot OpenAPI schema later without a rewrite.
- */
 
 export type ID = string;
 

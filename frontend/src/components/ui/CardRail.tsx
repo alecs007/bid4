@@ -8,16 +8,7 @@ import { cn } from "@/lib/utils/cn";
 /** Past this, the pointer was dragging the rail rather than clicking a card. */
 const DRAG_THRESHOLD_PX = 4;
 
-/**
- * A horizontal rail of cards, driven by its arrows or by dragging it — never
- * by a scrollbar, which is hidden. Touch keeps the native swipe; a mouse or
- * pen gets grab-and-pull instead.
- *
- * The arrows show only once there is something off-screen to reach, and each
- * disables itself at its end: a control that scrolls nowhere is worse than no
- * control. `data-lenis-prevent` keeps the smooth-scroll wrapper from
- * swallowing the horizontal gesture.
- */
+/** `data-lenis-prevent` keeps the smooth-scroll wrapper from swallowing the drag. */
 export function CardRail({
   children,
   ariaLabel,
@@ -68,8 +59,6 @@ export function CardRail({
       behavior: "smooth",
     });
   };
-
-  /* ---- grab and pull, for pointers that have no swipe ------------------- */
 
   const drag = useRef({ active: false, startX: 0, startLeft: 0, moved: false });
 
@@ -164,8 +153,7 @@ export function CardRail({
         onPointerCancel={endDrag}
         onClickCapture={onClickCapture}
         className={cn(
-          // scroll-pl matches the padding: without it the first card snaps
-          // past it, and the rail opens looking nudged to the right.
+          // scroll-pl matches the padding, or the first card snaps past it.
           "no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 select-none sm:mx-0 sm:scroll-pl-0 sm:gap-4 sm:px-0",
           scrollable && "cursor-grab active:cursor-grabbing",
         )}

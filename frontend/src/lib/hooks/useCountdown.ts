@@ -31,13 +31,10 @@ export function diffToParts(
 }
 
 /**
- * Per-second countdown to an ISO instant.
+ * Recomputes from `Date.now()` every tick rather than decrementing, so a
+ * backgrounded tab or a sleeping laptop cannot drift.
  *
- * Ticks on a 1s interval and recomputes from `Date.now()` every time rather
- * than decrementing, so a backgrounded tab or a sleeping laptop cannot drift.
- *
- * TODO(backend): the server is the clock of record. When the WebSocket channel
- * lands, reconcile against the `serverTime` it pushes with every auction event.
+ * TODO(backend): reconcile against the `serverTime` the WebSocket channel pushes.
  */
 export function useCountdown(
   target: string,

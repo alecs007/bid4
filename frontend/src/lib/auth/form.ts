@@ -1,10 +1,7 @@
 /** Loose on purpose: the backend is the authority, this only catches typos. */
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-/**
- * Where to land after signing in. Only same-origin paths are honoured — a
- * `?redirect=` that points anywhere else is an open redirect.
- */
+/** Only same-origin paths — a `?redirect=` pointing anywhere else is an open redirect. */
 export function safeRedirect(
   value: string | null | undefined,
   fallback = "/",

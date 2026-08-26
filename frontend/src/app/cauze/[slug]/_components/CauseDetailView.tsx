@@ -71,9 +71,8 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
         {frames.length > 1 ? (
           <div
             data-lenis-prevent
-            /* overflow-x-auto clips on both axes, and the selected frame's
-               ring is drawn outside its box — hence the padding, with a
-               matching negative margin so the rail still lines up. */
+            /* overflow-x-auto clips on both axes and the selected ring is drawn
+               outside its box — hence the padding and matching negative margin. */
             className="-mx-4 mt-2 flex gap-2.5 overflow-x-auto px-4 py-1 sm:-mx-1 sm:px-1"
           >
             {frames.map((frame, index) => (

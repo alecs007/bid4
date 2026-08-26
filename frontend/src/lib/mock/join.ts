@@ -15,9 +15,8 @@ import type {
 import { getWorld } from "./store";
 
 /**
- * The mock layer's "joins". The backend will return these shapes assembled by
- * JPA projections; here we stitch them from the in-memory world so components
- * consume identical payloads either way.
+ * The mock layer's "joins": what JPA projections will return, stitched from the
+ * in-memory world so components consume identical payloads either way.
  */
 
 export function toPublicUser(user: User): PublicUser {

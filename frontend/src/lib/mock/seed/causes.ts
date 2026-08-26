@@ -10,11 +10,7 @@ import type {
 import { isoAgo } from "@/lib/utils/date";
 import { causeCover, causeGallery, causeImage } from "../images";
 
-/**
- * Seed causes across every status the operator queue has to handle: live ones
- * that carry listings, two waiting for approval, one rejected with a real
- * reason, one still a draft and one suspended.
- */
+/** One cause per status, so the operator queue has every case to handle. */
 interface CauseSeed {
   id: string;
   name: string;
@@ -278,7 +274,7 @@ const SEEDS: CauseSeed[] = [
     iban: "RO88CCCC1B31007593842222",
   },
 
-  /* --- waiting on the operator queue ------------------------------------ */
+  // Waiting on the operator queue
   {
     id: "cau_rmn",
     name: "Aparat RMN pentru Spitalul Județean",
@@ -325,7 +321,7 @@ const SEEDS: CauseSeed[] = [
     iban: "RO66GGGG1B31007593846666",
   },
 
-  /* --- rejected, draft, suspended --------------------------------------- */
+  // Rejected, draft, suspended
   {
     id: "cau_programare",
     name: "Cursuri de programare pentru liceeni",

@@ -41,10 +41,7 @@ function Thumb({ file, className }: { file: UploadedFileRef; className?: string 
   );
 }
 
-/**
- * One file, picked and shown back. Nothing is uploaded — `toFileRef` explains
- * what happens here once there is a server to talk to.
- */
+/** Nothing is uploaded — see `toFileRef` for what happens once there is a server. */
 export function FileUpload({
   label,
   hint,

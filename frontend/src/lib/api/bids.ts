@@ -64,8 +64,8 @@ export interface BidEligibility {
  * The gate: a bid is a commitment to pay, so the card and the delivery method
  * must already exist. Checked here so every entry point agrees.
  *
- * TODO(backend): this mirrors the server's precondition. The real flow also
- * confirms a Stripe SetupIntent for the saved card before accepting the bid.
+ * TODO(backend): the real flow also confirms a Stripe SetupIntent for the saved
+ * card before accepting the bid.
  */
 export function checkBidEligibility(userId?: ID): BidEligibility {
   if (!userId) {
@@ -165,8 +165,7 @@ export async function placeBid(
     );
   }
 
-  // One offer per bidder per listing: raising replaces your previous bid
-  // instead of stacking a second row onto the history.
+  // One offer per bidder: raising replaces your previous bid, it does not stack.
   world.bids = world.bids.filter(
     (bid) => !(bid.auctionId === auction.id && bid.bidderId === bidderId),
   );
@@ -178,7 +177,6 @@ export async function placeBid(
       bid.status = "OUTBID";
     });
 
-  /* --- anti-sniping ---------------------------------------------------- */
   const msLeft = Date.parse(auction.endTime) - Date.now();
   const windowMs = auction.antiSnipeSeconds * 1000;
   let extendedBySeconds: number | undefined;
@@ -257,9 +255,8 @@ export async function listMyBids(userId: ID): Promise<MyBidSummary[]> {
 }
 
 /**
- * How long before the close a bid can no longer be pulled back.
- * Retracting in the closing moments would be indistinguishable from bid
- * shielding, so the window is locked once anti-sniping territory starts.
+ * Retracting in the closing moments is indistinguishable from bid shielding, so
+ * the window locks once anti-sniping territory starts.
  */
 export const RETRACT_LOCK_SECONDS = 300;
 
@@ -302,9 +299,8 @@ export function checkRetractEligibility(
 /**
  * DELETE /auctions/{id}/bids/mine
  *
- * Removes the caller's leading bid and rolls the price back to whatever was
- * underneath it. Only the top bid can go: removing one from the middle would
- * rewrite a history other people already acted on.
+ * Only the top bid can go: removing one from the middle would rewrite a history
+ * other people already acted on.
  */
 export async function retractBid(
   auctionId: ID,

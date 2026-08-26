@@ -10,11 +10,7 @@ export interface StepperStep {
   label: string;
 }
 
-/**
- * The wizard's spine: how far along, what this step is called, and a way back
- * to anything already finished. Steps ahead are not links — a form you have
- * not filled in is not a place you can go.
- */
+/** Steps ahead are not links: a form you have not filled in is not a place you can go. */
 export function Stepper({
   steps,
   current,

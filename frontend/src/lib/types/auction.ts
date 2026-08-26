@@ -72,7 +72,6 @@ export interface Auction {
   extensionCount: number;
 }
 
-/** The shape every card and the auction page actually consume. */
 export interface AuctionDetail extends Auction {
   product: Product;
   seller: PublicUser;
@@ -138,8 +137,6 @@ export interface CreateAuctionPayload {
   endTime: ISODateString;
   antiSnipeSeconds: number;
 }
-
-/* -------------------------------------------------------------------------- */
 
 export interface AuctionFilters {
   q?: string;

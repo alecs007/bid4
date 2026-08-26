@@ -17,14 +17,9 @@ export function errorMessage(error: unknown): string {
 }
 
 /**
- * Loads data from `lib/api/*` inside a client component.
- *
- * Deliberately keyed by a string rather than a dependency array: callers pass
- * something like `` `auctions:${JSON.stringify(filters)}` ``, which keeps the
- * effect honest without fighting exhaustive-deps over an inline closure.
- *
- * `loading` stays true until the first result arrives, which is what every
- * skeleton on the site keys off.
+ * Keyed by a string rather than a dependency array: callers pass something like
+ * `` `auctions:${JSON.stringify(filters)}` ``, which keeps the effect honest
+ * without fighting exhaustive-deps over an inline closure.
  */
 export function useApi<T>(
   loader: () => Promise<T>,
@@ -33,10 +28,8 @@ export function useApi<T>(
 ): ApiState<T> & { reload: () => void } {
   const { enabled = true } = options;
 
-  // `key` is stored alongside the result so `loading` can be derived rather
-  // than announced from inside the effect. Announcing it a frame late let the
-  // caller render "loaded, empty" for one frame every time the key changed —
-  // long enough for an empty state to flash in place of a skeleton.
+  // `key` is stored with the result so `loading` is derived, not announced from
+  // inside the effect — a frame late, an empty state flashed in the skeleton's place.
   const [state, setState] = useState<{
     data: T | null;
     error: string | null;
@@ -78,8 +71,8 @@ export function useApi<T>(
   const reload = useCallback(() => setNonce((value) => value + 1), []);
 
   return {
-    // Whatever was loaded last stays on screen while the next request runs;
-    // callers guard with `loading && !data` when they want a skeleton instead.
+    // The last result stays on screen while the next request runs; guard with
+    // `loading && !data` for a skeleton instead.
     data: state.data,
     // An error from a previous key is not this key's error.
     error: state.key === key ? state.error : null,
@@ -88,10 +81,7 @@ export function useApi<T>(
   };
 }
 
-/**
- * Runs a mutation and tracks its pending/error state. Pair with a toast for
- * the success case — that is the app-wide convention for user actions.
- */
+/** Pair with a toast for the success case — the app-wide convention for actions. */
 export function useAction<TArgs extends unknown[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,
 ): {

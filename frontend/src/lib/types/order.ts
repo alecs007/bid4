@@ -6,13 +6,11 @@ import type { DeliveryMethod, PublicUser } from "./user";
 
 /**
  * The escrow state machine. Money sits with the platform from PAID_HELD until
- * COMPLETED — the UI must always make that visible, never imply the seller has
- * already been paid.
+ * COMPLETED, and the UI must never imply the seller has already been paid.
  *
  *  AWAITING_CONFIRMATION → AWAITING_PAYMENT → PAID_HELD → LABEL_GENERATED
  *    → DROPPED_OFF → IN_TRANSIT → ARRIVED_AT_LOCKER → DELIVERED → COMPLETED
- *
- *  Any point after payment: DISPUTE_OPEN → DISPUTE_RESOLVED → REFUNDED | COMPLETED
+ *  After payment: DISPUTE_OPEN → DISPUTE_RESOLVED → REFUNDED | COMPLETED
  */
 export type OrderStatus =
   | "AWAITING_CONFIRMATION"
@@ -53,8 +51,8 @@ export interface TrackingEvent {
 }
 
 /**
- * A frozen copy of the delivery method as it was at confirmation time. The user
- * may later delete or edit the saved address; the label must not change.
+ * Frozen at confirmation time: the saved address may later be edited or deleted,
+ * the label must not change.
  */
 export type DeliverySnapshot = Omit<DeliveryMethod, "isDefault" | "userId">;
 
@@ -67,7 +65,7 @@ export interface Order {
   sellerId: ID;
   causeId: ID;
 
-  /* --- money, all frozen at close (see lib/money.ts computeFees) --------- */
+  // Money, all frozen at close — see computeFees in lib/money.ts.
   finalPrice: Bani;
   platformTax: Bani;
   shipping: Bani;
@@ -80,7 +78,6 @@ export interface Order {
   deliveryMethod?: DeliverySnapshot;
   status: OrderStatus;
 
-  /* --- fulfilment ------------------------------------------------------- */
   awb?: string;
   courier?: string;
   /** Mock reference for the generated PDF; a storage key later. */

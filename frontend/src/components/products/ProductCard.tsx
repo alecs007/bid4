@@ -10,12 +10,7 @@ import { formatMoney } from "@/lib/money";
 import { revealDelay } from "@/lib/utils/reveal";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Same frame as `<AuctionCard>` — square cover, two title lines, one footer
- * row — so the two grids sit together and both can use `<SkeletonGrid>`. What
- * differs is what it leads with: the object and its condition, rather than the
- * clock and the current bid.
- */
+/** Same frame as `<AuctionCard>`, so the two grids sit together and share `<SkeletonGrid>`. */
 export function ProductCard({
   product,
   className,

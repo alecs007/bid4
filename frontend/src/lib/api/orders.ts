@@ -28,18 +28,12 @@ import type {
 import { http } from "./http";
 
 /**
- * Orders and escrow.
- *
- * TODO(backend): the real Stripe Connect choreography is
- *   1. SetupIntent when the user saves a card (off_session usage).
- *   2. On auction close, an off-session PaymentIntent for buyerTotal, captured
- *      to the PLATFORM account — this is the escrow hold.
- *   3. On release (buyer confirms pickup, or the 72h timer fires), two
- *      Transfers: donationAmount to the cause's connected account and sellerNet
- *      to the seller's. bid4 keeps buyerTax + sellerFee.
- *   4. On a dispute resolved in the buyer's favour, a Refund of the
- *      PaymentIntent (full or partial) instead of the Transfers.
- * None of that belongs in the frontend; these calls stay exactly as they are.
+ * TODO(backend): the Stripe Connect choreography is a SetupIntent when a card is
+ * saved; an off-session PaymentIntent for buyerTotal on close, captured to the
+ * platform account (the escrow hold); on release two Transfers, donationAmount to
+ * the cause and sellerNet to the seller, bid4 keeping buyerTax + sellerFee; and a
+ * full or partial Refund instead of those Transfers when a dispute goes the
+ * buyer's way. None of it belongs in the frontend — these calls stay as they are.
  */
 
 /** GET /orders?role=BUYER|SELLER */
@@ -105,8 +99,8 @@ export async function getOrder(orderId: ID, viewerId: ID): Promise<OrderDetail> 
 }
 
 /**
- * POST /orders/{id}/confirm — the winner locks in delivery details.
- * Payment is charged straight after (mocked by the world clock).
+ * POST /orders/{id}/confirm — the winner locks in delivery details. Payment is
+ * charged straight after (mocked by the world clock).
  */
 export async function confirmOrder(
   payload: ConfirmOrderPayload,
@@ -223,8 +217,8 @@ export async function markDroppedOff(
 }
 
 /**
- * POST /orders/{id}/confirm-pickup — the buyer says the parcel arrived intact.
- * This is what releases the escrow early; otherwise the 72h timer does it.
+ * POST /orders/{id}/confirm-pickup — releases the escrow early; otherwise the
+ * 72h timer does it.
  */
 export async function confirmPickup(
   orderId: ID,
@@ -260,10 +254,6 @@ export async function confirmPickup(
   return detail;
 }
 
-/* ---------------------------------------------------------------------------
- * Staff
- * ------------------------------------------------------------------------ */
-
 /** GET /operator/orders — every order, for intervention. */
 export async function listAllOrders(
   role: UserRole,
@@ -295,10 +285,7 @@ export async function listAllOrders(
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/**
- * POST /operator/orders/{id}/force — nudge a stuck order along.
- * Used when a courier webhook never arrives, which does happen.
- */
+/** POST /operator/orders/{id}/force — for when a courier webhook never arrives. */
 export async function forceOrderStatus(
   orderId: ID,
   status: Order["status"],

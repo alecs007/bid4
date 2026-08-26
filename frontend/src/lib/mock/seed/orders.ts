@@ -16,11 +16,9 @@ import { isoAgo, isoIn } from "@/lib/utils/date";
 import { snapshotDelivery } from "../delivery";
 
 /**
- * One order per status, so every screen — buyer tracking, seller fulfilment,
- * operator intervention, admin reporting — has something real to render.
- *
- * Timing is expressed as "hours ago", counted backwards from the current
- * status, so a DELIVERED order genuinely looks older than a PAID_HELD one.
+ * One order per status, so every screen has something real to render. Timing is
+ * "hours ago" counted back from the current status, so a DELIVERED order
+ * genuinely looks older than a PAID_HELD one.
  */
 
 /** How far into the past each status started, in hours. */
@@ -238,7 +236,7 @@ export function buildOrders({
 
     orders.push(order);
 
-    /* --- invoices ------------------------------------------------------ */
+    // Invoices
     if (paid && status !== "CANCELLED") {
       invoiceNumber += 1;
       invoices.push({
@@ -285,7 +283,7 @@ export function buildOrders({
       });
     }
 
-    /* --- disputes ------------------------------------------------------- */
+    // Disputes
     if (status === "DISPUTE_OPEN") {
       disputes.push({
         id: `dsp_${order.id}`,

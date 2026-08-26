@@ -8,11 +8,8 @@ import { isoAgo } from "@/lib/utils/date";
 import { avatarImage } from "../images";
 
 /**
- * Seed accounts. Every one of them logs in with the same demo password so the
- * role switcher can jump between them without a credentials cheat sheet.
- *
- * The four the brief asks for are the first four below; the rest populate bid
- * histories, listings and orders so the app never looks like a single-user demo.
+ * Every seed account logs in with the same demo password. The four from the brief
+ * are first; the rest populate bid histories so this never looks single-user.
  */
 export const DEMO_PASSWORD = "bid4demo";
 
@@ -105,7 +102,7 @@ const SEEDS: UserSeed[] = [
     featured: true,
   },
 
-  /* --- supporting cast -------------------------------------------------- */
+  // Supporting cast
   {
     id: "usr_vlad",
     email: "vlad.georgescu@example.ro",
@@ -267,8 +264,6 @@ export function buildUsers(): User[] {
     totalRaised: lei(seed.totalRaisedLei),
   }));
 }
-
-/* -------------------------------------------------------------------------- */
 
 const LOCKERS: [string, string, string][] = [
   ["BUC-142", "Easybox Auchan Titan", "Bd. 1 Decembrie 1918 nr. 33, București"],

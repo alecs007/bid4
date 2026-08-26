@@ -1,13 +1,9 @@
 import type { UploadedFileRef } from "@/lib/types";
 
 /**
- * Turns a picked file into the reference the rest of the app passes around.
- *
- * TODO(backend): POST /uploads (multipart) returns `{ fileRef }` from object
- * storage, and identity documents go to a private bucket the public API never
- * reads from. Today nothing leaves the browser: the ref is minted here and the
- * preview is an object URL, which is why it does not survive a reload — a
- * resumed draft shows the file's name and a placeholder rather than a thumbnail.
+ * TODO(backend): POST /uploads returns `{ fileRef }`, and identity documents go
+ * to a private bucket. Today nothing leaves the browser — the preview is an
+ * object URL, which is why a resumed draft shows a name rather than a thumbnail.
  */
 export function toFileRef(file: File): UploadedFileRef {
   const isImage = file.type.startsWith("image/");

@@ -11,10 +11,6 @@ import { Lightbox } from "./Lightbox";
 /** How many thumbnails the desktop rail shows before it needs its arrows. */
 const RAIL_VISIBLE = 4;
 
-/**
- * A vertical thumbnail rail beside the photograph on a desktop, one swipeable
- * photograph with dots on a phone, and the same lightbox behind both.
- */
 export function Gallery({
   images,
   alt,
@@ -47,8 +43,7 @@ export function Gallery({
     [count],
   );
 
-  // The phone rail is a real scroller, so the dots follow the scroll position
-  // rather than the other way round.
+  // The phone rail is a real scroller, so the dots follow the scroll position.
   const onScroll = () => {
     const track = trackRef.current;
     if (!track) return;
@@ -74,7 +69,6 @@ export function Gallery({
   return (
     <>
       <div className="flex gap-3">
-        {/* --- desktop rail ------------------------------------------- */}
         {count > 1 ? (
           <div className="hidden w-16 shrink-0 flex-col items-center gap-1.5 lg:flex">
             <RailArrow
@@ -125,7 +119,6 @@ export function Gallery({
           </div>
         ) : null}
 
-        {/* --- the photograph ------------------------------------------ */}
         <div className="min-w-0 flex-1">
           <button
             type="button"

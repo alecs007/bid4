@@ -23,15 +23,12 @@ import type {
 import { http } from "./http";
 
 /**
- * Shipping.
- *
- * TODO(backend): every function here maps onto a Sameday Easybox API call —
- *   lockers      -> GET /geolocation/lockers
- *   generateAwb  -> POST /awb            (returns awbNumber + label PDF bytes)
+ * TODO(backend): every function here maps onto a Sameday Easybox call —
+ *   lockers      -> GET  /geolocation/lockers
+ *   generateAwb  -> POST /awb   (returns awbNumber + label PDF bytes)
  *   trackAwb     -> GET  /awb/{awb}/status
- * The label rendered client-side by `lib/pdf/shippingLabel.ts` is a faithful
- * stand-in; once the courier issues the real PDF, serve that instead and keep
- * the local renderer only as the dev fallback.
+ * Once the courier issues the real PDF, serve that and keep the local renderer
+ * in `lib/pdf/shippingLabel.ts` as the dev fallback.
  */
 
 const LOCKERS: EasyboxLocker[] = [
@@ -142,10 +139,7 @@ function addressLinesOf(delivery: DeliverySnapshot): string[] {
   ].filter(Boolean);
 }
 
-/**
- * Assembles everything `<ShippingLabel>` and the PDF renderer need.
- * Pure: give it an order and it produces the label, no I/O.
- */
+/** Pure: give it an order and it produces the label, no I/O. */
 export function buildLabelData(orderId: ID): ShippingLabelData {
   const world = getWorld();
   const order = world.orders.find((item) => item.id === orderId);

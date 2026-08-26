@@ -11,12 +11,9 @@ import { isoAgo, isoIn } from "@/lib/utils/date";
 import { productGallery } from "../images";
 
 /**
- * The catalogue: one blueprint per listing, expanded into a Product, an
- * Auction and (where it makes sense) a bid history.
- *
- * `timing` decides where an auction sits relative to now, so the seeded world
- * always contains something ending in a minute, something ending tomorrow and
- * a shelf of finished sales — without hard-coding dates that go stale.
+ * `timing` places an auction relative to now, so the seeded world always has
+ * something ending in a minute, something ending tomorrow and a shelf of
+ * finished sales — without hard-coded dates that go stale.
  */
 type Timing =
   | "ENDING_SECONDS" // inside the anti-snipe window right now
@@ -50,7 +47,7 @@ interface ListingSeed {
 }
 
 const LISTINGS: ListingSeed[] = [
-  /* -------------------------------------- live, inside the anti-snipe window */
+  // Live, inside the anti-snipe window
   {
     key: "tricou-retro",
     title: "Tricou retro Steaua București, ediție aniversară",
@@ -69,7 +66,7 @@ const LISTINGS: ListingSeed[] = [
     bids: 13,
   },
 
-  /* ------------------------------------------------ live, ending very soon */
+  // Live, ending very soon
   {
     key: "canon",
     title: "Aparat foto Canon AE-1 Program cu obiectiv 50mm f/1.8",
@@ -106,7 +103,7 @@ const LISTINGS: ListingSeed[] = [
     bids: 9,
   },
 
-  /* --------------------------------------------------- live, ending today */
+  // Live, ending today
   {
     key: "bicicleta",
     title: "Bicicletă de oraș Pegas Clasic, cadru 54",
@@ -160,7 +157,7 @@ const LISTINGS: ListingSeed[] = [
     bids: 16,
   },
 
-  /* ---------------------------------------------------- live, a few days */
+  // Live, a few days
   {
     key: "lego",
     title: "LEGO Technic 42096 Porsche 911 RSR, complet",
@@ -282,7 +279,7 @@ const LISTINGS: ListingSeed[] = [
     bids: 10,
   },
 
-  /* ----------------------------------------------------------- scheduled */
+  // Scheduled
   {
     key: "chitara",
     title: "Chitară clasică Yamaha C40, cu husă",
@@ -316,7 +313,7 @@ const LISTINGS: ListingSeed[] = [
     status: "SCHEDULED",
   },
 
-  /* ----------------------------------------------- seller-side lifecycle */
+  // Seller-side lifecycle
   {
     key: "draft-telefon",
     title: "Telefon Samsung Galaxy S21, 128 GB",
@@ -396,7 +393,7 @@ const LISTINGS: ListingSeed[] = [
     bids: 0,
   },
 
-  /* ------------------------------------------- sold: one per order status */
+  // Sold: one per order status
   {
     key: "sold-confirmare",
     title: "Boxă portabilă JBL Flip 5, waterproof",
@@ -666,8 +663,8 @@ const BIDDER_POOL = [
 function timingWindow(timing: Timing): { start: string; end: string } {
   switch (timing) {
     case "ENDING_SECONDS":
-      // Always inside AUCTION.DEFAULT_ANTI_SNIPE_SECONDS, so the extension
-      // behaviour is visible on a freshly seeded world.
+      // Inside AUCTION.DEFAULT_ANTI_SNIPE_SECONDS, so a freshly seeded world
+      // shows the extension behaviour.
       return { start: isoAgo(6, "days"), end: isoIn(1.5, "minutes") };
     case "ENDING_MINUTES":
       return { start: isoAgo(5, "days"), end: isoIn(9, "minutes") };
@@ -718,7 +715,7 @@ export function buildCatalog(): CatalogSeed {
       createdAt: start,
     });
 
-    /* --- bid history -------------------------------------------------- */
+    // Bid history
     const bidCount = seed.bids ?? 0;
     let currentPrice = startingPrice;
     const auctionBids: Bid[] = [];
@@ -758,8 +755,8 @@ export function buildCatalog(): CatalogSeed {
       currentPrice = amount;
     }
 
-    // One offer per bidder per listing. The pool repeats on long histories,
-    // so keep only each bidder's latest and let the count follow it.
+    // One offer per bidder: the pool repeats on long histories, so keep only
+    // each bidder's latest and let the count follow it.
     const latest = new Map<string, Bid>();
     auctionBids.forEach((bid) => latest.set(bid.bidderId, bid));
     const keptBids = auctionBids.filter((bid) => latest.get(bid.bidderId) === bid);
@@ -776,7 +773,7 @@ export function buildCatalog(): CatalogSeed {
     }
     bids.push(...keptBids);
 
-    /* --- auction ------------------------------------------------------- */
+    // Auction
     const reservePrice = seed.reserveLei ? lei(seed.reserveLei) : undefined;
 
     auctions.push({

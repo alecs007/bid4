@@ -7,17 +7,10 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import { revealDelay } from "@/lib/utils/reveal";
 
-/**
- * Two across on a phone, at exactly the width the auctions grid gives them —
- * the rail's own content width less the gap between the pair.
- */
+/** Two across on a phone at the auctions grid's width: the rail's content less the gap. */
 const CARD = "w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-52";
 
-/**
- * "More like this" under an auction: same cause first, then the same kind of
- * object. The row is left out entirely when nothing matches, rather than
- * padding it with whatever else happens to be live.
- */
+/** Left out entirely when nothing matches, rather than padded with whatever is live. */
 export function RelatedAuctions({
   auctionId,
   causeName,

@@ -47,12 +47,9 @@ function RowHeader({
 }
 
 /**
- * What the counter shows until the real total arrives — and the number the
- * odometer then rolls up from, digit for digit, so the swap is invisible.
- *
- * The smallest sum of the same width as the total, never a bare "0": the
- * digits are tabular, so it is exactly as wide as the figure that replaces it
- * and the sentence after it never reflows.
+ * What the counter shows until the real total arrives, and what the odometer
+ * rolls up from. The smallest sum of the same width, never a bare "0": the digits
+ * are tabular, so the sentence after it never reflows.
  */
 const RAISED_PLACEHOLDER = formatMoney(lei(100_000), { compact: true });
 
@@ -73,8 +70,7 @@ function Count({ value }: { value: number | null }) {
     );
   }
 
-  // Read, not watched: the figure appears as it is and only rolls if it
-  // changes while the page is open.
+  // Read, not watched: it appears as it is and only rolls if it changes.
   return (
     <AnimatedNumber
       value={value}

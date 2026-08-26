@@ -26,9 +26,8 @@ import { http } from "./http";
 /**
  * Disputes freeze the escrow release until an operator decides.
  *
- * TODO(backend): resolving a dispute triggers the Stripe side effect —
- * a full/partial Refund of the PaymentIntent, or the two Transfers that a
- * normal release would have made. See lib/api/orders.ts.
+ * TODO(backend): resolving one triggers the Stripe side effect — a full/partial
+ * Refund, or the two Transfers a normal release would have made.
  */
 
 /** POST /orders/{id}/disputes */

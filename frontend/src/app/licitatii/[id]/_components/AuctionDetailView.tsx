@@ -160,11 +160,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     } catch {}
   };
 
-  /**
-   * A white chip while they float over the photograph on a phone, a hover
-   * surface once they sit beside the title on a desktop. Saving animates the
-   * same way as on a card — the icon fills, nothing else moves.
-   */
+  /** A white chip while they float over the photograph, a hover surface beside the title. */
   const actionButton =
     "inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 ring-1 ring-edge backdrop-blur-sm transition duration-200 active:scale-90 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none lg:hover:bg-ink-100";
 
@@ -210,7 +206,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       />
 
       <div className="grid gap-x-12 gap-y-7 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        {/* --- photographs, with the title above them on a desktop ----- */}
+        {/* Photographs, with the title above them on a desktop */}
         <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
           <div className="order-2 lg:order-1">
             <div className="flex items-start justify-between gap-3">
@@ -255,7 +251,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </div>
         </div>
 
-        {/* --- one box: clock, price, cause, bids, costs, payment ------ */}
+        {/* One box: clock, price, cause, bids, costs, payment */}
         <aside className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="rounded-xl bg-white ring-1 ring-edge">
             <BidBox
@@ -400,7 +396,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </div>
         </aside>
 
-        {/* --- the long read ------------------------------------------ */}
+        {/* The long read */}
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">
           <Section title="Descriere" className="border-t-0 pt-0">
             <p className="leading-relaxed whitespace-pre-line text-ink-700">

@@ -25,11 +25,7 @@ import { formatMemberSince } from "@/lib/utils/date";
 
 type Tab = "listings" | "causes";
 
-/**
- * One page for every kind of account. An individual and an organisation are
- * the same role with the same powers, so they get the same profile — the only
- * difference is the legal name an organisation carries under its own.
- */
+/** An individual and an organisation have the same powers, so the same profile. */
 export function ProfileView({ username }: { username: string }) {
   const [tab, setTab] = useState<Tab>("listings");
 

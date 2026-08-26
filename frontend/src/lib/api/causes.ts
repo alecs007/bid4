@@ -119,9 +119,8 @@ export async function listMyCauses(userId: ID): Promise<CauseDetail[]> {
 }
 
 /**
- * The identity paperwork, restated as the document list an operator already
- * knows how to read. The application keeps each file where it belongs — an ID
- * next to the person it identifies — and the review queue wants one list.
+ * The identity paperwork restated as the flat document list the review queue
+ * expects; the application itself keeps each file next to what it belongs to.
  */
 function validationDocuments(
   payload: CauseApplicationPayload,
@@ -154,8 +153,8 @@ function validationDocuments(
  * POST /causes — any USER may propose a cause; it still needs staff approval.
  * `submit` decides between parking a draft and entering the operator queue.
  *
- * TODO(backend): the server re-validates everything here. Nothing a browser
- * says about identity may be trusted, least of all that a document was seen.
+ * TODO(backend): the server re-validates everything. Nothing a browser says about
+ * identity may be trusted, least of all that a document was seen.
  */
 export async function createCause(
   payload: CauseApplicationPayload,
@@ -255,9 +254,8 @@ export async function createCause(
 }
 
 /**
- * POST /causes/draft — the wizard parks its state here after every step, so a
- * closed tab costs nothing. One open draft per organiser, which is why this
- * upserts rather than appends.
+ * POST /causes/draft — one open draft per organiser, so this upserts rather than
+ * appends.
  */
 export async function saveDraftCause(
   data: CauseApplicationDraft,
@@ -350,10 +348,6 @@ export async function submitCause(
   commit();
   return toCauseDetail(cause);
 }
-
-/* ---------------------------------------------------------------------------
- * Staff actions — OPERATOR and ADMIN
- * ------------------------------------------------------------------------ */
 
 function assertStaff(role: UserRole): void {
   if (role !== "OPERATOR" && role !== "ADMIN") {

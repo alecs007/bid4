@@ -1,7 +1,4 @@
-/**
- * Barrel for the domain model. UI code imports from `@/lib/types` only —
- * never from a specific file — so DTOs can be regrouped without touching pages.
- */
+/** UI code imports from `@/lib/types` only, never from a file inside it. */
 export * from "./common";
 export * from "./user";
 export * from "./cause";

@@ -1,10 +1,8 @@
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Skeletons here mirror the real components box for box — same wrappers, same
- * paddings, same fixed heights — so that swapping placeholder for content does
- * not move anything on the page. When one of the real layouts changes, its
- * skeleton has to change with it.
+ * Skeletons mirror the real components box for box, so swapping placeholder for
+ * content moves nothing. Change a layout and its skeleton changes with it.
  */
 
 export function Skeleton({ className }: { className?: string }) {
@@ -35,11 +33,7 @@ export function SkeletonText({
   );
 }
 
-/**
- * Paragraph placeholder on the rhythm of `leading-relaxed` body copy: 16px
- * bars 10px apart, plus 5px of half-leading top and bottom, is 26px per line —
- * the same height the real text occupies, for any number of lines.
- */
+/** 16px bars 10px apart plus 5px half-leading is 26px per line — what `leading-relaxed` occupies. */
 export function SkeletonParagraph({
   lines = 3,
   className,
@@ -59,7 +53,7 @@ export function SkeletonParagraph({
   );
 }
 
-/** Mirrors `<AuctionCard>`: square cover, two title lines, price row. */
+/** Mirrors `<AuctionCard>`. */
 export function SkeletonAuctionCard() {
   return (
     <div className="flex flex-col rounded-3xl bg-white ring-1 ring-edge p-2">
@@ -79,7 +73,7 @@ export function SkeletonAuctionCard() {
   );
 }
 
-/** Same grid as `<AuctionGrid>`, including its two column choices. */
+/** Same grid as `<AuctionGrid>`. */
 export function SkeletonGrid({
   count = 8,
   columns = 4,
@@ -123,7 +117,7 @@ export function SkeletonRows({ count = 5 }: { count?: number }) {
   );
 }
 
-/** Mirrors the rows in `<BidHistory>`: avatar, name over time, amount. */
+/** Mirrors the rows in `<BidHistory>`. */
 export function SkeletonBidRows({ count = 3 }: { count?: number }) {
   return (
     <>
@@ -174,7 +168,7 @@ function SkeletonPersonRow() {
 const DETAIL_GRID =
   "grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6";
 
-/** Full `/licitatii/[id]` page: gallery, bid panel, description, bids, sidebar. */
+/** Full `/licitatii/[id]` page. */
 export function SkeletonDetail() {
   return (
     <div
@@ -375,7 +369,7 @@ export function SkeletonCauseDetail() {
   );
 }
 
-/** Full `/produse/[id]` page: gallery, price card, cause and seller, blocks. */
+/** Full `/produse/[id]` page. */
 export function SkeletonProductDetail() {
   return (
     <div role="status" aria-label="Se încarcă" className="flex flex-col gap-4">
@@ -448,7 +442,7 @@ export function SkeletonProductDetail() {
   );
 }
 
-/** Full `/profil/[username]` page: header, three stats, a grid of listings. */
+/** Full `/profil/[username]` page. */
 export function SkeletonProfile() {
   return (
     <div

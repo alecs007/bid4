@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils/cn";
 type Urgency = "calm" | "soon" | "urgent";
 
 function urgencyOf(totalSeconds: number): Urgency {
-  if (totalSeconds <= 3600) return "urgent"; // last hour
-  if (totalSeconds <= 86_400) return "soon"; // last day
+  if (totalSeconds <= 3600) return "urgent";
+  if (totalSeconds <= 86_400) return "soon";
   return "calm";
 }
 
@@ -247,11 +247,6 @@ export function CountdownInline({
   );
 }
 
-/**
- * Four cells and a line: days, hours, minutes, seconds, counting down, with
- * the auction's remaining share of its own window under them. No label — the
- * numbers are the label.
- */
 export function CountdownBoard({
   endTime,
   startTime,
@@ -329,10 +324,6 @@ export function CountdownBoard({
   );
 }
 
-/**
- * One line and a rule, for the strip above the phone's action bar: how long is
- * left, and how much of the auction's window that is.
- */
 export function CountdownBar({
   endTime,
   startTime,

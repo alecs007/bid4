@@ -7,13 +7,8 @@ import { Input } from "./Field";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * A search box whose text is owned by the URL.
- *
- * It keeps a draft while you type, so the list is not refiltered on every
- * keystroke, and seeds that draft from `term`. Key it on the term — `<SearchField
- * key={q} term={q} …>` — and a search arriving from somewhere else, the header
- * field for one, remounts it with the new text instead of leaving the box
- * showing something the results no longer match.
+ * Keeps a draft while you type and seeds it from `term`. Key it on the term, so a
+ * search arriving from elsewhere remounts it instead of leaving stale text.
  */
 export function SearchField({
   term,

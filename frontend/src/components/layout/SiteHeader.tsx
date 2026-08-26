@@ -25,19 +25,12 @@ const ACCOUNT_LINKS = [
   { href: "/cont/setari", label: "Setări" },
 ];
 
-/**
- * Three bars of different lengths, which fold into a cross when the menu is
- * open: the top and bottom bars slide to the middle and rotate, the short one
- * in between fades out.
- */
 function MenuToggle({ open }: { open: boolean }) {
-  // 2px bars in a 20px box: the same weight and size as the lucide icons
-  // beside it in the header, so the row reads as one set.
+  // 2px bars in a 20px box: the same weight as the lucide icons beside them.
   const bar =
     "h-[2px] rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1.1)]";
 
-  // Bars sit 4px apart, which puts the outer two 6px either side of the middle
-  // — exactly how far they travel to cross.
+  // Bars 4px apart puts the outer two 6px either side — how far they travel to cross.
   return (
     <span
       aria-hidden="true"
@@ -58,10 +51,8 @@ function MenuToggle({ open }: { open: boolean }) {
 }
 
 /**
- * A header dropdown. Both panels stay mounted so they can animate out as well
- * as in — `visibility` is in the transition list on purpose, since it holds at
- * `visible` for the whole duration when going the other way, and it takes the
- * closed panel's links out of the tab order.
+ * Both panels stay mounted so they animate out as well as in. `visibility` is in
+ * the transition on purpose: it takes a closed panel's links out of the tab order.
  */
 function Panel({
   open,
@@ -84,11 +75,6 @@ function Panel({
   );
 }
 
-/**
- * The header's search box. Rendered twice — once for the wide layout, once
- * inside the phone panel — so it is a component rather than a shared element:
- * each copy needs its own input, and the panel's needs the caret.
- */
 function HeaderSearch({
   value,
   onChange,
@@ -104,10 +90,8 @@ function HeaderSearch({
   useEffect(() => {
     if (!focused) return;
 
-    // The panel leaves `visibility: hidden` in the same commit, and a browser
-    // will not focus an element it still computes as hidden. Rather than
-    // guess how long that takes to settle, ask until it takes — a couple of
-    // frames at most, and it stops the moment the caret lands.
+    // The panel leaves `visibility: hidden` in the same commit, and a browser will
+    // not focus an element it still computes as hidden. Ask until it takes.
     let tries = 0;
     let timer = 0;
 
@@ -145,11 +129,6 @@ function HeaderSearch({
 const CATEGORY_TILE =
   "flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-[15px] font-bold whitespace-nowrap ring-1 transition sm:gap-2.5 sm:px-3";
 
-/**
- * The auction categories as tiles, so the menu reads as a set of destinations
- * rather than a list of words. "Toate licitațiile" is one of them, tinted so
- * it reads as the way out of the categories rather than another category.
- */
 function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div className="grid grid-cols-2 gap-1.5">
@@ -187,11 +166,6 @@ function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-/**
- * Header icon buttons. While their panel is open they hold the same tint they
- * take on hover — the state is worth marking, but a close button is not a
- * brand moment, so it stays in ink.
- */
 function iconButton(active: boolean, size = "h-10 w-10") {
   return cn(
     "inline-flex shrink-0 items-center justify-center rounded-xl transition",
@@ -242,8 +216,7 @@ export function SiteHeader() {
     };
   }, [openPanel, pathname]);
 
-  // Hovering the categories opens them; leaving either the trigger or the
-  // panel closes them, after a beat so the pointer can cross the gap.
+  // Closing waits a beat, so the pointer can cross the gap to the panel.
   const hoverTimer = useRef(0);
   const openAuctions = () => {
     window.clearTimeout(hoverTimer.current);
@@ -262,9 +235,8 @@ export function SiteHeader() {
     );
   };
 
-  // A panel hanging off the header should not slide away from it, so the page
-  // behind it holds still. The scrollbar's width is paid back to <body> to
-  // keep the header from jumping sideways as it disappears.
+  // The page behind the panel holds still. The scrollbar's width is paid back to
+  // <body>, or the header jumps sideways as it disappears.
   const panelIsOpen = openPanel === "nav" || openPanel === "search";
   useEffect(() => {
     if (!panelIsOpen) return;
@@ -341,7 +313,6 @@ export function SiteHeader() {
               />
             </button>
 
-            {/* Two columns of categories, hanging off the word they belong to. */}
             <div
               role="menu"
               className={cn(
@@ -404,18 +375,15 @@ export function SiteHeader() {
           </button>
 
           {status === "loading" ? (
-            /* Shaped like the sign-in button rather than an avatar: the
-               session is only known on the client, and most visits resolve to
-               signed out — so this footprint is the one that usually stays,
-               and nothing shifts when it does. */
+            /* Shaped like the sign-in button, not an avatar: most visits resolve to
+               signed out, so nothing shifts when it does. */
             <Skeleton className="h-9 w-28 rounded-2xl" />
           ) : user ? (
             <>
               <ButtonLink href="/cont/anunturi/nou" size="sm">
                 Vinde acum
               </ButtonLink>
-              {/* flex, or the inline-level button picks up a line box and the
-                  avatar rides 2px above the other controls. */}
+              {/* flex, or the inline-level button rides 2px above the other controls. */}
               <div className="relative flex" ref={accountRef}>
                 <button
                   type="button"
@@ -568,8 +536,6 @@ export function SiteHeader() {
           >
             <span
               aria-hidden="true"
-              /* The logo's mark, reused: a solid brand-green square with a
-                 white glyph on it. Coral on green fought itself. */
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-500 text-white"
             >
               <Icons.donation className="h-5.5 w-5.5" />

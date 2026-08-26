@@ -11,9 +11,8 @@ import { cn } from "@/lib/utils/cn";
 const ZOOM = 2.4;
 
 /**
- * The photographs, full size. Portalled to `document.body` for the same reason
- * every other dialog is: the page wrapper's animation makes it a stacking
- * context, and a z-index inside it cannot reach past the header.
+ * Portalled to `document.body`: the page wrapper's opacity animation makes it a
+ * stacking context, so a z-index inside it cannot reach past the header.
  */
 export function Lightbox({
   images,
@@ -44,10 +43,8 @@ export function Lightbox({
   );
 
   useEffect(() => {
-    // The scroll lock goes on <html>, or the root scrollbar leaves a strip of
-    // page down the right edge of a fixed overlay. The width it gave back is
-    // paid to <body> rather than <html>: Lenis makes <html> the containing
-    // block for fixed children, so padding there would shrink this dialog.
+    // The scroll lock goes on <html>, and the width it gives back is paid to
+    // <body>: Lenis makes <html> the containing block for fixed children.
     const root = document.documentElement;
     const scrollbar = window.innerWidth - root.clientWidth;
     const previous = {
@@ -92,7 +89,6 @@ export function Lightbox({
       aria-label={alt}
       className="animate-fade-in fixed inset-0 z-[60] flex flex-col bg-ink-900/95 backdrop-blur-sm"
     >
-      {/* --- bar ------------------------------------------------------- */}
       <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-5">
         <span className="numeric rounded-xl bg-white/10 px-2.5 py-1 text-sm font-bold text-white">
           {index + 1} / {count}
@@ -120,7 +116,6 @@ export function Lightbox({
         </div>
       </div>
 
-      {/* --- stage ----------------------------------------------------- */}
       <div className="relative min-h-0 flex-1">
         <div
           onClick={() => setZoomed((current) => !current)}
@@ -159,7 +154,6 @@ export function Lightbox({
         ) : null}
       </div>
 
-      {/* --- previews -------------------------------------------------- */}
       {count > 1 ? (
         <div className="no-scrollbar flex justify-start gap-2 overflow-x-auto px-3 py-3 sm:justify-center sm:px-5">
           {images.map((image, thumbIndex) => (

@@ -2,17 +2,13 @@ import { SkeletonCauseCard } from "@/components/causes/CauseCard";
 import { Skeleton } from "@/components/ui";
 import { CAUSE_CATEGORIES } from "@/lib/config";
 
-/** How many causes the unfiltered directory holds — keeps the number of
-    placeholder cards, and so the page height, level with the real thing. */
+/** Keeps the placeholder count, and so the page height, level with the real thing. */
 const PUBLIC_CAUSE_COUNT = 10;
 
 /**
- * Everything `<CauseBrowser>` renders below the page title, as placeholders:
- * search field, category row, result count, grid.
- *
- * Shared by `loading.tsx` and the page's Suspense fallback so the two are
- * never different. The category chips carry their real labels with visibility
- * off, which reproduces the row's exact widths and wrapping.
+ * Shared by `loading.tsx` and the page's Suspense fallback so the two are never
+ * different. The category chips carry their real labels with visibility off,
+ * which reproduces the row's exact widths and wrapping.
  */
 export function CauseBrowserSkeleton() {
   return (

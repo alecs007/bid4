@@ -1,9 +1,6 @@
 /**
- * A tiny time-boxed cache for values that change slowly.
- *
- * It lives on its own, importing nothing, so both the API layer that fills it
- * and the mock store that invalidates it can depend on it without forming an
- * import cycle.
+ * Imports nothing, so the API layer that fills it and the mock store that
+ * invalidates it can both depend on it without forming an import cycle.
  */
 
 interface Entry<T> {

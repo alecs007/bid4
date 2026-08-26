@@ -87,10 +87,6 @@ export async function updateProfile(
   return user;
 }
 
-/* ---------------------------------------------------------------------------
- * Delivery methods — one of the two gates that unlock bidding
- * ------------------------------------------------------------------------ */
-
 /** GET /users/me/delivery-methods */
 export async function listDeliveryMethods(
   userId: ID,
@@ -217,10 +213,6 @@ export async function removeDeliveryMethod(
   }
   commit();
 }
-
-/* ---------------------------------------------------------------------------
- * Admin — user and role management (ADMIN only)
- * ------------------------------------------------------------------------ */
 
 function assertAdmin(role: UserRole): void {
   if (role !== "ADMIN") forbidden("Doar administratorii au acces aici.");

@@ -156,9 +156,8 @@ function ToastCard({
     return () => window.clearTimeout(timeout);
   }, [leaving, id, onDismiss]);
 
-  // A toast that is only a title is one line shorter than its own icon, so
-  // topping everything out leaves the text riding high. Only stack when there
-  // is something under the title to stack against.
+  // A title-only toast is shorter than its own icon, so only stack when there is
+  // something under the title to stack against.
   const stacked = Boolean(description || action);
 
   return (
