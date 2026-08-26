@@ -30,9 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Before setup-node, which needs pnpm present to resolve its cache. The
-      # version comes from the packageManager field in package.json.
+      # Before setup-node, which needs pnpm present to resolve its cache.
+      #
+      # package_json_file is required: an action step runs at the repository
+      # root regardless of defaults.run.working-directory, which only applies to
+      # `run:` steps. Without it the action looks for package.json beside the
+      # workflow's checkout, finds none, and fails with "No pnpm version is
+      # specified". The version itself still comes from the packageManager
+      # field, so it is stated in one place.
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
 
       - uses: actions/setup-node@v4
         with:
