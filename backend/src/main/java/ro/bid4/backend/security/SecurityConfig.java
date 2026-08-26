@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -99,6 +100,23 @@ public class SecurityConfig {
                         // an account to authenticate with, so it cannot require one.
                         "/auth/verify",
                         "/auth/resend-verification")
+                    .permitAll()
+                    // Browsing is the point of the site, so reading the
+                    // catalogue never requires an account. GET only: everything
+                    // that changes an auction still falls through to the last
+                    // rule. A token is read when one is sent — the response
+                    // carries more for a signed-in viewer — but its absence is
+                    // not an error here.
+                    .requestMatchers(HttpMethod.GET, "/auctions", "/auctions/**")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/causes", "/causes/**")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/stats/public")
+                    .permitAll()
+                    // One segment only, so this opens the public profile at
+                    // /users/{username} and never /users/me/anything, which
+                    // falls through to the last rule and stays authenticated.
+                    .requestMatchers(HttpMethod.GET, "/users/*")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

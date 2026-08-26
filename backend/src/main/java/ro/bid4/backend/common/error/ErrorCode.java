@@ -31,6 +31,16 @@ public enum ErrorCode {
       HttpStatus.BAD_REQUEST,
       "Contul folosit nu are o adresă de email confirmată. Încearcă altă metodă."),
 
+  // The catalogue's refusals. The frontend switches on these spellings, and they
+  // match the codes the mock layer has been raising all along.
+  AUCTION_NOT_LIVE(HttpStatus.BAD_REQUEST, "Licitația nu mai acceptă oferte."),
+  BID_TOO_LOW(HttpStatus.BAD_REQUEST, "Oferta este mai mică decât minimul acceptat."),
+  BID_TOO_HIGH(HttpStatus.BAD_REQUEST, "Oferta depășește maximul acceptat."),
+  BID_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "Nu poți licita încă."),
+  RETRACT_NOT_ALLOWED(
+      HttpStatus.BAD_REQUEST, "Poți retrage doar propria ofertă aflată pe primul loc."),
+  CAUSE_NOT_APPROVED(HttpStatus.BAD_REQUEST, "Poți lista doar pentru cauze aprobate."),
+
   NOT_FOUND(HttpStatus.NOT_FOUND, "Resursa nu a fost găsită."),
   CONFLICT(HttpStatus.CONFLICT, "Operațiunea intră în conflict cu datele existente."),
   PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "Fișierul depășește dimensiunea acceptată."),

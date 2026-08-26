@@ -8,9 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -36,9 +36,16 @@ public class GlobalExceptionHandler {
         .body(ApiErrorResponse.of(ex.code(), ex.getMessage(), ex.fieldErrors()));
   }
 
-  /** A request body that failed its constraints: the caller gets the field map. */
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  ResponseEntity<ApiErrorResponse> handleBodyValidation(MethodArgumentNotValidException ex) {
+  /**
+   * A request body or a bound query object that failed its constraints: the caller gets the field
+   * map.
+   *
+   * <p>Typed as BindException rather than MethodArgumentNotValidException, which extends it. Query
+   * objects bound with {@code @ModelAttribute} report failures as the plain parent, and without
+   * this they would fall through to the catch-all and answer 500 to what is a bad request.
+   */
+  @ExceptionHandler(BindException.class)
+  ResponseEntity<ApiErrorResponse> handleBodyValidation(BindException ex) {
     Map<String, String> fields = new LinkedHashMap<>();
     ex.getBindingResult()
         .getFieldErrors()
