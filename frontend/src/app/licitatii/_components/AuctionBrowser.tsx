@@ -22,8 +22,8 @@ import { listAuctions } from "@/lib/api/auctions";
 import { listCauses } from "@/lib/api/causes";
 import {
   PAGINATION,
-  PRODUCT_CATEGORIES,
-  type ProductCategoryId,
+  AUCTION_CATEGORIES,
+  type AuctionCategoryId,
 } from "@/lib/config";
 import { AUCTION_STATUS } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
@@ -106,7 +106,7 @@ export function AuctionBrowser() {
 
   const q = params.get("q") ?? "";
   const sort = (params.get("sort") as AuctionSort | null) ?? "ENDING_SOON";
-  const categories = params.getAll("category") as ProductCategoryId[];
+  const categories = params.getAll("category") as AuctionCategoryId[];
   const statuses = params.getAll("status") as AuctionStatus[];
   const causeId = params.get("causeId") ?? undefined;
   const endingSoon = params.get("endingSoon") === "1";
@@ -226,7 +226,7 @@ export function AuctionBrowser() {
       <div>
         <p className="mb-2.5 text-sm font-bold text-ink-700">Categorie</p>
         <div className="flex flex-wrap gap-2">
-          {PRODUCT_CATEGORIES.map((category) => (
+          {AUCTION_CATEGORIES.map((category) => (
             <Chip
               key={category.id}
               active={categories.includes(category.id)}

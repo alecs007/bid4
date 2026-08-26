@@ -1,28 +1,14 @@
-import type { Bani, ProductCategoryId } from "@/lib/config";
+import type { AuctionCategoryId, Bani } from "@/lib/config";
 import type { ID, ISODateString } from "./common";
 import type { Cause } from "./cause";
 import type { PublicUser } from "./user";
 
-export type ProductCondition =
+export type ItemCondition =
   | "NEW"
   | "LIKE_NEW"
   | "VERY_GOOD"
   | "GOOD"
   | "USED";
-
-export interface Product {
-  id: ID;
-  title: string;
-  description: string;
-  images: string[];
-  category: ProductCategoryId;
-  condition: ProductCondition;
-  /** Drives the courier price band on the shipping label. */
-  weightGrams: number;
-  sellerId: ID;
-  causeId: ID;
-  createdAt: ISODateString;
-}
 
 /**
  * DRAFT          — being composed by the seller.
@@ -44,12 +30,26 @@ export type AuctionStatus =
   | "UNSOLD"
   | "CANCELLED";
 
+/**
+ * An auction is the object and the sale together. There is no separate product:
+ * nothing on this platform exists outside the auction that offers it, so a
+ * second entity would only ever be one row with one owner.
+ */
 export interface Auction {
   id: ID;
-  productId: ID;
   sellerId: ID;
   causeId: ID;
 
+  /* --- what is being sold ----------------------------------------------- */
+  title: string;
+  description: string;
+  images: string[];
+  category: AuctionCategoryId;
+  condition: ItemCondition;
+  /** Drives the courier price band on the shipping label. */
+  weightGrams: number;
+
+  /* --- the sale --------------------------------------------------------- */
   /** 0–100. The share of the hammer price that goes to the cause. */
   donationPercent: number;
 
@@ -70,10 +70,11 @@ export interface Auction {
   watcherCount: number;
   /** How many times `endTime` was pushed out by anti-sniping. */
   extensionCount: number;
+
+  createdAt: ISODateString;
 }
 
 export interface AuctionDetail extends Auction {
-  product: Product;
   seller: PublicUser;
   cause: Pick<
     Cause,
@@ -126,22 +127,28 @@ export interface PlaceBidResult {
   extendedBySeconds?: number;
 }
 
-export interface CreateAuctionPayload {
-  product: Omit<Product, "id" | "sellerId" | "createdAt">;
-  causeId: ID;
-  donationPercent: number;
-  startingPrice: Bani;
-  bidIncrement: Bani;
-  reservePrice?: Bani;
-  startTime: ISODateString;
-  endTime: ISODateString;
-  antiSnipeSeconds: number;
-}
+/** Everything the seller supplies. The rest is derived or assigned on create. */
+export type CreateAuctionPayload = Pick<
+  Auction,
+  | "title"
+  | "description"
+  | "images"
+  | "category"
+  | "condition"
+  | "weightGrams"
+  | "causeId"
+  | "donationPercent"
+  | "startingPrice"
+  | "bidIncrement"
+  | "startTime"
+  | "endTime"
+  | "antiSnipeSeconds"
+> & { reservePrice?: Bani };
 
 export interface AuctionFilters {
   q?: string;
   status?: AuctionStatus[];
-  category?: ProductCategoryId[];
+  category?: AuctionCategoryId[];
   causeId?: ID;
   sellerId?: ID;
   minPrice?: Bani;

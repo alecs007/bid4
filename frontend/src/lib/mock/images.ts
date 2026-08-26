@@ -1,5 +1,5 @@
-import type { CauseCategoryId, ProductCategoryId } from "@/lib/config";
-import { CAUSE_CATEGORIES, PRODUCT_CATEGORIES } from "@/lib/config";
+import type { CauseCategoryId, AuctionCategoryId } from "@/lib/config";
+import { CAUSE_CATEGORIES, AUCTION_CATEGORIES } from "@/lib/config";
 
 /**
  * Placeholder imagery as SVG data URIs: no network, no image hosts, and a
@@ -85,32 +85,32 @@ function tile({
   return svgToDataUri(svg);
 }
 
-const PRODUCT_GLYPHS = new Map(
-  PRODUCT_CATEGORIES.map((category) => [category.id, category.emoji]),
+const CATEGORY_GLYPHS = new Map(
+  AUCTION_CATEGORIES.map((category) => [category.id, category.emoji]),
 );
 const CAUSE_GLYPHS = new Map(
   CAUSE_CATEGORIES.map((category) => [category.id, category.emoji]),
 );
 
-export function productImage(
+export function auctionImage(
   seed: string,
-  category: ProductCategoryId,
+  category: AuctionCategoryId,
   index = 0,
 ): string {
   return tile({
     seed: `${seed}-${index}`,
-    glyph: PRODUCT_GLYPHS.get(category) ?? "📦",
+    glyph: CATEGORY_GLYPHS.get(category) ?? "📦",
   });
 }
 
-/** A small gallery for one product; each frame gets its own colourway. */
-export function productGallery(
+/** A small gallery for one auction; each frame gets its own colourway. */
+export function auctionGallery(
   seed: string,
-  category: ProductCategoryId,
+  category: AuctionCategoryId,
   count = 3,
 ): string[] {
   return Array.from({ length: count }, (_, index) =>
-    productImage(seed, category, index),
+    auctionImage(seed, category, index),
   );
 }
 

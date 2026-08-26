@@ -1,7 +1,7 @@
 import { AUCTION, PAGINATION, USE_MOCK } from "@/lib/config";
 import { pickEndingSoon, pickPopular, pickRelated } from "@/lib/featured";
 import { toAuctionDetail } from "@/lib/mock/join";
-import { productGallery } from "@/lib/mock/images";
+import { auctionGallery } from "@/lib/mock/images";
 import {
   badRequest,
   commit,
@@ -115,7 +115,7 @@ export async function listAuctions(
         if (!filters.status.includes(auction.status)) return false;
       }
       if (filters.category?.length) {
-        if (!filters.category.includes(auction.product.category)) return false;
+        if (!filters.category.includes(auction.category)) return false;
       }
       if (filters.causeId && auction.causeId !== filters.causeId) return false;
       if (filters.minPrice && auction.currentPrice < filters.minPrice) return false;
@@ -134,7 +134,7 @@ export async function listAuctions(
         }
       }
       if (filters.q) {
-        const haystack = `${auction.product.title} ${auction.product.description} ${auction.cause.name}`;
+        const haystack = `${auction.title} ${auction.description} ${auction.cause.name}`;
         if (!matchesSearch(haystack, filters.q)) return false;
       }
       return true;
@@ -260,24 +260,20 @@ export async function createAuction(
     badRequest("Data de final trebuie să fie după data de start.");
   }
 
-  const productId = nextId("prd");
   const auctionId = nextId("auc");
-
-  world.products.push({
-    ...payload.product,
-    id: productId,
-    sellerId,
-    images: payload.product.images.length
-      ? payload.product.images
-      : productGallery(productId, payload.product.category, 3),
-    createdAt: new Date().toISOString(),
-  });
 
   const auction: Auction = {
     id: auctionId,
-    productId,
     sellerId,
     causeId: payload.causeId,
+    title: payload.title,
+    description: payload.description,
+    images: payload.images.length
+      ? payload.images
+      : auctionGallery(auctionId, payload.category, 3),
+    category: payload.category,
+    condition: payload.condition,
+    weightGrams: payload.weightGrams,
     donationPercent: payload.donationPercent,
     startingPrice: payload.startingPrice,
     currentPrice: payload.startingPrice,
@@ -291,6 +287,7 @@ export async function createAuction(
     bidCount: 0,
     watcherCount: 0,
     extensionCount: 0,
+    createdAt: new Date().toISOString(),
   };
 
   world.auctions.push(auction);

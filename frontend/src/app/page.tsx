@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { Icons } from "@/components/icons";
 import { ButtonLink, IconBubble, Mascot } from "@/components/ui";
-import { PRODUCT_CATEGORIES } from "@/lib/config";
+import { AUCTION_CATEGORIES } from "@/lib/config";
 import {
   CategoryRow,
   EndingSoonRow,
@@ -77,7 +77,7 @@ export default function HomePage() {
         </section>
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-10 sm:px-6 lg:gap-14 lg:px-8 lg:py-14">
           <EndingSoonRow />
-          <CategoryRow categories={PRODUCT_CATEGORIES} />
+          <CategoryRow categories={AUCTION_CATEGORIES} />
           <PopularRow />
           <TrendingCauses />
           <section

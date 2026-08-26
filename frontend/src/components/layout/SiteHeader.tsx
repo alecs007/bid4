@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
 import { Avatar, ButtonLink, Logo, Skeleton } from "@/components/ui";
-import { PRODUCT_CATEGORIES } from "@/lib/config";
+import { AUCTION_CATEGORIES } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
@@ -145,7 +145,7 @@ function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
         <span className="truncate">Toate licitațiile</span>
       </Link>
 
-      {PRODUCT_CATEGORIES.map((category) => (
+      {AUCTION_CATEGORIES.map((category) => (
         <Link
           key={category.id}
           href={`/licitatii?category=${category.id}`}

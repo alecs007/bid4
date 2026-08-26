@@ -141,7 +141,7 @@ export const MOCK = {
   SIMULATION_WINDOW_SECONDS: 1800,
   /** localStorage key + schema version. Bump to invalidate a stale world. */
   STORAGE_KEY: "bid4.world",
-  SCHEMA_VERSION: 3,
+  SCHEMA_VERSION: 4,
   /**
    * Seeded auctions are dated from when the world was created, so an old world
    * ends up with everything closed. Past this age it is reseeded.
@@ -160,7 +160,7 @@ export const CAUSE_CATEGORIES = [
   { id: "urgente", label: "Urgențe", emoji: "🚨" },
 ] as const;
 
-export const PRODUCT_CATEGORIES = [
+export const AUCTION_CATEGORIES = [
   { id: "moda", label: "Modă", emoji: "👗" },
   { id: "electronice", label: "Electronice", emoji: "📱" },
   { id: "casa", label: "Casă & Decor", emoji: "🏡" },
@@ -184,7 +184,7 @@ export const ROMANIAN_COUNTIES = [
 ] as const;
 
 export type CauseCategoryId = (typeof CAUSE_CATEGORIES)[number]["id"];
-export type ProductCategoryId = (typeof PRODUCT_CATEGORIES)[number]["id"];
+export type AuctionCategoryId = (typeof AUCTION_CATEGORIES)[number]["id"];
 
 export const FEATURED = {
   /** Weights of the popularity score: bids, watchers, urgency, donation share. */

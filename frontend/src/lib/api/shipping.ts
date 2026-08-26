@@ -149,9 +149,6 @@ export function buildLabelData(orderId: ID): ShippingLabelData {
   }
 
   const auction = world.auctions.find((item) => item.id === order.auctionId);
-  const product = auction
-    ? world.products.find((item) => item.id === auction.productId)
-    : undefined;
   const seller = world.users.find((item) => item.id === order.sellerId);
   const buyer = world.users.find((item) => item.id === order.buyerId);
   const cause = world.causes.find((item) => item.id === order.causeId);
@@ -185,8 +182,8 @@ export function buildLabelData(orderId: ID): ShippingLabelData {
     deliveryType: order.deliveryMethod.type,
     lockerId: order.deliveryMethod.easyboxLockerId,
     lockerName: order.deliveryMethod.lockerName,
-    weightGrams: product?.weightGrams ?? SHIPPING.DEFAULT_WEIGHT_GRAMS,
-    productTitle: product?.title ?? "Produs bid4",
+    weightGrams: auction?.weightGrams ?? SHIPPING.DEFAULT_WEIGHT_GRAMS,
+    itemTitle: auction?.title ?? "Obiect bid4",
     issuedAt: new Date().toISOString(),
     donationNote: cause
       ? `Din această comandă, ${formatMoney(order.donationAmount)} merg către ${cause.name}.`

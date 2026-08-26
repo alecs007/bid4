@@ -31,7 +31,6 @@ export {
   SkeletonBidRows,
   SkeletonDetail,
   SkeletonCauseDetail,
-  SkeletonProductDetail,
   SkeletonProfile,
   SkeletonStats,
   Reveal,

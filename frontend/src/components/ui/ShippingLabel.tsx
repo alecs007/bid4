@@ -137,7 +137,7 @@ export function ShippingLabel({
       </div>
       <div className="px-4 py-2">
         <Block caption="Conținut">
-          <p className="line-clamp-2">{data.productTitle}</p>
+          <p className="line-clamp-2">{data.itemTitle}</p>
         </Block>
       </div>
       <div className="mt-auto border-t-2 border-black px-4 py-3">

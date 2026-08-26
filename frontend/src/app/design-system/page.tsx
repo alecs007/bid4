@@ -147,7 +147,7 @@ const SAMPLE_LABEL: ShippingLabelData = {
     addressLines: ["Bd. 1 Decembrie 1918 nr. 33", "București, Sector 3", "032468"],
   },
   weightGrams: 850,
-  productTitle: "Aparat foto Canon AE-1 Program, film 35mm, cu obiectiv 50mm",
+  itemTitle: "Aparat foto Canon AE-1 Program, film 35mm, cu obiectiv 50mm",
   issuedAt: isoAgo(2, "hours"),
   donationNote:
     "Din această comandă, 128,00 lei merg către Împreună pentru Ana.",

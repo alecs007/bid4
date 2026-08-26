@@ -40,7 +40,7 @@ export interface ShippingLabelData {
   lockerName?: string;
 
   weightGrams: number;
-  productTitle: string;
+  itemTitle: string;
   issuedAt: ISODateString;
 
   /** Warm one-liner: "Din această comandă, 120,00 lei merg către ...". */

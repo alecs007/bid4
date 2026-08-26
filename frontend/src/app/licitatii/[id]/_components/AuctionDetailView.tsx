@@ -22,11 +22,11 @@ import { listBids } from "@/lib/api/bids";
 import {
   FEES,
   ORDER,
-  PRODUCT_CATEGORIES,
+  AUCTION_CATEGORIES,
   SHIPPING,
   SHIPPING_PRICES,
 } from "@/lib/config";
-import { ACCOUNT_TYPE, AUCTION_STATUS, PRODUCT_CONDITION } from "@/lib/labels";
+import { ACCOUNT_TYPE, AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
@@ -114,8 +114,8 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   }
 
   const refresh = () => setNonce((value) => value + 1);
-  const category = PRODUCT_CATEGORIES.find(
-    (item) => item.id === auction.product.category,
+  const category = AUCTION_CATEGORIES.find(
+    (item) => item.id === auction.category,
   );
   const fees = computeFees({
     finalPrice: auction.currentPrice,
@@ -136,7 +136,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
     const next = !watched;
     setWatchOverride(next);
-    if (next) toast.success("Adăugat la salvate", auction.product.title);
+    if (next) toast.success("Adăugat la salvate", auction.title);
 
     try {
       const result = await toggleWatch(auction.id, user.id);
@@ -152,7 +152,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     const url = window.location.href;
     try {
       if (navigator.share) {
-        await navigator.share({ title: auction.product.title, url });
+        await navigator.share({ title: auction.title, url });
         return;
       }
       await navigator.clipboard.writeText(url);
@@ -201,7 +201,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         items={[
           { label: "Acasă", href: "/" },
           { label: "Licitații", href: "/licitatii" },
-          { label: auction.product.title },
+          { label: auction.title },
         ]}
       />
 
@@ -211,7 +211,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           <div className="order-2 lg:order-1">
             <div className="flex items-start justify-between gap-3">
               <h1 className="font-display text-2xl leading-tight font-extrabold text-ink-900 sm:text-3xl">
-                {auction.product.title}
+                {auction.title}
               </h1>
               <div className="hidden shrink-0 gap-1 lg:flex">{actions}</div>
             </div>
@@ -228,7 +228,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <span aria-hidden="true" className="text-ink-300">
                 &middot;
               </span>
-              <span>{PRODUCT_CONDITION[auction.product.condition]}</span>
+              <span>{ITEM_CONDITION[auction.condition]}</span>
               {auction.status !== "LIVE" ? (
                 <span className="rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
                   {AUCTION_STATUS[auction.status].label}
@@ -244,8 +244,8 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
           <div className="order-1 lg:order-2">
             <Gallery
-              images={auction.product.images}
-              alt={auction.product.title}
+              images={auction.images}
+              alt={auction.title}
               actions={actions}
             />
           </div>
@@ -400,7 +400,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">
           <Section title="Descriere" className="border-t-0 pt-0">
             <p className="leading-relaxed whitespace-pre-line text-ink-700">
-              {auction.product.description}
+              {auction.description}
             </p>
           </Section>
 
@@ -408,7 +408,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             <dl className="grid gap-x-8 sm:grid-cols-2">
               <Spec
                 label="Stare"
-                value={PRODUCT_CONDITION[auction.product.condition]}
+                value={ITEM_CONDITION[auction.condition]}
               />
               <Spec label="Categorie" value={category?.label} />
             </dl>

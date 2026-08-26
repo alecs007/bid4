@@ -1,14 +1,8 @@
-import { AUCTION, type ProductCategoryId } from "@/lib/config";
+import { AUCTION, type AuctionCategoryId } from "@/lib/config";
 import { lei } from "@/lib/money";
-import type {
-  Auction,
-  AuctionStatus,
-  Bid,
-  Product,
-  ProductCondition,
-} from "@/lib/types";
+import type { Auction, AuctionStatus, Bid, ItemCondition } from "@/lib/types";
 import { isoAgo, isoIn } from "@/lib/utils/date";
-import { productGallery } from "../images";
+import { auctionGallery } from "../images";
 
 /**
  * `timing` places an auction relative to now, so the seeded world always has
@@ -28,8 +22,8 @@ interface ListingSeed {
   key: string;
   title: string;
   description: string;
-  category: ProductCategoryId;
-  condition: ProductCondition;
+  category: AuctionCategoryId;
+  condition: ItemCondition;
   weightGrams: number;
   sellerId: string;
   causeId: string;
@@ -682,7 +676,6 @@ function timingWindow(timing: Timing): { start: string; end: string } {
 }
 
 export interface CatalogSeed {
-  products: Product[];
   auctions: Auction[];
   bids: Bid[];
   /** orderKey -> auctionId, so the order seed can find its auction. */
@@ -690,30 +683,15 @@ export interface CatalogSeed {
 }
 
 export function buildCatalog(): CatalogSeed {
-  const products: Product[] = [];
   const auctions: Auction[] = [];
   const bids: Bid[] = [];
   const orderTargets = new Map<string, string>();
 
   LISTINGS.forEach((seed, listingIndex) => {
-    const productId = `prd_${seed.key}`;
     const auctionId = `auc_${seed.key}`;
     const { start, end } = timingWindow(seed.timing);
     const increment = lei(seed.incrementLei ?? 10);
     const startingPrice = lei(seed.startLei);
-
-    products.push({
-      id: productId,
-      title: seed.title,
-      description: seed.description,
-      images: productGallery(seed.key, seed.category, 3),
-      category: seed.category,
-      condition: seed.condition,
-      weightGrams: seed.weightGrams,
-      sellerId: seed.sellerId,
-      causeId: seed.causeId,
-      createdAt: start,
-    });
 
     // Bid history
     const bidCount = seed.bids ?? 0;
@@ -778,9 +756,14 @@ export function buildCatalog(): CatalogSeed {
 
     auctions.push({
       id: auctionId,
-      productId,
       sellerId: seed.sellerId,
       causeId: seed.causeId,
+      title: seed.title,
+      description: seed.description,
+      images: auctionGallery(seed.key, seed.category, 3),
+      category: seed.category,
+      condition: seed.condition,
+      weightGrams: seed.weightGrams,
       donationPercent: seed.donationPercent,
       startingPrice,
       currentPrice,
@@ -794,10 +777,11 @@ export function buildCatalog(): CatalogSeed {
       bidCount: keptBids.length,
       watcherCount: 3 + ((listingIndex * 7) % 41),
       extensionCount: 0,
+      createdAt: start,
     });
 
     if (seed.orderKey) orderTargets.set(seed.orderKey, auctionId);
   });
 
-  return { products, auctions, bids, orderTargets };
+  return { auctions, bids, orderTargets };
 }

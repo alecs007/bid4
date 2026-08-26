@@ -206,7 +206,7 @@ export function renderShippingLabel(
   ctx.y = 138;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  const titleLines = doc.splitTextToSize(pdfText(data.productTitle), RIGHT - M);
+  const titleLines = doc.splitTextToSize(pdfText(data.itemTitle), RIGHT - M);
   doc.text(titleLines.slice(0, 2), M, ctx.y);
 
   // Impact footer

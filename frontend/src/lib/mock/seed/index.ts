@@ -8,7 +8,6 @@ import type {
   Invoice,
   Order,
   PaymentMethodCard,
-  Product,
   User,
   Auction,
 } from "@/lib/types";
@@ -31,7 +30,6 @@ export interface World {
   deliveryMethods: DeliveryMethod[];
   cards: PaymentMethodCard[];
   causes: Cause[];
-  products: Product[];
   auctions: Auction[];
   bids: Bid[];
   orders: Order[];
@@ -51,14 +49,13 @@ export function createWorld(): World {
   ];
   const cards = buildCards(users);
   const causes = buildCauses();
-  const { products, auctions, bids, orderTargets } = buildCatalog();
+  const { auctions, bids, orderTargets } = buildCatalog();
 
   const displayNameOf = (userId: ID) =>
     users.find((user) => user.id === userId)?.displayName ?? "Utilizator bid4";
 
   const { orders, invoices, disputes } = buildOrders({
     auctions,
-    products,
     deliveryMethods,
     orderTargets,
     displayNameOf,
@@ -77,7 +74,6 @@ export function createWorld(): World {
     deliveryMethods,
     cards,
     causes,
-    products,
     auctions,
     bids,
     orders,

@@ -1,6 +1,6 @@
 import type { Bani } from "@/lib/config";
 import type { ID, ISODateString } from "./common";
-import type { Auction, Product } from "./auction";
+import type { Auction } from "./auction";
 import type { Cause } from "./cause";
 import type { DeliveryMethod, PublicUser } from "./user";
 
@@ -99,7 +99,6 @@ export interface Order {
 /** Order plus every join the tracking page needs in one payload. */
 export interface OrderDetail extends Order {
   auction: Auction;
-  product: Product;
   buyer: PublicUser;
   seller: PublicUser;
   cause: Pick<Cause, "id" | "name" | "slug" | "imageUrl" | "category">;

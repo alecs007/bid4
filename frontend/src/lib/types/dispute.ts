@@ -39,8 +39,8 @@ export interface DisputeDetail extends Dispute {
   seller: PublicUser;
   operator?: PublicUser;
   orderTotal: Bani;
-  productTitle: string;
-  productImage: string;
+  itemTitle: string;
+  itemImage: string;
 }
 
 export interface OpenDisputePayload {

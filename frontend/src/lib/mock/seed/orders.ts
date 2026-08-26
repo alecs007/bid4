@@ -8,7 +8,6 @@ import type {
   Invoice,
   Order,
   OrderStatus,
-  Product,
   TrackingEvent,
 } from "@/lib/types";
 import { ORDER_FLOW } from "@/lib/types";
@@ -118,13 +117,11 @@ export interface OrdersSeed {
 
 export function buildOrders({
   auctions,
-  products,
   deliveryMethods,
   orderTargets,
   displayNameOf,
 }: {
   auctions: Auction[];
-  products: Product[];
   deliveryMethods: DeliveryMethod[];
   orderTargets: Map<string, string>;
   displayNameOf: (userId: ID) => string;
@@ -144,8 +141,6 @@ export function buildOrders({
 
     const auction = auctions.find((item) => item.id === auctionId);
     if (!auction || !auction.winnerId) return;
-    const product = products.find((item) => item.id === auction.productId);
-    if (!product) return;
 
     const buyerId = auction.winnerId;
     const delivery =

@@ -16,7 +16,7 @@ import type {
   DisputeStatus,
   InvoiceType,
   OrderStatus,
-  ProductCondition,
+  ItemCondition,
   UserRole,
 } from "@/lib/types";
 
@@ -163,7 +163,7 @@ export const ACCOUNT_TYPE: Record<AccountType, string> = {
   ORGANIZATION: "Organizație",
 };
 
-export const PRODUCT_CONDITION: Record<ProductCondition, string> = {
+export const ITEM_CONDITION: Record<ItemCondition, string> = {
   NEW: "Nou, cu etichetă",
   LIKE_NEW: "Ca nou",
   VERY_GOOD: "Stare foarte bună",

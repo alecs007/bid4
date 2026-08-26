@@ -1,5 +1,5 @@
 import { Skeleton, SkeletonGrid } from "@/components/ui";
-import { PAGINATION, PRODUCT_CATEGORIES } from "@/lib/config";
+import { PAGINATION, AUCTION_CATEGORIES } from "@/lib/config";
 import { AUCTION_STATUS } from "@/lib/labels";
 
 /**
@@ -64,7 +64,7 @@ export function AuctionBrowserSkeleton() {
                 </div>
 
                 <FilterGroup labelWidth="w-20">
-                  {PRODUCT_CATEGORIES.map((category) => (
+                  {AUCTION_CATEGORIES.map((category) => (
                     <ChipGhost
                       key={category.id}
                       emoji={category.emoji}

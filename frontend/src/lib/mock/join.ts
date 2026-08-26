@@ -60,10 +60,9 @@ export function toAuctionDetail(
   viewerId?: ID,
 ): AuctionDetail | null {
   const world = getWorld();
-  const product = world.products.find((item) => item.id === auction.productId);
   const cause = world.causes.find((item) => item.id === auction.causeId);
   const seller = world.users.find((item) => item.id === auction.sellerId);
-  if (!product || !cause || !seller) return null;
+  if (!cause || !seller) return null;
 
   const viewerBids = viewerId
     ? world.bids.filter(
@@ -76,7 +75,6 @@ export function toAuctionDetail(
 
   return {
     ...auction,
-    product,
     seller: toPublicUser(seller),
     cause: {
       id: cause.id,
@@ -123,16 +121,12 @@ export function toCauseDetail(cause: Cause): CauseDetail {
 export function toOrderDetail(order: Order): OrderDetail | null {
   const world = getWorld();
   const auction = world.auctions.find((item) => item.id === order.auctionId);
-  const product = auction
-    ? world.products.find((item) => item.id === auction.productId)
-    : undefined;
   const cause = world.causes.find((item) => item.id === order.causeId);
-  if (!auction || !product || !cause) return null;
+  if (!auction || !cause) return null;
 
   return {
     ...order,
     auction,
-    product,
     buyer: publicUserById(order.buyerId),
     seller: publicUserById(order.sellerId),
     cause: {
@@ -155,9 +149,6 @@ export function toDisputeDetail(dispute: Dispute): DisputeDetail | null {
   const order = world.orders.find((item) => item.id === dispute.orderId);
   if (!order) return null;
   const auction = world.auctions.find((item) => item.id === order.auctionId);
-  const product = auction
-    ? world.products.find((item) => item.id === auction.productId)
-    : undefined;
 
   return {
     ...dispute,
@@ -167,7 +158,7 @@ export function toDisputeDetail(dispute: Dispute): DisputeDetail | null {
       ? publicUserById(dispute.operatorId)
       : undefined,
     orderTotal: order.totalPaid,
-    productTitle: product?.title ?? "Produs",
-    productImage: product?.images[0] ?? "",
+    itemTitle: auction?.title ?? "Obiect",
+    itemImage: auction?.images[0] ?? "",
   };
 }

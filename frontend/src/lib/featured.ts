@@ -126,14 +126,14 @@ function priceProximity(a: number, b: number): number {
 
 export function relatedScore(
   subject: Auction,
-  candidate: Auction & { product: { category: string } },
+  candidate: Auction,
   subjectCategory: string,
   now = Date.now(),
 ): number {
   let score = 0;
 
   if (candidate.causeId === subject.causeId) score += RELATED.WEIGHT_SAME_CAUSE;
-  if (candidate.product.category === subjectCategory) {
+  if (candidate.category === subjectCategory) {
     score += RELATED.WEIGHT_SAME_CATEGORY;
   }
   if (candidate.sellerId === subject.sellerId) {
@@ -153,7 +153,7 @@ export function relatedScore(
  * cause, the kind of object, or the seller; price and urgency only order those.
  */
 export function pickRelated<
-  T extends Auction & { product: { category: string } },
+  T extends Auction,
 >(
   subject: T,
   auctions: T[],
@@ -168,12 +168,12 @@ export function pickRelated<
     .filter(
       (auction) =>
         auction.causeId === subject.causeId ||
-        auction.product.category === subject.product.category ||
+        auction.category === subject.category ||
         auction.sellerId === subject.sellerId,
     )
     .map((auction) => ({
       auction,
-      score: relatedScore(subject, auction, subject.product.category, now),
+      score: relatedScore(subject, auction, subject.category, now),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, count)

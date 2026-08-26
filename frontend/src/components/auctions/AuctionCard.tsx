@@ -34,7 +34,7 @@ export function AuctionCard({
   const watched = override ?? Boolean(auction.isWatched);
 
   const live = auction.status === "LIVE";
-  const cover = auction.product.images[0] ?? "";
+  const cover = auction.images[0] ?? "";
 
   /** The icon turns before the request leaves; a failed call puts it back. */
   const handleWatch = async () => {
@@ -46,7 +46,7 @@ export function AuctionCard({
     const next = !watched;
     setOverride(next);
     // Only the save is worth announcing; removing one speaks for itself.
-    if (next) toast.success("Adăugat la salvate", auction.product.title);
+    if (next) toast.success("Adăugat la salvate", auction.title);
 
     try {
       const result = await toggleWatch(auction.id, user.id);
@@ -121,7 +121,7 @@ export function AuctionCard({
           className="font-display text-[15px] leading-[1.3] font-bold text-ink-900 after:absolute after:inset-0 sm:text-base"
         >
           <span className="line-clamp-2 min-h-[2.6em]">
-            {auction.product.title}
+            {auction.title}
           </span>
         </Link>
         <div className="mt-auto flex items-end justify-between gap-1.5 pt-2.5">
