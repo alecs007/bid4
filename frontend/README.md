@@ -55,5 +55,7 @@ src/lib          api/ (the backend seam), mock/, types/, money, config
 split and keeps amounts in integer bani. `/design-system` renders the
 component vocabulary.
 
-A full integration guide, with the expected backend endpoints and the
-escrow, shipping and state-machine rules, is still to be written.
+The backend now exists under `../backend` and already serves
+`/api/auth/*`. Its decisions, the request path and the schema conventions are
+in `../backend/ARCHITECTURE.md`; how to run both halves together is in the
+README at the repository root.
