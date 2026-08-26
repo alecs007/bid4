@@ -116,6 +116,43 @@ dev server has run, the typecheck cannot resolve them without it.
 
 One eslint warning is expected: the commented-out `DevRoleSwitcher` import.
 
+### Demo accounts
+
+An empty database is hard to test against, so the `dev` profile seeds the same
+four accounts the frontend's mock world uses. In IntelliJ set **Active profiles:
+`dev`** on the run configuration, or:
+
+```bash
+cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+| Address | Role | Type |
+| ------- | ---- | ---- |
+| `maria@bid4.ro` | USER | individual |
+| `contact@zambet.ro` | USER | organisation |
+| `operator@bid4.ro` | OPERATOR | individual |
+| `admin@bid4.ro` | ADMIN | individual |
+
+All four use the password `bid4demo` and are already confirmed, so they sign in
+without an email round trip.
+
+This never runs by accident: it needs `bid4.dev.seed=true`, which only the `dev`
+profile sets, and it refuses to touch a database that already holds any users.
+
+### Confirming an address by hand
+
+A new account has to follow the link before it can sign in. In development the
+mail goes to Mailpit rather than anywhere real:
+
+```bash
+open http://127.0.0.1:8025
+```
+
+Register, open the message, and follow the link — it lands on
+`/confirmare-email`, which redeems the token. To do it entirely from an API
+client, read the token out of Mailpit's own API at
+`http://127.0.0.1:8025/api/v1/messages` and post it to `/auth/verify`.
+
 ### By hand
 
 Point Postman at `http://localhost:8080`. Register, and store the token from

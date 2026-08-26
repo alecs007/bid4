@@ -1,0 +1,16 @@
+# The dev profile. Activate it in IntelliJ's run configuration (Active profiles:
+# dev) or with `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`.
+#
+# Nothing here is on by default, and nothing here belongs anywhere but a laptop.
+
+bid4:
+  dev:
+    # Creates the four demo accounts, but only into an empty database. See
+    # DevDataSeeder for the guards.
+    seed: true
+
+logging:
+  level:
+    # The statements Hibernate actually sends. Invaluable when a query is doing
+    # something other than what the method name suggests.
+    org.hibernate.SQL: DEBUG
