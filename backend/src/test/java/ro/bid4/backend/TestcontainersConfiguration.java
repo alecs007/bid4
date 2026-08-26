@@ -23,8 +23,7 @@ public class TestcontainersConfiguration {
   static final PostgreSQLContainer POSTGRES =
       new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"));
 
-  static final RedisContainer REDIS =
-      new RedisContainer(DockerImageName.parse("redis:7-alpine"));
+  static final RedisContainer REDIS = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
 
   @Bean
   @ServiceConnection
