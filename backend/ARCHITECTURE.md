@@ -16,6 +16,11 @@ wider.
 | `minio`    | Object storage: imagery and identity documents | 127.0.0.1:9000 |
 | `backend`  | This service (profile `app`)                   | 127.0.0.1:8080 |
 
+The API is served under `/api` (`server.servlet.context-path`), which is what
+`NEXT_PUBLIC_API_BASE` already points at. Actuator answers on port 8081 instead,
+and compose does not publish it — health and metrics are unreachable from off the
+host by construction rather than by remembering to secure a path.
+
 Every published port binds to `127.0.0.1`, so the databases are reachable from
 this machine and from the compose network and never from the LAN. The default
 `docker compose up` starts infrastructure only; `--profile app` adds the API.
@@ -48,7 +53,10 @@ A request passes these in order, and each one can end it:
    Blunt DoS ceilings, set before any application code runs.
 2. **Rate limit filter** — Redis token bucket keyed by IP for anonymous calls and
    by user id once authenticated. Buckets are per route class: reads are generous,
-   writes are not, and `/auth/*` is the tightest.
+   writes are not, and the credential paths — `/auth/login`, `/auth/register`,
+   `/auth/refresh` — are the tightest. `/auth/me` is deliberately not among them:
+   the frontend calls it on every page load, and charging it against the strict
+   budget would lock a normal session out within minutes.
 3. **Security filter chain** — stateless, deny by default. Access tokens are
    short-lived JWTs verified by Spring Security's resource server (Nimbus), so
    there is no hand-rolled token parsing. Refresh tokens rotate and are stored
@@ -119,9 +127,40 @@ Flyway, `src/main/resources/db/migration`, forward-only. `clean` is disabled.
 - **No Lettuce connection pool.** Lettuce is thread-safe and multiplexes every
   command over one connection; a pool only adds commons-pool2 and overhead.
 - **No springdoc yet.** The published 2.x line targets Spring Framework 6; this is
-  on 7. The API contract is documented by the frontend and by the Postman
-  collection until a compatible release lands.
+  on 7. The contract is defined by `frontend/src/lib/api/*` and asserted by
+  `AuthEndpointsTest`, which checks the wire shape field by field.
 - **Both MinIO buckets are private.** Imagery and identity documents differ by
   presigned-URL lifetime and audit treatment, not by public access.
 - **Jackson 3** (`tools.jackson.*`) ships with Boot 4. Annotations remain
-  `com.fasterxml.jackson.annotation.*`.
+  `com.fasterxml.jackson.annotation.*`, and `WRITE_DATES_AS_TIMESTAMPS` moved from
+  `SerializationFeature` to `DateTimeFeature` — the property is
+  `spring.jackson.datatype.datetime.*`. Jackson 3 also exposes parser ceilings
+  (`spring.jackson.factory.constraints.read.*`), which are set: a small body can
+  still be expensive to parse, and deep nesting is the cheap way to burn CPU on an
+  endpoint that has not authenticated yet.
+
+- **The error body is ours, not RFC 9457.** Spring would default to ProblemDetail;
+  the frontend's `ApiError` already parses `{status, code, message, fieldErrors}`,
+  so `ApiErrorResponse` matches that exactly. Codes are contract:
+  `INVALID_CREDENTIALS`, `ACCOUNT_SUSPENDED`, `EMAIL_TAKEN` and `TERMS_REQUIRED`
+  keep their spelling because the frontend switches on them.
+
+- **The access token is in the body, the refresh token is a cookie.** The frontend
+  puts `token` in the Authorization header, so that half must be readable. The
+  refresh half is httpOnly, `SameSite=Strict` and scoped to `/api/auth`, so a
+  script that manages to run on the page can borrow a 15-minute token but cannot
+  take the 30-day one. SameSite=Strict is also what stands in for CSRF protection
+  on `/auth/refresh`: a cross-site POST simply does not carry the cookie.
+
+- **Refresh tokens rotate and detect reuse.** A token presented after it was already
+  exchanged means a copy is loose, and there is no way to tell the thief from the
+  owner — so the whole family is revoked and both must sign in again.
+
+- **Spotless with google-java-format**, checked in the `validate` phase. Formatting
+  is never a review comment; `./mvnw spotless:apply` fixes it.
+
+- **ArchUnit** enforces what the compiler cannot: controllers do not reach
+  repositories, entities do not reach controllers, `common` knows nothing of the
+  features. Patterns name `ro.bid4.backend` explicitly — a loose `..domain..` also
+  matches `org.springframework.data.domain`, and a rule that fires on someone
+  else's package teaches people to ignore it.
