@@ -3,6 +3,7 @@ import { Nunito, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { SwrProvider } from "@/lib/hooks/SwrProvider";
 import { DevRoleSwitcher } from "@/components/auth/DevRoleSwitcher";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -41,24 +42,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${nunito.variable} ${baloo.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-canvas text-ink-900">
-        <AuthProvider>
-          <ToastProvider>
-            <a
-              href="#continut"
-              className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-2 focus:font-bold"
-            >
-              Sari la conținut
-            </a>
-            <SmoothScroll />
-            <RouteProgress />
-            <SiteHeader />
-            <div id="continut" className="flex-1">
-              {children}
-            </div>
-            <SiteFooter />
-            {/* <DevRoleSwitcher /> */}
-          </ToastProvider>
-        </AuthProvider>
+        <SwrProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <a
+                href="#continut"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-2 focus:font-bold"
+              >
+                Sari la conținut
+              </a>
+              <SmoothScroll />
+              <RouteProgress />
+              <SiteHeader />
+              <div id="continut" className="flex-1">
+                {children}
+              </div>
+              <SiteFooter />
+              {/* <DevRoleSwitcher /> */}
+            </ToastProvider>
+          </AuthProvider>
+        </SwrProvider>
       </body>
     </html>
   );

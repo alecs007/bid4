@@ -29,7 +29,7 @@ import {
 import { ACCOUNT_TYPE, AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useApi } from "@/lib/hooks/useApi";
+import { useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
 import { countRo } from "@/lib/utils/plural";
 import { BidBox } from "./BidBox";
@@ -84,7 +84,7 @@ function SellerStat({ value, label }: { value: string; label: string }) {
 export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   const { user } = useAuth();
   const toast = useToast();
-  const [nonce, setNonce] = useState(0);
+  const revalidate = useRevalidate();
   const [feesOpen, setFeesOpen] = useState(false);
   const [watchOverride, setWatchOverride] = useState<boolean | null>(null);
 
@@ -94,12 +94,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     error,
   } = useApi(
     () => getAuction(auctionId, user?.id),
-    `auction:${auctionId}:${user?.id ?? "anon"}:${nonce}`,
+    `auction:${auctionId}:${user?.id ?? "anon"}`,
   );
 
   const { data: bids, loading: bidsLoading } = useApi(
     () => listBids(auctionId),
-    `bids:${auctionId}:${nonce}`,
+    `bids:${auctionId}`,
   );
 
   if (loading && !auction) return <SkeletonDetail />;
@@ -113,7 +113,11 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     );
   }
 
-  const refresh = () => setNonce((value) => value + 1);
+  // A bid changes the listing, its history and the homepage rows, and none of
+  // those know about each other. Naming the prefixes here keeps that knowledge
+  // where the change happens.
+  const refresh = () =>
+    revalidate(`auction:${auctionId}`, `bids:${auctionId}`, "auctions:", "featured:");
   const category = AUCTION_CATEGORIES.find(
     (item) => item.id === auction.category,
   );

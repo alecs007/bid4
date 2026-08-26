@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
 
 import { ApiError } from "@/lib/types";
 
@@ -17,9 +18,17 @@ export function errorMessage(error: unknown): string {
 }
 
 /**
- * Keyed by a string rather than a dependency array: callers pass something like
- * `` `auctions:${JSON.stringify(filters)}` ``, which keeps the effect honest
- * without fighting exhaustive-deps over an inline closure.
+ * Reads through SWR, keyed by a string the caller builds — something like
+ * `` `auctions:${JSON.stringify(filters)}` ``.
+ *
+ * <p>The key is the cache entry, so two components asking the same question share
+ * one request and one answer. That is the whole reason this is SWR rather than an
+ * effect: the auction page renders the listing, the bid box and the history from
+ * overlapping data, and three copies of the same fetch is what a hand-rolled hook
+ * gives you for free.
+ *
+ * The shape it returns is deliberately unchanged — `data`, `error`, `loading`,
+ * `reload` — so no call site had to learn a new one.
  */
 export function useApi<T>(
   loader: () => Promise<T>,
@@ -28,57 +37,55 @@ export function useApi<T>(
 ): ApiState<T> & { reload: () => void } {
   const { enabled = true } = options;
 
-  // `key` is stored with the result so `loading` is derived, not announced from
-  // inside the effect — a frame late, an empty state flashed in the skeleton's place.
-  const [state, setState] = useState<{
-    data: T | null;
-    error: string | null;
-    key: string | null;
-  }>({ data: null, error: null, key: null });
-  const [pending, setPending] = useState(false);
-  const [nonce, setNonce] = useState(0);
-
-  // The loader is recreated on every render; keep it out of the deps.
+  // SWR calls the fetcher with the key; the loader closes over what it needs, so
+  // it is kept in a ref and the key alone decides when to refetch. Without this,
+  // a loader recreated on every render would invalidate on every render.
   const loaderRef = useRef(loader);
   useEffect(() => {
     loaderRef.current = loader;
   });
 
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
+  const { data, error, isLoading, mutate } = useSWR<T>(
+    // A null key is how SWR is told not to fetch at all.
+    enabled ? key : null,
+    () => loaderRef.current(),
+  );
 
-    const run = async () => {
-      setPending(true);
-      try {
-        const data = await loaderRef.current();
-        if (!cancelled) setState({ data, error: null, key });
-      } catch (error) {
-        if (!cancelled) {
-          setState({ data: null, error: errorMessage(error), key });
-        }
-      } finally {
-        if (!cancelled) setPending(false);
-      }
-    };
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [key, nonce, enabled]);
-
-  const reload = useCallback(() => setNonce((value) => value + 1), []);
+  const reload = useCallback(() => {
+    void mutate();
+  }, [mutate]);
 
   return {
-    // The last result stays on screen while the next request runs; guard with
-    // `loading && !data` for a skeleton instead.
-    data: state.data,
-    // An error from a previous key is not this key's error.
-    error: state.key === key ? state.error : null,
-    loading: enabled && (state.key !== key || pending),
+    data: data ?? null,
+    error: error ? errorMessage(error) : null,
+    // The previous answer stays on screen while the next one loads, so a
+    // skeleton belongs behind `loading && !data` rather than `loading`.
+    loading: enabled && isLoading,
     reload,
   };
+}
+
+/**
+ * Drops every cached answer whose key starts with one of these prefixes.
+ *
+ * <p>Placing a bid changes the listing, the history, the homepage rows and the
+ * bidder's own page, and none of those know about each other. Naming the prefixes
+ * at the call site keeps that knowledge where the change happens instead of
+ * spreading a subscription through the tree.
+ */
+export function useRevalidate(): (...prefixes: string[]) => void {
+  const { mutate } = useSWRConfig();
+
+  return useCallback(
+    (...prefixes: string[]) => {
+      void mutate(
+        (key) => typeof key === "string" && prefixes.some((p) => key.startsWith(p)),
+        undefined,
+        { revalidate: true },
+      );
+    },
+    [mutate],
+  );
 }
 
 /** Pair with a toast for the success case — the app-wide convention for actions. */
