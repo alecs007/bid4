@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /build
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw && ./mvnw -B -DskipTests dependency:go-offline
+COPY src/ src/
+RUN ./mvnw -B -DskipTests package && mv target/*.jar app.jar
+
+FROM eclipse-temurin:21-jre-alpine AS runtime
+# wget is the health check; the JRE image has no curl.
+RUN apk add --no-cache wget \
+    && addgroup -S bid4 && adduser -S -G bid4 -H -s /sbin/nologin bid4
+WORKDIR /app
+COPY --from=build --chown=bid4:bid4 /build/app.jar app.jar
+USER bid4
+EXPOSE 8080
+# Container memory is the limit compose sets, so let the JVM read it rather
+# than guess a fixed heap.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

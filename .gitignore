@@ -5,3 +5,6 @@
 
 # Java / Maven
 backend/target/
+
+# Local secrets
+.env
