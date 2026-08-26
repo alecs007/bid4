@@ -107,8 +107,12 @@ so Flyway migrates on every run and a broken migration fails the build rather
 than the deploy. Docker Desktop has to be running.
 
 ```bash
-cd frontend && pnpm exec tsc --noEmit && pnpm exec eslint src --max-warnings=1 && pnpm exec next build
+cd frontend && pnpm exec next typegen && pnpm exec tsc --noEmit && pnpm exec eslint src --max-warnings=1 && pnpm exec next build
 ```
+
+`next typegen` comes first because `PageProps` and `LayoutProps` are generated
+into `.next/types`, which `tsconfig.json` includes. On a clean clone, where no
+dev server has run, the typecheck cannot resolve them without it.
 
 One eslint warning is expected: the commented-out `DevRoleSwitcher` import.
 

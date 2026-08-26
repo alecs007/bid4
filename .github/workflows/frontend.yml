@@ -53,6 +53,14 @@ jobs:
       - name: install
         run: pnpm install --frozen-lockfile
 
+      # PageProps and LayoutProps are generated, not hand-written. They land in
+      # .next/types, which tsconfig includes — so on a clean checkout, where no
+      # dev server has ever run, tsc cannot resolve them. `next build` would
+      # generate them, but it runs after the typecheck; typegen does the same
+      # job without building.
+      - name: generate route types
+        run: pnpm exec next typegen
+
       - name: typecheck
         run: pnpm exec tsc --noEmit
 
