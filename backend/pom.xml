@@ -31,6 +31,8 @@
 		<minio.version>8.5.17</minio.version>
 		<owasp-sanitizer.version>20240325.1</owasp-sanitizer.version>
 		<bucket4j.version>8.16.0</bucket4j.version>
+		<archunit.version>1.4.0</archunit.version>
+		<spotless.version>2.44.0</spotless.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -161,6 +163,12 @@
 			<artifactId>testcontainers-redis</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>${archunit.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -168,6 +176,30 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>${spotless.version}</version>
+				<configuration>
+					<java>
+						<googleJavaFormat>
+							<style>GOOGLE</style>
+						</googleJavaFormat>
+						<removeUnusedImports/>
+					</java>
+				</configuration>
+				<executions>
+					<execution>
+						<!-- Fails the build on unformatted code, so formatting is
+						     never a review comment. `mvn spotless:apply` fixes it. -->
+						<id>check-format</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

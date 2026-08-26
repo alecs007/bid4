@@ -8,7 +8,10 @@
 --   * every instant is timestamptz, stored UTC;
 --   * enumerations are varchar + CHECK rather than a native pg enum: a CHECK
 --     widens in a later migration without an exclusive lock. The allowed values
---     mirror the TypeScript unions in frontend/src/lib/types exactly.
+--     mirror the TypeScript unions in frontend/src/lib/types exactly;
+--   * fixed-width values are varchar with a CHECK on the shape, never char(n).
+--     Postgres blank-pads char(n) and gains nothing for it, and the padding
+--     reads back as a column type Hibernate refuses to match.
 
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $fn$
 BEGIN
@@ -90,7 +93,7 @@ CREATE TABLE refresh_tokens (
     user_id       uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     -- SHA-256 of the token. The token is shown to its owner once and is never
     -- recoverable from here, so a dump of this table grants nothing.
-    token_hash    char(64) NOT NULL,
+    token_hash    varchar(64) NOT NULL,
     issued_at     timestamptz NOT NULL DEFAULT now(),
     expires_at    timestamptz NOT NULL,
     revoked_at    timestamptz,
@@ -195,7 +198,7 @@ CREATE TABLE payment_methods (
     provider_method_id varchar(64) NOT NULL,
 
     brand              varchar(16)  NOT NULL,
-    last4              char(4)      NOT NULL,
+    last4              varchar(4)   NOT NULL,
     exp_month          smallint     NOT NULL,
     exp_year           smallint     NOT NULL,
     holder_name        varchar(120) NOT NULL,
@@ -236,7 +239,7 @@ CREATE TABLE stored_files (
     original_name   varchar(255) NOT NULL,
     content_type    varchar(120) NOT NULL,
     size_bytes      bigint       NOT NULL,
-    checksum_sha256 char(64)     NOT NULL,
+    checksum_sha256 varchar(64)  NOT NULL,
 
     owner_id        uuid REFERENCES users (id) ON DELETE SET NULL,
     created_at      timestamptz  NOT NULL DEFAULT now(),

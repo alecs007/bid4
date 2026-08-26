@@ -2,6 +2,12 @@ spring:
   application:
     name: bid4-backend
 
+  config:
+    # The repo-root .env is already KEY=VALUE, which is properties syntax, so
+    # running from an IDE picks up the same secrets compose uses. Optional: in
+    # a container the file is absent and the environment supplies them instead.
+    import: optional:file:../.env[.properties]
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:bid4}
     username: ${POSTGRES_USER:bid4}
@@ -25,7 +31,6 @@ spring:
         order_inserts: true
         order_updates: true
         query:
-          # A query with no ceiling is a denial-of-service primitive.
           in_clause_parameter_padding: true
 
   flyway:
@@ -46,13 +51,44 @@ spring:
       lettuce:
         shutdown-timeout: 200ms
 
+  jackson:
+    # Optional fields in the TypeScript types are absent rather than null.
+    default-property-inclusion: non_null
+    datatype:
+      datetime:
+        # Instants as ISO-8601 strings, not epoch numbers: Date.parse on the
+        # other side expects a string. Jackson 3 already defaults this way; it
+        # is stated so an upgrade cannot quietly change the wire format.
+        write-dates-as-timestamps: false
+    factory:
+      constraints:
+        # Parser ceilings. A small body can still be expensive to parse — deep
+        # nesting and enormous strings are the cheap way to burn CPU on an
+        # endpoint that has not even authenticated yet.
+        read:
+          max-document-length: 1048576
+          max-nesting-depth: 32
+          max-string-length: 200000
+          max-name-length: 256
+          max-token-count: 100000
+
   servlet:
     multipart:
       max-file-size: 8MB
       max-request-size: 24MB
 
+  threads:
+    virtual:
+      # Off deliberately. A virtual thread pins its carrier inside synchronized,
+      # and the Postgres driver synchronizes heavily, so this needs a benchmark
+      # before it is worth turning on.
+      enabled: false
+
 server:
   port: 8080
+  # The frontend calls http://localhost:8080/api — see NEXT_PUBLIC_API_BASE.
+  servlet:
+    context-path: /api
   shutdown: graceful
   error:
     # An error response says what went wrong in our own words, never in the
@@ -73,6 +109,11 @@ server:
     max-swallow-size: 2MB
 
 management:
+  server:
+    # Actuator on its own port, which compose does not publish. Health and
+    # metrics are then unreachable from outside the host by construction rather
+    # than by remembering to secure a path.
+    port: 8081
   endpoints:
     access:
       # A ceiling, not a default: no endpoint can be raised past read-only by a
@@ -92,8 +133,7 @@ management:
 
 bid4:
   jwt:
-    # HMAC-SHA256. Injected from the environment; the app refuses to start
-    # without it outside the dev profile.
+    # HMAC-SHA256. The application refuses to start if this is short or absent.
     secret: ${BID4_JWT_SECRET:}
     issuer: bid4
     access-token-ttl: 15m
@@ -109,6 +149,24 @@ bid4:
     # Imagery is linked from pages that stay open; identity documents are not.
     public-url-ttl: 12h
     private-url-ttl: 5m
+  security:
+    # Brute force: the durable per-account half. Redis counts per IP in parallel.
+    max-failed-logins: 5
+    lockout-duration: 15m
+  rate-limit:
+    enabled: true
+    # Requests per window, per caller. Anonymous callers are keyed by IP,
+    # authenticated ones by user id, so one shared office address cannot
+    # exhaust everyone else's budget.
+    auth:
+      capacity: 10
+      window: 15m
+    write:
+      capacity: 60
+      window: 1m
+    read:
+      capacity: 300
+      window: 1m
 
 logging:
   level:

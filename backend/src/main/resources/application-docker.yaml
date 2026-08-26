@@ -10,3 +10,13 @@ spring:
 bid4:
   storage:
     endpoint: http://minio:9000
+
+logging:
+  # One JSON object per line, with the MDC — and therefore the request id — in
+  # every one. A log aggregator can index this; the human-readable console
+  # format used locally cannot be queried.
+  structured:
+    format:
+      console: ecs
+  level:
+    root: INFO
