@@ -1,13 +1,6 @@
 import { API_BASE } from "@/lib/config";
 import { ApiError, type ApiErrorBody } from "@/lib/types";
 
-/**
- * The single fetch wrapper used when `NEXT_PUBLIC_USE_MOCK=false`.
- *
- * TODO(backend): the token is a mock string today. Add refresh handling and the
- * 401 -> redirect-to-login hook here, nowhere else.
- */
-
 const TOKEN_KEY = "bid4.token";
 
 export function readToken(): string | null {
@@ -50,14 +43,51 @@ function buildUrl(path: string, query?: HttpOptions["query"]): string {
   return url.toString();
 }
 
-export async function http<T>(
-  path: string,
-  { body, query, headers, ...init }: HttpOptions = {},
-): Promise<T> {
-  const token = readToken();
+/** Endpoints that answer 401 for their own reasons; refreshing would loop. */
+const NO_REFRESH = ["/auth/login", "/auth/register", "/auth/refresh"];
 
-  const response = await fetch(buildUrl(path, query), {
+let refreshing: Promise<string | null> | null = null;
+
+/**
+ * Trades the refresh cookie for a new access token.
+ *
+ * The cookie is httpOnly, so nothing here reads it — `credentials: "include"`
+ * is what sends it. Concurrent callers share one request: a page that fires
+ * five calls at once should not open five sessions and invalidate four of them,
+ * since the server treats a spent refresh token as theft.
+ */
+function refreshSession(): Promise<string | null> {
+  refreshing ??= (async () => {
+    try {
+      const response = await fetch(buildUrl("/auth/refresh"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) return null;
+      const session = (await response.json()) as { token?: string };
+      if (!session.token) return null;
+      writeToken(session.token);
+      return session.token;
+    } catch {
+      return null;
+    } finally {
+      refreshing = null;
+    }
+  })();
+  return refreshing;
+}
+
+function send(
+  path: string,
+  { body, query, headers, ...init }: HttpOptions,
+  token: string | null,
+): Promise<Response> {
+  return fetch(buildUrl(path, query), {
     ...init,
+    // The refresh token travels as a cookie, which a cross-origin fetch drops
+    // unless it is asked for.
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -65,7 +95,9 @@ export async function http<T>(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+}
 
+async function unwrap<T>(response: Response): Promise<T> {
   if (response.status === 204) return undefined as T;
 
   const payload: unknown = await response.json().catch(() => null);
@@ -83,4 +115,30 @@ export async function http<T>(
   }
 
   return payload as T;
+}
+
+/**
+ * The single fetch wrapper used when `NEXT_PUBLIC_USE_MOCK=false`.
+ *
+ * Access tokens are deliberately short-lived, so a 401 is the expected way a
+ * session continues rather than a failure: refresh once, retry once, and only
+ * then surface the error.
+ */
+export async function http<T>(
+  path: string,
+  options: HttpOptions = {},
+): Promise<T> {
+  const response = await send(path, options, readToken());
+
+  if (response.status !== 401 || NO_REFRESH.some((p) => path.startsWith(p))) {
+    return unwrap<T>(response);
+  }
+
+  const token = await refreshSession();
+  if (!token) {
+    writeToken(null);
+    return unwrap<T>(response);
+  }
+
+  return unwrap<T>(await send(path, options, token));
 }
