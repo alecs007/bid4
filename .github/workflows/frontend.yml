@@ -1,0 +1,60 @@
+name: frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node, which needs pnpm present to resolve its cache. The
+      # version comes from the packageManager field in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # --frozen-lockfile fails rather than silently resolving something new,
+      # so CI installs exactly what a developer installed.
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: typecheck
+        run: pnpm exec tsc --noEmit
+
+      # One warning is expected: the commented-out DevRoleSwitcher import.
+      - name: lint
+        run: pnpm exec eslint src --max-warnings=1
+
+      # Catches what tsc cannot — a server/client boundary crossed, a bad route
+      # export, a component that only fails when it is actually rendered.
+      - name: build
+        run: pnpm exec next build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
