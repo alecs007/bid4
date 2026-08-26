@@ -20,8 +20,11 @@ import ro.bid4.backend.common.config.Bid4Properties;
 import ro.bid4.backend.identity.api.dto.AuthSessionResponse;
 import ro.bid4.backend.identity.api.dto.LoginRequest;
 import ro.bid4.backend.identity.api.dto.RegisterRequest;
+import ro.bid4.backend.identity.api.dto.ResendVerificationRequest;
 import ro.bid4.backend.identity.api.dto.UserResponse;
+import ro.bid4.backend.identity.api.dto.VerifyEmailRequest;
 import ro.bid4.backend.identity.service.AuthService;
+import ro.bid4.backend.identity.service.EmailVerificationService;
 
 /**
  * The endpoints frontend/src/lib/api/auth.ts calls.
@@ -38,21 +41,46 @@ public class AuthController {
   static final String REFRESH_COOKIE = "bid4.refresh";
 
   private final AuthService authService;
+  private final EmailVerificationService emailVerification;
   private final Bid4Properties properties;
 
-  public AuthController(AuthService authService, Bid4Properties properties) {
+  public AuthController(
+      AuthService authService,
+      EmailVerificationService emailVerification,
+      Bid4Properties properties) {
     this.authService = authService;
+    this.emailVerification = emailVerification;
     this.properties = properties;
   }
 
+  /**
+   * Creates the account and mails a confirmation link.
+   *
+   * <p>Returns the user and no token. The address has not been proved yet, so there is nothing to
+   * sign in to — the caller belongs in their inbox, not in the application.
+   */
   @PostMapping("/register")
-  ResponseEntity<AuthSessionResponse> register(
+  ResponseEntity<UserResponse> register(
       @Valid @RequestBody RegisterRequest request, HttpServletRequest http) {
-    AuthService.SessionResult result =
-        authService.register(request, clientIp(http), userAgent(http));
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .header(HttpHeaders.SET_COOKIE, refreshCookie(result.refreshToken(), http).toString())
-        .body(result.session());
+    UserResponse user = authService.register(request, clientIp(http), userAgent(http));
+    return ResponseEntity.status(HttpStatus.CREATED).body(user);
+  }
+
+  /** Redeems the link from the message. Idempotent: mail clients prefetch links. */
+  @PostMapping("/verify")
+  ResponseEntity<Void> verify(@Valid @RequestBody VerifyEmailRequest request) {
+    emailVerification.confirm(request.token());
+    return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Sends another link. Answers 204 whether or not the address exists, so this cannot be used to
+   * discover who has an account.
+   */
+  @PostMapping("/resend-verification")
+  ResponseEntity<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+    emailVerification.resend(request.email());
+    return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/login")

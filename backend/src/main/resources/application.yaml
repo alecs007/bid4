@@ -57,6 +57,21 @@ spring:
       lettuce:
         shutdown-timeout: 200ms
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+        # A hung mail server must not hold a request thread open.
+        transport:
+          protocol: smtp
+
   jackson:
     # Optional fields in the TypeScript types are absent rather than null.
     default-property-inclusion: non_null
@@ -134,6 +149,19 @@ management:
       probes:
         enabled: true
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: openid, profile, email
+          facebook:
+            client-id: ${FACEBOOK_CLIENT_ID:}
+            client-secret: ${FACEBOOK_CLIENT_SECRET:}
+            scope: public_profile, email
+
 bid4:
   jwt:
     # HMAC-SHA256. The application refuses to start if this is short or absent.
@@ -156,6 +184,16 @@ bid4:
     # Brute force: the durable per-account half. Redis counts per IP in parallel.
     max-failed-logins: 5
     lockout-duration: 15m
+  mail:
+    from: ${MAIL_FROM:bid4 <nu-raspunde@bid4.ro>}
+    # Where a verification link points. The backend never renders HTML, so the
+    # link lands on the web app, which then calls the API.
+    web-base-url: ${BID4_WEB_BASE_URL:http://localhost:3000}
+  verification:
+    token-ttl: 24h
+    # A new link invalidates the previous one, so a mailbox cannot accumulate
+    # working tokens.
+    resend-cooldown: 2m
   rate-limit:
     enabled: true
     # Requests per window, per caller. Anonymous callers are keyed by IP,

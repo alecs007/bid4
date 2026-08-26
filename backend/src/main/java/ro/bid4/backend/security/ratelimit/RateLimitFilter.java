@@ -31,7 +31,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
           + "\"}";
 
   private static final Set<String> CREDENTIAL_PATHS =
-      Set.of("/auth/login", "/auth/register", "/auth/refresh");
+      Set.of("/auth/login", "/auth/register", "/auth/refresh", "/auth/resend-verification");
 
   private final RateLimiter rateLimiter;
 

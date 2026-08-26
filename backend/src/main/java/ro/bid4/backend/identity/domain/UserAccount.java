@@ -37,7 +37,11 @@ public class UserAccount {
   @Column(nullable = false)
   private String email;
 
-  @Column(name = "password_hash", nullable = false)
+  /**
+   * Null for an account that only ever signed in through a provider. It is never given a
+   * placeholder: a fabricated hash is a credential someone can eventually guess.
+   */
+  @Column(name = "password_hash")
   private String passwordHash;
 
   @Column(name = "display_name", nullable = false)
@@ -115,6 +119,14 @@ public class UserAccount {
 
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt = Instant.now();
+
+  public boolean hasPassword() {
+    return passwordHash != null && !passwordHash.isBlank();
+  }
+
+  public boolean isEmailVerified() {
+    return emailVerifiedAt != null;
+  }
 
   public boolean isLocked(Instant now) {
     return lockedUntil != null && lockedUntil.isAfter(now);

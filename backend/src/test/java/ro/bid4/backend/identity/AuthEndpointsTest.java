@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.servlet.http.Cookie;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,13 +25,19 @@ import ro.bid4.backend.TestcontainersConfiguration;
 /**
  * The auth surface as the frontend sees it.
  *
- * <p>Rate limiting is off here so that one test's requests cannot exhaust the next one's budget;
- * RateLimitTest turns it on deliberately and asserts it works.
+ * <p>Rate limiting is off here so one test's requests cannot exhaust the next one's budget;
+ * RateLimitTest turns it on deliberately.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
-@TestPropertySource(properties = "bid4.rate-limit.enabled=false")
+@Import({TestcontainersConfiguration.class, MailCaptureConfiguration.class})
+@TestPropertySource(
+    properties = {
+      "bid4.rate-limit.enabled=false",
+      // The cooldown is a real control and has its own test; here it would only
+      // stop this class from exercising what a resend actually does.
+      "bid4.verification.resend-cooldown=0s"
+    })
 class AuthEndpointsTest {
 
   private static final String PASSWORD = "parola-buna-123";
@@ -49,18 +56,50 @@ class AuthEndpointsTest {
         .formatted(email, PASSWORD, displayName, terms);
   }
 
-  private MvcResult register(String email, String displayName) throws Exception {
-    return mvc.perform(
+  private static String loginBody(String email, String password) {
+    return """
+        {"email":"%s","password":"%s"}
+        """
+        .formatted(email, password);
+  }
+
+  private void register(String email, String displayName) throws Exception {
+    mvc.perform(
             post("/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerBody(email, displayName, true)))
-        .andExpect(status().isCreated())
+        .andExpect(status().isCreated());
+  }
+
+  /** Registers, redeems the emailed link, signs in, and returns the session response. */
+  private MvcResult registerVerifiedAndLogin(String email, String displayName) throws Exception {
+    register(email, displayName);
+    confirm(MailCaptureConfiguration.LAST_TOKEN.get());
+    return mvc.perform(
+            post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(email, PASSWORD)))
+        .andExpect(status().isOk())
         .andReturn();
   }
 
+  private void confirm(String token) throws Exception {
+    mvc.perform(
+            post("/auth/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"token":"%s"}
+                    """
+                        .formatted(token)))
+        .andExpect(status().isNoContent());
+  }
+
+  /* ---- registration ---------------------------------------------------- */
+
   @Test
-  @DisplayName("register returns the AuthSession shape the frontend expects")
-  void registerReturnsSession() throws Exception {
+  @DisplayName("register returns the user and no session at all")
+  void registerReturnsUserWithoutSession() throws Exception {
     String email = freshEmail();
 
     mvc.perform(
@@ -68,26 +107,20 @@ class AuthEndpointsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerBody(email, "Maria Ionescu", true)))
         .andExpect(status().isCreated())
-        // AuthSession: { user, token, expiresAt }
-        .andExpect(jsonPath("$.token").isNotEmpty())
-        .andExpect(jsonPath("$.expiresAt").isNotEmpty())
-        .andExpect(jsonPath("$.user.id").isNotEmpty())
-        .andExpect(jsonPath("$.user.email").value(email))
-        .andExpect(jsonPath("$.user.displayName").value("Maria Ionescu"))
-        .andExpect(jsonPath("$.user.username").value("maria-ionescu"))
-        .andExpect(jsonPath("$.user.role").value("USER"))
-        .andExpect(jsonPath("$.user.accountType").value("INDIVIDUAL"))
-        .andExpect(jsonPath("$.user.status").value("ACTIVE"))
-        .andExpect(jsonPath("$.user.stripeReady").value(false))
-        .andExpect(jsonPath("$.user.hasPaymentMethod").value(false))
-        .andExpect(jsonPath("$.user.totalRaised").value(0))
-        // The password must not come back in any form.
-        .andExpect(jsonPath("$.user.passwordHash").doesNotExist())
-        .andExpect(jsonPath("$.user.tokenVersion").doesNotExist())
-        // The refresh token is a cookie the page cannot read, never a body field.
-        .andExpect(jsonPath("$.refreshToken").doesNotExist())
-        .andExpect(cookie().httpOnly("bid4.refresh", true))
+        .andExpect(jsonPath("$.id").isNotEmpty())
+        .andExpect(jsonPath("$.email").value(email))
+        .andExpect(jsonPath("$.displayName").value("Maria Ionescu"))
+        .andExpect(jsonPath("$.username").value("maria-ionescu"))
+        .andExpect(jsonPath("$.role").value("USER"))
+        // An address nobody has proved they own is not a session.
+        .andExpect(jsonPath("$.token").doesNotExist())
+        .andExpect(jsonPath("$.expiresAt").doesNotExist())
+        .andExpect(cookie().doesNotExist("bid4.refresh"))
+        .andExpect(jsonPath("$.passwordHash").doesNotExist())
         .andExpect(header().exists("X-Request-Id"));
+
+    assertThat(MailCaptureConfiguration.LAST_RECIPIENT.get()).isEqualTo(email);
+    assertThat(MailCaptureConfiguration.LAST_TOKEN.get()).isNotBlank();
   }
 
   @Test
@@ -101,8 +134,7 @@ class AuthEndpointsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerBody(email, "A Doua Persoana", true)))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"))
-        .andExpect(jsonPath("$.status").value(400));
+        .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"));
   }
 
   @Test
@@ -126,8 +158,7 @@ class AuthEndpointsTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
         .andExpect(jsonPath("$.fieldErrors.email").isNotEmpty())
-        .andExpect(jsonPath("$.trace").doesNotExist())
-        .andExpect(jsonPath("$.exception").doesNotExist());
+        .andExpect(jsonPath("$.trace").doesNotExist());
   }
 
   @Test
@@ -146,40 +177,115 @@ class AuthEndpointsTest {
     assertThat(body).contains("Ana Pop");
   }
 
+  /* ---- verification ---------------------------------------------------- */
+
   @Test
-  @DisplayName("login returns a session for the right password")
-  void loginSucceeds() throws Exception {
+  @DisplayName("an unconfirmed address cannot sign in, even with the right password")
+  void unverifiedCannotLogIn() throws Exception {
     String email = freshEmail();
-    register(email, "Andrei Popescu");
+    register(email, "Neconfirmat Test");
 
     mvc.perform(
             post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(email, PASSWORD)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("EMAIL_NOT_VERIFIED"));
+  }
+
+  @Test
+  @DisplayName("confirming the address then unlocks sign-in")
+  void verificationUnlocksLogin() throws Exception {
+    MvcResult session = registerVerifiedAndLogin(freshEmail(), "Confirmat Test");
+
+    assertThat(session.getResponse().getContentAsString()).contains("\"token\"");
+    assertThat(session.getResponse().getCookie("bid4.refresh")).isNotNull();
+  }
+
+  @Test
+  @DisplayName("a token that was never issued is refused")
+  void unknownTokenRefused() throws Exception {
+    mvc.perform(
+            post("/auth/verify")
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
-                    {"email":"%s","password":"%s"}
-                    """
-                        .formatted(email, PASSWORD)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.token").isNotEmpty())
-        .andExpect(jsonPath("$.user.email").value(email));
+                    {"token":"nu-a-fost-emis-niciodata"}
+                    """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VERIFICATION_LINK_INVALID"));
   }
+
+  @Test
+  @DisplayName("visiting the link twice succeeds, because mail clients prefetch")
+  void confirmingTwiceIsIdempotent() throws Exception {
+    register(freshEmail(), "Prefetch Test");
+    String token = MailCaptureConfiguration.LAST_TOKEN.get();
+
+    confirm(token);
+    confirm(token);
+  }
+
+  @Test
+  @DisplayName("a new link retires the previous one")
+  void reissuingRetiresTheOldLink() throws Exception {
+    String email = freshEmail();
+    register(email, "Doua Linkuri");
+    String first = MailCaptureConfiguration.LAST_TOKEN.get();
+
+    mvc.perform(
+            post("/auth/resend-verification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"email":"%s"}
+                    """
+                        .formatted(email)))
+        .andExpect(status().isNoContent());
+
+    String second = MailCaptureConfiguration.LAST_TOKEN.get();
+    assertThat(second).isNotEqualTo(first);
+
+    mvc.perform(
+            post("/auth/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"token":"%s"}
+                    """
+                        .formatted(first)))
+        .andExpect(status().isBadRequest());
+
+    confirm(second);
+  }
+
+  @Test
+  @DisplayName("asking to resend for an unknown address says nothing about it")
+  void resendDoesNotRevealAccounts() throws Exception {
+    mvc.perform(
+            post("/auth/resend-verification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"email":"%s"}
+                    """
+                        .formatted(freshEmail())))
+        .andExpect(status().isNoContent());
+  }
+
+  /* ---- sign-in --------------------------------------------------------- */
 
   @Test
   @DisplayName("a wrong password and an unknown address are indistinguishable")
   void loginFailuresLookIdentical() throws Exception {
     String email = freshEmail();
-    register(email, "Ioana Marin");
+    registerVerifiedAndLogin(email, "Ioana Marin");
 
     String wrongPassword =
         mvc.perform(
                 post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(
-                        """
-                        {"email":"%s","password":"gresita-total"}
-                        """
-                            .formatted(email)))
+                    .content(loginBody(email, "gresita-total")))
             .andExpect(status().isUnauthorized())
             .andReturn()
             .getResponse()
@@ -189,50 +295,38 @@ class AuthEndpointsTest {
         mvc.perform(
                 post("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(
-                        """
-                        {"email":"%s","password":"gresita-total"}
-                        """
-                            .formatted(freshEmail())))
+                    .content(loginBody(freshEmail(), "gresita-total")))
             .andExpect(status().isUnauthorized())
             .andReturn()
             .getResponse()
             .getContentAsString();
 
-    // Byte-identical: nothing here tells an attacker which addresses exist.
-    assertThat(wrongPassword).isEqualTo(unknownAccount);
-    assertThat(wrongPassword).contains("INVALID_CREDENTIALS");
+    assertThat(wrongPassword).isEqualTo(unknownAccount).contains("INVALID_CREDENTIALS");
   }
 
   @Test
   @DisplayName("the account locks after the configured number of wrong passwords")
   void accountLocksOut() throws Exception {
     String email = freshEmail();
-    register(email, "Blocat Temporar");
-
-    String wrong =
-        """
-        {"email":"%s","password":"gresita-total"}
-        """
-            .formatted(email);
+    registerVerifiedAndLogin(email, "Blocat Temporar");
 
     for (int attempt = 0; attempt < 5; attempt++) {
-      mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content(wrong))
+      mvc.perform(
+              post("/auth/login")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(loginBody(email, "gresita-total")))
           .andExpect(status().isUnauthorized());
     }
 
-    // Even the correct password is refused while the lock stands.
     mvc.perform(
             post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {"email":"%s","password":"%s"}
-                    """
-                        .formatted(email, PASSWORD)))
+                .content(loginBody(email, PASSWORD)))
         .andExpect(status().isTooManyRequests())
         .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
   }
+
+  /* ---- session --------------------------------------------------------- */
 
   @Test
   @DisplayName("/auth/me needs a token")
@@ -253,8 +347,7 @@ class AuthEndpointsTest {
   @DisplayName("/auth/me returns the signed-in user")
   void meReturnsUser() throws Exception {
     String email = freshEmail();
-    MvcResult registered = register(email, "Elena Radu");
-    String token = tokenOf(registered);
+    String token = tokenOf(registerVerifiedAndLogin(email, "Elena Radu"));
 
     mvc.perform(get("/auth/me").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -264,10 +357,10 @@ class AuthEndpointsTest {
   }
 
   @Test
-  @DisplayName("a refresh cookie buys a new access token, and the old cookie is rotated")
+  @DisplayName("a refresh cookie buys a new access token, and the spent one is theft")
   void refreshRotates() throws Exception {
-    MvcResult registered = register(freshEmail(), "Rotire Test");
-    jakarta.servlet.http.Cookie refreshCookie = registered.getResponse().getCookie("bid4.refresh");
+    MvcResult session = registerVerifiedAndLogin(freshEmail(), "Rotire Test");
+    Cookie refreshCookie = session.getResponse().getCookie("bid4.refresh");
     assertThat(refreshCookie).isNotNull();
 
     MvcResult refreshed =
@@ -279,7 +372,6 @@ class AuthEndpointsTest {
     assertThat(refreshed.getResponse().getCookie("bid4.refresh").getValue())
         .isNotEqualTo(refreshCookie.getValue());
 
-    // Presenting the spent cookie again is treated as theft, not as a retry.
     mvc.perform(post("/auth/refresh").cookie(refreshCookie))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));

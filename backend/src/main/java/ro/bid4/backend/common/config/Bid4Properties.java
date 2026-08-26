@@ -23,6 +23,8 @@ public record Bid4Properties(
     @Valid @NotNull Cors cors,
     @Valid @NotNull Storage storage,
     @Valid @NotNull Security security,
+    @Valid @NotNull Mail mail,
+    @Valid @NotNull Verification verification,
     @Valid @NotNull RateLimit rateLimit) {
 
   public record Jwt(
@@ -50,6 +52,10 @@ public record Bid4Properties(
       @NotBlank String privateBucket,
       @NotNull Duration publicUrlTtl,
       @NotNull Duration privateUrlTtl) {}
+
+  public record Mail(@NotBlank String from, @NotBlank String webBaseUrl) {}
+
+  public record Verification(@NotNull Duration tokenTtl, @NotNull Duration resendCooldown) {}
 
   public record Security(@Min(1) int maxFailedLogins, @NotNull Duration lockoutDuration) {}
 

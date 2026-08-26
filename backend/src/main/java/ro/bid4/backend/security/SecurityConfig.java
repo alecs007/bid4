@@ -91,7 +91,14 @@ public class SecurityConfig {
                     // matcher built here resolves against the wrong one and never fires.
                     .requestMatchers("/actuator/**")
                     .permitAll()
-                    .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
+                    .requestMatchers(
+                        "/auth/login",
+                        "/auth/register",
+                        "/auth/refresh",
+                        // Confirming an address is the step that precedes having
+                        // an account to authenticate with, so it cannot require one.
+                        "/auth/verify",
+                        "/auth/resend-verification")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

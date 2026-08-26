@@ -49,6 +49,7 @@ public class AuthService {
   private final UserMapper userMapper;
   private final UsernameFactory usernameFactory;
   private final TextSanitizer sanitizer;
+  private final EmailVerificationService emailVerification;
   private final Bid4Properties properties;
 
   public AuthService(
@@ -60,6 +61,7 @@ public class AuthService {
       UserMapper userMapper,
       UsernameFactory usernameFactory,
       TextSanitizer sanitizer,
+      EmailVerificationService emailVerification,
       Bid4Properties properties) {
     this.users = users;
     this.refreshTokens = refreshTokens;
@@ -69,11 +71,17 @@ public class AuthService {
     this.userMapper = userMapper;
     this.usernameFactory = usernameFactory;
     this.sanitizer = sanitizer;
+    this.emailVerification = emailVerification;
     this.properties = properties;
   }
 
+  /**
+   * Creates the account and mails a confirmation link. Deliberately returns no session: an address
+   * nobody has proved they own must not become a usable account, so the caller is sent to their
+   * inbox rather than into the application.
+   */
   @Transactional
-  public SessionResult register(RegisterRequest request, String ip, String userAgent) {
+  public UserResponse register(RegisterRequest request, String ip, String userAgent) {
     if (!request.acceptedTerms()) {
       throw new ApiException(ErrorCode.TERMS_REQUIRED);
     }
@@ -103,8 +111,9 @@ public class AuthService {
     user.setOrgRegistrationNumber(sanitizer.plain(request.orgRegistrationNumber()));
 
     UserAccount saved = users.save(user);
-    loginAttempts.save(LoginAttempt.of(email, saved.getId(), ip, userAgent, true, null));
-    return startSession(saved, ip, userAgent);
+    loginAttempts.save(LoginAttempt.of(email, saved.getId(), ip, userAgent, true, "REGISTERED"));
+    emailVerification.issue(saved);
+    return userMapper.toResponse(saved);
   }
 
   /**
@@ -132,17 +141,31 @@ public class AuthService {
       throw new ApiException(ErrorCode.ACCOUNT_LOCKED);
     }
 
+    // An account created through a provider has no password. Verifying against
+    // the absent-user hash keeps the timing identical to a wrong password.
+    if (!user.hasPassword()) {
+      passwordEncoder.matches(request.password(), ABSENT_USER_HASH);
+      record(email, user.getId(), ip, userAgent, false, "NO_PASSWORD");
+      throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
+    }
+
     if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
       registerFailure(user, now);
       record(email, user.getId(), ip, userAgent, false, "BAD_PASSWORD");
       throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
     }
 
-    // Checked only once the password is right: answering "suspended" to a wrong
-    // password would confirm the address to someone who does not have it.
+    // Both checks come after the password for the same reason: answering
+    // "suspended" or "unconfirmed" to a wrong password would confirm the address
+    // to someone who does not have it.
     if (user.getStatus() == UserStatus.SUSPENDED) {
       record(email, user.getId(), ip, userAgent, false, "SUSPENDED");
       throw new ApiException(ErrorCode.ACCOUNT_SUSPENDED);
+    }
+
+    if (!user.isEmailVerified()) {
+      record(email, user.getId(), ip, userAgent, false, "UNVERIFIED");
+      throw new ApiException(ErrorCode.EMAIL_NOT_VERIFIED);
     }
 
     user.setFailedLoginCount(0);
@@ -183,6 +206,9 @@ public class AuthService {
     UserAccount user = stored.getUser();
     if (user.getStatus() == UserStatus.SUSPENDED) {
       throw new ApiException(ErrorCode.ACCOUNT_SUSPENDED);
+    }
+    if (!user.isEmailVerified()) {
+      throw new ApiException(ErrorCode.EMAIL_NOT_VERIFIED);
     }
 
     SessionResult session = startSession(user, ip, userAgent);

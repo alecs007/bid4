@@ -121,6 +121,29 @@ services:
       "
     restart: "no"
 
+  # Catches every message the application sends and shows them at
+  # http://127.0.0.1:8025. Nothing leaves the machine, so a verification link
+  # can be clicked in development without owning the address it was sent to.
+  mailpit:
+    <<: *hardening
+    image: axllent/mailpit:latest
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 192m
+
   backend:
     <<: *hardening
     profiles: ["app"]
@@ -132,6 +155,8 @@ services:
       redis:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
