@@ -34,7 +34,7 @@ import { countRo } from "@/lib/utils/plural";
 import { cn } from "@/lib/utils/cn";
 
 const SORTS: { value: AuctionSort; label: string }[] = [
-  { value: "ENDING_SOON", label: "Se termină curând" },
+  { value: "ENDING_SOON", label: "Aproape de final" },
   { value: "NEWEST", label: "Cele mai noi" },
   { value: "MOST_BIDS", label: "Cele mai licitate" },
   { value: "PRICE_ASC", label: "Preț crescător" },
@@ -420,7 +420,7 @@ export function AuctionBrowser() {
               skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
               emptyState={
                 <EmptyState
-                  title="Nimic pe filtrele astea"
+                  title="Nicio licitație găsită"
                   action={
                     activeCount > 0 ? (
                       <Button onClick={clearAll}>Șterge filtrele</Button>

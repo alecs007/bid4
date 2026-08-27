@@ -26,7 +26,7 @@ import { formatMemberSince } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
 const SORTS: { value: AuctionSort; label: string }[] = [
-  { value: "ENDING_SOON", label: "Se termină curând" },
+  { value: "ENDING_SOON", label: "Aproape de final" },
   { value: "NEWEST", label: "Cele mai noi" },
   { value: "MOST_BIDS", label: "Cele mai licitate" },
   { value: "PRICE_DESC", label: "Preț descrescător" },
@@ -350,9 +350,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
                   : "Nicio licitație aici încă"
               }
               action={
-                <ButtonLink href="/cont/anunturi/nou">
-                  Vinde acum
-                </ButtonLink>
+                <ButtonLink href="/cont/anunturi/nou">Vinde acum</ButtonLink>
               }
               compact
             />

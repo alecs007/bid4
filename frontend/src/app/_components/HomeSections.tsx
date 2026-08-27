@@ -51,7 +51,7 @@ function RowHeader({
  * rolls up from. The smallest sum of the same width, never a bare "0": the digits
  * are tabular, so the sentence after it never reflows.
  */
-const RAISED_PLACEHOLDER = formatMoney(lei(100_000), { compact: true });
+const RAISED_PLACEHOLDER = formatMoney(lei(10_000), { compact: true });
 
 const COUNT_PLACEHOLDER = "0";
 /** Two characters holds both "8" and "12" without nudging the word after it. */
@@ -63,7 +63,7 @@ function Count({ value }: { value: number | null }) {
       <span
         aria-hidden="true"
         className="numeric inline-block font-bold text-ink-300"
-        style={{ minWidth: `${COUNT_CHARS}ch` }}
+        // style={{ minWidth: `${COUNT_CHARS}ch` }}
       >
         {COUNT_PLACEHOLDER}
       </span>
@@ -75,7 +75,7 @@ function Count({ value }: { value: number | null }) {
     <AnimatedNumber
       value={value}
       format={(count) => String(count)}
-      minChars={COUNT_CHARS}
+      //  minChars={COUNT_CHARS}
       animateOnMount={false}
       className="font-bold text-ink-800"
     />
@@ -140,7 +140,7 @@ export function EndingSoonRow() {
       <section aria-labelledby="ending-soon">
         <RowHeader
           id="ending-soon"
-          title="Se încheie curând"
+          title="Aproape de final 🔥"
           href="/licitatii?endingSoon=1"
         />
         <AuctionGrid

@@ -53,9 +53,9 @@ export function RegisterForm() {
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   /** Set once the account exists and the confirmation link is on its way. */
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(
-    null,
-  );
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState<
+    string | null
+  >(null);
 
   const isOrganization = accountType === "ORGANIZATION";
 
@@ -77,7 +77,8 @@ export function RegisterForm() {
         found.orgLegalName = "Completează denumirea legală a organizației.";
       }
       if (!orgRegistrationNumber.trim()) {
-        found.orgRegistrationNumber = "Completează codul de înregistrare (CUI).";
+        found.orgRegistrationNumber =
+          "Completează codul de înregistrare (CUI).";
       }
     }
 
@@ -170,10 +171,7 @@ export function RegisterForm() {
           </Alert>
         ) : null}
 
-        <Field
-          label="Tip de cont"
-          hint="Ambele pot licita, vinde și propune cauze. Diferă doar documentele cerute la verificarea unei cauze."
-        >
+        <Field label="Tip de cont">
           <div className="grid gap-2 sm:grid-cols-2">
             <RadioCard
               name="accountType"
@@ -196,11 +194,7 @@ export function RegisterForm() {
           </div>
         </Field>
 
-        <Field
-          label="Nume afișat"
-          error={errors.displayName}
-          hint="Numele apare pe anunțuri, oferte și profil."
-        >
+        <Field label="Nume afișat" error={errors.displayName}>
           <Input
             name="displayName"
             autoComplete="name"
@@ -252,7 +246,7 @@ export function RegisterForm() {
         <Field
           label="Parolă"
           error={errors.password}
-          hint={`Cel puțin ${ACCOUNT.MIN_PASSWORD_LENGTH} caractere.`}
+          // hint={`Cel puțin ${ACCOUNT.MIN_PASSWORD_LENGTH} caractere.`}
         >
           <PasswordInput
             name="password"

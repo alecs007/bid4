@@ -23,7 +23,9 @@ export function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {},
+  );
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -35,7 +37,7 @@ export function LoginForm() {
   // TODO(backend): POST /auth/forgot-password — there is no reset flow yet, so
   // the link is left out rather than pointing nowhere.
   const arrive = (name: string) => {
-    toast.success(`Bine ai revenit, ${name.split(" ")[0]}!`);
+    toast.success(`Bine ai venit, ${name.split(" ")[0]}!`);
     router.replace(destination);
   };
 
@@ -64,8 +66,10 @@ export function LoginForm() {
 
   return (
     <AuthShell
-      title="Bine ai revenit"
-      aside={<SeedAccounts onSignedIn={(account) => arrive(account.displayName)} />}
+      title="Bine ai venit!"
+      aside={
+        <SeedAccounts onSignedIn={(account) => arrive(account.displayName)} />
+      }
       description="Intră în cont pentru a licita, a vinde și a urmări cauzele pe care le susții."
       footer={
         <>

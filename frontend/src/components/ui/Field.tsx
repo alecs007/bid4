@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  ComponentPropsWithoutRef,
-  ReactNode,
-  Ref,
-} from "react";
+import type { ComponentPropsWithoutRef, ReactNode, Ref } from "react";
 import { createContext, useContext, useId } from "react";
 import { Icons } from "@/components/icons";
 
@@ -129,7 +125,7 @@ export function Input({ className, leading, trailing, ...props }: InputProps) {
       className={cn(
         "group flex h-12 items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-ink-200 transition",
         "focus-within:ring-2 focus-within:ring-primary-500 hover:ring-ink-300",
-        props["aria-invalid"] ?? fieldProps["aria-invalid"]
+        (props["aria-invalid"] ?? fieldProps["aria-invalid"])
           ? "ring-danger-500"
           : "",
         className,
@@ -221,7 +217,7 @@ export function RadioCard({
       <label
         htmlFor={id}
         className={cn(
-          "flex cursor-pointer items-start gap-3 rounded-2xl bg-ink-100 p-4 transition",
+          "flex cursor-pointer items-start gap-2 rounded-2xl bg-ink-100 p-3 transition whitespace-nowrap",
           "hover:bg-ink-200/70 peer-checked:bg-primary-50 peer-checked:ring-2 peer-checked:ring-primary-500",
           "peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
           "peer-disabled:cursor-not-allowed peer-disabled:opacity-60",
@@ -229,7 +225,10 @@ export function RadioCard({
         )}
       >
         {icon ? (
-          <span className="mt-0.5 shrink-0 text-xl text-ink-700" aria-hidden="true">
+          <span
+            className="mt-0.5 shrink-0 text-xl text-ink-700"
+            aria-hidden="true"
+          >
             {icon}
           </span>
         ) : null}

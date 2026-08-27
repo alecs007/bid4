@@ -545,7 +545,7 @@ export function SiteHeader() {
                 Strânge fonduri
               </span>
               <span className="text-sm leading-tight text-primary-900/80">
-                Deschide o cauză
+                pentru o cauză care necesită sprijin
               </span>
             </span>
             <Icons.forward
