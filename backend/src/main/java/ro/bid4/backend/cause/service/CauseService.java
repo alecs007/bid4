@@ -81,7 +81,7 @@ public class CauseService {
                 // Ties broken by id, so the order is stable between calls.
                 Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.ASC, "id"))));
 
-    return mapper.toResponses(found.getContent(), viewer);
+    return mapper.toCards(found.getContent(), viewer);
   }
 
   /** GET /causes/{idOrSlug} — the page is reachable by either. */
@@ -118,7 +118,7 @@ public class CauseService {
             .limit(TRENDING_COUNT)
             .toList();
 
-    return mapper.toResponses(ranked, viewer);
+    return mapper.toCards(ranked, viewer);
   }
 
   /** GET /users/me/causes — any status, including drafts and rejections. */
@@ -126,7 +126,7 @@ public class CauseService {
     if (viewer.isAnonymous()) {
       return List.of();
     }
-    return mapper.toResponses(causes.findByOrganizerIdOrderByCreatedAtDesc(viewer.id()), viewer);
+    return mapper.toCards(causes.findByOrganizerIdOrderByCreatedAtDesc(viewer.id()), viewer);
   }
 
   private static boolean isVisible(Cause cause, Viewer viewer) {

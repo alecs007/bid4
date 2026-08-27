@@ -3,6 +3,7 @@ package ro.bid4.backend.catalog.api;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,6 +24,7 @@ import ro.bid4.backend.catalog.api.dto.PlaceBidResponse;
 import ro.bid4.backend.catalog.service.AuctionService;
 import ro.bid4.backend.catalog.service.BidService;
 import ro.bid4.backend.common.web.PageResponse;
+import ro.bid4.backend.common.web.PublicCaching;
 import ro.bid4.backend.security.web.Viewers;
 
 /**
@@ -53,8 +55,8 @@ public class AuctionController {
 
   /** Before {@code /{id}}: a literal segment wins over a variable one, so this is not ambiguous. */
   @GetMapping("/featured")
-  FeaturedAuctionsResponse featured(@AuthenticationPrincipal Jwt jwt) {
-    return auctions.featured(Viewers.from(jwt));
+  ResponseEntity<FeaturedAuctionsResponse> featured(@AuthenticationPrincipal Jwt jwt) {
+    return PublicCaching.perViewer(auctions.featured(Viewers.from(jwt)));
   }
 
   @GetMapping("/{id}")

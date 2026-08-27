@@ -84,7 +84,23 @@ public class CauseMapper {
 
   /* --- the cause's own page ------------------------------------------------ */
 
-  public List<CauseResponse> toResponses(List<Cause> loaded, Viewer viewer) {
+  /**
+   * A row of cause cards: name, imagery, progress, and how many listings are running.
+   *
+   * <p>Does not read the paperwork. A card shows none of it, and loading the documents and the
+   * evidence for a homepage row is two round trips per request spent on data the page will not
+   * render. Those arrive with {@link #toResponse}, which is what the cause's own page calls.
+   */
+  public List<CauseResponse> toCards(List<Cause> loaded, Viewer viewer) {
+    return map(loaded, viewer, false);
+  }
+
+  /** One cause, with everything its page shows — the paperwork included. */
+  public CauseResponse toResponse(Cause cause, Viewer viewer) {
+    return map(List.of(cause), viewer, true).getFirst();
+  }
+
+  private List<CauseResponse> map(List<Cause> loaded, Viewer viewer, boolean withPaperwork) {
     if (loaded.isEmpty()) {
       return List.of();
     }
@@ -99,15 +115,16 @@ public class CauseMapper {
     Map<UUID, PublicUserResponse> organizers = users.publicUsersById(organizerIds);
 
     Map<UUID, List<CauseDocument>> documentsByCause = new HashMap<>();
-    for (CauseDocument document : documents.findByCauseIdInOrderByUploadedAtAsc(causeIds)) {
-      documentsByCause
-          .computeIfAbsent(document.getCauseId(), key -> new ArrayList<>())
-          .add(document);
-    }
-
     Map<UUID, List<CauseEvidence>> evidenceByCause = new HashMap<>();
-    for (CauseEvidence item : evidence.findByCauseIdIn(causeIds)) {
-      evidenceByCause.computeIfAbsent(item.getCauseId(), key -> new ArrayList<>()).add(item);
+    if (withPaperwork) {
+      for (CauseDocument document : documents.findByCauseIdInOrderByUploadedAtAsc(causeIds)) {
+        documentsByCause
+            .computeIfAbsent(document.getCauseId(), key -> new ArrayList<>())
+            .add(document);
+      }
+      for (CauseEvidence item : evidence.findByCauseIdIn(causeIds)) {
+        evidenceByCause.computeIfAbsent(item.getCauseId(), key -> new ArrayList<>()).add(item);
+      }
     }
 
     Map<UUID, Integer> liveCounts = new HashMap<>();
@@ -126,10 +143,6 @@ public class CauseMapper {
                     liveCounts.getOrDefault(cause.getId(), 0),
                     viewer))
         .toList();
-  }
-
-  public CauseResponse toResponse(Cause cause, Viewer viewer) {
-    return toResponses(List.of(cause), viewer).getFirst();
   }
 
   private CauseResponse toResponse(

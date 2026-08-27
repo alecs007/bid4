@@ -62,9 +62,14 @@ public class AuctionMapper {
     Map<UUID, PublicUserResponse> sellers = users.publicUsersById(sellerIds);
     Map<UUID, CauseSummaryResponse> causeSummaries = causes.summariesById(causeIds);
 
+    // Who is leading only matters for telling a viewer whether it is them, so an
+    // anonymous page does not pay for it. Same for the two lookups below: with
+    // nobody to answer about, they would fetch a row to compare against null.
     Map<UUID, UUID> leaders = new HashMap<>();
-    for (BidRepository.Leader leader : bids.findLeaders(auctionIds, BidStatus.WINNING)) {
-      leaders.put(leader.getAuctionId(), leader.getBidderId());
+    if (viewerId != null) {
+      for (BidRepository.Leader leader : bids.findLeaders(auctionIds, BidStatus.WINNING)) {
+        leaders.put(leader.getAuctionId(), leader.getBidderId());
+      }
     }
 
     Set<UUID> watched =

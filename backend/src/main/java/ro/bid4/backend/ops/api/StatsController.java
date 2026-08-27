@@ -1,8 +1,10 @@
 package ro.bid4.backend.ops.api;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import ro.bid4.backend.common.web.PublicCaching;
 import ro.bid4.backend.ops.service.StatsService;
 
 /** The counters the homepage puts in front of a first-time visitor. */
@@ -17,7 +19,7 @@ public class StatsController {
   }
 
   @GetMapping("/public")
-  StatsService.PublicStatsResponse publicStats() {
-    return stats.publicStats();
+  ResponseEntity<StatsService.PublicStatsResponse> publicStats() {
+    return PublicCaching.shared(stats.publicStats());
   }
 }

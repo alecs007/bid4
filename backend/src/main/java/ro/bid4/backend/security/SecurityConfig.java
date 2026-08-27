@@ -66,6 +66,11 @@ public class SecurityConfig {
         .headers(
             headers ->
                 headers
+                    // cacheControl is left as Spring Security configures it: it
+                    // stamps no-store on anything that has not set a Cache-Control
+                    // of its own, and steps aside for anything that has. That is
+                    // what lets PublicCaching opt the browsing endpoints in
+                    // without weakening the default for everything else.
                     .frameOptions(frame -> frame.deny())
                     .contentTypeOptions(Customizer.withDefaults())
                     .referrerPolicy(
