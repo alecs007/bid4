@@ -48,29 +48,65 @@ const NO_REFRESH = ["/auth/login", "/auth/register", "/auth/refresh"];
 
 let refreshing: Promise<string | null> | null = null;
 
+/** Serialises the exchange across tabs, where the browser supports it. */
+const REFRESH_LOCK = "bid4.refresh";
+
+async function exchangeRefreshCookie(): Promise<string | null> {
+  try {
+    const response = await fetch(buildUrl("/auth/refresh"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) return null;
+    const session = (await response.json()) as { token?: string };
+    if (!session.token) return null;
+    writeToken(session.token);
+    return session.token;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Trades the refresh cookie for a new access token.
  *
  * The cookie is httpOnly, so nothing here reads it — `credentials: "include"`
- * is what sends it. Concurrent callers share one request: a page that fires
- * five calls at once should not open five sessions and invalidate four of them,
- * since the server treats a spent refresh token as theft.
+ * is what sends it.
+ *
+ * Two things have to be true at once for this to be safe, because refresh
+ * tokens rotate and the server treats a spent one as a stolen copy and revokes
+ * every session the account has.
+ *
+ * Within a tab, concurrent callers share one promise: a page firing five calls
+ * that all expire together must send one refresh, not five.
+ *
+ * Across tabs is the harder half, and the reason for the lock. Access tokens
+ * live in localStorage, which every tab shares, so two tabs go stale at the
+ * same instant and both reach for the same cookie. The second one to arrive
+ * looks exactly like theft, and the user is signed out everywhere through no
+ * fault of their own. The lock lets one tab through at a time, and the ones
+ * that waited find the token already replaced and use it instead of asking
+ * again — which is also one fewer request.
  */
-function refreshSession(): Promise<string | null> {
+function refreshSession(stale: string | null): Promise<string | null> {
   refreshing ??= (async () => {
+    const exchangeUnlessSomeoneElseDidIt = async () => {
+      const current = readToken();
+      if (current && current !== stale) return current;
+      return exchangeRefreshCookie();
+    };
+
     try {
-      const response = await fetch(buildUrl("/auth/refresh"), {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) return null;
-      const session = (await response.json()) as { token?: string };
-      if (!session.token) return null;
-      writeToken(session.token);
-      return session.token;
-    } catch {
-      return null;
+      // Absent in older browsers and in any non-browser context; the in-tab
+      // promise above still holds there.
+      if (typeof navigator !== "undefined" && navigator.locks) {
+        return await navigator.locks.request(
+          REFRESH_LOCK,
+          exchangeUnlessSomeoneElseDidIt,
+        );
+      }
+      return await exchangeUnlessSomeoneElseDidIt();
     } finally {
       refreshing = null;
     }
@@ -128,13 +164,16 @@ export async function http<T>(
   path: string,
   options: HttpOptions = {},
 ): Promise<T> {
-  const response = await send(path, options, readToken());
+  const stale = readToken();
+  const response = await send(path, options, stale);
 
   if (response.status !== 401 || NO_REFRESH.some((p) => path.startsWith(p))) {
     return unwrap<T>(response);
   }
 
-  const token = await refreshSession();
+  // The token that just failed, so a tab that waited on the lock can tell a
+  // replacement from the one it already tried.
+  const token = await refreshSession(stale);
   if (!token) {
     writeToken(null);
     return unwrap<T>(response);
