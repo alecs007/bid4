@@ -92,7 +92,7 @@ export default function HomePage() {
               {STEPS.map((step) => (
                 <li
                   key={step.title}
-                  className="flex flex-col rounded-2xl bg-gray-50/50 p-6 ring-1 ring-edge sm:p-8"
+                  className="flex flex-col rounded-2xl bg-gray-50/50 px-5 py-6 ring-1 ring-edge sm:p-8"
                 >
                   <div className="relative mb-6 h-32 w-full shrink-0 sm:h-40 lg:h-42">
                     <Image
@@ -118,7 +118,7 @@ export default function HomePage() {
             aria-labelledby="start-cause"
             className="overflow-hidden rounded-3xl bg-white ring-1 ring-edge"
           >
-            <div className="flex flex-col gap-5 p-8 sm:flex-row items-center sm:gap-10 sm:p-10">
+            <div className="flex flex-col gap-5 p-8 sm:flex-row items-center text-center sm:text-left sm:gap-10 sm:p-10">
               <Mascot mood="love" size={156} className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <h2
