@@ -55,7 +55,7 @@ const RAISED_PLACEHOLDER = formatMoney(lei(10_000), { compact: true });
 
 const COUNT_PLACEHOLDER = "0";
 /** Two characters holds both "8" and "12" without nudging the word after it. */
-const COUNT_CHARS = 2;
+// const COUNT_CHARS = 2;
 
 function Count({ value }: { value: number | null }) {
   if (value === null) {
