@@ -3,33 +3,31 @@ import type { ReactNode } from "react";
 import { Mascot, Skeleton, type MascotMood } from "@/components/ui";
 
 export function AuthShell({
-  mood = "happy",
+  mood = "hello",
   title,
   description,
   children,
-  aside,
   footer,
 }: {
   mood?: MascotMood;
   title: string;
   description: string;
   children: ReactNode;
-  aside?: ReactNode;
   footer?: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col items-center gap-5">
-      <Mascot mood={mood} size={84} floating />
-      <div className="text-center">
-        <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
-          {title}
-        </h1>
-        <p className="mt-1.5 text-ink-600">{description}</p>
+    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5">
+      <div className="w-full flex flex-col gap-5 items-center rounded-3xl bg-white ring-1 ring-edge p-6 sm:p-8">
+        <Mascot mood={mood} size={96} />
+        <div className="text-center">
+          <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
+            {title}
+          </h1>
+          <p className="mt-1.5 text-ink-600">{description}</p>
+        </div>
+        <div className="w-full">{children}</div>
       </div>
-      <div className="w-full rounded-3xl bg-white ring-1 ring-edge p-5 sm:p-6">
-        {children}
-      </div>
-      {aside}
+
       {footer ? <div className="text-sm text-ink-600">{footer}</div> : null}
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
+import Image from "next/image";
 import { Icons } from "@/components/icons";
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import {
@@ -232,7 +232,17 @@ export function AuctionBrowser() {
               active={categories.includes(category.id)}
               onClick={() => toggleValue("category", category.id)}
             >
-              <span aria-hidden="true">{category.emoji}</span>
+              <div
+                aria-hidden="true"
+                className="relative h-4 w-4 shrink-0 overflow-hidden"
+              >
+                <Image
+                  src={`/images/illustrations/categories/${category.id}.svg`}
+                  alt=""
+                  fill
+                  className="object-contain scale-[1.04]"
+                />
+              </div>
               {category.label}
             </Chip>
           ))}

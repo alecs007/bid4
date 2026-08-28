@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
 import { Icons } from "@/components/icons";
 import { Avatar, ButtonLink, Logo, Skeleton } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
@@ -129,7 +129,7 @@ function HeaderSearch({
 const CATEGORY_TILE =
   "flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-[15px] font-bold whitespace-nowrap ring-1 transition sm:gap-2.5 sm:px-3";
 
-function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
+export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div className="grid grid-cols-2 gap-1.5">
       <Link
@@ -156,9 +156,17 @@ function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
             "bg-canvas text-ink-800 ring-edge hover:bg-white hover:ring-ink-300",
           )}
         >
-          <span aria-hidden="true" className="shrink-0 text-lg">
-            {category.emoji}
-          </span>
+          <div
+            aria-hidden="true"
+            className="relative h-4.5 w-4.5 shrink-0 overflow-hidden"
+          >
+            <Image
+              src={`/images/illustrations/categories/${category.id}.svg`}
+              alt=""
+              fill
+              className="object-contain scale-[1.04]"
+            />
+          </div>
           <span className="truncate">{category.label}</span>
         </Link>
       ))}

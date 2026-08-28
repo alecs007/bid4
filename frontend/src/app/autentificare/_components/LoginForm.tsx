@@ -11,7 +11,6 @@ import { Alert, Button, Field, Input, useToast } from "@/components/ui";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { EMAIL_PATTERN, safeRedirect } from "@/lib/auth/form";
 import { errorMessage } from "@/lib/hooks/useApi";
-import { SeedAccounts } from "./SeedAccounts";
 
 export function LoginForm() {
   const router = useRouter();
@@ -67,10 +66,7 @@ export function LoginForm() {
   return (
     <AuthShell
       title="Bine ai venit!"
-      aside={
-        <SeedAccounts onSignedIn={(account) => arrive(account.displayName)} />
-      }
-      description="Intră în cont pentru a licita, a vinde și a urmări cauzele pe care le susții."
+      description="Intră în cont pentru a continua seria faptelor bune."
       footer={
         <>
           Nu ai încă un cont?{" "}

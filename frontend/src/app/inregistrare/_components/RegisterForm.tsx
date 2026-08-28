@@ -149,9 +149,9 @@ export function RegisterForm() {
 
   return (
     <AuthShell
-      mood="cheer"
+      mood="happy"
       title="Creează-ți contul"
-      description="Un singur cont pentru tot: licitezi, vinzi și poți deschide o cauză."
+      description="Un singur cont pentru a licita, a vinde și a susține cauze."
       footer={
         <>
           Ai deja cont?{" "}
@@ -171,15 +171,20 @@ export function RegisterForm() {
           </Alert>
         ) : null}
 
-        <Field label="Tip de cont">
-          <div className="grid gap-2 sm:grid-cols-2">
+        <Field label="Tipul de cont">
+          <div className="grid gap-2 grid-cols-2">
             <RadioCard
               name="accountType"
               value="INDIVIDUAL"
               checked={!isOrganization}
               onChange={() => setAccountType("INDIVIDUAL")}
               label="Persoană fizică"
-              icon={<Icons.account aria-hidden="true" className="h-5 w-5" />}
+              icon={
+                <Icons.account
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                />
+              }
             />
             <RadioCard
               name="accountType"
@@ -188,13 +193,19 @@ export function RegisterForm() {
               onChange={() => setAccountType("ORGANIZATION")}
               label="Organizație"
               icon={
-                <Icons.organization aria-hidden="true" className="h-5 w-5" />
+                <Icons.organization
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                />
               }
             />
           </div>
         </Field>
 
-        <Field label="Nume afișat" error={errors.displayName}>
+        <Field
+          label={isOrganization ? "Numele organizației" : "Numele tău"}
+          error={errors.displayName}
+        >
           <Input
             name="displayName"
             autoComplete="name"

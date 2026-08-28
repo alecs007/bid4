@@ -217,16 +217,16 @@ export function RadioCard({
       <label
         htmlFor={id}
         className={cn(
-          "flex cursor-pointer items-start gap-2 rounded-2xl bg-ink-100 p-3 transition whitespace-nowrap",
+          "flex cursor-pointer items-start gap-1.5 sm:gap-2 rounded-2xl bg-ink-100 p-3 transition whitespace-nowrap",
           "hover:bg-ink-200/70 peer-checked:bg-primary-50 peer-checked:ring-2 peer-checked:ring-primary-500",
           "peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
           "peer-disabled:cursor-not-allowed peer-disabled:opacity-60",
-          "peer-checked:[&_[data-dot]]:ring-[6px] peer-checked:[&_[data-dot]]:ring-primary-600",
+          "peer-checked:[&_[data-dot]]:ring-[5px] peer-checked:[&_[data-dot]]:ring-primary-600",
         )}
       >
         {icon ? (
           <span
-            className="mt-0.5 shrink-0 text-xl text-ink-700"
+            className="mt-0.5 shrink-0 text-lg text-ink-700"
             aria-hidden="true"
           >
             {icon}
@@ -234,7 +234,9 @@ export function RadioCard({
         ) : null}
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="font-display font-bold text-ink-900">{label}</span>
+            <span className="font-display font-bold text-ink-900 text-xs sm:text-sm">
+              {label}
+            </span>
             {badge}
           </span>
           {description ? (
@@ -246,7 +248,7 @@ export function RadioCard({
         <span
           data-dot=""
           aria-hidden="true"
-          className="mt-1 h-5 w-5 shrink-0 rounded-full bg-white ring-2 ring-inset ring-ink-300 transition-all"
+          className="mt-0.5 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 rounded-full bg-white ring-2 ring-inset ring-ink-300 transition-all"
         />
       </label>
     </div>

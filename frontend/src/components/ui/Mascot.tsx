@@ -7,7 +7,8 @@ export type MascotMood =
   | "sad"
   | "thinking"
   | "love"
-  | "idea";
+  | "idea"
+  | "hello";
 
 const MOOD_IMAGE_MAP: Record<MascotMood, string> = {
   happy: "/images/illustrations/mascot-happy.svg",
@@ -15,6 +16,7 @@ const MOOD_IMAGE_MAP: Record<MascotMood, string> = {
   sad: "/images/illustrations/mascot-sad.svg",
   love: "/images/illustrations/mascot-heart.svg",
   idea: "/images/illustrations/mascot-idea.svg",
+  hello: "/images/illustrations/mascot-hello.svg",
   thinking: "/images/illustrations/mascot-thinking.svg",
 };
 
