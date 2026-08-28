@@ -1,23 +1,23 @@
 import { API_BASE } from "@/lib/config";
-import { ApiError, type ApiErrorBody } from "@/lib/types";
+import { ApiError, type ApiErrorBody, type AuthSession } from "@/lib/types";
 
-const TOKEN_KEY = "bid4.token";
+/**
+ * The access token lives here and nowhere else.
+ *
+ * Not localStorage, not a cookie the document can read: whatever a script on
+ * the page can reach, a script that should not be on the page reaches too. A
+ * module variable dies with the tab, which is the whole reason
+ * `refreshSession()` exists — the httpOnly refresh cookie is what survives a
+ * reload, and spending it mints a replacement.
+ */
+let accessToken: string | null = null;
 
 export function readToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  return accessToken;
 }
 
 export function writeToken(token: string | null): void {
-  if (typeof window === "undefined") return;
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
-    // Mirrored into a cookie so server components can read it after the swap.
-    document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=604800; SameSite=Lax`;
-  } else {
-    window.localStorage.removeItem(TOKEN_KEY);
-    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
-  }
+  accessToken = token;
 }
 
 export interface HttpOptions extends Omit<RequestInit, "body"> {
@@ -46,12 +46,12 @@ function buildUrl(path: string, query?: HttpOptions["query"]): string {
 /** Endpoints that answer 401 for their own reasons; refreshing would loop. */
 const NO_REFRESH = ["/auth/login", "/auth/register", "/auth/refresh"];
 
-let refreshing: Promise<string | null> | null = null;
+let refreshing: Promise<AuthSession | null> | null = null;
 
 /** Serialises the exchange across tabs, where the browser supports it. */
 const REFRESH_LOCK = "bid4.refresh";
 
-async function exchangeRefreshCookie(): Promise<string | null> {
+async function exchangeRefreshCookie(): Promise<AuthSession | null> {
   try {
     const response = await fetch(buildUrl("/auth/refresh"), {
       method: "POST",
@@ -59,20 +59,22 @@ async function exchangeRefreshCookie(): Promise<string | null> {
       headers: { "Content-Type": "application/json" },
     });
     if (!response.ok) return null;
-    const session = (await response.json()) as { token?: string };
+    const session = (await response.json()) as AuthSession;
     if (!session.token) return null;
     writeToken(session.token);
-    return session.token;
+    return session;
   } catch {
     return null;
   }
 }
 
 /**
- * Trades the refresh cookie for a new access token.
+ * Trades the refresh cookie for an access token, and the user that goes with it.
  *
  * The cookie is httpOnly, so nothing here reads it — `credentials: "include"`
- * is what sends it.
+ * is what sends it. The response carries the user as well as the token, which
+ * is why boot restores a session with this one call and not a second one to
+ * `/auth/me`.
  *
  * Two things have to be true at once for this to be safe, because refresh
  * tokens rotate and the server treats a spent one as a stolen copy and revokes
@@ -81,32 +83,23 @@ async function exchangeRefreshCookie(): Promise<string | null> {
  * Within a tab, concurrent callers share one promise: a page firing five calls
  * that all expire together must send one refresh, not five.
  *
- * Across tabs is the harder half, and the reason for the lock. Access tokens
- * live in localStorage, which every tab shares, so two tabs go stale at the
- * same instant and both reach for the same cookie. The second one to arrive
- * looks exactly like theft, and the user is signed out everywhere through no
- * fault of their own. The lock lets one tab through at a time, and the ones
- * that waited find the token already replaced and use it instead of asking
- * again — which is also one fewer request.
+ * Across tabs is the harder half, and the reason for the lock. The access token
+ * above is per-tab now, but the cookie jar is not — tabs restoring on the same
+ * click, or going stale on the same timer, all reach for the same cookie, and
+ * the second to arrive looks exactly like theft. The user is then signed out
+ * everywhere through no fault of their own. The lock lets one tab through at a
+ * time, so each presents the cookie its predecessor rotated into place, which
+ * is an ordinary exchange rather than a replay.
  */
-function refreshSession(stale: string | null): Promise<string | null> {
+export function refreshSession(): Promise<AuthSession | null> {
   refreshing ??= (async () => {
-    const exchangeUnlessSomeoneElseDidIt = async () => {
-      const current = readToken();
-      if (current && current !== stale) return current;
-      return exchangeRefreshCookie();
-    };
-
     try {
       // Absent in older browsers and in any non-browser context; the in-tab
       // promise above still holds there.
       if (typeof navigator !== "undefined" && navigator.locks) {
-        return await navigator.locks.request(
-          REFRESH_LOCK,
-          exchangeUnlessSomeoneElseDidIt,
-        );
+        return await navigator.locks.request(REFRESH_LOCK, exchangeRefreshCookie);
       }
-      return await exchangeUnlessSomeoneElseDidIt();
+      return await exchangeRefreshCookie();
     } finally {
       refreshing = null;
     }
@@ -164,16 +157,20 @@ export async function http<T>(
   path: string,
   options: HttpOptions = {},
 ): Promise<T> {
-  const stale = readToken();
+  const stale = accessToken;
   const response = await send(path, options, stale);
 
   if (response.status !== 401 || NO_REFRESH.some((p) => path.startsWith(p))) {
     return unwrap<T>(response);
   }
 
-  // The token that just failed, so a tab that waited on the lock can tell a
-  // replacement from the one it already tried.
-  const token = await refreshSession(stale);
+  // A call that overlapped this one may already have replaced the token, in
+  // which case retrying is enough and a second rotation is waste.
+  const token =
+    accessToken && accessToken !== stale
+      ? accessToken
+      : ((await refreshSession())?.token ?? null);
+
   if (!token) {
     writeToken(null);
     return unwrap<T>(response);

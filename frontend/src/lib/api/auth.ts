@@ -19,10 +19,26 @@ import {
 
 import { slugify, uniqueSlug } from "@/lib/utils/slug";
 
-import { http, writeToken } from "./http";
+import { http, refreshSession, writeToken } from "./http";
 
 /** Seven days, matching the mock token's stated lifetime. */
 const SESSION_DAYS = 7;
+
+/**
+ * Mock mode only, and the one place an id is written to storage.
+ *
+ * A real session leaves nothing here: the token is in memory and the httpOnly
+ * refresh cookie restores it. The mock world has no cookies and no server, and
+ * it already persists itself to localStorage beside this — a mock id is a
+ * pointer into that fixture, not a credential.
+ */
+const MOCK_USER_KEY = "bid4.mock.userId";
+
+function rememberMockUser(userId: string | null): void {
+  if (typeof window === "undefined") return;
+  if (userId) window.localStorage.setItem(MOCK_USER_KEY, userId);
+  else window.localStorage.removeItem(MOCK_USER_KEY);
+}
 
 function mockSession(user: User): AuthSession {
   return {
@@ -66,6 +82,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
   const session = mockSession(user);
   writeToken(session.token);
+  rememberMockUser(user.id);
   return session;
 }
 
@@ -146,7 +163,28 @@ export async function resendVerification(email: string): Promise<void> {
   await delay();
 }
 
-/** GET /auth/me — called on boot to restore a session. */
+/**
+ * Restores a session on boot, or reports that there is none.
+ *
+ * Nothing readable survived the reload — the access token was a module variable
+ * in a page that no longer exists. The httpOnly refresh cookie did, so the only
+ * way to find out whether someone is signed in is to spend it. The exchange
+ * answers with the user as well as the token, so this costs one request rather
+ * than a refresh followed by `/auth/me`.
+ */
+export async function restore(): Promise<User | null> {
+  if (!USE_MOCK) return (await refreshSession())?.user ?? null;
+
+  const userId = typeof window === "undefined"
+    ? null
+    : window.localStorage.getItem(MOCK_USER_KEY);
+  if (!userId) return null;
+
+  await delay();
+  return getWorld().users.find((item) => item.id === userId) ?? null;
+}
+
+/** GET /auth/me — re-reads the signed-in user after a profile change. */
 export async function me(userId?: string): Promise<User> {
   if (!USE_MOCK) return http<User>("/auth/me");
 
@@ -163,6 +201,7 @@ export async function logout(): Promise<void> {
     await http<void>("/auth/logout", { method: "POST" }).catch(() => undefined);
   }
   writeToken(null);
+  rememberMockUser(null);
 }
 
 /** Dev-only: no backend counterpart — the role switcher is stripped in prod. */
@@ -174,6 +213,7 @@ export async function loginAsSeedAccount(userId: string): Promise<AuthSession> {
 
   const session = mockSession(user);
   writeToken(session.token);
+  rememberMockUser(user.id);
   return session;
 }
 

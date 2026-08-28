@@ -20,12 +20,12 @@ import type {
 } from "@/lib/types";
 
 /**
- * Mock auth with the shape real JWT auth will have. After the swap `auth.me()`
- * calls `GET /auth/me` with the bearer token `lib/api/http.ts` already attaches,
- * and nothing here changes beyond dropping the stored id argument.
+ * Who is signed in, for the React tree.
+ *
+ * <p>It stores nothing itself. The access token is a module variable inside
+ * `lib/api/http.ts`, and the only thing that outlives a reload is the httpOnly
+ * refresh cookie — so boot asks the API rather than reading storage.
  */
-
-const USER_KEY = "bid4.userId";
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -47,17 +47,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function storeUserId(userId: string | null): void {
-  if (typeof window === "undefined") return;
-  if (userId) window.localStorage.setItem(USER_KEY, userId);
-  else window.localStorage.removeItem(USER_KEY);
-}
-
-function readUserId(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(USER_KEY);
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
@@ -68,22 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const restore = async () => {
-      const storedId = readUserId();
-      if (!storedId) {
-        if (!cancelled) setStatus("anonymous");
-        return;
-      }
-      try {
-        const restored = await authApi.me(storedId);
-        if (cancelled) return;
-        setUser(restored);
-        setStatus("authenticated");
-      } catch {
-        if (cancelled) return;
-        storeUserId(null);
-        setUser(null);
-        setStatus("anonymous");
-      }
+      const restored = await authApi.restore().catch(() => null);
+      if (cancelled) return;
+      setUser(restored);
+      setStatus(restored ? "authenticated" : "anonymous");
     };
 
     void restore();
@@ -93,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const adopt = useCallback((session: AuthSession) => {
-    storeUserId(session.user.id);
     setUser(session.user);
     setStatus("authenticated");
     return session.user;
@@ -120,20 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await authApi.logout();
-    storeUserId(null);
     setUser(null);
     setStatus("anonymous");
   }, []);
 
   const refresh = useCallback(async () => {
-    const storedId = readUserId();
-    if (!storedId) return;
+    if (!user) return;
     try {
-      setUser(await authApi.me(storedId));
+      setUser(await authApi.me(user.id));
     } catch {
       // A failed refresh should not sign the user out mid-action.
     }
-  }, []);
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(() => {
     const hasRole = (...roles: UserRole[]) =>
