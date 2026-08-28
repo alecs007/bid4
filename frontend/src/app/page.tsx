@@ -34,7 +34,7 @@ export default function HomePage() {
     <PageTransition>
       <main className="flex flex-col">
         <section className="bg-white">
-          <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pt-4 pb-8 sm:px-6 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8 lg:pt-14 lg:pb-16">
+          <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pb-8 sm:px-6 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8 lg:pt-6 lg:pb-16">
             <div>
               <h1 className="font-display text-[2.1rem] leading-[1.05] font-extrabold text-ink-900 sm:text-5xl lg:text-6xl">
                 Investește în bine
@@ -63,9 +63,9 @@ export default function HomePage() {
                 <ImpactLine />
               </div>
             </div>
-            <div className="relative order-first aspect-video w-full lg:order-none">
+            <div className="relative order-first aspect-[3/2] w-full lg:order-none">
               <Image
-                src="/images/hero-mascot.avif"
+                src="/images/hero-mascot-illustration.avif"
                 alt="Mascota bid4 ține o cutie cu donații, lângă haine și lucruri pregătite de trimis."
                 fill
                 priority
@@ -118,7 +118,7 @@ export default function HomePage() {
             aria-labelledby="start-cause"
             className="overflow-hidden rounded-3xl bg-white ring-1 ring-edge"
           >
-            <div className="flex flex-col gap-5 p-6 sm:flex-row items-center sm:gap-10 sm:p-10">
+            <div className="flex flex-col gap-5 p-8 sm:flex-row items-center sm:gap-10 sm:p-10">
               <Mascot mood="love" size={156} className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <h2

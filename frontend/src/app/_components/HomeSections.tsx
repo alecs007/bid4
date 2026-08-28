@@ -266,7 +266,7 @@ export function CategoryRow({
                 alt={`${category.label} illustration`}
                 fill
                 priority
-                className="object-contain scale-105"
+                className="object-contain scale-104"
               />
             </div>
 
