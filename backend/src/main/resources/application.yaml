@@ -114,6 +114,10 @@ spring:
 server:
   port: 8080
   shutdown: graceful
+  # Behind a proxy that terminates TLS the application otherwise sees plain HTTP,
+  # and every decision keyed on that — the Secure flag on the refresh cookie, the
+  # scheme in a redirect — is made on the wrong information.
+  forward-headers-strategy: framework
   error:
     # An error response says what went wrong in our own words, never in the
     # framework's: stack traces and binding details are a map of the internals.
@@ -177,6 +181,10 @@ bid4:
     refresh-token-ttl: 30d
   cors:
     allowed-origins: ${BID4_CORS_ORIGINS:http://localhost:3000}
+  cookies:
+    # Overridden to false only by the dev profile, where there is no TLS and the
+    # browser would refuse a Secure cookie over plain http.
+    require-secure: true
   storage:
     endpoint: http://${MINIO_HOST:localhost}:${MINIO_PORT:9000}
     access-key: ${MINIO_ROOT_USER:}
@@ -191,7 +199,7 @@ bid4:
     max-failed-logins: 5
     lockout-duration: 15m
   mail:
-    from: ${MAIL_FROM:bid4 <nu-raspunde@bid4.ro>}
+    from: ${MAIL_FROM:bid4 <noreply@bid4.ro>}
     # Where a verification link points. The backend never renders HTML, so the
     # link lands on the web app, which then calls the API.
     web-base-url: ${BID4_WEB_BASE_URL:http://localhost:3000}
@@ -208,6 +216,12 @@ bid4:
     auth:
       capacity: 10
       window: 15m
+    # Generous and fail-open: a refresh token cannot be guessed, and refusing the
+    # exchange logs people out rather than protecting them. Still bounded, so a
+    # loop cannot hammer it.
+    refresh:
+      capacity: 60
+      window: 5m
     write:
       capacity: 60
       window: 1m

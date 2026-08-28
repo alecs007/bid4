@@ -32,7 +32,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
           + "\"}";
 
   private static final Set<String> CREDENTIAL_PATHS =
-      Set.of("/auth/login", "/auth/register", "/auth/refresh", "/auth/resend-verification");
+      Set.of("/auth/login", "/auth/register", "/auth/resend-verification");
+
+  private static final String REFRESH_PATH = "/auth/refresh";
 
   private final RateLimiter rateLimiter;
 
@@ -81,6 +83,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // budget would lock a normal session out within minutes.
     if (CREDENTIAL_PATHS.contains(path)) {
       return RateLimitPolicy.AUTH;
+    }
+    if (REFRESH_PATH.equals(path)) {
+      return RateLimitPolicy.REFRESH;
     }
     return HttpMethod.GET.matches(request.getMethod())
             || HttpMethod.HEAD.matches(request.getMethod())

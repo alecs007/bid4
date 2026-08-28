@@ -13,16 +13,16 @@ public enum ErrorCode {
   VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "Verifică datele completate."),
   MALFORMED_REQUEST(HttpStatus.BAD_REQUEST, "Cererea nu a putut fi citită."),
   EMAIL_TAKEN(HttpStatus.BAD_REQUEST, "Există deja un cont cu acest email."),
-  TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "Trebuie să accepți termenii ca să continui."),
+  TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "Trebuie să accepți termenii pentru a continua."),
 
-  UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Autentifică-te ca să continui."),
+  UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Autentifică-te pentru a continua."),
   INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Email sau parolă greșite."),
   INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "Sesiunea a expirat. Autentifică-te din nou."),
 
   FORBIDDEN(HttpStatus.FORBIDDEN, "Nu ai acces la această resursă."),
   EMAIL_NOT_VERIFIED(
       HttpStatus.FORBIDDEN,
-      "Confirmă adresa de email ca să continui. Ți-am trimis un link la înregistrare."),
+      "Confirmă adresa de email pentru a continua. Ți-am trimis un link pe email la înregistrare."),
   ACCOUNT_SUSPENDED(HttpStatus.FORBIDDEN, "Contul este suspendat. Scrie-ne la ajutor@bid4.ro."),
 
   VERIFICATION_LINK_INVALID(

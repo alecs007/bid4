@@ -40,6 +40,9 @@ public class AuthController {
 
   static final String REFRESH_COOKIE = "bid4.refresh";
 
+  /** Carries no token — only that a session exists, and what it may render. */
+  static final String SESSION_COOKIE = "bid4.session";
+
   private final AuthService authService;
   private final EmailVerificationService emailVerification;
   private final Bid4Properties properties;
@@ -89,6 +92,7 @@ public class AuthController {
     AuthService.SessionResult result = authService.login(request, clientIp(http), userAgent(http));
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, refreshCookie(result.refreshToken(), http).toString())
+        .header(HttpHeaders.SET_COOKIE, sessionCookie(result.session().user(), http).toString())
         .body(result.session());
   }
 
@@ -100,6 +104,7 @@ public class AuthController {
         authService.refresh(refreshToken, clientIp(http), userAgent(http));
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, refreshCookie(result.refreshToken(), http).toString())
+        .header(HttpHeaders.SET_COOKIE, sessionCookie(result.session().user(), http).toString())
         .body(result.session());
   }
 
@@ -110,6 +115,7 @@ public class AuthController {
     authService.logout(refreshToken);
     return ResponseEntity.noContent()
         .header(HttpHeaders.SET_COOKIE, expiredRefreshCookie(http).toString())
+        .header(HttpHeaders.SET_COOKIE, expiredSessionCookie(http).toString())
         .build();
   }
 
@@ -129,14 +135,57 @@ public class AuthController {
   private ResponseCookie.ResponseCookieBuilder baseCookie(String value, HttpServletRequest http) {
     return ResponseCookie.from(REFRESH_COOKIE, value)
         .httpOnly(true)
-        // Set only over TLS, and therefore not over plain http in development —
-        // where the browser would refuse the cookie outright.
-        .secure(http.isSecure())
+        .secure(isSecure(http))
         // Strict is what stands in for CSRF protection on /auth/refresh: a POST
         // from another site simply does not carry this cookie. The frontend is
         // same-site with the API, so its own calls are unaffected.
         .sameSite("Strict")
         .path("/auth");
+  }
+
+  /**
+   * Says that a session exists, and nothing else.
+   *
+   * <p>The web app needs to know whether to render a signed-in shell before it has asked the API
+   * anything — otherwise every protected route flashes its signed-out state first. It used to learn
+   * that by reading the access token out of storage, which meant the token had to be somewhere a
+   * script could reach.
+   *
+   * <p>This carries no token. It is the role and nothing more, so the worst a stolen copy achieves
+   * is rendering a page whose data the API then refuses. Lax rather than Strict because it has to
+   * survive a top-level navigation — being read during navigation is its entire purpose — and it is
+   * httpOnly so the page itself cannot read it either.
+   */
+  private ResponseCookie sessionCookie(UserResponse user, HttpServletRequest http) {
+    return sessionCookieBase(user.roleName(), http)
+        .maxAge(properties.jwt().refreshTokenTtl())
+        .build();
+  }
+
+  private ResponseCookie expiredSessionCookie(HttpServletRequest http) {
+    return sessionCookieBase("", http).maxAge(Duration.ZERO).build();
+  }
+
+  private ResponseCookie.ResponseCookieBuilder sessionCookieBase(
+      String value, HttpServletRequest http) {
+    return ResponseCookie.from(SESSION_COOKIE, value)
+        .httpOnly(true)
+        .secure(isSecure(http))
+        .sameSite("Lax")
+        .path("/");
+  }
+
+  /**
+   * Whether the browser reached us over TLS.
+   *
+   * <p>{@code request.isSecure()} is false behind a proxy that terminates TLS unless Boot is told
+   * to trust the forwarded headers, which it is outside development — see {@code
+   * server.forward-headers-strategy}. Inferring this wrongly would ship the refresh token without
+   * Secure and let it travel in clear, so development is the only place it is allowed to come out
+   * false, and it says so rather than guessing.
+   */
+  private boolean isSecure(HttpServletRequest http) {
+    return properties.cookies().requireSecure() || http.isSecure();
   }
 
   private static String clientIp(HttpServletRequest request) {

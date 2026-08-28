@@ -70,6 +70,7 @@ public class RateLimiter {
   private Bid4Properties.RateLimit.Rule ruleFor(RateLimitPolicy policy) {
     return switch (policy) {
       case AUTH -> properties.rateLimit().auth();
+      case REFRESH -> properties.rateLimit().refresh();
       case WRITE -> properties.rateLimit().write();
       case READ -> properties.rateLimit().read();
     };

@@ -4,6 +4,10 @@
 # Nothing here is on by default, and nothing here belongs anywhere but a laptop.
 
 bid4:
+  cookies:
+    # No TLS on a laptop, and a Secure cookie over plain http is one the browser
+    # silently drops — which looks exactly like authentication being broken.
+    require-secure: false
   dev:
     # Creates the four demo accounts, but only into an empty database, and then
     # a catalogue for them. See DevDataSeeder and DevCatalogSeeder for the guards.

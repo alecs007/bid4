@@ -17,9 +17,11 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -33,6 +35,7 @@ import ro.bid4.backend.common.config.Bid4Properties;
 import ro.bid4.backend.common.error.ErrorCode;
 import ro.bid4.backend.common.web.RequestCorrelationFilter;
 import ro.bid4.backend.security.jwt.JwtService;
+import ro.bid4.backend.security.jwt.TokenVersionValidator;
 import ro.bid4.backend.security.ratelimit.RateLimitFilter;
 import ro.bid4.backend.security.ratelimit.RateLimiter;
 
@@ -160,8 +163,17 @@ public class SecurityConfig {
   }
 
   @Bean
-  JwtDecoder jwtDecoder() {
-    return NimbusJwtDecoder.withSecretKey(secretKey()).macAlgorithm(MacAlgorithm.HS256).build();
+  JwtDecoder jwtDecoder(TokenVersionValidator tokenVersion) {
+    NimbusJwtDecoder decoder =
+        NimbusJwtDecoder.withSecretKey(secretKey()).macAlgorithm(MacAlgorithm.HS256).build();
+
+    // The default validator only checks the clock. Issuer is checked because we
+    // set one, and tv because otherwise revoking a session leaves every access
+    // token already issued working until it expires on its own.
+    decoder.setJwtValidator(
+        new DelegatingOAuth2TokenValidator<>(
+            JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()), tokenVersion));
+    return decoder;
   }
 
   @Bean

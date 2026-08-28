@@ -21,6 +21,7 @@ import org.springframework.validation.annotation.Validated;
 public record Bid4Properties(
     @Valid @NotNull Jwt jwt,
     @Valid @NotNull Cors cors,
+    @Valid @NotNull Cookies cookies,
     @Valid @NotNull Storage storage,
     @Valid @NotNull Security security,
     @Valid @NotNull Mail mail,
@@ -33,9 +34,29 @@ public record Bid4Properties(
       @NotNull Duration accessTokenTtl,
       @NotNull Duration refreshTokenTtl) {
 
-    /** HS256 needs at least 256 bits of key, and a short one is worse than none. */
+    /** A record prints all of its components, and one of these signs every token. */
+    @Override
+    public String toString() {
+      return "Jwt[secret=<redacted>, issuer="
+          + issuer
+          + ", accessTokenTtl="
+          + accessTokenTtl
+          + ", refreshTokenTtl="
+          + refreshTokenTtl
+          + "]";
+    }
+
+    /**
+     * HS256 needs at least 256 bits of key, and a short one is worse than none.
+     *
+     * <p>Forty-four characters, not thirty-two: that is what 32 random bytes come to in base64, and
+     * the README's {@code openssl rand -base64 48} clears it comfortably. Thirty-two characters is
+     * exactly the floor rather than above it, and length is not entropy in any case — a run of the
+     * same letter passes this. The generation command is the real control; this only catches a
+     * secret nobody thought about.
+     */
     public Jwt {
-      if (secret != null && secret.length() < 32) {
+      if (secret != null && secret.length() < 44) {
         throw new IllegalStateException(
             "bid4.jwt.secret is too short — generate one with: openssl rand -base64 48");
       }
@@ -43,6 +64,16 @@ public record Bid4Properties(
   }
 
   public record Cors(@NotEmpty List<String> allowedOrigins) {}
+
+  /**
+   * Whether session cookies must carry Secure regardless of what the request looked like.
+   *
+   * <p>True everywhere but development. Behind a proxy that terminates TLS the application sees
+   * plain HTTP, and inferring the flag from that would ship a thirty-day refresh token without
+   * Secure — after which the browser sends it over any plaintext request to the domain. Stating it
+   * means a misconfigured proxy cannot quietly downgrade the cookie.
+   */
+  public record Cookies(boolean requireSecure) {}
 
   public record Storage(
       @NotBlank String endpoint,
@@ -62,6 +93,7 @@ public record Bid4Properties(
   public record RateLimit(
       boolean enabled,
       @Valid @NotNull Rule auth,
+      @Valid @NotNull Rule refresh,
       @Valid @NotNull Rule write,
       @Valid @NotNull Rule read) {
 

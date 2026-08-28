@@ -7,8 +7,22 @@ package ro.bid4.backend.security.ratelimit;
  * frequent, writing is neither, and guessing a password should be expensive long before either.
  */
 public enum RateLimitPolicy {
-  /** Sign-in, registration and refresh. Strict, and refuses when Redis is unreachable. */
+  /** Sign-in and registration. Strict, and refuses when Redis is unreachable. */
   AUTH(true),
+  /**
+   * Trading a refresh token for an access token.
+   *
+   * <p>Not AUTH, for two reasons. The token is 256 bits of SecureRandom, so there is nothing here
+   * to guess and no reason to price it like a password attempt; theft is caught by rotation and
+   * reuse detection instead. And the caller is anonymous by definition — the exchange sends no
+   * bearer token — so the budget is keyed by address, and a shared office or a carrier NAT would
+   * spend one budget between everyone behind it.
+   *
+   * <p>It also fails open. Access tokens last fifteen minutes; refusing refreshes while Redis is
+   * down would sign the entire user base out inside a quarter of an hour, which is a worse outcome
+   * than an unmetered window on an operation that cannot be brute-forced.
+   */
+  REFRESH(false),
   /** Anything that changes state. */
   WRITE(false),
   /** Reads. Generous, and lets traffic through if Redis is unreachable. */

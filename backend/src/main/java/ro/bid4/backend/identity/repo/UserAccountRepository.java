@@ -29,4 +29,14 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> 
       value = "select exists(select 1 from payment_methods where user_id = :userId)",
       nativeQuery = true)
   boolean hasPaymentMethod(@Param("userId") UUID userId);
+
+  /**
+   * The token version alone, checked on every authenticated request.
+   *
+   * <p>One column rather than the entity: this runs in the security filter chain, and loading a
+   * whole user with its associations to compare one integer is the difference between a cheap
+   * revocation check and a reason to skip having one.
+   */
+  @Query("select u.tokenVersion from UserAccount u where u.id = :userId")
+  Optional<Integer> findTokenVersionById(@Param("userId") UUID userId);
 }
