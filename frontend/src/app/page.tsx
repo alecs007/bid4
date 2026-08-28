@@ -1,7 +1,6 @@
 import Image from "next/image";
 
-import { Icons } from "@/components/icons";
-import { ButtonLink, IconBubble, Mascot } from "@/components/ui";
+import { ButtonLink, Mascot } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import {
   CategoryRow,
@@ -14,19 +13,19 @@ import { PageTransition } from "@/components/layout/PageTransition";
 
 const STEPS = [
   {
-    icon: Icons.auction,
-    title: "Licitezi",
-    body: "Fiecare anunț arată din prima cât din preț ajunge la cauză.",
+    image: "/images/illustrations/bid.svg",
+    title: "1. Alegi produsul dorit",
+    body: "Ai găsit ceva ce-ți place? Plasează o ofertă. Tu decizi suma maximă pe care ești dispus să o plătești pentru produsul ales.",
   },
   {
-    icon: Icons.escrow,
-    title: "Plătești protejat",
-    body: "Plata rămâne la bid4 până confirmi că ai primit coletul.",
+    image: "/images/illustrations/escrow.svg",
+    title: "2. Plătești în siguranță",
+    body: "Oferta ta a fost câștigătoare? Plătește online fără nicio grijă. Noi păstrăm banii în siguranță până când coletul ajunge la tine.",
   },
   {
-    icon: Icons.donation,
-    title: "Ajutorul ajunge",
-    body: "Donația pleacă spre cauză, iar vânzătorul își primește partea.",
+    image: "/images/illustrations/donation.svg",
+    title: "3. Finalizezi cu o faptă bună",
+    body: "Coletul a ajuns la tine? Confirmă că totul este ok. Din banii pe care i-ai plătit deja, o parte devin donație pentru o cauză verificată.",
   },
 ];
 
@@ -78,79 +77,89 @@ export default function HomePage() {
         </section>
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-10 sm:px-6 lg:gap-14 lg:px-8 lg:py-14">
           <EndingSoonRow />
-          <CategoryRow categories={AUCTION_CATEGORIES} />
-          <PopularRow />
+          <CategoryRow categories={AUCTION_CATEGORIES} />{" "}
+          <section
+            aria-labelledby="how"
+            className="rounded-3xl bg-white ring-1 ring-edge p-8 sm:p-10"
+          >
+            <h2
+              id="how"
+              className="mb-8 font-display text-2xl font-extrabold text-ink-900 sm:text-3xl text-center sm:text-left"
+            >
+              Cum funcționează?
+            </h2>
+            <ol className="grid gap-6 sm:grid-cols-3">
+              {STEPS.map((step) => (
+                <li
+                  key={step.title}
+                  className="flex flex-col rounded-2xl bg-gray-50/50 p-6 ring-1 ring-edge sm:p-8"
+                >
+                  <div className="relative mb-6 h-32 w-full shrink-0 sm:h-40 lg:h-42">
+                    <Image
+                      src={step.image}
+                      alt={step.title}
+                      fill
+                      className="object-contain object-center sm:object-left"
+                    />
+                  </div>
+
+                  <h3 className="font-display text-xl font-extrabold text-ink-900 text-center sm:text-2xl sm:text-left">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-ink-600 leading-relaxed text-center sm:text-left">
+                    {step.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
           <TrendingCauses />
           <section
             aria-labelledby="start-cause"
             className="overflow-hidden rounded-3xl bg-white ring-1 ring-edge"
           >
-            <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:gap-8 sm:p-8">
-              <Mascot mood="happy" size={104} className="shrink-0" />
+            <div className="flex flex-col gap-5 p-6 sm:flex-row items-center sm:gap-10 sm:p-10">
+              <Mascot mood="love" size={156} className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <h2
                   id="start-cause"
-                  className="font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
+                  className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl"
                 >
-                  Ai o cauză care are nevoie de sprijin?
+                  Știi o cauză care are nevoie de sprijin?
                 </h2>
-                <p className="mt-1.5 text-ink-600">
-                  Un tratament, un adăpost de animale, o școală fără bibliotecă
-                  sau o comunitate lovită de calamitate. Deschizi cauza, o
-                  verificăm în 48 de ore, apoi oricine poate licita în sprijinul
-                  ei.
+                <p className="mt-1.5 text-ink-600 sm:text-lg">
+                  Un tratament medical, o problemă socială, un proiect caritabil
+                  sau o situație de urgență. Trimite-ne detaliile, validăm cazul
+                  în 48 de ore și dăm startul licitațiilor caritabile.
                 </p>
                 <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
                   <ButtonLink href="/cont/cauze/noua" size="lg">
-                    Deschide o cauză
+                    Strânge fonduri prin bid4
                   </ButtonLink>
                   <ButtonLink
                     href="/cum-functioneaza#cauze"
                     variant="secondary"
                     size="lg"
                   >
-                    Vezi cum verificăm
+                    Află cum verificăm
                   </ButtonLink>
                 </div>
               </div>
             </div>
-          </section>
-          <section aria-labelledby="how">
-            <h2
-              id="how"
-              className="mb-4 font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
-            >
-              Cum funcționează
-            </h2>
-            <ol className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-              {STEPS.map((step) => (
-                <li
-                  key={step.title}
-                  className="rounded-3xl bg-white ring-1 ring-edge p-5"
-                >
-                  <IconBubble tone="primary" size="md">
-                    <step.icon aria-hidden="true" className="h-5 w-5" />
-                  </IconBubble>
-                  <h3 className="mt-3 font-display text-lg font-extrabold text-ink-900">
-                    {step.title}
-                  </h3>
-                  <p className="mt-1 text-ink-600">{step.body}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
+          </section>{" "}
+          <PopularRow />
           <section className="rounded-3xl bg-white ring-1 ring-edge px-5 py-10 text-center sm:px-12">
-            <Mascot mood="happy" size={80} className="mx-auto" />
-            <h2 className="mt-3 font-display text-xl font-extrabold text-ink-900 sm:text-2xl">
-              Ai lucruri care merită o a doua viață?
+            <Mascot mood="idea" size={156} className="mx-auto" />
+            <h2 className="mt-3 font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
+              Ce-ar fi să ajuți cu ce nu folosești?
             </h2>
-            <p className="mx-auto mt-1.5 max-w-md text-ink-600">
-              Alegi cauza și procentul donat. De plată, livrare și transferul
-              banilor ne ocupăm noi.
+            <p className="mx-auto mt-1.5 max-w-xl text-ink-600">
+              Să vinzi pe bid4 este cea mai simplă metodă de a face ordine în
+              casă și de a ajuta o cauză în același timp.
             </p>
             <div className="mt-5 flex justify-center">
               <ButtonLink href="/cont/anunturi/nou" size="lg">
-                Vinde acum
+                Începe să vinzi pe bid4
               </ButtonLink>
             </div>
           </section>

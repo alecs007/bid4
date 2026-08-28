@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import { CauseGrid } from "@/components/causes/CauseCard";
 import {
@@ -237,7 +238,12 @@ export function TrendingCauses() {
 export function CategoryRow({
   categories,
 }: {
-  categories: readonly { id: string; label: string; emoji: string }[];
+  categories: readonly {
+    id: string;
+    label: string;
+    emoji?: string;
+    icon?: string;
+  }[];
 }) {
   return (
     <section aria-labelledby="categories">
@@ -247,17 +253,24 @@ export function CategoryRow({
       >
         Categorii
       </h2>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {categories.map((category) => (
           <Link
             key={category.id}
             href={`/licitatii?category=${category.id}`}
-            className="flex items-center gap-2.5 rounded-2xl bg-white ring-1 ring-edge px-3.5 py-3 transition-transform hover:-translate-y-0.5"
+            className="group flex flex-col items-center justify-between rounded-2xl bg-white p-5 text-center ring-1 ring-edge transition-all hover:-translate-y-0.5 hover:ring-primary-500"
           >
-            <span aria-hidden="true" className="text-xl">
-              {category.emoji}
-            </span>
-            <span className="min-w-0 truncate font-display font-bold text-ink-900">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden sm:h-20 sm:w-20">
+              <Image
+                src={`/images/illustrations/categories/${category.id}.svg`}
+                alt={`${category.label} illustration`}
+                fill
+                priority
+                className="object-contain scale-105"
+              />
+            </div>
+
+            <span className="mt-4 font-display text-base font-extrabold text-ink-900 group-hover:text-primary-600">
               {category.label}
             </span>
           </Link>
