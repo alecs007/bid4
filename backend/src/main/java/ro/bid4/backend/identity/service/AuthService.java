@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ro.bid4.backend.common.audit.AuditLog;
 import ro.bid4.backend.common.config.Bid4Properties;
 import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.error.ErrorCode;
@@ -50,6 +51,7 @@ public class AuthService {
   private final UsernameFactory usernameFactory;
   private final TextSanitizer sanitizer;
   private final EmailVerificationService emailVerification;
+  private final AuditLog auditLog;
   private final Bid4Properties properties;
 
   public AuthService(
@@ -62,6 +64,7 @@ public class AuthService {
       UsernameFactory usernameFactory,
       TextSanitizer sanitizer,
       EmailVerificationService emailVerification,
+      AuditLog auditLog,
       Bid4Properties properties) {
     this.users = users;
     this.refreshTokens = refreshTokens;
@@ -72,6 +75,7 @@ public class AuthService {
     this.usernameFactory = usernameFactory;
     this.sanitizer = sanitizer;
     this.emailVerification = emailVerification;
+    this.auditLog = auditLog;
     this.properties = properties;
   }
 
@@ -172,7 +176,9 @@ public class AuthService {
     user.setLockedUntil(null);
     user.setLastLoginAt(now);
     record(email, user.getId(), ip, userAgent, true, null);
-    return startSession(user, ip, userAgent);
+    // A password was typed, so this is the start of a new chain rather than the
+    // continuation of one — the absolute ceiling is measured from here.
+    return startSession(user, ip, userAgent, now);
   }
 
   /**
@@ -181,6 +187,13 @@ public class AuthService {
    * <p>A token that was already exchanged means a copy is loose: the honest client and the thief
    * both hold one, and there is no way to tell which just called. Every token for that user is
    * revoked, which ends both sessions and forces a real sign-in.
+   *
+   * <p>There is deliberately no grace period for a replay, tempting as one is. A client that lost
+   * the response to its own exchange presents exactly what a thief presents — the same token,
+   * moments later, against a successor nobody has spent — so a window that forgives the one
+   * forgives the other, and buys availability with the detection this is here for. Keeping honest
+   * clients out of that position is the client's job: see the cross-tab lock in
+   * frontend/src/lib/api/http.ts, and the row lock below for callers that still overlap.
    */
   @Transactional(noRollbackFor = ApiException.class)
   public SessionResult refresh(String presented, String ip, String userAgent) {
@@ -188,18 +201,30 @@ public class AuthService {
       throw new ApiException(ErrorCode.INVALID_TOKEN);
     }
 
+    // For update: two callers presenting one token must be judged one after the
+    // other, or both read "not yet spent" and both succeed.
     RefreshToken stored =
         refreshTokens
-            .findByTokenHash(jwtService.hash(presented))
+            .findByTokenHashForUpdate(jwtService.hash(presented))
             .orElseThrow(() -> new ApiException(ErrorCode.INVALID_TOKEN));
 
     Instant now = Instant.now();
     if (stored.getRotatedTo() != null) {
-      log.warn("Refresh token reuse detected for user {}", stored.getUser().getId());
-      refreshTokens.revokeAllForUser(stored.getUser().getId(), now);
+      UUID victim = stored.getUser().getId();
+      log.warn("Refresh token reuse detected for user {}", victim);
+      auditLog.record(
+          AuditLog.REFRESH_TOKEN_REUSE, victim, ip, AuditLog.REFRESH_TOKEN, stored.getId());
+      refreshTokens.revokeAllForUser(victim, now);
       throw new ApiException(ErrorCode.INVALID_TOKEN);
     }
     if (!stored.isUsable(now)) {
+      throw new ApiException(ErrorCode.INVALID_TOKEN);
+    }
+    if (stored.familyExpired(now, properties.jwt().absoluteRefreshTtl())) {
+      // Only this chain, not every session the account has: the other devices
+      // have their own families and their own clocks, and ending them would
+      // punish an ordinary long-lived account for one stale tab.
+      stored.setRevokedAt(now);
       throw new ApiException(ErrorCode.INVALID_TOKEN);
     }
 
@@ -211,7 +236,7 @@ public class AuthService {
       throw new ApiException(ErrorCode.EMAIL_NOT_VERIFIED);
     }
 
-    SessionResult session = startSession(user, ip, userAgent);
+    SessionResult session = startSession(user, ip, userAgent, stored.getFamilyStartedAt());
     stored.setRotatedTo(session.refreshTokenId());
     stored.setRevokedAt(now);
     return session;
@@ -235,13 +260,19 @@ public class AuthService {
         .orElseThrow(() -> new ApiException(ErrorCode.INVALID_TOKEN));
   }
 
-  private SessionResult startSession(UserAccount user, String ip, String userAgent) {
+  /**
+   * Issues a pair. {@code familyStartedAt} is the caller's answer to whether this continues a chain
+   * or begins one: rotation passes what it was given, sign-in passes the moment it happened.
+   */
+  private SessionResult startSession(
+      UserAccount user, String ip, String userAgent, Instant familyStartedAt) {
     JwtService.AccessToken access = jwtService.issueAccessToken(user);
     JwtService.RefreshTokenValue refresh = jwtService.issueRefreshToken();
 
     RefreshToken token = new RefreshToken();
     token.setUser(user);
     token.setTokenHash(refresh.hash());
+    token.setFamilyStartedAt(familyStartedAt);
     token.setExpiresAt(jwtService.refreshTokenExpiry());
     token.setUserAgent(truncate(userAgent, 255));
     token.setIp(ip);

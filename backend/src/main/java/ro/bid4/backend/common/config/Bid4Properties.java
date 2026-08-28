@@ -28,11 +28,21 @@ public record Bid4Properties(
     @Valid @NotNull Verification verification,
     @Valid @NotNull RateLimit rateLimit) {
 
+  /**
+   * @param refreshTokenTtl how long one refresh token lives, reset on every rotation.
+   * @param absoluteRefreshTtl how long the chain lives, measured from the first token in it and
+   *     never reset. Without it a session used once a month never ends, and a stolen token its
+   *     holder keeps spending stays valid forever.
+   * @param refreshTokenRetention how long an expired row is kept before the sweeper deletes it. Its
+   *     only remaining use is forensic — the token itself cannot be revived.
+   */
   public record Jwt(
       @NotBlank String secret,
       @NotBlank String issuer,
       @NotNull Duration accessTokenTtl,
-      @NotNull Duration refreshTokenTtl) {
+      @NotNull Duration refreshTokenTtl,
+      @NotNull Duration absoluteRefreshTtl,
+      @NotNull Duration refreshTokenRetention) {
 
     /** A record prints all of its components, and one of these signs every token. */
     @Override
@@ -43,6 +53,10 @@ public record Bid4Properties(
           + accessTokenTtl
           + ", refreshTokenTtl="
           + refreshTokenTtl
+          + ", absoluteRefreshTtl="
+          + absoluteRefreshTtl
+          + ", refreshTokenRetention="
+          + refreshTokenRetention
           + "]";
     }
 

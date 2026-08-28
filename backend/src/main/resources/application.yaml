@@ -178,7 +178,16 @@ bid4:
     secret: ${BID4_JWT_SECRET:}
     issuer: bid4
     access-token-ttl: 15m
+    # One token's life, reset on every exchange — this is what keeps an active
+    # session from asking for a password every month.
     refresh-token-ttl: 30d
+    # The chain's life, measured from its first token and never reset. It is the
+    # only thing that eventually forces a real sign-in, and the only ceiling on
+    # a stolen token whose holder keeps spending it.
+    absolute-refresh-ttl: 90d
+    # How long an expired row is kept before the nightly sweep removes it. The
+    # token cannot be revived; what is left is the trail of when and from where.
+    refresh-token-retention: 30d
   cors:
     allowed-origins: ${BID4_CORS_ORIGINS:http://localhost:3000}
   cookies:

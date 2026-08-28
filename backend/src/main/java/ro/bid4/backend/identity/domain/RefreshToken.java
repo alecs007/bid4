@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -46,6 +47,16 @@ public class RefreshToken {
   @Column(name = "issued_at", nullable = false, updatable = false)
   private Instant issuedAt = Instant.now();
 
+  /**
+   * When the first token in this chain was issued, carried unchanged through every rotation.
+   *
+   * <p>expires_at moves forward on each exchange, which is what keeps an active session alive. This
+   * does not, which is what eventually ends one: past bid4.jwt.absolute-refresh-ttl measured from
+   * here, the chain is refused however recently it was used.
+   */
+  @Column(name = "family_started_at", nullable = false, updatable = false)
+  private Instant familyStartedAt = Instant.now();
+
   @Column(name = "expires_at", nullable = false)
   private Instant expiresAt;
 
@@ -68,6 +79,11 @@ public class RefreshToken {
 
   public boolean isUsable(Instant now) {
     return revokedAt == null && rotatedTo == null && expiresAt.isAfter(now);
+  }
+
+  /** Whether the chain has outlived its absolute ceiling, however recently it was exchanged. */
+  public boolean familyExpired(Instant now, Duration absoluteTtl) {
+    return familyStartedAt.plus(absoluteTtl).isBefore(now);
   }
 
   @Override
