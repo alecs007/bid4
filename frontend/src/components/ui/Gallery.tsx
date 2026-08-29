@@ -344,8 +344,7 @@ export function Gallery({
         <Lightbox
           images={images}
           alt={alt}
-          index={active}
-          onIndexChange={show}
+          startIndex={active}
           onClose={() => setOpen(false)}
         />
       ) : null}

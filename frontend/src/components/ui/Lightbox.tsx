@@ -28,16 +28,26 @@ const RESET: View = { scale: 1, x: 0, y: 0 };
 export function Lightbox({
   images,
   alt,
-  index,
-  onIndexChange,
+  startIndex,
   onClose,
 }: {
   images: string[];
   alt: string;
-  index: number;
-  onIndexChange: (index: number) => void;
+  /** Where to open. The reader's way around in here is their own from then on. */
+  startIndex: number;
   onClose: () => void;
 }) {
+  /**
+   * Owned here rather than lifted to the gallery.
+   *
+   * <p>While the gallery held it, every step in this modal was also a step on
+   * the page underneath — and the page's slider answers a change by animating
+   * to it, reporting each slide it passes over on the way. Stepping from the
+   * last picture to the first travelled the whole strip backwards and handed
+   * back every index in between, so the modal appeared to rotate through the
+   * others to reach its neighbour.
+   */
+  const [index, setIndex] = useState(startIndex);
   const [view, setView] = useState<View>(RESET);
   const [dragging, setDragging] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -109,14 +119,15 @@ export function Lightbox({
 
   const go = useCallback(
     (next: number) => {
+      if (count === 0) return;
       pointers.current.clear();
       pinch.current = null;
       draggingRef.current = false;
       setDragging(false);
       setView(RESET);
-      onIndexChange(next);
+      setIndex((next + count) % count);
     },
-    [onIndexChange],
+    [count],
   );
 
   // Mount-only: the scroll lock and the initial focus. These used to sit in the
@@ -239,14 +250,24 @@ export function Lightbox({
           {/* Only once there is something to undo. A reset that is always there
               is a control that does nothing most of the time. */}
           {zoomed ? (
-            <StageButton label="Revino la dimensiunea inițială" onClick={() => setView(RESET)}>
-              <Icons.refresh aria-hidden="true" className="h-5 w-5 shrink-0" />
+            <StageButton label="Încadrează în ecran" onClick={() => setView(RESET)}>
+              <Icons.fitToScreen aria-hidden="true" className="h-5 w-5 shrink-0" />
             </StageButton>
           ) : null}
-          <StageButton label="Micșorează" onClick={() => scaleAround(1 / 1.4)}>
+          {/* Shown spent rather than removed, so the pair keeps its place and
+              the reader can see they are already all the way in or out. */}
+          <StageButton
+            label="Micșorează"
+            onClick={() => scaleAround(1 / 1.4)}
+            disabled={view.scale <= MIN_SCALE}
+          >
             <Icons.zoomOut aria-hidden="true" className="h-5 w-5 shrink-0" />
           </StageButton>
-          <StageButton label="Mărește" onClick={() => scaleAround(1.4)}>
+          <StageButton
+            label="Mărește"
+            onClick={() => scaleAround(1.4)}
+            disabled={view.scale >= MAX_SCALE}
+          >
             <Icons.zoomIn aria-hidden="true" className="h-5 w-5 shrink-0" />
           </StageButton>
           <StageButton label="Închide" onClick={onClose} ref={closeRef}>
@@ -269,7 +290,9 @@ export function Lightbox({
           )}
         >
           <Image
-            key={images[index]}
+            // Keyed on the position, not the file: the same photograph may be
+            // listed twice, and two slides that share a key share an element.
+            key={index}
             src={images[index] ?? ""}
             alt={alt}
             fill
@@ -280,7 +303,7 @@ export function Lightbox({
               transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})`,
             }}
             className={cn(
-              "object-contain select-none",
+              "animate-fade-in object-contain select-none",
               // Animated except while a finger or the mouse is on it, where the
               // picture has to keep up with the hand rather than trail it. This
               // is also what carries it home when the zoom comes back to one.
@@ -335,11 +358,13 @@ export function Lightbox({
 function StageButton({
   label,
   onClick,
+  disabled,
   children,
   ref,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
   children: React.ReactNode;
   ref?: React.Ref<HTMLButtonElement>;
 }) {
@@ -348,8 +373,12 @@ function StageButton({
       ref={ref}
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/15"
+      className={cn(
+        "inline-flex h-10 w-10 items-center justify-center rounded-xl text-white transition",
+        disabled ? "cursor-not-allowed opacity-40" : "hover:bg-white/15",
+      )}
     >
       {children}
     </button>
