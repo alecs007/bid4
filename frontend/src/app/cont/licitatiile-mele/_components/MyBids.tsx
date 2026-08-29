@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 
-import { AuctionRow } from "@/components/auctions/AuctionRow";
+import { AuctionRow, AuctionRowSkeleton } from "@/components/auctions/AuctionRow";
+import { ListState } from "@/app/cont/_components/ListState";
 import { Icons } from "@/components/icons";
 import { checkRetractEligibility, listMyBids, retractBid } from "@/lib/api/bids";
 import { useAction, useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { useCurrentUserId } from "@/lib/auth/AuthProvider";
 import { AUCTION_STATUS, BID_STATUS } from "@/lib/labels";
+import { PAGINATION } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 import { formatDateTimeRo } from "@/lib/utils/date";
 import { countRo } from "@/lib/utils/plural";
@@ -16,10 +18,9 @@ import {
   Badge,
   Button,
   ButtonLink,
-  EmptyState,
   ErrorState,
+  Pagination,
   SegmentedControl,
-  Skeleton,
   StatusBadge,
   useToast,
 } from "@/components/ui";
@@ -28,20 +29,22 @@ import {
  * Where a bidder finds out what happened.
  *
  * <p>Until auctions actually closed there was nothing to show here: every offer
- * sat at "Câștigi" forever, because no winner was ever recorded. The three tabs
- * are the three answers settlement produces.
+ * sat at "Câștigi" forever, because no winner was ever recorded. Active, won and
+ * lost are the three answers settlement produces; the fourth tab is just all of
+ * them, and is what "show everything" resets to.
  */
 
-type Tab = "active" | "won" | "lost";
+type Tab = "all" | "active" | "won" | "lost";
 
 const TABS: { value: Tab; label: string }[] = [
+  { value: "all", label: "Toate" },
   { value: "active", label: "În desfășurare" },
   { value: "won", label: "Câștigate" },
   { value: "lost", label: "Încheiate" },
 ];
 
 /** Which tab an offer belongs under, decided by the bid rather than the auction. */
-function tabOf(summary: MyBidSummary): Tab {
+function tabOf(summary: MyBidSummary): Exclude<Tab, "all"> {
   switch (summary.myTopBid.status) {
     case "WON":
       return "won";
@@ -56,7 +59,8 @@ export function MyBids() {
   const userId = useCurrentUserId();
   const toast = useToast();
   const revalidate = useRevalidate();
-  const [tab, setTab] = useState<Tab>("active");
+  const [tab, setTab] = useState<Tab>("all");
+  const [page, setPage] = useState(1);
 
   const { data, error, loading, reload } = useApi(
     () => listMyBids(userId!),
@@ -80,15 +84,30 @@ export function MyBids() {
   };
 
   const grouped = useMemo(() => {
-    const empty: Record<Tab, MyBidSummary[]> = { active: [], won: [], lost: [] };
-    for (const summary of data ?? []) empty[tabOf(summary)].push(summary);
-    return empty;
+    const all = data ?? [];
+    const buckets: Record<Tab, MyBidSummary[]> = { all, active: [], won: [], lost: [] };
+    for (const summary of all) buckets[tabOf(summary)].push(summary);
+    return buckets;
   }, [data]);
 
-  const shown = grouped[tab];
+  const matching = grouped[tab];
+  const totalPages = Math.max(1, Math.ceil(matching.length / PAGINATION.DEFAULT_PAGE_SIZE));
+  // Clamped rather than reset: retracting the last offer on the last page should
+  // step back a page, not throw the reader to the top of the list.
+  const current = Math.min(page, totalPages);
+  const shown = matching.slice(
+    (current - 1) * PAGINATION.DEFAULT_PAGE_SIZE,
+    current * PAGINATION.DEFAULT_PAGE_SIZE,
+  );
+
+  const choose = (next: Tab) => {
+    setTab(next);
+    setPage(1);
+  };
 
   return (
-    <section className="flex flex-col gap-5">
+    // A short list must not leave the footer halfway up the screen.
+    <section className="flex min-h-[60vh] flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
           Licitațiile mele
@@ -102,7 +121,7 @@ export function MyBids() {
             label: data ? `${item.label} (${grouped[item.value].length})` : item.label,
           }))}
           value={tab}
-          onChange={setTab}
+          onChange={choose}
         />
       </div>
 
@@ -116,13 +135,19 @@ export function MyBids() {
           }
         />
       ) : loading && !data ? (
-        <MyBidsSkeleton />
+        <AuctionRowSkeleton />
       ) : shown.length === 0 ? (
-        <EmptyForTab tab={tab} />
+        <ListState
+          filtered={grouped.all.length > 0}
+          onReset={() => choose("all")}
+          title="Nu ai nicio ofertă"
+          description="Alege un obiect care îți place și susții o cauză în același timp."
+          action={<ButtonLink href="/licitatii">Vezi licitațiile</ButtonLink>}
+        />
       ) : (
         <>
           <p className="sr-only" aria-live="polite">
-            {countRo(shown.length, "ofertă", "oferte")}
+            {countRo(matching.length, "ofertă", "oferte")}
           </p>
           <ul className="flex flex-col gap-2.5">
             {shown.map((summary) => (
@@ -134,6 +159,7 @@ export function MyBids() {
               />
             ))}
           </ul>
+          <Pagination page={current} totalPages={totalPages} onChange={setPage} />
         </>
       )}
     </section>
@@ -196,52 +222,5 @@ function BidRow({
         ) : null
       }
     />
-  );
-}
-
-function EmptyForTab({ tab }: { tab: Tab }) {
-  if (tab === "won") {
-    return (
-      <EmptyState
-        title="Nicio licitație câștigată încă"
-        description="Când câștigi o licitație, o găsești aici împreună cu pașii următori."
-        action={<ButtonLink href="/licitatii">Vezi licitațiile</ButtonLink>}
-      />
-    );
-  }
-  if (tab === "lost") {
-    return (
-      <EmptyState
-        title="Nicio licitație încheiată"
-        description="Aici ajung licitațiile la care ai participat și care s-au închis."
-      />
-    );
-  }
-  return (
-    <EmptyState
-      title="Nu ai oferte active"
-      description="Alege un obiect care îți place și susții o cauză în același timp."
-      action={<ButtonLink href="/licitatii">Vezi licitațiile</ButtonLink>}
-    />
-  );
-}
-
-function MyBidsSkeleton() {
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <li
-          key={index}
-          className="flex items-center gap-3 rounded-3xl bg-white ring-1 ring-edge p-3 sm:gap-4 sm:p-4"
-        >
-          <Skeleton className="aspect-square w-16 shrink-0 rounded-2xl sm:w-20" />
-          <div className="min-w-0 flex-1">
-            <Skeleton className="h-5 w-32 rounded-full" />
-            <Skeleton className="mt-1.5 h-6 w-3/4 rounded-xl" />
-            <Skeleton className="mt-1 h-4 w-1/2 rounded-lg" />
-          </div>
-        </li>
-      ))}
-    </ul>
   );
 }
