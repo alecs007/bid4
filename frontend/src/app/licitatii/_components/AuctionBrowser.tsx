@@ -250,8 +250,8 @@ export function AuctionBrowser() {
                   src={`/images/illustrations/categories/${category.id}.webp`}
                   alt=""
                   fill
-              sizes="16px"
-              unoptimized
+                  sizes="16px"
+                  unoptimized
                   className="object-contain scale-[1.04]"
                 />
               </div>
@@ -320,7 +320,9 @@ export function AuctionBrowser() {
       variant="secondary"
       size="sm"
       onClick={() => setSheetOpen(true)}
-      leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />}
+      leftIcon={
+        <Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />
+      }
     >
       Filtre
       {activeCount > 0 ? (
@@ -447,7 +449,7 @@ export function AuctionBrowser() {
                   title="Nicio licitație găsită"
                   action={
                     activeCount > 0 ? (
-                      <Button onClick={clearAll}>Șterge filtrele</Button>
+                      <Button onClick={clearAll}>Resetează filtrele</Button>
                     ) : (
                       <ButtonLink href="/cont/vanzari/nou">
                         Vinde acum

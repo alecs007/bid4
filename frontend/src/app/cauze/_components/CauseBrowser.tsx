@@ -126,28 +126,32 @@ export function CauseBrowser() {
           the footer halfway up the screen, and so swapping a tall set of rows
           for a short one moves the page once rather than collapsing it first. */}
       <div className="min-h-[60vh]">
-      {error ? (
-        <ErrorState
-          action={
-            <Button variant="secondary" onClick={reload}>
-              Încearcă din nou
-            </Button>
-          }
-        />
-      ) : (
-        <CauseGrid
-          causes={data ?? []}
-          loading={busy}
-          skeletonCount={Math.min(Math.max(outgoing, 3), 12)}
-          emptyState={
-            <EmptyState
-              title="Nicio cauză pe filtrele astea"
-              description="Încearcă altă categorie sau propune chiar tu o cauză."
-              action={<ButtonLink href="/cont/cauze/noua">Propune o cauză</ButtonLink>}
-            />
-          }
-        />
-      )}
+        {error ? (
+          <ErrorState
+            action={
+              <Button variant="secondary" onClick={reload}>
+                Încearcă din nou
+              </Button>
+            }
+          />
+        ) : (
+          <CauseGrid
+            causes={data ?? []}
+            loading={busy}
+            skeletonCount={Math.min(Math.max(outgoing, 3), 12)}
+            emptyState={
+              <EmptyState
+                title="Nicio cauză găsită"
+                description="Încearcă altă categorie sau propune chiar tu o cauză."
+                action={
+                  <ButtonLink href="/cont/cauze/noua">
+                    Propune o cauză
+                  </ButtonLink>
+                }
+              />
+            }
+          />
+        )}
       </div>
     </>
   );

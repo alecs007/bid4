@@ -74,8 +74,10 @@ export function AuctionCard({
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
         />
-        <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-sm font-extrabold text-primary-800 backdrop-blur-sm">
-          <Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />
+        {/* Two cards to a phone screen: at the full size these two sat over a
+            third of the photograph between them. */}
+        <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-lg bg-white/95 px-1.5 py-0.5 text-xs font-extrabold text-primary-800 backdrop-blur-sm sm:top-2.5 sm:left-2.5 sm:gap-1 sm:px-2 sm:py-1 sm:text-sm">
+          <Icons.donation aria-hidden="true" className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
           {auction.donationPercent}%
         </span>
         <span className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-lg bg-white/95 py-1 pr-2 pl-1 backdrop-blur-sm">
@@ -100,7 +102,7 @@ export function AuctionCard({
           aria-pressed={watched}
           aria-label={watched ? "Scoate din listă" : "Salvează în listă"}
           className={cn(
-            "absolute top-2.5 right-2.5 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 backdrop-blur-sm",
+            "absolute top-2 right-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 backdrop-blur-sm sm:top-2.5 sm:right-2.5 sm:h-9 sm:w-9",
             "transition duration-200 active:scale-90",
             watched ? "text-primary-600" : "text-ink-500 hover:text-ink-900",
           )}
@@ -109,7 +111,7 @@ export function AuctionCard({
             aria-hidden="true"
             /* fill-transparent, not fill="none": a colour animates to a colour, `none` cannot. */
             className={cn(
-              "h-[18px] w-[18px] fill-transparent transition-[fill,transform] duration-200",
+              "h-4 w-4 shrink-0 fill-transparent transition-[fill,transform] duration-200 sm:h-[18px] sm:w-[18px]",
               watched && "scale-110 fill-current",
             )}
           />
