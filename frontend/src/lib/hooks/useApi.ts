@@ -37,18 +37,17 @@ export function useApi<T>(
 ): ApiState<T> & { reload: () => void } {
   const { enabled = true } = options;
 
-  // SWR calls the fetcher with the key; the loader closes over what it needs, so
-  // it is kept in a ref and the key alone decides when to refetch. Without this,
-  // a loader recreated on every render would invalidate on every render.
-  const loaderRef = useRef(loader);
-  useEffect(() => {
-    loaderRef.current = loader;
-  });
-
   const { data, error, isLoading, mutate } = useSWR<T>(
     // A null key is how SWR is told not to fetch at all.
     enabled ? key : null,
-    () => loaderRef.current(),
+    // Passed straight through, closure and all. It used to be held in a ref that
+    // this hook refreshed in an effect, on the theory that a loader rebuilt each
+    // render would refetch each render — which is not how SWR decides: the key
+    // is. What the ref actually did was lag. SWR refreshes its own copy of the
+    // fetcher in a layout effect, before this one ran, so a key change fetched
+    // with the previous render's loader and returned the previous filter's
+    // results. Changing a filter twice looked like it fixed itself.
+    loader,
   );
 
   const reload = useCallback(() => {
