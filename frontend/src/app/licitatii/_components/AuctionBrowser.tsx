@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Icons } from "@/components/icons";
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
@@ -121,6 +121,8 @@ export function AuctionBrowser() {
   ]);
   const [donationDraft, setDonationDraft] = useState(minDonation);
 
+  const [navigating, startNavigation] = useTransition();
+
   const { data, loading, error, reload } = useApi(
     () =>
       listAuctions(
@@ -143,6 +145,8 @@ export function AuctionBrowser() {
 
   const { data: causes } = useApi(() => listCauses(), "causes-for-filter");
 
+  const busy = navigating || loading;
+
   const update = (
     mutate: (next: URLSearchParams) => void,
     { keepPage = false } = {},
@@ -151,8 +155,14 @@ export function AuctionBrowser() {
     mutate(next);
     if (!keepPage) next.delete("page");
     const query = next.toString();
-    router.replace(query ? `/licitatii?${query}` : "/licitatii", {
-      scroll: false,
+    // The filter lives in the URL, and useSearchParams only catches up once the
+    // router has navigated. Until then the key has not changed, nothing is
+    // loading, and the previous filter's results sit there looking like an
+    // answer. A transition gives an immediate `pending` to show instead.
+    startNavigation(() => {
+      router.replace(query ? `/licitatii?${query}` : "/licitatii", {
+        scroll: false,
+      });
     });
   };
 
@@ -193,7 +203,7 @@ export function AuctionBrowser() {
   const clearAll = () => {
     setPriceDraft([PRICE_MIN, PRICE_MAX]);
     setDonationDraft(0);
-    router.replace("/licitatii", { scroll: false });
+    startNavigation(() => router.replace("/licitatii", { scroll: false }));
     setSheetOpen(false);
   };
 
@@ -404,7 +414,7 @@ export function AuctionBrowser() {
         </aside>
         <div className="min-w-0">
           <div className="mb-3 hidden h-5 sm:block">
-            {loading ? (
+            {busy ? (
               <Skeleton className="h-5 w-32" />
             ) : (
               <p className="text-sm text-ink-500">
@@ -425,9 +435,11 @@ export function AuctionBrowser() {
           ) : (
             <AuctionGrid
               auctions={data?.items ?? []}
-              loading={loading}
+              loading={busy}
               columns={3}
-              skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
+              // As many placeholders as there were cards, so swapping one set
+              // for the other does not resize the page under the reader.
+              skeletonCount={data?.items.length || PAGINATION.DEFAULT_PAGE_SIZE}
               emptyState={
                 <EmptyState
                   title="Nicio licitație găsită"

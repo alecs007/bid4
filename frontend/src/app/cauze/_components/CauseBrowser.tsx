@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTransition } from "react";
 
 import { CauseGrid } from "@/components/causes/CauseCard";
 import {
@@ -24,6 +25,8 @@ export function CauseBrowser() {
   const q = params.get("q") ?? "";
   const categories = params.getAll("category");
 
+  const [navigating, startNavigation] = useTransition();
+
   const { data, loading, error, reload } = useApi(
     () =>
       listCauses({
@@ -33,11 +36,26 @@ export function CauseBrowser() {
     `causes:${params.toString()}`,
   );
 
+  const busy = navigating || loading;
+  // As many placeholders as there were cards, so swapping one set for the other
+  // does not resize the page under the reader.
+  const outgoing = data?.length ?? 0;
+
+  /**
+   * The filter lives in the URL, and useSearchParams only catches up once the
+   * router has finished navigating — about half a second. Until then the key has
+   * not changed, nothing is loading, and the previous filter's results sit there
+   * looking like an answer. Marking the navigation as a transition gives an
+   * immediate `pending`, so the list can say it is working from the click rather
+   * than from whenever the address bar agrees.
+   */
   const update = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(params.toString());
     mutate(next);
     const query = next.toString();
-    router.replace(query ? `/cauze?${query}` : "/cauze", { scroll: false });
+    startNavigation(() => {
+      router.replace(query ? `/cauze?${query}` : "/cauze", { scroll: false });
+    });
   };
 
   const toggleCategory = (id: string) =>
@@ -95,7 +113,7 @@ export function CauseBrowser() {
       </div>
 
       <div className="mb-3 hidden h-5 sm:block">
-        {loading ? (
+        {busy ? (
           <Skeleton className="h-5 w-40" />
         ) : (
           <p className="text-sm text-ink-500">
@@ -115,8 +133,8 @@ export function CauseBrowser() {
       ) : (
         <CauseGrid
           causes={data ?? []}
-          loading={loading}
-          skeletonCount={10}
+          loading={busy}
+          skeletonCount={Math.min(Math.max(outgoing, 3), 12)}
           emptyState={
             <EmptyState
               title="Nicio cauză pe filtrele astea"
