@@ -145,7 +145,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
     const next = !watched;
     setWatchOverride(next);
-    if (next) toast.success("Adăugat la salvate", auction.title);
+    if (next) toast.success("Adăugat la urmărite", auction.title);
 
     try {
       const result = await toggleWatch(auction.id, user.id);

@@ -43,22 +43,92 @@ export function Gallery({
     [count],
   );
 
-  // The phone rail is a real scroller, so the dots follow the scroll position.
+  /**
+   * The phone track loops by carrying a copy of the last image before the first
+   * and a copy of the first after the last. Swiping past either end lands on a
+   * clone, and the scroll position is then moved to its twin with the animation
+   * off — the picture under the finger is identical, so the seam is invisible
+   * and the swipe can carry on in the same direction forever.
+   *
+   * <p>It stays a native scroller rather than a transformed track, because that
+   * is what gives a phone its own momentum, rubber-banding and pointer handling.
+   */
+  const looped = count > 1;
+  const slides = looped ? [images[count - 1], ...images, images[0]] : images;
+  /** Where image `i` sits in the track above. */
+  const slot = useCallback((i: number) => (looped ? i + 1 : i), [looped]);
+
+  const jumping = useRef(false);
+
   const onScroll = () => {
     const track = trackRef.current;
-    if (!track) return;
-    const index = Math.round(track.scrollLeft / track.clientWidth);
-    setActive(Math.min(count - 1, Math.max(0, index)));
+    if (!track || jumping.current) return;
+    const width = track.clientWidth;
+    if (!width) return;
+    const position = Math.round(track.scrollLeft / width);
+
+    if (looped && (position === 0 || position === count + 1)) {
+      // On a clone: hop to the real one it copies, without animating.
+      const real = position === 0 ? count : 1;
+      jumping.current = true;
+      track.style.scrollBehavior = "auto";
+      track.scrollLeft = real * width;
+      track.style.scrollBehavior = "";
+      requestAnimationFrame(() => {
+        jumping.current = false;
+      });
+      setActive(real - 1);
+      return;
+    }
+
+    setActive(Math.min(count - 1, Math.max(0, looped ? position - 1 : position)));
   };
 
+  /**
+   * Parks the track on the slide it is meant to be showing, without animating.
+   *
+   * <p>Driven by a resize observer rather than run once on mount, because the
+   * track is `lg:hidden`: on a desktop first paint it has no width, so a mount-
+   * time scroll would be a scroll to zero — which is the clone before the first
+   * image, not the first image. This fires when it gains width, and again when
+   * the phone is rotated, where the old offset would otherwise leave it parked
+   * between two slides.
+   */
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    const target = active * track.clientWidth;
+
+    const park = () => {
+      const width = track.clientWidth;
+      if (!width) return;
+      const target = slot(active) * width;
+      if (Math.abs(track.scrollLeft - target) < 1) return;
+      jumping.current = true;
+      track.style.scrollBehavior = "auto";
+      track.scrollLeft = target;
+      track.style.scrollBehavior = "";
+      requestAnimationFrame(() => {
+        jumping.current = false;
+      });
+    };
+
+    park();
+    const observer = new ResizeObserver(park);
+    observer.observe(track);
+    return () => observer.disconnect();
+    // Only the geometry matters here; `active` changes are animated by the
+    // effect below instead of being snapped to.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slot]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || jumping.current) return;
+    const target = slot(active) * track.clientWidth;
     if (Math.abs(track.scrollLeft - target) > 4) {
       track.scrollTo({ left: target, behavior: "smooth" });
     }
-  }, [active]);
+  }, [active, slot]);
 
   if (count === 0) return null;
 
@@ -120,11 +190,12 @@ export function Gallery({
         ) : null}
 
         <div className="min-w-0 flex-1">
+          <div className="group relative hidden aspect-4/3 w-full overflow-hidden rounded-2xl bg-ink-50 lg:block">
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Vezi imaginile mărite"
-            className="group relative hidden aspect-4/3 w-full cursor-zoom-in overflow-hidden rounded-2xl bg-ink-50 lg:block"
+            className="absolute inset-0 h-full w-full cursor-zoom-in"
           >
             <Image
               key={current}
@@ -142,6 +213,17 @@ export function Gallery({
             </span>
           </button>
 
+          {/* Always there rather than on hover: arrows that appear when the
+              pointer arrives are arrows nobody knows are there until they
+              happen to sweep across the picture. */}
+          {count > 1 ? (
+            <>
+              <StageArrow direction="prev" onClick={() => show(active - 1)} />
+              <StageArrow direction="next" onClick={() => show(active + 1)} />
+            </>
+          ) : null}
+          </div>
+
           {/* phone: one image per screen, swiped */}
           <div className="relative lg:hidden">
             {actions ? (
@@ -155,28 +237,38 @@ export function Gallery({
               data-lenis-prevent
               className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-2xl bg-ink-50"
             >
-              {images.map((image, index) => (
-                <button
-                  key={image}
-                  type="button"
-                  onClick={() => {
-                    setActive(index);
-                    setOpen(true);
-                  }}
-                  aria-label={`Imaginea ${index + 1} din ${count}`}
-                  className="relative aspect-4/3 w-full shrink-0 snap-center"
-                >
-                  <Image
-                    src={image}
-                    alt={index === 0 ? alt : ""}
-                    fill
-                    unoptimized
-                    priority={index === 0}
-                    sizes="100vw"
-                    className="object-contain"
-                  />
-                </button>
-              ))}
+              {slides.map((image, position) => {
+                // Clones stand outside the numbering: the copy at either end is
+                // the same picture as its twin and must not be announced twice.
+                const real = looped
+                  ? (position - 1 + count) % count
+                  : position;
+                const clone = looped && (position === 0 || position === count + 1);
+                return (
+                  <button
+                    key={`${position}-${image}`}
+                    type="button"
+                    onClick={() => {
+                      setActive(real);
+                      setOpen(true);
+                    }}
+                    aria-hidden={clone}
+                    tabIndex={clone ? -1 : undefined}
+                    aria-label={`Imaginea ${real + 1} din ${count}`}
+                    className="relative aspect-4/3 w-full shrink-0 snap-center"
+                  >
+                    <Image
+                      src={image}
+                      alt={!clone && real === 0 ? alt : ""}
+                      fill
+                      unoptimized
+                      priority={position <= 1}
+                      sizes="100vw"
+                      className="object-contain"
+                    />
+                  </button>
+                );
+              })}
             </div>
 
             {count > 1 ? (
@@ -212,6 +304,32 @@ export function Gallery({
         />
       ) : null}
     </>
+  );
+}
+
+/** Prev/next over the large image, above the click-to-zoom overlay. */
+function StageArrow({
+  direction,
+  onClick,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={direction === "prev" ? "Imaginea anterioară" : "Imaginea următoare"}
+      className={cn(
+        "absolute top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-white/85 text-ink-800 shadow-sm backdrop-blur-sm transition hover:bg-white",
+        direction === "prev" ? "left-3" : "right-3",
+      )}
+    >
+      <Icons.crumb
+        aria-hidden="true"
+        className={cn("h-5 w-5 shrink-0", direction === "prev" && "rotate-180")}
+      />
+    </button>
   );
 }
 

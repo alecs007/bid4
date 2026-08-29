@@ -46,7 +46,7 @@ export function AuctionCard({
     const next = !watched;
     setOverride(next);
     // Only the save is worth announcing; removing one speaks for itself.
-    if (next) toast.success("Adăugat la salvate", auction.title);
+    if (next) toast.success("Adăugat la urmărite", auction.title);
 
     try {
       const result = await toggleWatch(auction.id, user.id);
