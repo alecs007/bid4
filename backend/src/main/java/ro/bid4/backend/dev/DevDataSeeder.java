@@ -125,6 +125,13 @@ public class DevDataSeeder implements ApplicationRunner {
     user.setRole(role);
     user.setAccountType(accountType);
     user.setOrgLegalName(orgLegalName);
+    // A face rather than a pair of initials. Keyed on the address, so an account
+    // keeps the same one across restarts, and an organisation gets a mark rather
+    // than a portrait because a company is not a person.
+    user.setAvatarUrl(
+        accountType == AccountType.ORGANIZATION
+            ? "https://picsum.photos/seed/bid4org%d/240/240".formatted(email.hashCode())
+            : "https://i.pravatar.cc/240?u=%s".formatted(email));
     // Already confirmed, or every one of these would need a link followed
     // before it could be used for anything.
     user.setEmailVerifiedAt(now);

@@ -1,7 +1,5 @@
 package ro.bid4.backend.dev;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -533,18 +531,16 @@ public class DevCatalogSeeder implements ApplicationRunner {
       String registrationNumber,
       String representative) {
 
-    String glyph = CAUSE_GLYPHS.getOrDefault(category, "💚");
     Cause cause = new Cause();
     cause.setOrganizerId(organizerId);
     cause.setName(name);
     cause.setSlug(slug);
     cause.setShortDescription(shortDescription);
     cause.setCategory(category);
-    cause.setImageUrl(tile(slug, glyph));
-    cause.setCoverUrl(tile(slug + "-cover", glyph));
+    cause.setImageUrl(banner(slug));
+    cause.setCoverUrl(banner(slug + "-cover"));
     // Several photographs, in the order the organiser put them.
-    cause.setGallery(
-        List.of(tile(slug + "-1", glyph), tile(slug + "-2", glyph), tile(slug + "-3", glyph)));
+    cause.setGallery(List.of(photo(slug + "-1"), photo(slug + "-2"), photo(slug + "-3")));
     cause.setStory(story);
     cause.setStatus(CauseStatus.ACTIVE);
     cause.setGoalAmount(goal);
@@ -590,15 +586,12 @@ public class DevCatalogSeeder implements ApplicationRunner {
       Instant endTime,
       AuctionStatus status) {
 
-    String glyph = AUCTION_GLYPHS.getOrDefault(category, "🎁");
-
     Auction auction = new Auction();
     auction.setSellerId(sellerId);
     auction.setCauseId(cause.getId());
     auction.setTitle(title);
     auction.setDescription(description);
-    auction.setImages(
-        List.of(tile(title + "-1", glyph), tile(title + "-2", glyph), tile(title + "-3", glyph)));
+    auction.setImages(List.of(photo(title + "-1"), photo(title + "-2"), photo(title + "-3")));
     auction.setCategory(category);
     auction.setCondition(condition);
     auction.setWeightGrams(weightGrams);
@@ -672,72 +665,34 @@ public class DevCatalogSeeder implements ApplicationRunner {
 
   /* --- placeholder imagery -------------------------------------------------
    *
-   * Inline SVG, so a development database needs neither an image host nor an
-   * upload pipeline to render a page. Deterministic in its seed, so a listing
-   * keeps the same colours across restarts.
+   * Real photographs from a public placeholder service, addressed by a seed so
+   * a listing keeps the same picture across restarts. Emoji on a gradient made
+   * the catalogue legible but not believable — a page of coloured squares reads
+   * as a wireframe, and design decisions taken against it are decisions about a
+   * wireframe.
+   *
+   * Development only, and it does mean a seeded database now wants a network
+   * on first paint. Nothing else in the application fetches from here: a real
+   * listing carries whatever its seller uploaded.
    */
 
-  private static final String[][] PALETTE = {
-    {"#e3f8cf", "#a6e772"},
-    {"#ffe1d8", "#ffc3b2"},
-    {"#d9f0fd", "#b3e2fb"},
-    {"#fff3c6", "#ffe587"},
-    {"#f3fcea", "#c8f1a4"}
-  };
+  private static final String PHOTO = "https://picsum.photos/seed/%s/800/600";
 
-  private static final Map<String, String> AUCTION_GLYPHS =
-      Map.of(
-          "moda", "👗",
-          "electronice", "📱",
-          "casa", "🏡",
-          "arta", "🎨",
-          "carti", "📖",
-          "sport", "⚽",
-          "jucarii", "🧩",
-          "colectii", "🏆",
-          "bijuterii", "💍");
+  /** A different seed per image, or a gallery is one picture repeated three times. */
+  private static String photo(String seed) {
+    return PHOTO.formatted(slugSeed(seed));
+  }
 
-  private static final Map<String, String> CAUSE_GLYPHS =
-      Map.of(
-          "medical", "🩺",
-          "educatie", "📚",
-          "copii", "🧸",
-          "animale", "🐾",
-          "mediu", "🌱",
-          "varstnici", "👵",
-          "comunitate", "🏘️",
-          "urgente", "🚨");
+  /** Wide, because a cause is read as a banner rather than a card. */
+  private static String banner(String seed) {
+    return "https://picsum.photos/seed/%s/1200/800".formatted(slugSeed(seed));
+  }
 
-  private static String tile(String seed, String glyph) {
-    int hash = Math.abs(seed.hashCode());
-    String[] pair = PALETTE[hash % PALETTE.length];
-    // The gradient is named after the seed, which is also what makes two tiles
-    // from different seeds different strings. Without it a gallery whose images
-    // land on the same palette is a list of identical URLs, and anything keying
-    // off the URL — a React list, a lightbox — sees one image repeated.
-    String gradientId = "g" + hash;
-    int angle = hash % 60;
-
-    String svg =
-        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 600'>"
-            + "<defs><linearGradient id='"
-            + gradientId
-            + "' gradientTransform='rotate("
-            + angle
-            + ")'>"
-            + "<stop offset='0' stop-color='"
-            + pair[0]
-            + "'/><stop offset='1' stop-color='"
-            + pair[1]
-            + "'/></linearGradient></defs>"
-            + "<rect width='800' height='600' fill='url(#"
-            + gradientId
-            + ")'/>"
-            + "<text x='400' y='390' font-size='220' text-anchor='middle'>"
-            + glyph
-            + "</text></svg>";
-
-    return "data:image/svg+xml;charset=utf-8,"
-        + URLEncoder.encode(svg, StandardCharsets.UTF_8).replace("+", "%20");
+  /**
+   * A stable, url-safe token for a title that may carry diacritics and spaces. The hash rather than
+   * the text, so "Aparat foto Canon AE-1" and its neighbour cannot collide into the same picture.
+   */
+  private static String slugSeed(String seed) {
+    return "bid4" + Integer.toHexString(seed.hashCode());
   }
 }
