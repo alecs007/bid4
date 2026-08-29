@@ -89,7 +89,7 @@ export function Sheet({
             aria-label="Închide"
             className="-mr-1 rounded-xl p-2 text-ink-500 transition hover:bg-ink-100 hover:text-ink-900"
           >
-            <Icons.close aria-hidden="true" className="h-5 w-5" />
+            <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
           </button>
         </div>
         <div

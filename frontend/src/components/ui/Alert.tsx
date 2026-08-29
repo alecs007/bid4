@@ -27,14 +27,14 @@ const CHIP_SOLID: Record<Tone, string> = {
 };
 
 const DEFAULT_ICONS: Record<Tone, ReactNode> = {
-  primary: <Icons.escrow aria-hidden="true" className="h-4 w-4" />,
-  accent: <Icons.impact aria-hidden="true" className="h-4 w-4" />,
-  sky: <Icons.info aria-hidden="true" className="h-4 w-4" />,
-  sun: <Icons.warning aria-hidden="true" className="h-4 w-4" />,
-  success: <Icons.success aria-hidden="true" className="h-4 w-4" />,
-  warning: <Icons.warning aria-hidden="true" className="h-4 w-4" />,
-  danger: <Icons.error aria-hidden="true" className="h-4 w-4" />,
-  neutral: <Icons.info aria-hidden="true" className="h-4 w-4" />,
+  primary: <Icons.escrow aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  accent: <Icons.impact aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  sky: <Icons.info aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  sun: <Icons.warning aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  success: <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  warning: <Icons.warning aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  danger: <Icons.error aria-hidden="true" className="h-4 w-4 shrink-0" />,
+  neutral: <Icons.info aria-hidden="true" className="h-4 w-4 shrink-0" />,
 };
 
 export function Alert({

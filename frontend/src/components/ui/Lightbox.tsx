@@ -102,7 +102,7 @@ export function Lightbox({
             aria-pressed={zoomed}
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/15"
           >
-            <Icons.search aria-hidden="true" className="h-5 w-5" />
+            <Icons.search aria-hidden="true" className="h-5 w-5 shrink-0" />
           </button>
           <button
             ref={closeRef}
@@ -111,7 +111,7 @@ export function Lightbox({
             aria-label="Închide"
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/15"
           >
-            <Icons.close aria-hidden="true" className="h-5 w-5" />
+            <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
           </button>
         </div>
       </div>

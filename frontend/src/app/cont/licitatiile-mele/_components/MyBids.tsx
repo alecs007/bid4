@@ -148,7 +148,10 @@ export function MyBids() {
           <p className="sr-only" aria-live="polite">
             {countRo(view.matching.length, "ofertă", "oferte")}
           </p>
-          <ul className="flex flex-col gap-2.5">
+          <ul
+            key={`${view.filter}:${view.page}`}
+            className="flex animate-fade-in flex-col gap-2.5"
+          >
             {view.shown.map((summary) => (
               <BidRow
                 key={summary.auction.id}
@@ -263,7 +266,7 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
             live && !leading
               ? {
                   label: "Mărește oferta",
-                  icon: <Icons.auction aria-hidden="true" className="h-4 w-4" />,
+                  icon: <Icons.auction aria-hidden="true" className="h-4 w-4 shrink-0" />,
                   href: `/licitatii/${auction.id}`,
                   onClick: undefined,
                 }

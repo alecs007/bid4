@@ -86,7 +86,7 @@ export function Countdown({
           className,
         )}
       >
-        <Icons.clock aria-hidden="true" className="h-3.5 w-3.5" />
+        <Icons.clock aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
         {endedLabel}
       </span>
     );

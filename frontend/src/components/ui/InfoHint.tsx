@@ -50,7 +50,7 @@ export function InfoHint({
         onClick={() => setOpen((current) => !current)}
         className="inline-flex h-5 w-5 items-center justify-center rounded-lg text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
       >
-        <Icons.help aria-hidden="true" className="h-4 w-4" />
+        <Icons.help aria-hidden="true" className="h-4 w-4 shrink-0" />
       </button>
 
       {open ? (

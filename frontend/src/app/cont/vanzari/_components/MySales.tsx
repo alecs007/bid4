@@ -238,7 +238,10 @@ export function MySales() {
           <p className="sr-only" aria-live="polite">
             {countRo(view.matching.length, "vânzare", "vânzări")}
           </p>
-          <ul className="flex flex-col gap-2.5">
+          <ul
+            key={`${view.filter}:${view.page}`}
+            className="flex animate-fade-in flex-col gap-2.5"
+          >
             {view.shown.map((auction) => (
               <AuctionRow
                 key={auction.id}

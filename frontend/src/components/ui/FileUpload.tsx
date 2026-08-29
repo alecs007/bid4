@@ -128,7 +128,7 @@ export function FileUpload({
             aria-label={`Șterge ${value.fileName}`}
             className="rounded-xl p-2 text-ink-500 transition hover:bg-ink-100 hover:text-danger-600"
           >
-            <Icons.remove aria-hidden="true" className="h-4 w-4" />
+            <Icons.remove aria-hidden="true" className="h-4 w-4 shrink-0" />
           </button>
         </div>
       ) : (
@@ -142,7 +142,7 @@ export function FileUpload({
           )}
         >
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-100 text-ink-600">
-            <Icons.upload aria-hidden="true" className="h-5 w-5" />
+            <Icons.upload aria-hidden="true" className="h-5 w-5 shrink-0" />
           </span>
           <span className="min-w-0">
             <span className="block text-sm font-bold text-ink-800">
@@ -230,7 +230,7 @@ export function FileUploadGrid({
               aria-label={`Șterge imaginea ${index + 1}`}
               className="absolute top-1 right-1 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-ink-600 shadow-sm transition hover:text-danger-600"
             >
-              <Icons.close aria-hidden="true" className="h-3.5 w-3.5" />
+              <Icons.close aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
             </button>
           </div>
         ))}
@@ -240,7 +240,7 @@ export function FileUploadGrid({
             htmlFor={id}
             className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-ink-200 text-ink-500 transition hover:border-primary-400 hover:bg-primary-50/50"
           >
-            <Icons.photo aria-hidden="true" className="h-5 w-5" />
+            <Icons.photo aria-hidden="true" className="h-5 w-5 shrink-0" />
             <span className="text-[11px] font-bold">Adaugă</span>
           </label>
         ) : null}

@@ -45,7 +45,7 @@ export function DevRoleSwitcher() {
               onClick={() => setOpen(false)}
               className="rounded-xl p-1.5 text-ink-500 transition hover:bg-ink-100 hover:text-ink-900"
             >
-              <Icons.close aria-hidden="true" className="h-4 w-4" />
+              <Icons.close aria-hidden="true" className="h-4 w-4 shrink-0" />
             </button>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -94,7 +94,7 @@ export function DevRoleSwitcher() {
             <Button
               variant="secondary"
               size="sm"
-              leftIcon={<Icons.refresh aria-hidden="true" className="h-4 w-4" />}
+              leftIcon={<Icons.refresh aria-hidden="true" className="h-4 w-4 shrink-0" />}
               onClick={() => {
                 resetWorld();
                 toast.info(

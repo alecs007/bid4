@@ -75,7 +75,7 @@ export function AuctionCard({
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
         />
         <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-sm font-extrabold text-primary-800 backdrop-blur-sm">
-          <Icons.donation aria-hidden="true" className="h-4 w-4" />
+          <Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />
           {auction.donationPercent}%
         </span>
         <span className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-lg bg-white/95 py-1 pr-2 pl-1 backdrop-blur-sm">

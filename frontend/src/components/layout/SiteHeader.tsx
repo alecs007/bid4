@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
 import { Avatar, ButtonLink, Logo, Skeleton } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
@@ -369,7 +369,7 @@ export function SiteHeader() {
             href="/cont/cauze/noua"
             className="ml-1 inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-display text-[15px] font-bold whitespace-nowrap text-primary-700 transition hover:bg-primary-50"
           >
-            <Icons.donation aria-hidden="true" className="h-4 w-4" />
+            <Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />
             Strânge fonduri
           </Link>
         </nav>
@@ -392,9 +392,9 @@ export function SiteHeader() {
             )}
           >
             {openPanel === "search" ? (
-              <Icons.close aria-hidden="true" className="h-5 w-5" />
+              <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
             ) : (
-              <Icons.search aria-hidden="true" className="h-5 w-5" />
+              <Icons.search aria-hidden="true" className="h-5 w-5 shrink-0" />
             )}
           </button>
 
@@ -437,34 +437,43 @@ export function SiteHeader() {
                     {ACCOUNT_LINKS.map((item) => {
                       const Icon = Icons[item.icon];
                       return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          role="menuitem"
-                          className={cn(
-                            "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-ink-700 transition hover:bg-ink-50 hover:text-ink-900",
-                            // A hairline where the subject changes, so the menu
-                            // reads as three short lists rather than one long one.
-                            item.group && "mt-1 border-t border-line pt-2.5",
-                          )}
-                        >
-                          <Icon aria-hidden="true" className="h-4.5 w-4.5 shrink-0 text-ink-500" />
-                          {item.label}
-                        </Link>
+                        <Fragment key={item.href}>
+                          {/* A rule of its own where the subject changes. As a
+                              border on the row it followed the rounded corners
+                              and read as a box with a lid. */}
+                          {item.group ? (
+                            <span aria-hidden="true" className="my-1 block h-px bg-line" />
+                          ) : null}
+                          <Link
+                            href={item.href}
+                            role="menuitem"
+                            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-ink-700 transition hover:bg-ink-50 hover:text-ink-900"
+                          >
+                            <Icon
+                              aria-hidden="true"
+                              className="h-4.5 w-4.5 shrink-0 text-ink-500"
+                            />
+                            {item.label}
+                          </Link>
+                        </Fragment>
                       );
                     })}
 
                     {isStaff ? (
+                      <>
+                      <span aria-hidden="true" className="my-1 block h-px bg-line" />
                       <Link
                         href={isAdmin ? "/admin" : "/operator/cauze"}
                         role="menuitem"
-                        className="mt-1 flex items-center gap-2.5 rounded-xl border-t border-line px-2.5 py-2 pt-2.5 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
+                        className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
                       >
                         <Icons.secure aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
                         {isAdmin ? "Administrare" : "Zona operator"}
                       </Link>
+                      </>
                     ) : null}
 
+                    <span aria-hidden="true" className="my-1 block h-px bg-line" />
                     <button
                       type="button"
                       role="menuitem"
@@ -472,7 +481,7 @@ export function SiteHeader() {
                         await logout();
                         router.push("/");
                       }}
-                      className="mt-1 flex w-full items-center gap-2.5 rounded-xl border-t border-line px-2.5 pt-2.5 pb-2 text-left text-[15px] font-semibold text-danger-700 transition hover:bg-danger-50"
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[15px] font-semibold text-danger-700 transition hover:bg-danger-50"
                     >
                       <Icons.signOut aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
                       Ieși din cont

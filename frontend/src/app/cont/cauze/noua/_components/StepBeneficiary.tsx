@@ -112,7 +112,7 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
                 setBeneficiary({ contactEmail: event.target.value })
               }
               placeholder="nume@exemplu.ro"
-              leading={<Icons.email aria-hidden="true" className="h-4 w-4" />}
+              leading={<Icons.email aria-hidden="true" className="h-4 w-4 shrink-0" />}
             />
           </Field>
 
@@ -129,7 +129,7 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
                 setBeneficiary({ contactPhone: event.target.value })
               }
               placeholder="0722 123 456"
-              leading={<Icons.phone aria-hidden="true" className="h-4 w-4" />}
+              leading={<Icons.phone aria-hidden="true" className="h-4 w-4 shrink-0" />}
             />
           </Field>
 
@@ -221,7 +221,7 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
                 value={draft.guardian.phone}
                 onChange={(event) => setGuardian({ phone: event.target.value })}
                 placeholder="0722 123 456"
-                leading={<Icons.phone aria-hidden="true" className="h-4 w-4" />}
+                leading={<Icons.phone aria-hidden="true" className="h-4 w-4 shrink-0" />}
               />
             </Field>
           </div>

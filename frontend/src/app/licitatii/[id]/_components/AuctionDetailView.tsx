@@ -199,7 +199,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         aria-label="Distribuie"
         className={cn(actionButton, "text-ink-600 hover:text-ink-900")}
       >
-        <Icons.share aria-hidden="true" className="h-5 w-5" />
+        <Icons.share aria-hidden="true" className="h-5 w-5 shrink-0" />
       </button>
     </>
   );
@@ -227,7 +227,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-ink-600">
               <span className="inline-flex items-center gap-1.5 font-bold text-primary-800">
-                <Icons.donation aria-hidden="true" className="h-4 w-4" />
+                <Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />
                 {auction.donationPercent}% donație
               </span>
               <span aria-hidden="true" className="text-ink-300">
@@ -456,12 +456,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 <span className="mt-1 flex flex-wrap items-center gap-1.5">
                   {auction.seller.city ? (
                     <span className="inline-flex items-center gap-1 rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
-                      <Icons.locker aria-hidden="true" className="h-3 w-3" />
+                      <Icons.locker aria-hidden="true" className="h-3 w-3 shrink-0" />
                       {auction.seller.city}
                     </span>
                   ) : null}
                   <span className="inline-flex items-center gap-1 rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-900">
-                    <Icons.check aria-hidden="true" className="h-3 w-3" />
+                    <Icons.check aria-hidden="true" className="h-3 w-3 shrink-0" />
                     {ACCOUNT_TYPE[auction.seller.accountType]}
                   </span>
                 </span>

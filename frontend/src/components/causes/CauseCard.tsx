@@ -52,7 +52,7 @@ export function CauseCard({
 
         {cause.activeAuctionCount > 0 ? (
           <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-2.5 py-1 text-sm font-bold text-white">
-            <Icons.auction aria-hidden="true" className="h-4 w-4" />
+            <Icons.auction aria-hidden="true" className="h-4 w-4 shrink-0" />
             {cause.activeAuctionCount}
           </span>
         ) : null}

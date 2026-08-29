@@ -245,7 +245,7 @@ export function CauseWizard() {
         <span className="ml-auto inline-flex items-center gap-2">
           {saveState === "saved" ? (
             <span className="hidden items-center gap-1.5 text-xs font-bold text-ink-500 sm:inline-flex">
-              <Icons.check aria-hidden="true" className="h-3.5 w-3.5" />
+              <Icons.check aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
               Salvat
             </span>
           ) : null}
@@ -259,7 +259,7 @@ export function CauseWizard() {
               size="lg"
               onClick={next}
               rightIcon={
-                <Icons.forward aria-hidden="true" className="h-4 w-4" />
+                <Icons.forward aria-hidden="true" className="h-4 w-4 shrink-0" />
               }
             >
               Continuă

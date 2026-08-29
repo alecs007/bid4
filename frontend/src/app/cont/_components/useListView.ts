@@ -118,11 +118,28 @@ export function useListView<T, F extends string>({
   );
 
 
+  /** How many rows a bucket holds, without having to switch to it first. */
+  const sizeOf = useCallback(
+    (bucket: F) =>
+      bucket === all ? items.length : items.filter((row) => bucketOf(row) === bucket).length,
+    [items, bucketOf, all],
+  );
+
+  /** How many of those land on a given page. */
+  const onPage = (total: number, page: number) =>
+    Math.max(0, Math.min(PAGINATION.DEFAULT_PAGE_SIZE, total - (page - 1) * PAGINATION.DEFAULT_PAGE_SIZE));
+
   // Rows already in hand, so a filter costs nothing to apply and the list would
   // otherwise swap under the cursor between one frame and the next. A brief
   // placeholder is the same beat the catalogue has, where the pause is a real
   // request; here it is only long enough to read as a change rather than a jump.
-  // Drawn at the outgoing count, so the page does not resize twice on the way.
+  //
+  // Drawn at the *incoming* count, not the outgoing one. Standing in for what is
+  // leaving means a jump to twelve placeholders and then a collapse to the one
+  // row that arrives — the shift lands at the end, after the reader has stopped
+  // expecting movement. Standing in for what is coming puts the whole change at
+  // the click, where it was asked for, and the placeholder is then the height of
+  // its own replacement.
   const settle = useCallback((count: number) => {
     setOutgoing(count);
     setSettling(true);
@@ -131,23 +148,21 @@ export function useListView<T, F extends string>({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const onScreen = shown.length;
-
   const choose = useCallback(
     (next: F) => {
-      settle(onScreen);
+      settle(onPage(sizeOf(next), 1));
       setFilter(next);
       setPage(1);
     },
-    [settle, onScreen],
+    [settle, sizeOf],
   );
 
   const goToPage = useCallback(
     (next: number) => {
-      settle(onScreen);
+      settle(onPage(matching.length, next));
       setPage(next);
     },
-    [settle, onScreen],
+    [settle, matching.length],
   );
 
   return {

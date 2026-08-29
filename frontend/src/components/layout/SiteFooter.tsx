@@ -79,11 +79,11 @@ export function SiteFooter() {
           </p>
           <div className="flex flex-wrap items-center gap-4 text-sm text-ink-500">
             <span className="inline-flex items-center gap-1.5">
-              <Icons.escrow aria-hidden="true" className="h-4 w-4" />
+              <Icons.escrow aria-hidden="true" className="h-4 w-4 shrink-0" />
               Plăți protejate
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Icons.delivery aria-hidden="true" className="h-4 w-4" />
+              <Icons.delivery aria-hidden="true" className="h-4 w-4 shrink-0" />
               Livrare prin Sameday Easybox
             </span>
             <Link href="/design-system" className="transition hover:text-ink-800">

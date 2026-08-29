@@ -107,7 +107,7 @@ export function Modal({
             onClick={onClose}
             aria-label={closeLabel}
           >
-            <Icons.close aria-hidden="true" className="h-5 w-5" />
+            <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
           </Button>
         </div>
 

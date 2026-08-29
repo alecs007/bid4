@@ -124,14 +124,14 @@ export function FeeBreakdown({
                 { compact: true },
               )} și ${formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}`}
               value={`+ ${formatMoney(buyerTax)}`}
-              icon={<Icons.wallet aria-hidden="true" className="h-4 w-4" />}
+              icon={<Icons.wallet aria-hidden="true" className="h-4 w-4 shrink-0" />}
               tone="muted"
             />
             <Row
               label="Livrare"
               hint={shipping === 0 ? "Se calculează la confirmare" : undefined}
               value={shipping === 0 ? "se adaugă la confirmare" : `+ ${formatMoney(shipping)}`}
-              icon={<Icons.delivery aria-hidden="true" className="h-4 w-4" />}
+              icon={<Icons.delivery aria-hidden="true" className="h-4 w-4 shrink-0" />}
               tone="muted"
             />
             <Divider />
@@ -149,7 +149,7 @@ export function FeeBreakdown({
             <Row
               label={`Donație către cauză (${donationPercent}%)`}
               value={`− ${formatMoney(donationAmount)}`}
-              icon={<Icons.donation aria-hidden="true" className="h-4 w-4" />}
+              icon={<Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />}
               tone="negative"
             />
             <Row
@@ -186,7 +186,7 @@ export function FeeBreakdown({
       </dl>
       <div className="mt-3 flex items-center gap-3 border-t border-line pt-4">
         <IconBubble tone="primary">
-          <Icons.donation aria-hidden="true" className="h-5 w-5" />
+          <Icons.donation aria-hidden="true" className="h-5 w-5 shrink-0" />
         </IconBubble>
         <div className="min-w-0">
           <p className="font-display font-extrabold text-ink-900">

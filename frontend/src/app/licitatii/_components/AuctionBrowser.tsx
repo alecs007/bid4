@@ -298,7 +298,7 @@ export function AuctionBrowser() {
               })
             }
           >
-            <Icons.urgent aria-hidden="true" className="h-4 w-4" />
+            <Icons.urgent aria-hidden="true" className="h-4 w-4 shrink-0" />
             Sub 24h
           </Chip>
           {STATUS_FILTERS.map((status) => (
@@ -320,7 +320,7 @@ export function AuctionBrowser() {
       variant="secondary"
       size="sm"
       onClick={() => setSheetOpen(true)}
-      leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4" />}
+      leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />}
     >
       Filtre
       {activeCount > 0 ? (

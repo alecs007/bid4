@@ -74,7 +74,7 @@ export function Stepper({
                   )}
                 >
                   {done && !active ? (
-                    <Icons.check aria-hidden="true" className="h-3 w-3" />
+                    <Icons.check aria-hidden="true" className="h-3 w-3 shrink-0" />
                   ) : (
                     index + 1
                   )}

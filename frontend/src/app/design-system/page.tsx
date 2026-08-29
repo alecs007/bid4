@@ -285,7 +285,7 @@ export default function DesignSystemPage() {
                     variant="secondary"
                     aria-label="Adaugă la favorite"
                   >
-                    <Icons.impact aria-hidden="true" className="h-5 w-5" />
+                    <Icons.impact aria-hidden="true" className="h-5 w-5 shrink-0" />
                   </Button>
                 </div>
                 <div className="mt-4">
@@ -371,26 +371,26 @@ export default function DesignSystemPage() {
             <div className="flex flex-col gap-5">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Stat
-                  icon={<Icons.donation aria-hidden="true" className="h-5 w-5" />}
+                  icon={<Icons.donation aria-hidden="true" className="h-5 w-5 shrink-0" />}
                   value={formatMoney(lei(482_150), { compact: true })}
                   label="Strânse pentru cauze"
                   hint="de la lansare"
                 />
                 <Stat
                   tone="accent"
-                  icon={<Icons.auction aria-hidden="true" className="h-5 w-5" />}
+                  icon={<Icons.auction aria-hidden="true" className="h-5 w-5 shrink-0" />}
                   value="1.284"
                   label="Licitații încheiate"
                 />
                 <Stat
                   tone="sky"
-                  icon={<Icons.members aria-hidden="true" className="h-5 w-5" />}
+                  icon={<Icons.members aria-hidden="true" className="h-5 w-5 shrink-0" />}
                   value="6.902"
                   label="Membri activi"
                 />
                 <Stat
                   tone="sun"
-                  icon={<Icons.parcel aria-hidden="true" className="h-5 w-5" />}
+                  icon={<Icons.parcel aria-hidden="true" className="h-5 w-5 shrink-0" />}
                   value="98%"
                   label="Comenzi livrate la timp"
                 />

@@ -95,7 +95,7 @@ export function LoginForm() {
             placeholder="nume@exemplu.ro"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            leading={<Icons.email aria-hidden="true" className="h-4 w-4" />}
+            leading={<Icons.email aria-hidden="true" className="h-4 w-4 shrink-0" />}
           />
         </Field>
 

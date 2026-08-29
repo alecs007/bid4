@@ -71,7 +71,7 @@ export function StepEvidence({ draft, set, errors }: StepProps) {
                   onClick={() => add(type)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-xs font-bold text-ink-700 ring-1 ring-edge transition hover:ring-primary-400"
                 >
-                  <Icons.add aria-hidden="true" className="h-3.5 w-3.5" />
+                  <Icons.add aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                   {EVIDENCE_TYPE[type]}
                 </button>
               </li>
@@ -96,7 +96,7 @@ export function StepEvidence({ draft, set, errors }: StepProps) {
                 aria-label={`Șterge documentul ${index + 1}`}
                 className="rounded-xl p-1.5 text-ink-500 transition hover:bg-white hover:text-danger-600"
               >
-                <Icons.remove aria-hidden="true" className="h-4 w-4" />
+                <Icons.remove aria-hidden="true" className="h-4 w-4 shrink-0" />
               </button>
             </div>
 
@@ -149,7 +149,7 @@ export function StepEvidence({ draft, set, errors }: StepProps) {
         <Button
           variant="secondary"
           onClick={() => add()}
-          leftIcon={<Icons.add aria-hidden="true" className="h-4 w-4" />}
+          leftIcon={<Icons.add aria-hidden="true" className="h-4 w-4 shrink-0" />}
         >
           Adaugă un document
         </Button>

@@ -104,9 +104,9 @@ export function StepGoal({ draft, set, errors }: StepProps) {
             )}
           >
             {draft.payout.stripeOnboarded ? (
-              <Icons.check aria-hidden="true" className="h-5 w-5" />
+              <Icons.check aria-hidden="true" className="h-5 w-5 shrink-0" />
             ) : (
-              <Icons.payment aria-hidden="true" className="h-5 w-5" />
+              <Icons.payment aria-hidden="true" className="h-5 w-5 shrink-0" />
             )}
           </span>
 

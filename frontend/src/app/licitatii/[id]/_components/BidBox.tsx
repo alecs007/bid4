@@ -240,7 +240,7 @@ function Result({
       className={cn("p-4", viewerWon && "bg-primary-50")}
     >
       <p className="flex items-center gap-2 text-sm font-bold text-success-700">
-        <Icons.success aria-hidden="true" className="h-4 w-4" />
+        <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
         {viewerWon ? "Ai câștigat!" : "Vândut"}
       </p>
       <p className="mt-2 text-sm text-ink-500">Preț final</p>
@@ -355,7 +355,7 @@ export function BidBox({
             size="lg"
             onClick={undo}
             loading={pending}
-            leftIcon={<Icons.close aria-hidden="true" className="h-4 w-4" />}
+            leftIcon={<Icons.close aria-hidden="true" className="h-4 w-4 shrink-0" />}
           >
             Retrage
           </Button>
@@ -380,7 +380,7 @@ export function BidBox({
 
       <div className="border-b border-line px-5 pt-4 pb-3">
         <p className="flex items-center gap-1.5 text-xs text-ink-500">
-          <Icons.calendar aria-hidden="true" className="h-3.5 w-3.5" />
+          <Icons.calendar aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
           Publicată {formatDateTimeRo(auction.startTime)}
         </p>
       </div>
@@ -408,7 +408,7 @@ export function BidBox({
               onClick={() => setRulesOpen(true)}
               className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
             >
-              <Icons.help aria-hidden="true" className="h-4 w-4" />
+              <Icons.help aria-hidden="true" className="h-4 w-4 shrink-0" />
               Cum funcționează licitarea
             </button>
           </div>
@@ -571,7 +571,7 @@ export function BidBox({
             }}
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
           >
-            <Icons.help aria-hidden="true" className="h-4 w-4" />
+            <Icons.help aria-hidden="true" className="h-4 w-4 shrink-0" />
             Cum funcționează licitarea
           </button>
           <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">

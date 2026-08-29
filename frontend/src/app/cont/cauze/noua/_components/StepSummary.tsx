@@ -32,7 +32,7 @@ function Section({
           onClick={onEdit}
           className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-primary-700 transition hover:bg-white"
         >
-          <Icons.edit aria-hidden="true" className="h-3.5 w-3.5" />
+          <Icons.edit aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
           Modifică
         </button>
       </div>

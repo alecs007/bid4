@@ -182,7 +182,7 @@ export function ShippingLabelPreview({
       <div className="flex flex-col gap-2">
         <Button
           onClick={handleDownload}
-          leftIcon={<Icons.download aria-hidden="true" className="h-5 w-5" />}
+          leftIcon={<Icons.download aria-hidden="true" className="h-5 w-5 shrink-0" />}
         >
           Descarcă eticheta (PDF)
         </Button>

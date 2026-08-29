@@ -42,7 +42,7 @@ export function SearchField({
         placeholder={placeholder}
         aria-label={label}
         className={inputClassName}
-        leading={<Icons.search aria-hidden="true" className="h-4 w-4" />}
+        leading={<Icons.search aria-hidden="true" className="h-4 w-4 shrink-0" />}
       />
     </form>
   );

@@ -114,7 +114,7 @@ export function Pagination({
             : "text-ink-700 hover:text-ink-900 hover:ring-ink-300",
         )}
       >
-        <Icons.forward aria-hidden="true" className="h-4 w-4" />
+        <Icons.forward aria-hidden="true" className="h-4 w-4 shrink-0" />
       </button>
     </nav>
   );

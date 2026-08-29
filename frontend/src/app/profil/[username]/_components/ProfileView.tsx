@@ -115,19 +115,19 @@ export function ProfileView({ username }: { username: string }) {
 
       <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <Stat
-          icon={<Icons.donation aria-hidden="true" className="h-5 w-5" />}
+          icon={<Icons.donation aria-hidden="true" className="h-5 w-5 shrink-0" />}
           tone="primary"
           label="Strâns pentru cauze"
           value={formatMoney(user.totalRaised, { compact: true })}
         />
         <Stat
-          icon={<Icons.auction aria-hidden="true" className="h-5 w-5" />}
+          icon={<Icons.auction aria-hidden="true" className="h-5 w-5 shrink-0" />}
           tone="sky"
           label="Licitații active"
           value={String(profile.activeAuctionCount)}
         />
         <Stat
-          icon={<Icons.success aria-hidden="true" className="h-5 w-5" />}
+          icon={<Icons.success aria-hidden="true" className="h-5 w-5 shrink-0" />}
           tone="success"
           label="Vânzări încheiate"
           value={String(profile.completedSaleCount)}
