@@ -81,6 +81,17 @@ export const AUCTION = {
   MAX_DURATION_DAYS: 30,
   DEFAULT_DURATION_DAYS: 7,
 
+  /** A listing with no photo does not sell, and the first one is the card. */
+  MIN_IMAGES: 1,
+  MAX_IMAGES: 8,
+  /** Mirrors the column widths: varchar(120) and varchar(4000). */
+  MAX_TITLE_LENGTH: 120,
+  MIN_TITLE_LENGTH: 8,
+  MAX_DESCRIPTION_LENGTH: 4000,
+  MIN_DESCRIPTION_LENGTH: 20,
+  MIN_WEIGHT_GRAMS: 1,
+  MAX_WEIGHT_GRAMS: 15_000,
+
   /** "Se termină curând" cut-off used by the homepage and the filters. */
   ENDING_SOON_HOURS: 24,
   /** An auction is "hot" from this many bids up. */
