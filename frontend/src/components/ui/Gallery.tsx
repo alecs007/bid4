@@ -11,6 +11,23 @@ import { Lightbox } from "./Lightbox";
 /** How many thumbnails the desktop rail shows before it needs its arrows. */
 const RAIL_VISIBLE = 4;
 
+/** How long the track must sit still before the seam is crossed. */
+const SETTLE_MS = 140;
+
+/**
+ * Moves the track without animating it. Snapping is switched off across the
+ * write because a mandatory snap container re-snaps after a layout change, and
+ * that re-snap beat this write when the track first gained width — parking it on
+ * the clone before the first image while the dots said the first.
+ */
+function jump(track: HTMLDivElement, left: number) {
+  track.style.scrollSnapType = "none";
+  track.style.scrollBehavior = "auto";
+  track.scrollLeft = left;
+  track.style.scrollBehavior = "";
+  track.style.scrollSnapType = "";
+}
+
 export function Gallery({
   images,
   alt,
@@ -29,6 +46,27 @@ export function Gallery({
   const count = images.length;
   const current = images[active] ?? images[0] ?? "";
 
+  /**
+   * The phone track loops by carrying a copy of the last image before the first
+   * and a copy of the first after the last. Swiping past either end lands on a
+   * clone showing the same picture as its twin, and the scroll position is then
+   * moved to that twin with the animation off — identical pixels, so the seam is
+   * invisible and a swipe can carry on in one direction forever.
+   *
+   * <p>It stays a native scroller rather than a transformed track, because that
+   * is what gives a phone its own momentum, rubber-banding and pointer handling.
+   */
+  const looped = count > 1;
+  const slides = looped ? [images[count - 1], ...images, images[0]] : images;
+  /** Where image `i` sits in the track above. */
+  const slot = useCallback((i: number) => (looped ? i + 1 : i), [looped]);
+
+  /** Read inside callbacks that outlive the render they were made in. */
+  const activeRef = useRef(0);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
   const show = useCallback(
     (index: number) => {
       if (count === 0) return;
@@ -39,60 +77,81 @@ export function Gallery({
         if (next >= start + RAIL_VISIBLE) return next - RAIL_VISIBLE + 1;
         return start;
       });
+      // Driven from here rather than from an effect on `active`. As an effect it
+      // also ran for the changes the scroller itself reported, so a swipe was
+      // answered with a scrollTo back to where the finger already was — the two
+      // pulled against each other for the length of the gesture.
+      const track = trackRef.current;
+      if (track?.clientWidth) {
+        track.scrollTo({ left: slot(next) * track.clientWidth, behavior: "smooth" });
+      }
     },
-    [count],
+    [count, slot],
   );
 
-  /**
-   * The phone track loops by carrying a copy of the last image before the first
-   * and a copy of the first after the last. Swiping past either end lands on a
-   * clone, and the scroll position is then moved to its twin with the animation
-   * off — the picture under the finger is identical, so the seam is invisible
-   * and the swipe can carry on in the same direction forever.
-   *
-   * <p>It stays a native scroller rather than a transformed track, because that
-   * is what gives a phone its own momentum, rubber-banding and pointer handling.
-   */
-  const looped = count > 1;
-  const slides = looped ? [images[count - 1], ...images, images[0]] : images;
-  /** Where image `i` sits in the track above. */
-  const slot = useCallback((i: number) => (looped ? i + 1 : i), [looped]);
-
-  const jumping = useRef(false);
-
+  // Reports which picture is on screen. It does no scrolling of its own: moving
+  // the scroller from inside its own scroll event is what made the swipe judder,
+  // because the jump landed in the middle of the browser's momentum.
   const onScroll = () => {
     const track = trackRef.current;
-    if (!track || jumping.current) return;
+    if (!track) return;
     const width = track.clientWidth;
     if (!width) return;
     const position = Math.round(track.scrollLeft / width);
-
-    if (looped && (position === 0 || position === count + 1)) {
-      // On a clone: hop to the real one it copies, without animating.
-      const real = position === 0 ? count : 1;
-      jumping.current = true;
-      track.style.scrollBehavior = "auto";
-      track.scrollLeft = real * width;
-      track.style.scrollBehavior = "";
-      requestAnimationFrame(() => {
-        jumping.current = false;
-      });
-      setActive(real - 1);
-      return;
-    }
-
-    setActive(Math.min(count - 1, Math.max(0, looped ? position - 1 : position)));
+    const real = looped
+      ? (position - 1 + count) % count
+      : Math.min(count - 1, Math.max(0, position));
+    setActive(real);
   };
+
+  /**
+   * Moves off a clone once the track has come to rest — still the moment to do
+   * it, or the jump fights the browser's momentum.
+   *
+   * <p>Rest is read as a quiet period after the last scroll event, rather than
+   * from `scrollend` and a finger-down flag. Those were single points of failure
+   * with no way back: a gesture that delivered no `scrollend`, or a pointer
+   * released off the track so its `pointerup` never arrived, left this unrun and
+   * the scroller stranded on the trailing clone — the far end of the track,
+   * where swiping forward does nothing and the gallery looks frozen.
+   */
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !looped) return;
+
+    let timer: number | undefined;
+
+    const rewind = () => {
+      const width = track.clientWidth;
+      if (!width) return;
+      const exact = track.scrollLeft / width;
+      const position = Math.round(exact);
+      // Mid-flight, or resting between two slides: not ours to touch.
+      if (Math.abs(exact - position) > 0.01) return;
+      if (position !== 0 && position !== count + 1) return;
+      jump(track, (position === 0 ? count : 1) * width);
+    };
+
+    const onQuiet = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(rewind, SETTLE_MS);
+    };
+
+    track.addEventListener("scroll", onQuiet, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      track.removeEventListener("scroll", onQuiet);
+    };
+  }, [looped, count]);
 
   /**
    * Parks the track on the slide it is meant to be showing, without animating.
    *
    * <p>Driven by a resize observer rather than run once on mount, because the
    * track is `lg:hidden`: on a desktop first paint it has no width, so a mount-
-   * time scroll would be a scroll to zero — which is the clone before the first
-   * image, not the first image. This fires when it gains width, and again when
-   * the phone is rotated, where the old offset would otherwise leave it parked
-   * between two slides.
+   * time scroll would be a scroll to zero — the clone before the first image
+   * rather than the image. This fires when it gains width, and again on a
+   * rotation, where the old offset would leave it parked between two slides.
    */
   useEffect(() => {
     const track = trackRef.current;
@@ -101,34 +160,16 @@ export function Gallery({
     const park = () => {
       const width = track.clientWidth;
       if (!width) return;
-      const target = slot(active) * width;
+      const target = slot(activeRef.current) * width;
       if (Math.abs(track.scrollLeft - target) < 1) return;
-      jumping.current = true;
-      track.style.scrollBehavior = "auto";
-      track.scrollLeft = target;
-      track.style.scrollBehavior = "";
-      requestAnimationFrame(() => {
-        jumping.current = false;
-      });
+      jump(track, target);
     };
 
     park();
     const observer = new ResizeObserver(park);
     observer.observe(track);
     return () => observer.disconnect();
-    // Only the geometry matters here; `active` changes are animated by the
-    // effect below instead of being snapped to.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slot]);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track || jumping.current) return;
-    const target = slot(active) * track.clientWidth;
-    if (Math.abs(track.scrollLeft - target) > 4) {
-      track.scrollTo({ left: target, behavior: "smooth" });
-    }
-  }, [active, slot]);
 
   if (count === 0) return null;
 
