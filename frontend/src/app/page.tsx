@@ -13,17 +13,17 @@ import { PageTransition } from "@/components/layout/PageTransition";
 
 const STEPS = [
   {
-    image: "/images/illustrations/bid.svg",
+    image: "/images/illustrations/bid.webp",
     title: "1. Alegi produsul dorit",
     body: "Ai găsit ceva ce-ți place? Plasează o ofertă. Tu decizi suma maximă pe care ești dispus să o plătești pentru produsul ales.",
   },
   {
-    image: "/images/illustrations/escrow.svg",
+    image: "/images/illustrations/escrow.webp",
     title: "2. Plătești în siguranță",
     body: "Oferta ta a fost câștigătoare? Plătește online fără nicio grijă. Noi păstrăm banii în siguranță până când coletul ajunge la tine.",
   },
   {
-    image: "/images/illustrations/donation.svg",
+    image: "/images/illustrations/donation.webp",
     title: "3. Finalizezi cu o faptă bună",
     body: "Coletul a ajuns la tine? Confirmă că totul este ok. Din banii pe care i-ai plătit deja, o parte devin donație pentru o cauză verificată.",
   },

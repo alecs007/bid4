@@ -45,7 +45,7 @@ export function Logo({
 
   const content = (
     <Image
-      src="/images/logo.svg"
+      src="/images/logo.webp"
       alt="bid4"
       width={Math.round(height * LOGO_RATIO)}
       height={height}

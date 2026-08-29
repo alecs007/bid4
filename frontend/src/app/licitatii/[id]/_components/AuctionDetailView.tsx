@@ -117,7 +117,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   // those know about each other. Naming the prefixes here keeps that knowledge
   // where the change happens.
   const refresh = () =>
-    revalidate(`auction:${auctionId}`, `bids:${auctionId}`, "auctions:", "featured:");
+    revalidate(
+      `auction:${auctionId}`,
+      `bids:${auctionId}`,
+      "auctions:",
+      "featured:",
+    );
   const category = AUCTION_CATEGORIES.find(
     (item) => item.id === auction.category,
   );
@@ -228,7 +233,21 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <span aria-hidden="true" className="text-ink-300">
                 &middot;
               </span>
-              <span>{category?.label}</span>
+              {category ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span aria-hidden="true" className="relative h-4 w-4 shrink-0">
+                    <Image
+                      src={`/images/illustrations/categories/${category.id}.webp`}
+                      alt=""
+                      fill
+                      sizes="16px"
+                      unoptimized
+                      className="object-contain"
+                    />
+                  </span>
+                  {category.label}
+                </span>
+              ) : null}
               <span aria-hidden="true" className="text-ink-300">
                 &middot;
               </span>
@@ -319,7 +338,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   <span className="numeric font-bold text-ink-900">
                     {auction.watcherCount}
                   </span>{" "}
-                  urmăresc
+                  urmăritori
                 </span>
               </div>
 
@@ -410,10 +429,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
           <Section title="Detalii">
             <dl className="grid gap-x-8 sm:grid-cols-2">
-              <Spec
-                label="Stare"
-                value={ITEM_CONDITION[auction.condition]}
-              />
+              <Spec label="Stare" value={ITEM_CONDITION[auction.condition]} />
               <Spec label="Categorie" value={category?.label} />
             </dl>
           </Section>

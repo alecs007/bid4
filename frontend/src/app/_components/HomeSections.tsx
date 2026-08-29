@@ -262,10 +262,12 @@ export function CategoryRow({
           >
             <div className="relative h-16 w-16 shrink-0 overflow-hidden sm:h-20 sm:w-20">
               <Image
-                src={`/images/illustrations/categories/${category.id}.svg`}
+                src={`/images/illustrations/categories/${category.id}.webp`}
                 alt={`${category.label} illustration`}
                 fill
                 priority
+                sizes="80px"
+                unoptimized
                 className="object-contain scale-104"
               />
             </div>

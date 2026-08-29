@@ -161,9 +161,11 @@ export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
             className="relative h-4.5 w-4.5 shrink-0 overflow-hidden"
           >
             <Image
-              src={`/images/illustrations/categories/${category.id}.svg`}
+              src={`/images/illustrations/categories/${category.id}.webp`}
               alt=""
               fill
+              unoptimized
+              sizes="18px"
               className="object-contain scale-[1.04]"
             />
           </div>

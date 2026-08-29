@@ -247,9 +247,11 @@ export function AuctionBrowser() {
                 className="relative h-4 w-4 shrink-0 overflow-hidden"
               >
                 <Image
-                  src={`/images/illustrations/categories/${category.id}.svg`}
+                  src={`/images/illustrations/categories/${category.id}.webp`}
                   alt=""
                   fill
+              sizes="16px"
+              unoptimized
                   className="object-contain scale-[1.04]"
                 />
               </div>

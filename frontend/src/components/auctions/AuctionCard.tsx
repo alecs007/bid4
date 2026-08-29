@@ -120,9 +120,7 @@ export function AuctionCard({
           href={`/licitatii/${auction.id}`}
           className="font-display text-[15px] leading-[1.3] font-bold text-ink-900 after:absolute after:inset-0 sm:text-base"
         >
-          <span className="line-clamp-2 min-h-[2.6em]">
-            {auction.title}
-          </span>
+          <span className="line-clamp-2 min-h-[2.6em]">{auction.title}</span>
         </Link>
         <div className="mt-auto flex items-end justify-between gap-1.5 pt-2.5">
           <span className="numeric shrink-0 font-display text-xl leading-none font-extrabold tracking-tight whitespace-nowrap text-ink-900 sm:text-2xl">

@@ -24,9 +24,7 @@ export function Card({
     <Component
       className={cn(
         "rounded-3xl border",
-        surface === "white"
-          ? "border-line bg-white"
-          : "border-line bg-ink-50",
+        surface === "white" ? "border-line bg-white" : "border-line bg-ink-50",
         padded === true && "p-5 sm:p-6",
         padded === "sm" && "p-4",
         padded === "lg" && "p-6 sm:p-8",
@@ -54,7 +52,9 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-4 flex items-start justify-between gap-4", className)}>
+    <div
+      className={cn("mb-4 flex items-start justify-between gap-4", className)}
+    >
       <div className="flex min-w-0 items-start gap-3">
         {icon ? <div className="mt-0.5 shrink-0">{icon}</div> : null}
         <div className="min-w-0">
@@ -121,6 +121,8 @@ export function SectionLabel({
   className?: string;
 }) {
   return (
-    <p className={cn("text-sm font-bold text-ink-500", className)}>{children}</p>
+    <p className={cn("text-sm font-bold text-ink-500", className)}>
+      {children}
+    </p>
   );
 }

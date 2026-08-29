@@ -17,13 +17,13 @@ export type MascotMood =
  * Point them at their own files as soon as those are drawn.
  */
 const MOOD_IMAGE_MAP: Record<MascotMood, string> = {
-  happy: "/images/illustrations/mascot-happy.svg",
-  cheer: "/images/illustrations/mascot-happy.svg",
-  sad: "/images/illustrations/mascot-thinking.svg",
-  love: "/images/illustrations/mascot-heart.svg",
-  idea: "/images/illustrations/mascot-idea.svg",
-  hello: "/images/illustrations/mascot-hello.svg",
-  thinking: "/images/illustrations/mascot-thinking.svg",
+  happy: "/images/illustrations/mascot-happy.webp",
+  cheer: "/images/illustrations/mascot-happy.webp",
+  sad: "/images/illustrations/mascot-thinking.webp",
+  love: "/images/illustrations/mascot-heart.webp",
+  idea: "/images/illustrations/mascot-idea.webp",
+  hello: "/images/illustrations/mascot-hello.webp",
+  thinking: "/images/illustrations/mascot-thinking.webp",
 };
 
 export function Mascot({
