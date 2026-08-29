@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { AuctionRow, AuctionRowSkeleton } from "@/components/auctions/AuctionRow";
 import { Icons } from "@/components/icons";
 import { ListState } from "@/app/cont/_components/ListState";
+import { RowAction } from "@/app/cont/_components/RowAction";
+import { useListView } from "@/app/cont/_components/useListView";
 import { cancelAuction, listMyAuctions } from "@/lib/api/auctions";
 import { useAction, useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { useCurrentUserId } from "@/lib/auth/AuthProvider";
 import { AUCTION_STATUS } from "@/lib/labels";
-import { PAGINATION } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 import { formatDateTimeRo } from "@/lib/utils/date";
 import { countRo } from "@/lib/utils/plural";
@@ -22,14 +23,14 @@ import {
   Pagination,
   SegmentedControl,
   StatusBadge,
-  useToast,
 } from "@/components/ui";
+import { useToast } from "@/components/ui";
 
 /**
  * Statuses a seller can still withdraw.
  *
- * <p>Only decides whether the button is worth showing. The API refuses on its own
- * terms, so a listing that settled a second ago is refused there rather than
+ * <p>Only decides whether the action is worth offering. The API refuses on its
+ * own terms, so a listing that settled a second ago is refused there rather than
  * trusted here.
  */
 const WITHDRAWABLE = new Set<AuctionStatus>([
@@ -39,28 +40,34 @@ const WITHDRAWABLE = new Set<AuctionStatus>([
   "LIVE",
 ]);
 
-type Filter = "all" | "review" | "active" | "closed";
+type Bucket = "all" | "review" | "scheduled" | "live" | "closed";
 
-/** Four buckets, because those are the four things a seller does about a listing. */
-const BUCKETS: Record<Exclude<Filter, "all">, Set<AuctionStatus>> = {
-  review: new Set(["DRAFT", "PENDING_REVIEW"]),
-  active: new Set(["SCHEDULED", "LIVE"]),
-  closed: new Set(["ENDED", "SOLD", "UNSOLD", "CANCELLED"]),
-};
-
-const FILTERS: { value: Filter; label: string }[] = [
+const FILTERS: { value: Bucket; label: string }[] = [
   { value: "all", label: "Toate" },
   { value: "review", label: "În verificare" },
-  { value: "active", label: "Active" },
+  { value: "scheduled", label: "Programate" },
+  { value: "live", label: "În desfășurare" },
   { value: "closed", label: "Încheiate" },
 ];
+
+function bucketOf(auction: AuctionDetail): Bucket {
+  switch (auction.status) {
+    case "DRAFT":
+    case "PENDING_REVIEW":
+      return "review";
+    case "SCHEDULED":
+      return "scheduled";
+    case "LIVE":
+      return "live";
+    default:
+      return "closed";
+  }
+}
 
 export function MyListings() {
   const userId = useCurrentUserId();
   const toast = useToast();
   const revalidate = useRevalidate();
-  const [filter, setFilter] = useState<Filter>("all");
-  const [page, setPage] = useState(1);
   const [pendingWithdrawal, setPendingWithdrawal] = useState<AuctionDetail | null>(null);
 
   const { data, error, loading, reload } = useApi(
@@ -69,39 +76,17 @@ export function MyListings() {
     { enabled: Boolean(userId) },
   );
 
+  const view = useListView<AuctionDetail, Bucket>({
+    rows: data,
+    filters: FILTERS,
+    bucketOf,
+    all: "all",
+  });
+
   const withdraw = useAction(async (auction: AuctionDetail) => {
     await cancelAuction(auction.id, userId!);
     return auction;
   });
-
-  const counts = useMemo(() => {
-    const all = data ?? [];
-    return {
-      all: all.length,
-      review: all.filter((item) => BUCKETS.review.has(item.status)).length,
-      active: all.filter((item) => BUCKETS.active.has(item.status)).length,
-      closed: all.filter((item) => BUCKETS.closed.has(item.status)).length,
-    } satisfies Record<Filter, number>;
-  }, [data]);
-
-  const matching = useMemo(() => {
-    const all = data ?? [];
-    return filter === "all" ? all : all.filter((item) => BUCKETS[filter].has(item.status));
-  }, [data, filter]);
-
-  const totalPages = Math.max(1, Math.ceil(matching.length / PAGINATION.DEFAULT_PAGE_SIZE));
-  // Clamped rather than reset: withdrawing the last row on the last page should
-  // step back a page, not throw the reader to the top of the list.
-  const current = Math.min(page, totalPages);
-  const shown = matching.slice(
-    (current - 1) * PAGINATION.DEFAULT_PAGE_SIZE,
-    current * PAGINATION.DEFAULT_PAGE_SIZE,
-  );
-
-  const choose = (next: Filter) => {
-    setFilter(next);
-    setPage(1);
-  };
 
   const confirmWithdrawal = async () => {
     if (!pendingWithdrawal) return;
@@ -120,15 +105,14 @@ export function MyListings() {
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
           Anunțurile mele
         </h1>
-        <SegmentedControl
-          ariaLabel="Filtrează anunțurile"
-          options={FILTERS.map((item) => ({
-            ...item,
-            label: data ? `${item.label} (${counts[item.value]})` : item.label,
-          }))}
-          value={filter}
-          onChange={choose}
-        />
+        {view.options.length > 0 ? (
+          <SegmentedControl
+            ariaLabel="Filtrează anunțurile"
+            options={view.options}
+            value={view.filter}
+            onChange={view.choose}
+          />
+        ) : null}
       </div>
 
       {error ? (
@@ -141,11 +125,11 @@ export function MyListings() {
           }
         />
       ) : loading && !data ? (
-        <AuctionRowSkeleton rows={3} />
-      ) : shown.length === 0 ? (
+        <AuctionRowSkeleton rows={4} />
+      ) : view.shown.length === 0 ? (
         <ListState
-          filtered={counts.all > 0}
-          onReset={() => choose("all")}
+          filtered={view.hiddenByFilter}
+          onReset={() => view.choose("all")}
           title="Nu ai niciun anunț"
           description="Pune la licitație ceva ce nu mai folosești și alege cauza care primește o parte din preț."
           action={<ButtonLink href="/cont/anunturi/nou">Vinde acum</ButtonLink>}
@@ -153,10 +137,10 @@ export function MyListings() {
       ) : (
         <>
           <p className="sr-only" aria-live="polite">
-            {countRo(matching.length, "anunț", "anunțuri")}
+            {countRo(view.matching.length, "anunț", "anunțuri")}
           </p>
           <ul className="flex flex-col gap-2.5">
-            {shown.map((auction) => (
+            {view.shown.map((auction) => (
               <AuctionRow
                 key={auction.id}
                 auction={auction}
@@ -174,22 +158,30 @@ export function MyListings() {
                 }
                 footnote={`Se încheie ${formatDateTimeRo(auction.endTime)}`}
                 actions={
-                  WITHDRAWABLE.has(auction.status) ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Retrage anunțul ${auction.title}`}
-                      leftIcon={<Icons.remove aria-hidden="true" className="h-4 w-4" />}
-                      onClick={() => setPendingWithdrawal(auction)}
-                    >
-                      Retrage
-                    </Button>
-                  ) : null
+                  <>
+                    <RowAction
+                      label="Vezi"
+                      href={`/licitatii/${auction.id}`}
+                      icon={<Icons.forward aria-hidden="true" className="h-4 w-4" />}
+                    />
+                    {WITHDRAWABLE.has(auction.status) ? (
+                      <RowAction
+                        label="Retrage"
+                        danger
+                        icon={<Icons.remove aria-hidden="true" className="h-4 w-4" />}
+                        onClick={() => setPendingWithdrawal(auction)}
+                      />
+                    ) : null}
+                  </>
                 }
               />
             ))}
           </ul>
-          <Pagination page={current} totalPages={totalPages} onChange={setPage} />
+          <Pagination
+            page={view.page}
+            totalPages={view.totalPages}
+            onChange={view.goToPage}
+          />
         </>
       )}
 
