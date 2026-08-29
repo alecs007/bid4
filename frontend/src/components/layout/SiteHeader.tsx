@@ -7,6 +7,10 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
 import { Avatar, ButtonLink, Logo, Skeleton } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
+import { listMyAuctions } from "@/lib/api/auctions";
+import { listMyBids } from "@/lib/api/bids";
+import { listMyCauses } from "@/lib/api/causes";
+import { useApi } from "@/lib/hooks/useApi";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
@@ -28,7 +32,7 @@ const ACCOUNT_LINKS: {
   icon: keyof typeof Icons;
   group?: boolean;
 }[] = [
-  { href: "/cont", label: "Panoul meu", icon: "account" },
+  { href: "/cont", label: "Contul meu", icon: "account" },
 
   { href: "/cont/licitatiile-mele", label: "Licitațiile mele", icon: "auction", group: true },
   { href: "/cont/comenzi", label: "Comenzile mele", icon: "parcel" },
@@ -218,6 +222,46 @@ export function SiteHeader() {
       which:
         current.path === pathname && current.which === which ? null : which,
     }));
+
+  /**
+   * What is still open on each list, shown beside it.
+   *
+   * <p>Fetched only while the menu is, and under the same cache keys the
+   * account pages use — so opening the menu after visiting one of them costs
+   * nothing, and opening it first means the page it leads to is already loaded.
+   * Comenzi has no count because it has no endpoint yet.
+   */
+  const menuOpen = openPanel === "account";
+  const mine = { enabled: menuOpen && Boolean(user) };
+  const { data: myBids } = useApi(
+    () => listMyBids(user!.id),
+    `my-bids:${user?.id}`,
+    mine,
+  );
+  const { data: mySales } = useApi(
+    () => listMyAuctions(user!.id),
+    `my-sales:${user?.id}`,
+    mine,
+  );
+  const { data: myCauses } = useApi(
+    () => listMyCauses(user!.id),
+    `my-causes:${user?.id}`,
+    mine,
+  );
+
+  // Only what is still running: a list of everything the account ever did is a
+  // number that never goes down and so never means anything.
+  const counts: Record<string, number | undefined> = {
+    "/cont/licitatiile-mele": myBids?.filter(
+      (item) => item.myTopBid.status !== "WON" && item.myTopBid.status !== "LOST",
+    ).length,
+    "/cont/vanzari": mySales?.filter(
+      (item) => item.status === "LIVE" || item.status === "SCHEDULED",
+    ).length,
+    "/cont/cauze": myCauses?.filter(
+      (item) => item.status === "ACTIVE" || item.status === "APPROVED",
+    ).length,
+  };
 
   const [query, setQuery] = useState("");
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -453,7 +497,12 @@ export function SiteHeader() {
                               aria-hidden="true"
                               className="h-4.5 w-4.5 shrink-0 text-ink-500"
                             />
-                            {item.label}
+                            <span className="flex-1">{item.label}</span>
+                            {counts[item.href] ? (
+                              <span className="numeric rounded-lg bg-primary-50 px-1.5 py-0.5 text-xs font-extrabold text-primary-800">
+                                {counts[item.href]}
+                              </span>
+                            ) : null}
                           </Link>
                         </Fragment>
                       );
