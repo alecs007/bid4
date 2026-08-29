@@ -58,7 +58,7 @@ export function ErrorState({
 }) {
   return (
     <EmptyState
-      mood="sad"
+      mood="thinking"
       title={title}
       description={description}
       action={action}
