@@ -105,15 +105,18 @@ export function Gallery({
   };
 
   /**
-   * Moves off a clone once the track has come to rest — still the moment to do
-   * it, or the jump fights the browser's momentum.
+   * Moves off a clone. Only ever while the track is stationary, or the jump
+   * fights the browser's momentum.
    *
-   * <p>Rest is read as a quiet period after the last scroll event, rather than
-   * from `scrollend` and a finger-down flag. Those were single points of failure
-   * with no way back: a gesture that delivered no `scrollend`, or a pointer
-   * released off the track so its `pointerup` never arrived, left this unrun and
-   * the scroller stranded on the trailing clone — the far end of the track,
-   * where swiping forward does nothing and the gallery looks frozen.
+   * <p>Two moments qualify, and both are needed. A quiet period after the last
+   * scroll event covers the reader who stops. The start of the next gesture
+   * covers the one who does not: landing on the trailing clone leaves the
+   * scroller at the far end of the track, where a swipe moves nothing but still
+   * fires scroll events — which restart the quiet period. Every attempt to swipe
+   * on postpones the very correction that would let it work, so the gallery
+   * fights back for as long as the reader keeps trying. Crossing on pointerdown
+   * instead lands it before that swipe is read, and the swipe carries on into
+   * the next photograph.
    */
   useEffect(() => {
     const track = trackRef.current;
@@ -138,9 +141,11 @@ export function Gallery({
     };
 
     track.addEventListener("scroll", onQuiet, { passive: true });
+    track.addEventListener("pointerdown", rewind, { passive: true });
     return () => {
       window.clearTimeout(timer);
       track.removeEventListener("scroll", onQuiet);
+      track.removeEventListener("pointerdown", rewind);
     };
   }, [looped, count]);
 
