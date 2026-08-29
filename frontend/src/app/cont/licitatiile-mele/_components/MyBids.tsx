@@ -5,17 +5,19 @@ import { useState } from "react";
 import { AuctionRow, AuctionRowSkeleton } from "@/components/auctions/AuctionRow";
 import type { RowStat } from "@/components/auctions/AuctionRow";
 import { ListState } from "@/app/cont/_components/ListState";
-import { RowAction } from "@/app/cont/_components/RowAction";
+import { RowActions } from "@/app/cont/_components/RowActions";
 import { useListView } from "@/app/cont/_components/useListView";
 import { Icons } from "@/components/icons";
 import { checkRetractEligibility, listMyBids, retractBid } from "@/lib/api/bids";
 import { useAction, useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { useCurrentUserId } from "@/lib/auth/AuthProvider";
 import { AUCTION_STATUS, BID_STATUS } from "@/lib/labels";
+import { cn } from "@/lib/utils/cn";
 import { formatMoney } from "@/lib/money";
 import { formatDateTimeRo } from "@/lib/utils/date";
 import { countRo } from "@/lib/utils/plural";
 import type { MyBidSummary } from "@/lib/api/bids";
+import type { BidStatus } from "@/lib/types";
 import {
   Badge,
   Button,
@@ -24,7 +26,6 @@ import {
   Modal,
   Pagination,
   SegmentedControl,
-  StatusBadge,
   useToast,
 } from "@/components/ui";
 
@@ -44,6 +45,15 @@ const FILTERS: { value: Bucket; label: string }[] = [
   { value: "won", label: "Câștigate" },
   { value: "lost", label: "Încheiate" },
 ];
+
+/** The bidder's own standing, coloured to match what it means. */
+const OUTCOME_TEXT: Record<BidStatus, string> = {
+  ACTIVE: "text-sky-700",
+  OUTBID: "text-warning-700",
+  WINNING: "text-primary-700",
+  WON: "text-success-700",
+  LOST: "text-ink-500",
+};
 
 /** Decided by the bid rather than the auction: it is the bidder's outcome. */
 function bucketOf(summary: MyBidSummary): Bucket {
@@ -116,7 +126,7 @@ export function MyBids() {
             </Button>
           }
         />
-      ) : loading && !data ? (
+      ) : !userId || (loading && !data) ? (
         <AuctionRowSkeleton rows={4} />
       ) : view.settling ? (
         <AuctionRowSkeleton rows={view.outgoing} />
@@ -175,20 +185,32 @@ export function MyBids() {
 function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () => void }) {
   const { auction, myTopBid } = summary;
   const settled = myTopBid.status === "WON" || myTopBid.status === "LOST";
-  // The same rule the auction page uses, rather than a second opinion about it.
-  const canRetract = checkRetractEligibility(auction, myTopBid.bidderId).canRetract;
+  const live = auction.status === "LIVE";
   // The whole question this page answers: is my offer still the one in front?
-  const behind = auction.currentPrice > myTopBid.amount;
-  const canRaise = behind && auction.status === "LIVE";
+  const leading = myTopBid.amount >= auction.currentPrice;
+  const retract = checkRetractEligibility(auction, myTopBid.bidderId);
 
   const stats: RowStat[] = [
-    { label: "Oferta ta", value: formatMoney(myTopBid.amount), emphasis: !behind },
+    { label: "Oferta ta", value: formatMoney(myTopBid.amount), emphasis: !live || leading },
     {
       label: settled ? "Preț final" : "Preț curent",
       value: formatMoney(auction.currentPrice),
-      // Whichever number is the one to act on is the one that stands out: your
-      // own while you are ahead, theirs the moment you are not.
-      emphasis: behind,
+      // Whichever number is the one to act on is the one that stands out, and
+      // the colour says which way it is going: your own offer while it is still
+      // in front, somebody else's the moment it is not.
+      emphasis: live && !leading,
+      // Green when the number is in your favour: your own offer while it leads,
+      // and the closing price when the thing you won closed at it. Red while
+      // somebody else's offer is in front. Nothing either way on one you lost —
+      // that price is somebody else's good news.
+      tone: live
+        ? leading
+          ? "positive"
+          : "negative"
+        : myTopBid.status === "WON"
+          ? "positive"
+          : undefined,
+      note: live && leading ? "oferta ta" : undefined,
     },
   ];
 
@@ -197,12 +219,10 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
       auction={auction}
       badges={
         <>
-          <StatusBadge
-            meta={BID_STATUS[myTopBid.status]}
-            size="sm"
-            marker={false}
-            className="text-[11px]"
-          />
+          {/* One box, and it is the listing's own state. Where the bidder stands
+              is a different kind of fact — it is about them, not the listing —
+              so it is said in words and colour rather than boxed up beside it,
+              which read as two competing labels for the same thing. */}
           <Badge
             tone={AUCTION_STATUS[auction.status].tone}
             size="sm"
@@ -212,6 +232,9 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
           >
             {AUCTION_STATUS[auction.status].label}
           </Badge>
+          <span className={cn("text-[11px] font-bold", OUTCOME_TEXT[myTopBid.status])}>
+            {BID_STATUS[myTopBid.status].label}
+          </span>
         </>
       }
       stats={stats}
@@ -221,29 +244,37 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
           : `Se încheie la ${formatDateTimeRo(auction.endTime)}`
       }
       actions={
-        <>
-          {canRaise ? (
-            <RowAction
-              label="Licitează din nou"
-              primary
-              href={`/licitatii/${auction.id}`}
-              icon={<Icons.auction aria-hidden="true" className="h-4 w-4" />}
-            />
-          ) : null}
-          <RowAction
-            label="Vezi detalii"
-            href={`/licitatii/${auction.id}`}
-            icon={<Icons.reveal aria-hidden="true" className="h-4 w-4" />}
-          />
-          {canRetract ? (
-            <RowAction
-              label="Retrage"
-              danger
-              icon={<Icons.remove aria-hidden="true" className="h-4 w-4" />}
-              onClick={onRetract}
-            />
-          ) : null}
-        </>
+        <RowActions
+          view={`/licitatii/${auction.id}`}
+          primary={
+            live && !leading
+              ? {
+                  label: "Mărește oferta",
+                  icon: <Icons.auction aria-hidden="true" className="h-4 w-4" />,
+                  href: `/licitatii/${auction.id}`,
+                  onClick: undefined,
+                }
+              : undefined
+          }
+          extra={
+            live
+              ? [
+                  {
+                    label: "Retrage",
+                    icon: <Icons.remove aria-hidden="true" className="h-4 w-4 shrink-0" />,
+                    danger: true,
+                    onClick: onRetract,
+                    // Shown and explained rather than dropped. Only the leading
+                    // offer can go: pulling one out of the middle would rewrite
+                    // a history the other bidders already acted on.
+                    unavailable: retract.canRetract
+                      ? undefined
+                      : (retract.reason ?? "Poți retrage doar oferta aflată pe primul loc."),
+                  },
+                ]
+              : []
+          }
+        />
       }
     />
   );

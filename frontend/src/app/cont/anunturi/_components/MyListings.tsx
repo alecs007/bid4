@@ -5,8 +5,9 @@ import { useState } from "react";
 import { AuctionRow, AuctionRowSkeleton } from "@/components/auctions/AuctionRow";
 import type { RowStat } from "@/components/auctions/AuctionRow";
 import { Icons } from "@/components/icons";
+import { BiddersModal } from "@/app/cont/_components/BiddersModal";
 import { ListState } from "@/app/cont/_components/ListState";
-import { RowAction } from "@/app/cont/_components/RowAction";
+import { RowActions } from "@/app/cont/_components/RowActions";
 import { useListView } from "@/app/cont/_components/useListView";
 import { cancelAuction, listMyAuctions } from "@/lib/api/auctions";
 import { useAction, useApi, useRevalidate } from "@/lib/hooks/useApi";
@@ -73,8 +74,8 @@ function bucketOf(auction: AuctionDetail): Bucket {
  * pair that matters is what it opened at against what it has reached; once it is
  * over, what it finished at.
  */
-function statsFor(auction: AuctionDetail): RowStat[] {
-  const start: RowStat = { label: "Preț pornire", value: formatMoney(auction.startingPrice) };
+function statsFor(auction: AuctionDetail, onSeeBidders: () => void): RowStat[] {
+  const start: RowStat = { label: "Preț de pornire", value: formatMoney(auction.startingPrice) };
 
   switch (auction.status) {
     case "DRAFT":
@@ -82,31 +83,62 @@ function statsFor(auction: AuctionDetail): RowStat[] {
     case "SCHEDULED":
       return [{ ...start, emphasis: true }];
     case "SOLD":
-      return [start, { label: "Preț final", value: formatMoney(auction.currentPrice), emphasis: true }];
-    case "UNSOLD":
-    case "ENDED":
       return [
         start,
         {
-          label: "Cea mai mare ofertă",
-          value: auction.bidCount ? formatMoney(auction.currentPrice) : "Fără oferte",
+          label: "Preț final",
+          value: formatMoney(auction.currentPrice),
           emphasis: true,
+          // Green like the running figure it grew out of: it is the number that
+          // went the seller's way, and it is what the donation comes out of.
+          tone: "positive",
         },
       ];
+    case "UNSOLD":
+    case "ENDED":
+      return [start, highest(auction, onSeeBidders, "Cea mai mare ofertă")].filter(present);
     case "CANCELLED":
       return [start];
     default:
-      return [
-        start,
-        {
-          label: auction.bidCount
-            ? countRo(auction.bidCount, "ofertă", "oferte")
-            : "Ofertă curentă",
-          value: auction.bidCount ? formatMoney(auction.currentPrice) : "Fără oferte încă",
-          emphasis: true,
-        },
-      ];
+      return [start, highest(auction, onSeeBidders, "Cea mai mare ofertă")].filter(present);
   }
+}
+
+/** Drops the figures that have nothing to say for this listing. */
+function present(stat: RowStat | null): stat is RowStat {
+  return stat !== null;
+}
+
+/**
+ * What the bidding has reached, in green because it is the number going the
+ * seller's way, with how many offers made it and a way to see whose.
+ */
+function highest(
+  auction: AuctionDetail,
+  onSeeBidders: () => void,
+  label: string,
+): RowStat | null {
+  // Nothing at all rather than "Fără oferte": an empty figure is a column of
+  // absence down the page, and the asking price beside it already says what
+  // there is to know.
+  if (!auction.bidCount) {
+    return null;
+  }
+  return {
+    label,
+    value: formatMoney(auction.currentPrice),
+    emphasis: true,
+    tone: "positive",
+    action: (
+      <button
+        type="button"
+        onClick={onSeeBidders}
+        className="rounded-md bg-ink-100 px-1.5 py-0.5 text-[10px] leading-none font-bold text-ink-700 transition hover:bg-ink-200"
+      >
+        {countRo(auction.bidCount, "ofertă", "oferte")}
+      </button>
+    ),
+  };
 }
 
 /** When the clock matters, and what it is doing. */
@@ -133,6 +165,7 @@ export function MyListings() {
   const toast = useToast();
   const revalidate = useRevalidate();
   const [pendingWithdrawal, setPendingWithdrawal] = useState<AuctionDetail | null>(null);
+  const [bidders, setBidders] = useState<AuctionDetail | null>(null);
 
   const { data, error, loading, reload } = useApi(
     () => listMyAuctions(userId!),
@@ -188,7 +221,7 @@ export function MyListings() {
             </Button>
           }
         />
-      ) : loading && !data ? (
+      ) : !userId || (loading && !data) ? (
         <AuctionRowSkeleton rows={4} />
       ) : view.settling ? (
         <AuctionRowSkeleton rows={view.outgoing} />
@@ -218,24 +251,23 @@ export function MyListings() {
                     className="text-[11px]"
                   />
                 }
-                stats={statsFor(auction)}
+                stats={statsFor(auction, () => setBidders(auction))}
                 footnote={footnoteFor(auction)}
                 actions={
-                  <>
-                    <RowAction
-                      label="Vezi detalii"
-                      href={`/licitatii/${auction.id}`}
-                      icon={<Icons.reveal aria-hidden="true" className="h-4 w-4" />}
-                    />
-                    {WITHDRAWABLE.has(auction.status) ? (
-                      <RowAction
-                        label="Retrage"
-                        danger
-                        icon={<Icons.remove aria-hidden="true" className="h-4 w-4" />}
-                        onClick={() => setPendingWithdrawal(auction)}
-                      />
-                    ) : null}
-                  </>
+                  <RowActions
+                    view={`/licitatii/${auction.id}`}
+                    extra={[
+                      {
+                        label: "Retrage",
+                        icon: <Icons.remove aria-hidden="true" className="h-4 w-4 shrink-0" />,
+                        danger: true,
+                        onClick: () => setPendingWithdrawal(auction),
+                        unavailable: WITHDRAWABLE.has(auction.status)
+                          ? undefined
+                          : "Licitația s-a încheiat și nu mai poate fi retrasă.",
+                      },
+                    ]}
+                  />
                 }
               />
             ))}
@@ -247,6 +279,12 @@ export function MyListings() {
           />
         </>
       )}
+
+      <BiddersModal
+        auction={bidders}
+        open={bidders !== null}
+        onClose={() => setBidders(null)}
+      />
 
       <Modal
         open={pendingWithdrawal !== null}

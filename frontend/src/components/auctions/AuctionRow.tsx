@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Icons } from "@/components/icons";
 import { Skeleton } from "@/components/ui";
 import { formatMoney, percentOf } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
@@ -27,7 +28,7 @@ const ROW = "rounded-3xl bg-white ring-1 ring-edge p-3 sm:p-4";
  * stacks instead.
  */
 const GRID =
-  "lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto_minmax(11rem,auto)] lg:items-center lg:gap-4";
+  "lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-5 lg:gap-y-0";
 
 const THUMB = "aspect-square w-20 shrink-0 rounded-2xl sm:w-24";
 
@@ -36,6 +37,12 @@ export interface RowStat {
   value: string;
   /** The figure that matters most in this row, given its state. */
   emphasis?: boolean;
+  /** Green when the number is in your favour, red when it is not. */
+  tone?: "positive" | "negative";
+  /** A word on why this number is what it is, e.g. that it is your own offer. */
+  note?: string;
+  /** Something to do with this figure, rendered beside it. */
+  action?: ReactNode;
 }
 
 export function AuctionRow({
@@ -54,44 +61,52 @@ export function AuctionRow({
   const cover = auction.images[0] ?? "";
 
   return (
-    <li className={cn(ROW, GRID, "transition hover:ring-ink-300")}>
-      <div className="flex items-start gap-3 sm:gap-4 lg:contents">
-        <Link
-          href={`/licitatii/${auction.id}`}
-          // Decorative twice over: the title beside it is the same link, and the
-          // photo says nothing a screen reader needs repeated.
-          tabIndex={-1}
-          aria-hidden="true"
-          className={cn(THUMB, "relative overflow-hidden bg-ink-100")}
-        >
-          {cover ? (
-            <Image src={cover} alt="" fill unoptimized sizes="96px" className="object-cover" />
-          ) : null}
-        </Link>
-
-        {/* min-w-0 is what lets the title truncate instead of stretching the row. */}
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          {badges ? <div className="flex flex-wrap items-center gap-1.5">{badges}</div> : null}
+    <li className={cn(ROW, "transition hover:ring-ink-300")}>
+      <div className={GRID}>
+        <div className="flex items-start gap-3 sm:gap-4 lg:contents">
           <Link
             href={`/licitatii/${auction.id}`}
-            className="block truncate font-display text-[15px] font-bold text-ink-900 underline-offset-4 hover:underline sm:text-base"
-            title={auction.title}
+            // Decorative twice over: the title beside it is the same link, and
+            // the photo says nothing a screen reader needs repeated.
+            tabIndex={-1}
+            aria-hidden="true"
+            className={cn(THUMB, "relative overflow-hidden bg-ink-100")}
           >
-            {auction.title}
+            {cover ? (
+              <Image src={cover} alt="" fill unoptimized sizes="96px" className="object-cover" />
+            ) : null}
           </Link>
-          {stats?.length ? <Stats stats={stats} /> : null}
-          {footnote ? <p className="truncate text-xs text-ink-500">{footnote}</p> : null}
+
+          {/* min-w-0 is what lets the title truncate rather than stretch the row. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {badges ? <div className="flex flex-wrap items-center gap-1.5">{badges}</div> : null}
+            <Link
+              href={`/licitatii/${auction.id}`}
+              className="block truncate font-display text-[15px] font-bold text-ink-900 underline-offset-4 hover:underline sm:text-base"
+              title={auction.title}
+            >
+              {auction.title}
+            </Link>
+            {footnote ? <p className="truncate text-xs text-ink-500">{footnote}</p> : null}
+          </div>
+        </div>
+
+        {/* The figures and the cause sit together on the right, because they are
+            the two things being compared: what this costs, and what it gives.
+            Below `lg` they each take a row of their own. */}
+        {stats?.length ? (
+          <div className="mt-3 lg:mt-0">
+            <Stats stats={stats} />
+          </div>
+        ) : null}
+        <div className="mt-2 lg:mt-0">
+          <CauseBlock auction={auction} />
         </div>
       </div>
 
-      {/* Below `lg` these are rows of their own. Beside the item they left the
-          title about a third of the width, and the title is what is being read. */}
-      <div className="mt-3 lg:mt-0">
-        <CauseBlock auction={auction} />
-      </div>
-      {actions ? (
-        <div className="mt-2 flex items-center justify-end gap-1.5 lg:mt-0">{actions}</div>
-      ) : null}
+      {/* Actions on a line of their own, at every width. Beside the item they
+          crowd the title; hidden behind a menu they are a guess. */}
+      {actions ? <div className="mt-3 border-t border-line pt-2.5">{actions}</div> : null}
     </li>
   );
 }
@@ -115,11 +130,27 @@ function Stats({ stats }: { stats: RowStat[] }) {
           </dt>
           <dd
             className={cn(
-              "font-display leading-tight font-bold",
-              stat.emphasis ? "text-[15px] text-ink-900" : "text-sm text-ink-700",
+              "flex items-center gap-1.5 font-display leading-tight font-bold",
+              stat.emphasis ? "text-[15px]" : "text-sm",
+              stat.tone === "positive" && "text-primary-700",
+              stat.tone === "negative" && "text-danger-700",
+              !stat.tone && (stat.emphasis ? "text-ink-900" : "text-ink-700"),
             )}
           >
             {stat.value}
+            {stat.action}
+            {stat.note ? (
+              <span
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[10px] leading-none font-bold",
+                  stat.tone === "negative"
+                    ? "bg-danger-50 text-danger-700"
+                    : "bg-primary-50 text-primary-800",
+                )}
+              >
+                {stat.note}
+              </span>
+            ) : null}
           </dd>
         </div>
       ))}
@@ -164,7 +195,11 @@ function CauseBlock({ auction }: { auction: AuctionDetail }) {
         </span>
         <span className="block truncate font-display text-sm leading-tight font-bold text-primary-800">
           {formatMoney(share)}
-          <span className="font-bold text-ink-600"> · {auction.cause.name}</span>
+          <Icons.forward
+            aria-hidden="true"
+            className="mx-1 inline-block h-3 w-3 shrink-0 align-[-1px] text-ink-400"
+          />
+          <span className="font-bold text-ink-600">{auction.cause.name}</span>
         </span>
       </span>
     </Link>
@@ -180,24 +215,26 @@ export function AuctionRowSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <ul className="flex flex-col gap-2.5" aria-hidden="true">
       {Array.from({ length: rows }).map((_, index) => (
-        <li key={index} className={cn(ROW, GRID)}>
-          <div className="flex items-start gap-3 sm:gap-4 lg:contents">
-            <Skeleton className={THUMB} />
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Skeleton className="h-[18px] w-28 rounded-full" />
-              <Skeleton className="h-5 w-2/3 rounded-lg" />
-              <div className="flex gap-5">
-                <Skeleton className="h-8 w-24 rounded-lg" />
-                <Skeleton className="h-8 w-24 rounded-lg" />
+        <li key={index} className={ROW}>
+          <div className={GRID}>
+            <div className="flex items-start gap-3 sm:gap-4 lg:contents">
+              <Skeleton className={THUMB} />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <Skeleton className="h-[18px] w-28 rounded-full" />
+                <Skeleton className="h-5 w-2/3 rounded-lg" />
+                <Skeleton className="h-4 w-40 rounded-lg" />
               </div>
-              <Skeleton className="h-4 w-40 rounded-lg" />
+            </div>
+            <div className="mt-3 flex gap-5 lg:mt-0">
+              <Skeleton className="h-9 w-24 rounded-lg" />
+              <Skeleton className="h-9 w-24 rounded-lg" />
+            </div>
+            <div className="mt-2 lg:mt-0">
+              <Skeleton className="h-12 w-full rounded-2xl lg:w-56" />
             </div>
           </div>
-          <div className="mt-3 lg:mt-0">
-            <Skeleton className="h-12 w-full rounded-2xl lg:w-56" />
-          </div>
-          <div className="mt-2 flex justify-end lg:mt-0">
-            <Skeleton className="h-8 w-40 rounded-xl" />
+          <div className="mt-3 flex justify-end border-t border-line pt-2.5">
+            <Skeleton className="h-8 w-56 rounded-xl" />
           </div>
         </li>
       ))}

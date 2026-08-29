@@ -6,7 +6,7 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { withRedirect } from "@/lib/auth/form";
 import type { UserRole } from "@/lib/types";
-import { Button, ButtonLink, EmptyState, SkeletonStats } from "@/components/ui";
+import { Button, ButtonLink, EmptyState } from "@/components/ui";
 
 export function RouteGuard({
   children,
@@ -30,12 +30,14 @@ export function RouteGuard({
     }
   }, [status, router, signIn]);
 
+  // Rendered, not replaced, while the session is still being restored. This
+  // used to draw three stat boxes over the whole account area — a placeholder
+  // for no page in particular, shown before the page then drew its own. A page
+  // knows what it is about to look like and this does not, so it waits here and
+  // lets the page say so. Everything under it already treats a missing user as
+  // "not ready" rather than "nobody".
   if (status === "loading") {
-    return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <SkeletonStats count={3} />
-      </div>
-    );
+    return <>{children}</>;
   }
 
   if (status === "anonymous") {
