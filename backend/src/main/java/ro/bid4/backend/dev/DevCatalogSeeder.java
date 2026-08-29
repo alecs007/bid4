@@ -345,11 +345,18 @@ public class DevCatalogSeeder implements ApplicationRunner {
                 0,
                 false));
 
+    // The eight above are the shop window: real titles, real copy, and what the
+    // homepage rows and the cause pages are composed from. The batch below is
+    // volume — enough listings, in enough states, that filtering and paging on
+    // the account pages are exercised by the seed rather than by hand.
+    List<Planned> everything = new ArrayList<>(planned);
+    everything.addAll(volume(mariaId, seededCauses.get("ana"), now));
+
     // Saved before the bids, because a bid carries the id of its auction.
-    auctions.saveAll(planned.stream().map(Planned::auction).toList());
+    auctions.saveAll(everything.stream().map(Planned::auction).toList());
 
     List<Bid> offers = new ArrayList<>();
-    for (Planned entry : planned) {
+    for (Planned entry : everything) {
       place(entry, cast, now, offers);
     }
     bids.saveAll(offers);
@@ -358,8 +365,113 @@ public class DevCatalogSeeder implements ApplicationRunner {
         "Development seed: {} causes, {} listings, {} bids. "
             + "Dev profile only, and only into a database with no causes.",
         seededCauses.size(),
-        planned.size(),
+        everything.size(),
         offers.size());
+  }
+
+  /**
+   * A run of ordinary listings, so the account pages have something to page through.
+   *
+   * <p>One seller and every status, because that is what the two lists filter on: the seller's own
+   * page needs listings in review, running and finished, and the bidder pages need one account to
+   * have bid on more auctions than fit on a page. Written out rather than randomised — a seed that
+   * differs run to run is one that cannot be described in a bug report.
+   */
+  private List<Planned> volume(UUID sellerId, Cause cause, Instant now) {
+    record Item(String title, String category, ItemCondition condition, long price, int offers) {}
+
+    List<Item> items =
+        List.of(
+            new Item("Boxă Bluetooth JBL Flip 5", "electronice", ItemCondition.VERY_GOOD, 220, 3),
+            new Item("Aparat de cafea Delonghi Dedica", "casa", ItemCondition.GOOD, 380, 2),
+            new Item("Trotinetă electrică Xiaomi Pro 2", "sport", ItemCondition.GOOD, 900, 3),
+            new Item("Set LEGO Technic, 1.200 piese", "jucarii", ItemCondition.LIKE_NEW, 260, 1),
+            new Item("Geacă de piele naturală, mărimea M", "moda", ItemCondition.VERY_GOOD, 340, 2),
+            new Item(
+                "Colecție de timbre românești interbelice", "colectii", ItemCondition.GOOD, 700, 3),
+            new Item("Chitară clasică Yamaha C40", "arta", ItemCondition.VERY_GOOD, 450, 2),
+            new Item("Rachetă de tenis Wilson Pro Staff", "sport", ItemCondition.GOOD, 280, 0),
+            new Item("Lampă de birou din alamă, anii 60", "casa", ItemCondition.GOOD, 190, 1),
+            new Item("Ceas de buzunar mecanic, argintat", "bijuterii", ItemCondition.GOOD, 620, 3),
+            new Item("Enciclopedie ilustrată, 12 volume", "carti", ItemCondition.VERY_GOOD, 240, 2),
+            new Item(
+                "Cameră foto instant Fujifilm Instax",
+                "electronice",
+                ItemCondition.LIKE_NEW,
+                300,
+                1),
+            new Item("Pătuț de lemn pentru copii", "jucarii", ItemCondition.GOOD, 350, 0),
+            new Item("Rolă de patinaj, mărimea 42", "sport", ItemCondition.USED, 160, 2),
+            new Item("Servietă din piele, model clasic", "moda", ItemCondition.VERY_GOOD, 410, 3),
+            new Item("Vinil: colecție rock, 20 de discuri", "colectii", ItemCondition.GOOD, 540, 2),
+            new Item("Tablou în ulei, peisaj de munte", "arta", ItemCondition.VERY_GOOD, 800, 1),
+            new Item("Robot de bucătărie Bosch", "casa", ItemCondition.GOOD, 330, 0));
+
+    // Cycled rather than random, so the same index is always the same status.
+    AuctionStatus[] cycle = {
+      AuctionStatus.LIVE,
+      AuctionStatus.LIVE,
+      AuctionStatus.SOLD,
+      AuctionStatus.PENDING_REVIEW,
+      AuctionStatus.LIVE,
+      AuctionStatus.UNSOLD,
+      AuctionStatus.SCHEDULED,
+      AuctionStatus.CANCELLED
+    };
+
+    List<Planned> generated = new ArrayList<>(items.size());
+    for (int index = 0; index < items.size(); index++) {
+      Item item = items.get(index);
+      AuctionStatus status = cycle[index % cycle.length];
+      boolean finished =
+          status == AuctionStatus.SOLD
+              || status == AuctionStatus.UNSOLD
+              || status == AuctionStatus.ENDED;
+
+      // A finished listing closed in the past. Anything still open has to close in
+      // the future measured from now, not from its own start: an auction that
+      // opened five days ago and runs for two is already over, and the clock
+      // would settle it on the first tick — leaving a seed that contradicts
+      // itself twenty seconds after boot.
+      Instant start =
+          status == AuctionStatus.SCHEDULED
+              ? now.plus(Duration.ofDays(1 + (index % 3)))
+              : now.minus(Duration.ofDays(1 + (index % 5)));
+      Instant end;
+      if (finished) {
+        end = now.minus(Duration.ofHours(2L + index));
+      } else if (status == AuctionStatus.SCHEDULED) {
+        end = start.plus(Duration.ofDays(2 + (index % 6)));
+      } else {
+        end = now.plus(Duration.ofDays(2 + (index % 6)));
+      }
+
+      generated.add(
+          new Planned(
+              listing(
+                  sellerId,
+                  cause,
+                  item.title(),
+                  "Stare bună, folosit cu grijă. Fotografiile sunt făcute în lumină naturală "
+                      + "și arată exact ce primești.",
+                  item.category(),
+                  item.condition(),
+                  1_000 + (index * 250),
+                  10 + ((index * 5) % 60),
+                  item.price() * LEU,
+                  10 * LEU,
+                  null,
+                  null,
+                  start,
+                  end,
+                  status),
+              // A cancelled or unreviewed listing never took an offer.
+              status == AuctionStatus.CANCELLED || status == AuctionStatus.PENDING_REVIEW
+                  ? 0
+                  : item.offers(),
+              finished));
+    }
+    return generated;
   }
 
   /**
@@ -535,11 +647,19 @@ public class DevCatalogSeeder implements ApplicationRunner {
       amount += auction.getBidIncrement();
     }
 
+    // Finished and won are not the same thing, and the table knows it: a winner
+    // is only legal on SOLD or ENDED, so an auction that missed its reserve is
+    // over with every bid lost and nobody holding it. Read off the status rather
+    // than off the flag, which cannot then disagree with the row it describes.
+    boolean hasWinner =
+        auction.getStatus() == AuctionStatus.SOLD || auction.getStatus() == AuctionStatus.ENDED;
+
     Bid leader = placed.getLast();
-    leader.setStatus(entry.settled() ? BidStatus.WON : BidStatus.WINNING);
+    leader.setStatus(
+        entry.settled() ? (hasWinner ? BidStatus.WON : BidStatus.LOST) : BidStatus.WINNING);
     auction.setCurrentPrice(leader.getAmount());
     auction.setBidCount(placed.size());
-    if (entry.settled()) {
+    if (hasWinner) {
       auction.setWinnerId(leader.getBidderId());
     }
 
