@@ -2,6 +2,7 @@ package ro.bid4.backend.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -97,6 +98,17 @@ class RefreshTokenLifetimeTest {
     assertThat(fresh).isNotNull();
 
     mvc.perform(post("/auth/refresh").cookie(fresh)).andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("a refused refresh clears the cookies instead of leaving them behind")
+  void refusalClearsBothCookies() throws Exception {
+    // The state after a token dies: the page cannot clear bid4.session itself,
+    // and one left behind keeps the middleware redirecting away from sign-in.
+    mvc.perform(post("/auth/refresh").cookie(new Cookie("bid4.refresh", "nu-a-fost-emis")))
+        .andExpect(status().isUnauthorized())
+        .andExpect(cookie().maxAge("bid4.refresh", 0))
+        .andExpect(cookie().maxAge("bid4.session", 0));
   }
 
   /** Ages the user's chains past the ninety-day ceiling. Returns how many rows were touched. */

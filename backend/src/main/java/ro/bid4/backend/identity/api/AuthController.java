@@ -1,6 +1,7 @@
 package ro.bid4.backend.identity.api;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ro.bid4.backend.common.config.Bid4Properties;
+import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.identity.api.dto.AuthSessionResponse;
 import ro.bid4.backend.identity.api.dto.LoginRequest;
 import ro.bid4.backend.identity.api.dto.RegisterRequest;
@@ -96,12 +98,28 @@ public class AuthController {
         .body(result.session());
   }
 
+  /**
+   * Trades the refresh cookie for a new pair.
+   *
+   * <p>A refusal clears both cookies rather than leaving them. The session cookie is httpOnly, so a
+   * page cannot tidy it up itself, and one left behind after the refresh token died keeps the
+   * frontend middleware redirecting away from the sign-in page — which is the one page somebody in
+   * that state needs. The headers are put on the response directly because this exit is an
+   * exception, and the error handler writes its body to the same response.
+   */
   @PostMapping("/refresh")
   ResponseEntity<AuthSessionResponse> refresh(
       @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
-      HttpServletRequest http) {
-    AuthService.SessionResult result =
-        authService.refresh(refreshToken, clientIp(http), userAgent(http));
+      HttpServletRequest http,
+      HttpServletResponse response) {
+    AuthService.SessionResult result;
+    try {
+      result = authService.refresh(refreshToken, clientIp(http), userAgent(http));
+    } catch (ApiException refused) {
+      response.addHeader(HttpHeaders.SET_COOKIE, expiredRefreshCookie(http).toString());
+      response.addHeader(HttpHeaders.SET_COOKIE, expiredSessionCookie(http).toString());
+      throw refused;
+    }
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, refreshCookie(result.refreshToken(), http).toString())
         .header(HttpHeaders.SET_COOKIE, sessionCookie(result.session().user(), http).toString())
