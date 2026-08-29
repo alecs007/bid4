@@ -158,7 +158,7 @@ export default function HomePage() {
               casă și de a ajuta o cauză în același timp.
             </p>
             <div className="mt-5 flex justify-center">
-              <ButtonLink href="/cont/anunturi/nou" size="lg">
+              <ButtonLink href="/cont/vanzari/nou" size="lg">
                 Începe să vinzi pe bid4
               </ButtonLink>
             </div>

@@ -16,7 +16,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Contul tău",
     links: [
       { href: "/cont", label: "Panoul meu" },
-      { href: "/cont/anunturi/nou", label: "Vinde acum" },
+      { href: "/cont/vanzari/nou", label: "Vinde acum" },
       { href: "/cont/cauze/noua", label: "Deschide o cauză" },
       { href: "/cont/comenzi", label: "Comenzile mele" },
     ],

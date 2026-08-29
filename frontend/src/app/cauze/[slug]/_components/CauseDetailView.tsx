@@ -350,7 +350,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
                   : "Nicio licitație aici încă"
               }
               action={
-                <ButtonLink href="/cont/anunturi/nou">Vinde acum</ButtonLink>
+                <ButtonLink href="/cont/vanzari/nou">Vinde acum</ButtonLink>
               }
               compact
             />

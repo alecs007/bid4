@@ -180,7 +180,7 @@ export function PopularRow() {
             <EmptyState
               title="Nicio licitație în desfășurare"
               action={
-                <ButtonLink href="/cont/anunturi/nou">Vinde acum</ButtonLink>
+                <ButtonLink href="/cont/vanzari/nou">Vinde acum</ButtonLink>
               }
               compact
             />

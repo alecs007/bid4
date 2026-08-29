@@ -160,7 +160,7 @@ function footnoteFor(auction: AuctionDetail): string {
   }
 }
 
-export function MyListings() {
+export function MySales() {
   const userId = useCurrentUserId();
   const toast = useToast();
   const revalidate = useRevalidate();
@@ -169,7 +169,7 @@ export function MyListings() {
 
   const { data, error, loading, reload } = useApi(
     () => listMyAuctions(userId!),
-    `my-listings:${userId}`,
+    `my-sales:${userId}`,
     { enabled: Boolean(userId) },
   );
 
@@ -192,7 +192,7 @@ export function MyListings() {
     setPendingWithdrawal(null);
     toast.success("Anunț retras", `„${done.title}” nu mai este public.`);
     // It also leaves the public catalogue and any cause page that counted it.
-    revalidate("my-listings", "auctions", "causes");
+    revalidate("my-sales", "auctions", "causes");
   };
 
   return (
@@ -200,11 +200,11 @@ export function MyListings() {
     <section className="flex min-h-[60vh] flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
-          Anunțurile mele
+          Vânzările mele
         </h1>
         {view.options.length > 0 ? (
           <SegmentedControl
-            ariaLabel="Filtrează anunțurile"
+            ariaLabel="Filtrează vânzările"
             options={view.options}
             value={view.filter}
             onChange={view.choose}
@@ -229,14 +229,14 @@ export function MyListings() {
         <ListState
           filtered={view.hiddenByFilter}
           onReset={() => view.choose("all")}
-          title="Nu ai niciun anunț"
+          title="Nu ai nicio vânzare"
           description="Pune la licitație ceva ce nu mai folosești și alege cauza care primește o parte din preț."
-          action={<ButtonLink href="/cont/anunturi/nou">Vinde acum</ButtonLink>}
+          action={<ButtonLink href="/cont/vanzari/nou">Vinde acum</ButtonLink>}
         />
       ) : (
         <>
           <p className="sr-only" aria-live="polite">
-            {countRo(view.matching.length, "anunț", "anunțuri")}
+            {countRo(view.matching.length, "vânzare", "vânzări")}
           </p>
           <ul className="flex flex-col gap-2.5">
             {view.shown.map((auction) => (
@@ -248,7 +248,7 @@ export function MyListings() {
                     meta={AUCTION_STATUS[auction.status]}
                     size="sm"
                     marker={false}
-                    className="text-[11px]"
+                    className="border-transparent text-[11px]"
                   />
                 }
                 stats={statsFor(auction, () => setBidders(auction))}

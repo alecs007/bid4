@@ -449,7 +449,7 @@ export function AuctionBrowser() {
                     activeCount > 0 ? (
                       <Button onClick={clearAll}>Șterge filtrele</Button>
                     ) : (
-                      <ButtonLink href="/cont/anunturi/nou">
+                      <ButtonLink href="/cont/vanzari/nou">
                         Vinde acum
                       </ButtonLink>
                     )

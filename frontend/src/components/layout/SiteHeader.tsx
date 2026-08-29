@@ -16,13 +16,27 @@ const NAV = [
   { href: "/cauze", label: "Cauze" },
 ];
 
-const ACCOUNT_LINKS = [
-  { href: "/cont", label: "Panoul meu" },
-  { href: "/cont/licitatiile-mele", label: "Licitațiile mele" },
-  { href: "/cont/comenzi", label: "Comenzi" },
-  { href: "/cont/anunturi", label: "Anunțuri" },
-  { href: "/cont/cauze", label: "Cauzele mele" },
-  { href: "/cont/setari", label: "Setări" },
+/**
+ * The account menu, grouped the way the account is used rather than
+ * alphabetically: what I am buying, then what I am selling, then what I support,
+ * then the account itself. Each carries the icon it is known by elsewhere in the
+ * app, so the menu is scanned rather than read.
+ */
+const ACCOUNT_LINKS: {
+  href: string;
+  label: string;
+  icon: keyof typeof Icons;
+  group?: boolean;
+}[] = [
+  { href: "/cont", label: "Panoul meu", icon: "account" },
+
+  { href: "/cont/licitatiile-mele", label: "Licitațiile mele", icon: "auction", group: true },
+  { href: "/cont/comenzi", label: "Comenzile mele", icon: "parcel" },
+
+  { href: "/cont/vanzari", label: "Vânzările mele", icon: "wallet", group: true },
+  { href: "/cont/cauze", label: "Cauzele mele", icon: "cause" },
+
+  { href: "/cont/setari", label: "Setări", icon: "settings", group: true },
 ];
 
 function MenuToggle({ open }: { open: boolean }) {
@@ -390,7 +404,7 @@ export function SiteHeader() {
             <Skeleton className="h-9 w-28 rounded-2xl" />
           ) : user ? (
             <>
-              <ButtonLink href="/cont/anunturi/nou" size="sm">
+              <ButtonLink href="/cont/vanzari/nou" size="sm">
                 Vinde acum
               </ButtonLink>
               {/* flex, or the inline-level button rides 2px above the other controls. */}
@@ -420,23 +434,33 @@ export function SiteHeader() {
                       {user.displayName}
                     </p>
 
-                    {ACCOUNT_LINKS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        role="menuitem"
-                        className="block rounded-xl px-2.5 py-2 text-[15px] font-semibold text-ink-700 transition hover:bg-ink-50 hover:text-ink-900"
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
+                    {ACCOUNT_LINKS.map((item) => {
+                      const Icon = Icons[item.icon];
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          role="menuitem"
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-ink-700 transition hover:bg-ink-50 hover:text-ink-900",
+                            // A hairline where the subject changes, so the menu
+                            // reads as three short lists rather than one long one.
+                            item.group && "mt-1 border-t border-line pt-2.5",
+                          )}
+                        >
+                          <Icon aria-hidden="true" className="h-4.5 w-4.5 shrink-0 text-ink-500" />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
 
                     {isStaff ? (
                       <Link
                         href={isAdmin ? "/admin" : "/operator/cauze"}
                         role="menuitem"
-                        className="block rounded-xl px-2.5 py-2 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
+                        className="mt-1 flex items-center gap-2.5 rounded-xl border-t border-line px-2.5 py-2 pt-2.5 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
                       >
+                        <Icons.secure aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
                         {isAdmin ? "Administrare" : "Zona operator"}
                       </Link>
                     ) : null}
@@ -448,8 +472,9 @@ export function SiteHeader() {
                         await logout();
                         router.push("/");
                       }}
-                      className="mt-1 block w-full border-t border-line px-2.5 pt-2.5 pb-2 text-left text-[15px] font-semibold text-ink-600 transition hover:text-ink-900"
+                      className="mt-1 flex w-full items-center gap-2.5 rounded-xl border-t border-line px-2.5 pt-2.5 pb-2 text-left text-[15px] font-semibold text-danger-700 transition hover:bg-danger-50"
                     >
+                      <Icons.signOut aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
                       Ieși din cont
                     </button>
                   </div>
@@ -565,7 +590,7 @@ export function SiteHeader() {
           </Link>
 
           {user ? (
-            <ButtonLink href="/cont/anunturi/nou" className="mt-2 sm:hidden">
+            <ButtonLink href="/cont/vanzari/nou" className="mt-2 sm:hidden">
               Vinde pe bid4
             </ButtonLink>
           ) : null}

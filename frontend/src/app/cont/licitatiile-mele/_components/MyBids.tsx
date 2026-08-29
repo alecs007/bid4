@@ -46,13 +46,18 @@ const FILTERS: { value: Bucket; label: string }[] = [
   { value: "lost", label: "Încheiate" },
 ];
 
-/** The bidder's own standing, coloured to match what it means. */
-const OUTCOME_TEXT: Record<BidStatus, string> = {
-  ACTIVE: "text-sky-700",
-  OUTBID: "text-warning-700",
-  WINNING: "text-primary-700",
-  WON: "text-success-700",
-  LOST: "text-ink-500",
+/**
+ * The bidder's own standing, coloured to match what it means, and marked when it
+ * is something to act on. Being outbid is the one line here that asks for a
+ * decision, so it is red and carries a warning rather than sitting in the same
+ * grey as everything else.
+ */
+const OUTCOME: Record<BidStatus, { text: string; alert?: boolean }> = {
+  ACTIVE: { text: "text-sky-700" },
+  OUTBID: { text: "text-danger-700", alert: true },
+  WINNING: { text: "text-primary-700" },
+  WON: { text: "text-success-700" },
+  LOST: { text: "text-ink-500" },
 };
 
 /** Decided by the bid rather than the auction: it is the bidder's outcome. */
@@ -228,11 +233,19 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
             size="sm"
             variant="soft"
             marker={false}
-            className="text-[11px]"
+            className="border-transparent text-[11px]"
           >
             {AUCTION_STATUS[auction.status].label}
           </Badge>
-          <span className={cn("text-[11px] font-bold", OUTCOME_TEXT[myTopBid.status])}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[11px] font-bold",
+              OUTCOME[myTopBid.status].text,
+            )}
+          >
+            {OUTCOME[myTopBid.status].alert ? (
+              <Icons.warning aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+            ) : null}
             {BID_STATUS[myTopBid.status].label}
           </span>
         </>
