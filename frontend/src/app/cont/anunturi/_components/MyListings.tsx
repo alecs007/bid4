@@ -126,6 +126,8 @@ export function MyListings() {
         />
       ) : loading && !data ? (
         <AuctionRowSkeleton rows={4} />
+      ) : view.settling ? (
+        <AuctionRowSkeleton rows={view.outgoing} />
       ) : view.shown.length === 0 ? (
         <ListState
           filtered={view.hiddenByFilter}
@@ -144,7 +146,7 @@ export function MyListings() {
               <AuctionRow
                 key={auction.id}
                 auction={auction}
-                badges={<StatusBadge meta={AUCTION_STATUS[auction.status]} size="sm" />}
+                badges={<StatusBadge meta={AUCTION_STATUS[auction.status]} size="sm" className="text-[11px]" />}
                 meta={
                   <>
                     <strong className="text-ink-900">
@@ -152,15 +154,13 @@ export function MyListings() {
                     </strong>
                     {" · "}
                     {countRo(auction.bidCount, "ofertă", "oferte")}
-                    {" · "}
-                    {auction.donationPercent}% către {auction.cause.name}
                   </>
                 }
                 footnote={`Se încheie ${formatDateTimeRo(auction.endTime)}`}
                 actions={
                   <>
                     <RowAction
-                      label="Vezi"
+                      label="Deschide"
                       href={`/licitatii/${auction.id}`}
                       icon={<Icons.forward aria-hidden="true" className="h-4 w-4" />}
                     />

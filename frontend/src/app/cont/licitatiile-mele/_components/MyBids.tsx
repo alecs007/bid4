@@ -117,6 +117,8 @@ export function MyBids() {
         />
       ) : loading && !data ? (
         <AuctionRowSkeleton rows={4} />
+      ) : view.settling ? (
+        <AuctionRowSkeleton rows={view.outgoing} />
       ) : view.shown.length === 0 ? (
         <ListState
           filtered={view.hiddenByFilter}
@@ -180,8 +182,8 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
       auction={auction}
       badges={
         <>
-          <StatusBadge meta={BID_STATUS[myTopBid.status]} size="sm" />
-          <Badge tone={AUCTION_STATUS[auction.status].tone} size="sm" variant="soft">
+          <StatusBadge meta={BID_STATUS[myTopBid.status]} size="sm" className="text-[11px]" />
+          <Badge tone={AUCTION_STATUS[auction.status].tone} size="sm" variant="soft" className="text-[11px]">
             {AUCTION_STATUS[auction.status].label}
           </Badge>
         </>
@@ -200,7 +202,7 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
       actions={
         <>
           <RowAction
-            label="Vezi"
+            label="Deschide"
             href={`/licitatii/${auction.id}`}
             icon={<Icons.forward aria-hidden="true" className="h-4 w-4" />}
           />

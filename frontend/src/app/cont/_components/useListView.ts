@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PAGINATION } from "@/lib/config";
 
@@ -40,6 +40,10 @@ export interface ListView<T, F extends string> {
   options: { value: F; label: string }[];
   /** True when rows exist but the filter is hiding them all. */
   hiddenByFilter: boolean;
+  /** Briefly true after a filter or page change, while the list swaps over. */
+  settling: boolean;
+  /** How many placeholders to draw so the swap does not resize the page. */
+  outgoing: number;
 }
 
 export function useListView<T, F extends string>({
@@ -58,6 +62,16 @@ export function useListView<T, F extends string>({
 }): ListView<T, F> {
   const [filter, setFilter] = useState<F>(all);
   const [page, setPage] = useState(1);
+  const [settling, setSettling] = useState(false);
+  const [outgoing, setOutgoing] = useState(0);
+  const timer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    [],
+  );
 
   const items = useMemo(() => rows ?? [], [rows]);
 
@@ -103,22 +117,38 @@ export function useListView<T, F extends string>({
     current * PAGINATION.DEFAULT_PAGE_SIZE,
   );
 
-  const toTop = () => {
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
 
-  const choose = useCallback((next: F) => {
-    setFilter(next);
-    setPage(1);
-    toTop();
+  // Rows already in hand, so a filter costs nothing to apply and the list would
+  // otherwise swap under the cursor between one frame and the next. A brief
+  // placeholder is the same beat the catalogue has, where the pause is a real
+  // request; here it is only long enough to read as a change rather than a jump.
+  // Drawn at the outgoing count, so the page does not resize twice on the way.
+  const settle = useCallback((count: number) => {
+    setOutgoing(count);
+    setSettling(true);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setSettling(false), 180);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const goToPage = useCallback((next: number) => {
-    setPage(next);
-    toTop();
-  }, []);
+  const onScreen = shown.length;
+
+  const choose = useCallback(
+    (next: F) => {
+      settle(onScreen);
+      setFilter(next);
+      setPage(1);
+    },
+    [settle, onScreen],
+  );
+
+  const goToPage = useCallback(
+    (next: number) => {
+      settle(onScreen);
+      setPage(next);
+    },
+    [settle, onScreen],
+  );
 
   return {
     shown,
@@ -130,6 +160,8 @@ export function useListView<T, F extends string>({
     goToPage,
     options,
     hiddenByFilter: items.length > 0 && matching.length === 0,
+    settling,
+    outgoing: outgoing || shown.length,
   };
 }
 
