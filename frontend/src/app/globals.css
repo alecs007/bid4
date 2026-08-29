@@ -57,8 +57,14 @@
 
   /* ---- Neutrals -----------------------------------------------------------
      A true neutral grey, not a warm beige. Surfaces are white and sit on a
-     slightly darker canvas, which separates them without a single border. */
-  --color-canvas: #f7f9f8; /* app background: near-white, a hint of green    */
+     slightly darker canvas, which separates them without a single border.
+
+     The canvas is the how-it-works card composited down: that tile is gray-50
+     at half opacity over white, and every page now sits on the colour it
+     resolves to. It is lighter than the green-tinted grey it replaces, so the
+     white surfaces on top separate by less — they carry ring-edge for that,
+     and the hairline is now doing more of the work than the fill. */
+  --color-canvas: #fbfcfd; /* app background: the how-it-works card, resolved */
   --color-line: #edefee; /* hairline, only where a divider is genuinely
                               needed inside a surface                        */
   /* At this brightness a pure-white card would vanish, so surfaces carry the
