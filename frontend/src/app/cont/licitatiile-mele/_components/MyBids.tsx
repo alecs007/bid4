@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { AuctionRow, AuctionRowSkeleton } from "@/components/auctions/AuctionRow";
+import type { RowStat } from "@/components/auctions/AuctionRow";
 import { ListState } from "@/app/cont/_components/ListState";
 import { RowAction } from "@/app/cont/_components/RowAction";
 import { useListView } from "@/app/cont/_components/useListView";
@@ -176,35 +177,63 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
   const settled = myTopBid.status === "WON" || myTopBid.status === "LOST";
   // The same rule the auction page uses, rather than a second opinion about it.
   const canRetract = checkRetractEligibility(auction, myTopBid.bidderId).canRetract;
+  // The whole question this page answers: is my offer still the one in front?
+  const behind = auction.currentPrice > myTopBid.amount;
+  const canRaise = behind && auction.status === "LIVE";
+
+  const stats: RowStat[] = [
+    { label: "Oferta ta", value: formatMoney(myTopBid.amount), emphasis: !behind },
+    {
+      label: settled ? "Preț final" : "Preț curent",
+      value: formatMoney(auction.currentPrice),
+      // Whichever number is the one to act on is the one that stands out: your
+      // own while you are ahead, theirs the moment you are not.
+      emphasis: behind,
+    },
+  ];
 
   return (
     <AuctionRow
       auction={auction}
       badges={
         <>
-          <StatusBadge meta={BID_STATUS[myTopBid.status]} size="sm" className="text-[11px]" />
-          <Badge tone={AUCTION_STATUS[auction.status].tone} size="sm" variant="soft" className="text-[11px]">
+          <StatusBadge
+            meta={BID_STATUS[myTopBid.status]}
+            size="sm"
+            marker={false}
+            className="text-[11px]"
+          />
+          <Badge
+            tone={AUCTION_STATUS[auction.status].tone}
+            size="sm"
+            variant="soft"
+            marker={false}
+            className="text-[11px]"
+          >
             {AUCTION_STATUS[auction.status].label}
           </Badge>
         </>
       }
-      meta={
-        <>
-          Oferta ta: <strong className="text-ink-900">{formatMoney(myTopBid.amount)}</strong>
-          {" · "}
-          {/* Once it is over, the closing price is the fact that matters; while
-              it runs, the same number is what you have to beat. */}
-          {settled ? "Preț final" : "Preț curent"}{" "}
-          <strong className="text-ink-900">{formatMoney(auction.currentPrice)}</strong>
-        </>
+      stats={stats}
+      footnote={
+        settled
+          ? `Încheiată la ${formatDateTimeRo(auction.endTime)}`
+          : `Se încheie la ${formatDateTimeRo(auction.endTime)}`
       }
-      footnote={`${settled ? "Încheiată" : "Se încheie"} ${formatDateTimeRo(auction.endTime)}`}
       actions={
         <>
+          {canRaise ? (
+            <RowAction
+              label="Licitează din nou"
+              primary
+              href={`/licitatii/${auction.id}`}
+              icon={<Icons.auction aria-hidden="true" className="h-4 w-4" />}
+            />
+          ) : null}
           <RowAction
-            label="Deschide"
+            label="Vezi detalii"
             href={`/licitatii/${auction.id}`}
-            icon={<Icons.forward aria-hidden="true" className="h-4 w-4" />}
+            icon={<Icons.reveal aria-hidden="true" className="h-4 w-4" />}
           />
           {canRetract ? (
             <RowAction

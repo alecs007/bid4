@@ -122,6 +122,10 @@ export function CauseBrowser() {
         )}
       </div>
 
+      {/* A floor under the results, so a page that finds one cause does not leave
+          the footer halfway up the screen, and so swapping a tall set of rows
+          for a short one moves the page once rather than collapsing it first. */}
+      <div className="min-h-[60vh]">
       {error ? (
         <ErrorState
           action={
@@ -144,6 +148,7 @@ export function CauseBrowser() {
           }
         />
       )}
+      </div>
     </>
   );
 }

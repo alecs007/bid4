@@ -18,6 +18,7 @@ export function RowAction({
   onClick,
   href,
   danger,
+  primary,
   loading,
 }: {
   label: string;
@@ -25,11 +26,19 @@ export function RowAction({
   onClick?: () => void;
   href?: string;
   danger?: boolean;
+  /** The one action worth reaching for on this row. */
+  primary?: boolean;
   loading?: boolean;
 }) {
   if (href) {
     return (
-      <ButtonLink href={href} variant="ghost" size="sm" aria-label={label} leftIcon={icon}>
+      <ButtonLink
+        href={href}
+        variant={primary ? "primary" : "ghost"}
+        size="sm"
+        aria-label={label}
+        leftIcon={icon}
+      >
         {label}
       </ButtonLink>
     );

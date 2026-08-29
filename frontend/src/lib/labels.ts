@@ -122,12 +122,21 @@ export const CAUSE_STATUS: Record<CauseStatus, StatusMeta> = {
   SUSPENDED: { label: "Suspendată", tone: "warning" },
 };
 
+/**
+ * Written from the bidder's side, because that is who reads them: "Ai fost
+ * depășit" says what happened to you, where "Depășit" leaves you working out
+ * what was depășit and by whom.
+ */
 export const BID_STATUS: Record<BidStatus, StatusMeta> = {
   ACTIVE: { label: "Ofertă plasată", tone: "sky" },
-  OUTBID: { label: "Depășit", tone: "warning", hint: "Cineva a licitat mai mult." },
-  WINNING: { label: "Câștigi", tone: "primary" },
-  WON: { label: "Câștigat", tone: "success" },
-  LOST: { label: "Pierdut", tone: "neutral" },
+  OUTBID: {
+    label: "Ai fost depășit",
+    tone: "warning",
+    hint: "Cineva a licitat mai mult decât tine.",
+  },
+  WINNING: { label: "Ești pe primul loc", tone: "primary" },
+  WON: { label: "Ai câștigat", tone: "success" },
+  LOST: { label: "Nu ai câștigat", tone: "neutral" },
 };
 
 export const DISPUTE_STATUS: Record<DisputeStatus, StatusMeta> = {

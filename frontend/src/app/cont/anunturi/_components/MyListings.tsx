@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { AuctionRow, AuctionRowSkeleton } from "@/components/auctions/AuctionRow";
+import type { RowStat } from "@/components/auctions/AuctionRow";
 import { Icons } from "@/components/icons";
 import { ListState } from "@/app/cont/_components/ListState";
 import { RowAction } from "@/app/cont/_components/RowAction";
@@ -61,6 +62,69 @@ function bucketOf(auction: AuctionDetail): Bucket {
       return "live";
     default:
       return "closed";
+  }
+}
+
+/**
+ * The figures worth showing, which depend on where the listing is.
+ *
+ * <p>Nothing has been offered on a listing still in review, so "current price"
+ * there is the asking price wearing a misleading label. Once it is running the
+ * pair that matters is what it opened at against what it has reached; once it is
+ * over, what it finished at.
+ */
+function statsFor(auction: AuctionDetail): RowStat[] {
+  const start: RowStat = { label: "Preț pornire", value: formatMoney(auction.startingPrice) };
+
+  switch (auction.status) {
+    case "DRAFT":
+    case "PENDING_REVIEW":
+    case "SCHEDULED":
+      return [{ ...start, emphasis: true }];
+    case "SOLD":
+      return [start, { label: "Preț final", value: formatMoney(auction.currentPrice), emphasis: true }];
+    case "UNSOLD":
+    case "ENDED":
+      return [
+        start,
+        {
+          label: "Cea mai mare ofertă",
+          value: auction.bidCount ? formatMoney(auction.currentPrice) : "Fără oferte",
+          emphasis: true,
+        },
+      ];
+    case "CANCELLED":
+      return [start];
+    default:
+      return [
+        start,
+        {
+          label: auction.bidCount
+            ? countRo(auction.bidCount, "ofertă", "oferte")
+            : "Ofertă curentă",
+          value: auction.bidCount ? formatMoney(auction.currentPrice) : "Fără oferte încă",
+          emphasis: true,
+        },
+      ];
+  }
+}
+
+/** When the clock matters, and what it is doing. */
+function footnoteFor(auction: AuctionDetail): string {
+  switch (auction.status) {
+    case "PENDING_REVIEW":
+    case "DRAFT":
+      return "Se publică după verificare";
+    case "SCHEDULED":
+      return `Începe la ${formatDateTimeRo(auction.startTime)}`;
+    case "CANCELLED":
+      return "Retras de tine";
+    case "SOLD":
+    case "UNSOLD":
+    case "ENDED":
+      return `Încheiată la ${formatDateTimeRo(auction.endTime)}`;
+    default:
+      return `Se încheie la ${formatDateTimeRo(auction.endTime)}`;
   }
 }
 
@@ -146,23 +210,22 @@ export function MyListings() {
               <AuctionRow
                 key={auction.id}
                 auction={auction}
-                badges={<StatusBadge meta={AUCTION_STATUS[auction.status]} size="sm" className="text-[11px]" />}
-                meta={
-                  <>
-                    <strong className="text-ink-900">
-                      {formatMoney(auction.currentPrice)}
-                    </strong>
-                    {" · "}
-                    {countRo(auction.bidCount, "ofertă", "oferte")}
-                  </>
+                badges={
+                  <StatusBadge
+                    meta={AUCTION_STATUS[auction.status]}
+                    size="sm"
+                    marker={false}
+                    className="text-[11px]"
+                  />
                 }
-                footnote={`Se încheie ${formatDateTimeRo(auction.endTime)}`}
+                stats={statsFor(auction)}
+                footnote={footnoteFor(auction)}
                 actions={
                   <>
                     <RowAction
-                      label="Deschide"
+                      label="Vezi detalii"
                       href={`/licitatii/${auction.id}`}
-                      icon={<Icons.forward aria-hidden="true" className="h-4 w-4" />}
+                      icon={<Icons.reveal aria-hidden="true" className="h-4 w-4" />}
                     />
                     {WITHDRAWABLE.has(auction.status) ? (
                       <RowAction
