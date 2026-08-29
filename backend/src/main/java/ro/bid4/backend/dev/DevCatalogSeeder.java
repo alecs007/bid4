@@ -465,8 +465,12 @@ public class DevCatalogSeeder implements ApplicationRunner {
                   start,
                   end,
                   status),
-              // A cancelled or unreviewed listing never took an offer.
-              status == AuctionStatus.CANCELLED || status == AuctionStatus.PENDING_REVIEW
+              // Nothing that never opened has an offer on it: a listing still in
+              // review, one withdrawn before it started, and one that has not
+              // reached its start time have all had nobody able to bid.
+              status == AuctionStatus.CANCELLED
+                      || status == AuctionStatus.PENDING_REVIEW
+                      || status == AuctionStatus.SCHEDULED
                   ? 0
                   : item.offers(),
               finished));
