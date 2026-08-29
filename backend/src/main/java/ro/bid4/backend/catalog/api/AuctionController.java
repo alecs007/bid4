@@ -3,6 +3,7 @@ package ro.bid4.backend.catalog.api;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,11 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 import ro.bid4.backend.catalog.api.dto.AuctionQuery;
 import ro.bid4.backend.catalog.api.dto.AuctionResponse;
 import ro.bid4.backend.catalog.api.dto.BidResponse;
+import ro.bid4.backend.catalog.api.dto.CreateAuctionRequest;
 import ro.bid4.backend.catalog.api.dto.FeaturedAuctionsResponse;
 import ro.bid4.backend.catalog.api.dto.PlaceBidRequest;
 import ro.bid4.backend.catalog.api.dto.PlaceBidResponse;
 import ro.bid4.backend.catalog.service.AuctionService;
 import ro.bid4.backend.catalog.service.BidService;
+import ro.bid4.backend.catalog.service.ListingService;
 import ro.bid4.backend.common.web.PageResponse;
 import ro.bid4.backend.common.web.PublicCaching;
 import ro.bid4.backend.security.web.Viewers;
@@ -41,10 +44,31 @@ public class AuctionController {
 
   private final AuctionService auctions;
   private final BidService bidding;
+  private final ListingService listings;
 
-  public AuctionController(AuctionService auctions, BidService bidding) {
+  public AuctionController(AuctionService auctions, BidService bidding, ListingService listings) {
     this.auctions = auctions;
     this.bidding = bidding;
+    this.listings = listings;
+  }
+
+  /**
+   * Creates a listing. The seller is the token's subject, never a field in the body.
+   *
+   * <p>201 with the listing as the seller sees it, which includes the reserve — the one caller
+   * entitled to read it back is the one who set it.
+   */
+  @PostMapping
+  ResponseEntity<AuctionResponse> create(
+      @Valid @RequestBody CreateAuctionRequest request, @AuthenticationPrincipal Jwt jwt) {
+    AuctionResponse created = listings.create(request, Viewers.from(jwt));
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);
+  }
+
+  /** Withdraws a listing. A status change, not a delete — bids and orders point at this row. */
+  @DeleteMapping("/{id}")
+  AuctionResponse cancel(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    return listings.cancel(id, Viewers.from(jwt));
   }
 
   @GetMapping

@@ -1,5 +1,7 @@
 package ro.bid4.backend.catalog.service;
 
+import java.util.Set;
+
 /**
  * The server-side twin of AUCTION, FEATURED, RELATED and PAGINATION in frontend/src/lib/config.ts.
  *
@@ -22,6 +24,55 @@ public final class CatalogRules {
    * bound is a CHECK constraint on the bids table.
    */
   public static final long MAX_BID = 1_000_000L * 100L;
+
+  /**
+   * What a new listing must look like. Every bound mirrors AUCTION and DONATION in
+   * frontend/src/lib/config.ts and a CHECK constraint on the auctions table, so a value the form
+   * accepts is a value the service accepts is a value the table accepts.
+   *
+   * <p>The service checks them anyway rather than letting the database refuse: a constraint
+   * violation is a 500 and a Postgres error string, where the seller needs a sentence saying which
+   * field to fix.
+   */
+  /**
+   * The categories a listing may claim, mirroring auctions_category_valid and AUCTION_CATEGORIES in
+   * frontend/src/lib/config.ts. Checked here so an unknown one is a sentence about the category
+   * rather than a constraint violation surfacing as a 500.
+   */
+  public static final Set<String> CATEGORIES =
+      Set.of(
+          "moda",
+          "electronice",
+          "casa",
+          "arta",
+          "carti",
+          "sport",
+          "jucarii",
+          "colectii",
+          "bijuterii");
+
+  public static final int MIN_TITLE_LENGTH = 8;
+
+  public static final int MAX_TITLE_LENGTH = 120;
+  public static final int MIN_DESCRIPTION_LENGTH = 20;
+  public static final int MAX_DESCRIPTION_LENGTH = 4000;
+  public static final int MIN_IMAGES = 1;
+  public static final int MAX_IMAGES = 8;
+  public static final int MAX_IMAGE_URL_LENGTH = 8192;
+  public static final int MIN_WEIGHT_GRAMS = 1;
+  public static final int MAX_WEIGHT_GRAMS = 15_000;
+  public static final int MIN_DONATION_PERCENT = 5;
+  public static final int MAX_DONATION_PERCENT = 100;
+  public static final long MIN_STARTING_PRICE = 100L;
+  public static final long MAX_STARTING_PRICE = 10_000_000L;
+  public static final long MIN_BID_INCREMENT = 100L;
+  public static final int MIN_ANTI_SNIPE_SECONDS = 30;
+  public static final int MAX_ANTI_SNIPE_SECONDS = 600;
+  public static final long MIN_DURATION_HOURS = 1;
+  public static final long MAX_DURATION_DAYS = 30;
+
+  /** How far ahead a listing may be scheduled to open. */
+  public static final long MAX_START_DELAY_DAYS = 30;
 
   public static final int DEFAULT_PAGE_SIZE = 12;
   public static final int MAX_PAGE_SIZE = 60;

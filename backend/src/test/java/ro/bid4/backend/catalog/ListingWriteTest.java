@@ -1,0 +1,354 @@
+package ro.bid4.backend.catalog;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
+import ro.bid4.backend.TestcontainersConfiguration;
+import ro.bid4.backend.catalog.api.dto.AuctionResponse;
+import ro.bid4.backend.catalog.api.dto.CreateAuctionRequest;
+import ro.bid4.backend.catalog.domain.Auction;
+import ro.bid4.backend.catalog.domain.AuctionStatus;
+import ro.bid4.backend.catalog.domain.Bid;
+import ro.bid4.backend.catalog.domain.BidStatus;
+import ro.bid4.backend.catalog.domain.ItemCondition;
+import ro.bid4.backend.catalog.repo.AuctionRepository;
+import ro.bid4.backend.catalog.repo.BidRepository;
+import ro.bid4.backend.catalog.service.ListingService;
+import ro.bid4.backend.cause.domain.Cause;
+import ro.bid4.backend.cause.domain.CauseStatus;
+import ro.bid4.backend.cause.repo.CauseRepository;
+import ro.bid4.backend.common.error.ApiException;
+import ro.bid4.backend.common.web.Viewer;
+import ro.bid4.backend.identity.domain.AccountType;
+import ro.bid4.backend.identity.domain.UserAccount;
+import ro.bid4.backend.identity.domain.UserRole;
+import ro.bid4.backend.identity.repo.UserAccountRepository;
+
+/**
+ * Putting a listing up, and taking it back down.
+ *
+ * <p>Driven through the service rather than MockMvc: what matters is the row that ends up in the
+ * table and who was allowed to write it, and a status code proves neither.
+ */
+@SpringBootTest
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Import(TestcontainersConfiguration.class)
+@TestPropertySource(properties = "bid4.rate-limit.enabled=false")
+class ListingWriteTest {
+
+  private static final long LEU = 100;
+
+  @Autowired private ListingService listings;
+  @Autowired private AuctionRepository auctions;
+  @Autowired private BidRepository bids;
+  @Autowired private CauseRepository causes;
+  @Autowired private UserAccountRepository users;
+
+  private UserAccount seller;
+  private Cause approved;
+
+  @BeforeAll
+  void seedTheWorld() {
+    seller = user("Vanzator Anunt", UserRole.USER);
+    approved = cause(seller.getId(), CauseStatus.ACTIVE);
+  }
+
+  /* --- creating ----------------------------------------------------------- */
+
+  @Test
+  @DisplayName("a new listing queues for review rather than opening straight away")
+  void createdListingWaitsForReview() {
+    AuctionResponse created = listings.create(request().build(), viewer(seller));
+
+    Auction stored = auctions.findById(created.id()).orElseThrow();
+    assertThat(stored.getStatus()).isEqualTo(AuctionStatus.PENDING_REVIEW);
+    assertThat(stored.getSellerId()).isEqualTo(seller.getId());
+    // Nothing has been offered, so the price on the card is the ask.
+    assertThat(stored.getCurrentPrice()).isEqualTo(stored.getStartingPrice());
+    assertThat(stored.getBidCount()).isZero();
+    assertThat(stored.getWinnerId()).isNull();
+    // Read off the response, not the entity: images are a lazy collection and
+    // the session that loaded the row is long closed by here.
+    assertThat(created.images()).hasSize(2);
+  }
+
+  @Test
+  @DisplayName("the seller is the token, not the body")
+  void sellerComesFromTheViewer() {
+    UserAccount other = user("Alt Vanzator", UserRole.USER);
+    AuctionResponse created = listings.create(request().build(), viewer(other));
+
+    assertThat(auctions.findById(created.id()).orElseThrow().getSellerId())
+        .isEqualTo(other.getId());
+  }
+
+  @Test
+  @DisplayName("signing in is required to list anything")
+  void anonymousCannotCreate() {
+    assertThatThrownBy(() -> listings.create(request().build(), Viewer.anonymous()))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("a listing can only raise money for a cause that was approved")
+  void unapprovedCauseIsRefused() {
+    Cause draft = cause(seller.getId(), CauseStatus.PENDING_APPROVAL);
+
+    assertThatThrownBy(
+            () -> listings.create(request().causeId(draft.getId()).build(), viewer(seller)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("aprobate");
+  }
+
+  @Test
+  @DisplayName("a reserve below the starting price is refused")
+  void reserveUnderStartIsRefused() {
+    assertThatThrownBy(
+            () -> listings.create(request().reservePrice(50 * LEU).build(), viewer(seller)))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("a buy-now at or below the starting price is refused")
+  void buyNowAtStartIsRefused() {
+    // Equal to the start, the first bid always ends it — a fixed-price sale
+    // wearing an auction's clothes.
+    assertThatThrownBy(
+            () -> listings.create(request().buyNowPrice(100 * LEU).build(), viewer(seller)))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("a window that ends before it starts, or outlasts a month, is refused")
+  void impossibleWindowsAreRefused() {
+    Instant start = Instant.now().plus(Duration.ofHours(1));
+
+    assertThatThrownBy(
+            () ->
+                listings.create(
+                    request().startTime(start).endTime(start.minusSeconds(60)).build(),
+                    viewer(seller)))
+        .isInstanceOf(ApiException.class);
+
+    assertThatThrownBy(
+            () ->
+                listings.create(
+                    request().startTime(start).endTime(start.plus(Duration.ofDays(31))).build(),
+                    viewer(seller)))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("a category outside the list is refused rather than left to the database")
+  void unknownCategoryIsRefused() {
+    assertThatThrownBy(
+            () -> listings.create(request().category("nave-spatiale").build(), viewer(seller)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("categorie");
+  }
+
+  /* --- withdrawing -------------------------------------------------------- */
+
+  @Test
+  @DisplayName("withdrawing marks the listing cancelled and releases every live offer")
+  void cancelReleasesBidders() {
+    Auction auction = liveAuction();
+    UserAccount bidder = user("Licitator Retras", UserRole.USER);
+    Bid offer = bid(auction, bidder.getId(), 200 * LEU, BidStatus.WINNING);
+
+    listings.cancel(auction.getId(), viewer(seller));
+
+    assertThat(auctions.findById(auction.getId()).orElseThrow().getStatus())
+        .isEqualTo(AuctionStatus.CANCELLED);
+    // Otherwise the bid sits at "Câștigi" against a listing that is gone.
+    assertThat(bids.findById(offer.getId()).orElseThrow().getStatus()).isEqualTo(BidStatus.LOST);
+  }
+
+  @Test
+  @DisplayName("somebody else's listing is not theirs to withdraw")
+  void onlyTheSellerMayCancel() {
+    Auction auction = liveAuction();
+    UserAccount stranger = user("Trecator", UserRole.USER);
+
+    assertThatThrownBy(() -> listings.cancel(auction.getId(), viewer(stranger)))
+        .isInstanceOf(ApiException.class);
+    assertThat(auctions.findById(auction.getId()).orElseThrow().getStatus())
+        .isEqualTo(AuctionStatus.LIVE);
+  }
+
+  @Test
+  @DisplayName("a listing that already sold cannot be withdrawn")
+  void soldCannotBeCancelled() {
+    Auction auction = liveAuction();
+    auction.setStatus(AuctionStatus.SOLD);
+    auctions.save(auction);
+
+    assertThatThrownBy(() -> listings.cancel(auction.getId(), viewer(seller)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("încheiat");
+  }
+
+  @Test
+  @DisplayName("withdrawing twice is not an error")
+  void cancelIsIdempotent() {
+    Auction auction = liveAuction();
+
+    listings.cancel(auction.getId(), viewer(seller));
+    listings.cancel(auction.getId(), viewer(seller));
+
+    assertThat(auctions.findById(auction.getId()).orElseThrow().getStatus())
+        .isEqualTo(AuctionStatus.CANCELLED);
+  }
+
+  @Test
+  @DisplayName("staff can withdraw a listing that is not theirs")
+  void staffMayCancel() {
+    Auction auction = liveAuction();
+    UserAccount operator = user("Moderator", UserRole.OPERATOR);
+
+    listings.cancel(auction.getId(), Viewer.of(operator.getId(), true));
+
+    assertThat(auctions.findById(auction.getId()).orElseThrow().getStatus())
+        .isEqualTo(AuctionStatus.CANCELLED);
+  }
+
+  /* --- fixtures ----------------------------------------------------------- */
+
+  /** A valid listing, so each test only has to say what it is bending. */
+  private Request request() {
+    return new Request(approved.getId());
+  }
+
+  private static final class Request {
+    private UUID causeId;
+    private String category = "electronice";
+    private Long reservePrice;
+    private Long buyNowPrice;
+    private Instant startTime = Instant.now().plus(Duration.ofHours(2));
+    private Instant endTime = Instant.now().plus(Duration.ofDays(5));
+
+    Request(UUID causeId) {
+      this.causeId = causeId;
+    }
+
+    Request causeId(UUID value) {
+      this.causeId = value;
+      return this;
+    }
+
+    Request category(String value) {
+      this.category = value;
+      return this;
+    }
+
+    Request reservePrice(long value) {
+      this.reservePrice = value;
+      return this;
+    }
+
+    Request buyNowPrice(long value) {
+      this.buyNowPrice = value;
+      return this;
+    }
+
+    Request startTime(Instant value) {
+      this.startTime = value;
+      return this;
+    }
+
+    Request endTime(Instant value) {
+      this.endTime = value;
+      return this;
+    }
+
+    CreateAuctionRequest build() {
+      return new CreateAuctionRequest(
+          "Aparat foto de colecție",
+          "Funcțional, păstrat în cutia originală, cu toate accesoriile incluse.",
+          List.of("https://example.invalid/a.png", "https://example.invalid/b.png"),
+          category,
+          ItemCondition.VERY_GOOD,
+          800,
+          causeId,
+          30,
+          100 * LEU,
+          10 * LEU,
+          reservePrice,
+          buyNowPrice,
+          startTime,
+          endTime,
+          120);
+    }
+  }
+
+  private Auction liveAuction() {
+    Auction auction = new Auction();
+    auction.setSellerId(seller.getId());
+    auction.setCauseId(approved.getId());
+    auction.setTitle("Obiect de test " + UUID.randomUUID());
+    auction.setDescription("Descriere suficient de lungă pentru validare.");
+    auction.setImages(List.of("https://example.invalid/live.png"));
+    auction.setCategory("electronice");
+    auction.setCondition(ItemCondition.VERY_GOOD);
+    auction.setWeightGrams(500);
+    auction.setDonationPercent((short) 25);
+    auction.setStartingPrice(100 * LEU);
+    auction.setCurrentPrice(100 * LEU);
+    auction.setBidIncrement(10 * LEU);
+    auction.setStartTime(Instant.now().minus(Duration.ofHours(1)));
+    auction.setEndTime(Instant.now().plus(Duration.ofDays(2)));
+    auction.setStatus(AuctionStatus.LIVE);
+    return auctions.save(auction);
+  }
+
+  private Bid bid(Auction auction, UUID bidderId, long amount, BidStatus status) {
+    Bid bid = new Bid();
+    bid.setAuctionId(auction.getId());
+    bid.setBidderId(bidderId);
+    bid.setAmount(amount);
+    bid.setStatus(status);
+    return bids.save(bid);
+  }
+
+  private static Viewer viewer(UserAccount account) {
+    return Viewer.of(account.getId(), false);
+  }
+
+  private UserAccount user(String displayName, UserRole role) {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    UserAccount account = new UserAccount();
+    account.setEmail("listing-" + suffix + "@bid4.ro");
+    account.setDisplayName(displayName);
+    account.setUsername("listing-" + suffix);
+    account.setRole(role);
+    account.setAccountType(AccountType.INDIVIDUAL);
+    account.setEmailVerifiedAt(Instant.now());
+    account.setAvatarUrl("");
+    return users.save(account);
+  }
+
+  private Cause cause(UUID organizerId, CauseStatus status) {
+    Cause cause = new Cause();
+    cause.setOrganizerId(organizerId);
+    cause.setName("Cauza pentru anunturi");
+    cause.setSlug("cauza-" + UUID.randomUUID().toString().substring(0, 8));
+    cause.setShortDescription("Descriere scurtă pentru teste.");
+    cause.setCategory("medical");
+    cause.setStatus(status);
+    cause.setGoalAmount(10_000 * LEU);
+    cause.setRaisedAmount(0);
+    return causes.save(cause);
+  }
+}
