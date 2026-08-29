@@ -25,6 +25,14 @@ public interface BidRepository extends JpaRepository<Bid, UUID> {
 
   Optional<Bid> findByAuctionIdAndBidderId(UUID auctionId, UUID bidderId);
 
+  /**
+   * The offer that wins, if any.
+   *
+   * <p>Highest first, and on a tie the one that got there first — reaching a price earlier is what
+   * breaks it, not who happened to be read back first.
+   */
+  Optional<Bid> findFirstByAuctionIdOrderByAmountDescCreatedAtAsc(UUID auctionId);
+
   long countByAuctionId(UUID auctionId);
 
   List<Bid> findByBidderIdOrderByCreatedAtDesc(UUID bidderId);
@@ -45,6 +53,17 @@ public interface BidRepository extends JpaRepository<Bid, UUID> {
   @Modifying(flushAutomatically = true)
   @Query("update Bid b set b.status = :status where b.auctionId = :auctionId")
   int demoteAllFor(@Param("auctionId") UUID auctionId, @Param("status") BidStatus status);
+
+  /**
+   * Sets one bid's status without going through the persistence context.
+   *
+   * <p>Settlement marks every bid on the auction and then lifts the winner back out, and a bulk
+   * update has already bypassed any copy held in memory. Addressing the row by id keeps the two
+   * statements consistent instead of racing a stale entity.
+   */
+  @Modifying(flushAutomatically = true)
+  @Query("update Bid b set b.status = :status where b.id = :id")
+  int markStatus(@Param("id") UUID id, @Param("status") BidStatus status);
 
   /**
    * Who leads each of these auctions.

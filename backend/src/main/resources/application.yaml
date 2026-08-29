@@ -188,6 +188,12 @@ bid4:
     # How long an expired row is kept before the nightly sweep removes it. The
     # token cannot be revived; what is left is the trail of when and from where.
     refresh-token-retention: 30d
+  auctions:
+    # The clock that opens scheduled auctions and closes finished ones. On by
+    # default and only ever turned off for tests, where a tick landing between
+    # an arrange and an assert would settle a fixture out from under it — the
+    # surefire configuration in pom.xml is what does that.
+    clock-enabled: true
   cors:
     allowed-origins: ${BID4_CORS_ORIGINS:http://localhost:3000}
   cookies:

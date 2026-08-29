@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -47,6 +48,24 @@ public interface AuctionRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select a from Auction a where a.id = :id")
   Optional<Auction> findByIdForUpdate(@Param("id") UUID id);
+
+  /**
+   * Ids of auctions the clock has caught up with, oldest first.
+   *
+   * <p>Ids rather than entities, and paged: a backlog after downtime could be any size, and the
+   * point of this query is to hand the settler a bounded batch to work through one row lock at a
+   * time, not to pull a day of listings into memory.
+   */
+  @Query(
+      "select a.id from Auction a where a.status = :status and a.endTime <= :now order by a.endTime asc")
+  List<UUID> findDueToClose(
+      @Param("status") AuctionStatus status, @Param("now") Instant now, Pageable page);
+
+  /** Ids of approved auctions whose opening time has arrived. */
+  @Query(
+      "select a.id from Auction a where a.status = :status and a.startTime <= :now order by a.startTime asc")
+  List<UUID> findDueToOpen(
+      @Param("status") AuctionStatus status, @Param("now") Instant now, Pageable page);
 
   List<Auction> findByIdIn(Collection<UUID> ids);
 
