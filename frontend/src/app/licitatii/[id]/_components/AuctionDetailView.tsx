@@ -72,15 +72,16 @@ const MARK_TONE = {
 } as const;
 
 /**
- * Size and padding travel together, every pair an eighth of the badge, so the
- * ring is the same share of the mark whether it is 24px in a cost row or 80px
- * above a dialog. Paired here rather than passed in: a caller free to choose
- * both would eventually choose a combination that breaks the ratio.
+ * Size and padding travel together rather than being passed in separately: a
+ * caller free to choose both would eventually pick a pair whose ring does not
+ * match the rest. The large badge carries a proportionally tighter ring than the
+ * two small ones, which is deliberate — a ring held to the same share of an 88px
+ * disc reads as far heavier than it does at 28px.
  */
 const MARK_SIZE = {
-  sm: "h-6 w-6 p-[3px]",
-  md: "h-12 w-12 p-1.5",
-  lg: "h-20 w-20 p-2.5",
+  sm: "h-7 w-7 p-[6px]",
+  md: "h-10 w-10 p-2",
+  lg: "h-22 w-22 p-3",
 } as const;
 
 /** A mark on its own tint: the shield, and the courier icon beside it. */
@@ -408,7 +409,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <p className="mb-2 font-display text-sm font-extrabold text-ink-900">
                 Alte costuri
               </p>
-              <div className="flex items-start gap-1.5 py-1.5">
+              <div className="flex items-center gap-1.5 py-1.5">
                 <CostMark size="sm">
                   <Illustration
                     src="protection-shield"
@@ -419,7 +420,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 {/* `min-w-fit` is what holds the promise that this never breaks
                     over two lines: it may grow to push the figure right, but it
                     cannot be shrunk under its own text and re-wrapped. */}
-                <span className="min-w-fit flex-1 whitespace-nowrap text-primary-800 text-sm">
+                <span className="min-w-fit flex-1 whitespace-nowrap text-primary-800 text-sm sm:text-xs font-semibold">
                   Protecția cumpărătorului
                 </span>
                 {/* A rule rather than a price, so it takes the smaller size:
@@ -445,10 +446,10 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   />
                 </CostMark>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-ink-600 text-sm ">
+                  <span className="block text-ink-600 text-sm sm:text-xs">
                     Livrare {SHIPPING.COURIER_NAME}
                   </span>
-                  <span className="block text-xs text-ink-500">
+                  <span className="block text-xs sm:text-[10px] text-ink-500">
                     {deliveryEta}
                   </span>
                 </span>
