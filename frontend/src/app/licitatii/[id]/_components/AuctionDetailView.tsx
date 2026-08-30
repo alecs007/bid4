@@ -36,7 +36,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
-import { countRo } from "@/lib/utils/plural";
+import { countRo, pluralRo } from "@/lib/utils/plural";
 import { BidBox } from "./BidBox";
 import { RelatedAuctions } from "./RelatedAuctions";
 import { BidHistory } from "./BidHistory";
@@ -110,13 +110,32 @@ function CostMark({
   );
 }
 
-function SellerStat({ value, label }: { value: string; label: string }) {
+/**
+ * One of the three figures under a seller's name.
+ *
+ * <p>The drawings carry their own colour and their own soft shadow, so they sit
+ * straight on the card: a tinted disc behind one is a second background under a
+ * mark that already has one, and it flattens the artwork rather than lifting it.
+ */
+function SellerStat({
+  illustration,
+  value,
+  label,
+}: {
+  /** File under `public/images/illustrations`, without the extension. */
+  illustration: string;
+  value: string;
+  label: string;
+}) {
   return (
-    <div className="px-2 py-2.5 text-center">
-      <dt className="numeric font-display font-extrabold text-ink-900">
-        {value}
-      </dt>
-      <dd className="text-xs leading-tight text-ink-500">{label}</dd>
+    <div className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 text-center ring-1 ring-edge">
+      <Illustration src={illustration} className="h-10 w-10" sizes="40px" />
+      <div>
+        <dt className="numeric font-display text-lg sm:text-xl leading-none font-extrabold text-ink-900">
+          {value}
+        </dt>
+        <dd className="mt-1 text-xs leading-tight text-ink-500">{label}</dd>
+      </div>
     </div>
   );
 }
@@ -567,24 +586,30 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </span>
             </Link>
 
-            <dl className="mt-3 grid grid-cols-3 divide-x divide-line rounded-2xl ring-1 ring-edge">
+            {/* Three cards rather than one panel split by hairlines: each
+                figure carries its own mark now, and a divider between two
+                illustrations reads as a seam rather than a separation. */}
+            <dl className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
               <SellerStat
+                illustration="rating"
                 value={auction.seller.rating.toFixed(1).replace(".", ",")}
                 label="rating"
               />
               <SellerStat
+                illustration="reviews-count"
                 value={String(auction.seller.ratingCount)}
-                label={countRo(
+                label={pluralRo(
                   auction.seller.ratingCount,
                   "evaluare",
                   "evaluări",
                 )}
               />
               <SellerStat
+                illustration="amount-donated"
                 value={formatMoney(auction.seller.totalRaised, {
                   compact: true,
                 })}
-                label="strânși pentru cauze"
+                label="donați"
               />
             </dl>
           </Section>

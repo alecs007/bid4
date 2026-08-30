@@ -11,3 +11,12 @@ export function countRo(count: number, one: string, many: string): string {
 
   return `${count} ${needsDe ? "de " : ""}${many}`;
 }
+
+/**
+ * The noun on its own, agreed with a count that is printed somewhere else.
+ * `countRo` carries the number with it, so using it as a label under its own
+ * figure prints the number twice: "0" above "0 evaluări".
+ */
+export function pluralRo(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
+}

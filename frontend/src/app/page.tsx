@@ -14,7 +14,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 const STEPS = [
   {
     image: "/images/illustrations/bid.webp",
-    title: "1. Alegi produsul dorit",
+    title: "1. Licitezi pentru produs",
     body: "Ai găsit ceva ce-ți place? Plasează o ofertă. Tu decizi suma maximă pe care ești dispus să o plătești pentru produsul ales.",
   },
   {

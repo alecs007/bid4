@@ -54,7 +54,7 @@ export function FormPlayground() {
             value={category}
             onChange={(next) => setCategory(next as typeof category)}
             options={[
-              { value: "moda", label: "Modă" },
+              { value: "moda", label: "Fashion" },
               { value: "sport", label: "Sport & Outdoor" },
               { value: "arta", label: "Artă & Handmade" },
             ].map((option) => ({

@@ -1,5 +1,6 @@
 package ro.bid4.backend.dev;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
@@ -62,42 +63,58 @@ public class DevDataSeeder implements ApplicationRunner {
 
     List<UserAccount> seeded =
         List.of(
-            account(
-                hash,
-                now,
-                "maria@bid4.ro",
-                "Maria Ionescu",
-                "maria-ionescu",
-                UserRole.USER,
-                AccountType.INDIVIDUAL,
-                null),
-            account(
-                hash,
-                now,
-                "contact@zambet.ro",
-                "Asociația Zâmbet pentru Mâine",
-                "zambet-pentru-maine",
-                UserRole.USER,
-                AccountType.ORGANIZATION,
-                "Asociația Zâmbet pentru Mâine"),
-            account(
-                hash,
-                now,
-                "operator@bid4.ro",
-                "Andrei Marinescu",
-                "andrei-operator",
-                UserRole.OPERATOR,
-                AccountType.INDIVIDUAL,
-                null),
-            account(
-                hash,
-                now,
-                "admin@bid4.ro",
-                "Cristina Dobre",
-                "cristina-admin",
-                UserRole.ADMIN,
-                AccountType.INDIVIDUAL,
-                null));
+            standing(
+                account(
+                    hash,
+                    now,
+                    "maria@bid4.ro",
+                    "Maria Ionescu",
+                    "maria-ionescu",
+                    UserRole.USER,
+                    AccountType.INDIVIDUAL,
+                    null),
+                "4.8",
+                37,
+                1_245_000L),
+            standing(
+                account(
+                    hash,
+                    now,
+                    "contact@zambet.ro",
+                    "Asociația Zâmbet pentru Mâine",
+                    "zambet-pentru-maine",
+                    UserRole.USER,
+                    AccountType.ORGANIZATION,
+                    "Asociația Zâmbet pentru Mâine"),
+                "4.9",
+                126,
+                8_630_000L),
+            standing(
+                account(
+                    hash,
+                    now,
+                    "operator@bid4.ro",
+                    "Andrei Marinescu",
+                    "andrei-operator",
+                    UserRole.OPERATOR,
+                    AccountType.INDIVIDUAL,
+                    null),
+                "4.6",
+                12,
+                214_000L),
+            standing(
+                account(
+                    hash,
+                    now,
+                    "admin@bid4.ro",
+                    "Cristina Dobre",
+                    "cristina-admin",
+                    UserRole.ADMIN,
+                    AccountType.INDIVIDUAL,
+                    null),
+                "5.0",
+                3,
+                64_000L));
 
     users.saveAll(seeded);
     log.warn(
@@ -105,6 +122,26 @@ public class DevDataSeeder implements ApplicationRunner {
             + "This runs only under the dev profile and only into an empty database.",
         seeded.size(),
         DEMO_PASSWORD);
+  }
+
+  /**
+   * A seller's public standing: their rating, how many people left one, and what their sales have
+   * raised for causes in total.
+   *
+   * <p>Seeded because these three sit together on every listing page, and three zeroes there read
+   * as a broken query rather than as a new account. The numbers hang together: a few dozen ratings
+   * against a few thousand lei raised, and the organisation ahead of the individual on both.
+   *
+   * <p>Not derived from the seeded sales. Lifetime totals outlive the handful of listings this
+   * seeder creates, and computing one from the other would tie a number the product treats as
+   * history to whatever the catalogue happens to hold today.
+   */
+  private static UserAccount standing(
+      UserAccount user, String rating, int ratingCount, long totalRaisedBani) {
+    user.setRating(new BigDecimal(rating));
+    user.setRatingCount(ratingCount);
+    user.setTotalRaised(totalRaisedBani);
+    return user;
   }
 
   private static UserAccount account(

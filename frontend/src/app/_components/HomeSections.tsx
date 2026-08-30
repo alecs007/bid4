@@ -38,10 +38,10 @@ function RowHeader({
     <div className="mb-4 flex items-baseline justify-between gap-3">
       <h2
         id={id}
-        className="flex items-center gap-2 font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
+        className="flex items-center gap-1 font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
       >
         {title}
-        {icon}
+        <span className="pb-1">{icon}</span>
       </h2>
       <ButtonLink
         href={href}
@@ -150,7 +150,9 @@ export function EndingSoonRow() {
         <RowHeader
           id="ending-soon"
           title="Aproape de final"
-          icon={<Illustration src="fire" className="h-6 w-6" sizes="24px" />}
+          icon={
+            <Illustration src="fire" className="h-5.5 w-5.5" sizes="24px" />
+          }
           href="/licitatii"
         />
         <AuctionGrid

@@ -181,7 +181,7 @@ export const CAUSE_CATEGORIES = [
 ] as const;
 
 export const AUCTION_CATEGORIES = [
-  { id: "moda", label: "Modă" },
+  { id: "moda", label: "Fashion" },
   { id: "electronice", label: "Electronice" },
   { id: "casa", label: "Casă & Decor" },
   { id: "arta", label: "Artă & Handmade" },
