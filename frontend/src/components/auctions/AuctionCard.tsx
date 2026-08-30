@@ -73,11 +73,15 @@ export function AuctionCard({
           unoptimized
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          draggable={false}
         />
         {/* Two cards to a phone screen: at the full size these two sat over a
             third of the photograph between them. */}
         <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-lg bg-white/95 px-1.5 py-0.5 text-xs font-extrabold text-primary-800 backdrop-blur-sm sm:top-2.5 sm:left-2.5 sm:gap-1 sm:px-2 sm:py-1 sm:text-sm">
-          <Icons.donation aria-hidden="true" className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
+          <Icons.donation
+            aria-hidden="true"
+            className="h-3 w-3 shrink-0 sm:h-4 sm:w-4"
+          />
           {auction.donationPercent}%
         </span>
         <span className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-lg bg-white/95 py-1 pr-2 pl-1 backdrop-blur-sm">
@@ -89,6 +93,7 @@ export function AuctionCard({
               unoptimized
               sizes="20px"
               className="object-cover"
+              draggable={false}
             />
           </span>
           <span className="min-w-0 truncate text-xs font-bold">

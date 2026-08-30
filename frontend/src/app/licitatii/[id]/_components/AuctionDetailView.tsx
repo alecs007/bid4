@@ -292,6 +292,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   unoptimized
                   sizes="40px"
                   className="object-cover"
+                  draggable={false}
                 />
               </div>
               <div className="min-w-0 flex-1">

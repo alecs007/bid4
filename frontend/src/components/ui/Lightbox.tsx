@@ -344,7 +344,15 @@ export function Lightbox({
                     : "opacity-60 ring-transparent hover:opacity-100",
                 )}
               >
-                <Image src={image} alt="" fill unoptimized sizes="64px" className="object-cover" />
+                <Image
+                  src={image}
+                  alt=""
+                  fill
+                  unoptimized
+                  sizes="64px"
+                  className="object-cover"
+                  draggable={false}
+                />
               </button>
             ))}
           </div>

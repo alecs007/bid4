@@ -31,6 +31,7 @@ function Thumb({ file, className }: { file: UploadedFileRef; className?: string 
         <img
           src={file.previewUrl}
           alt=""
+          draggable={false}
           onError={() => setBroken(true)}
           className="h-full w-full object-cover"
         />

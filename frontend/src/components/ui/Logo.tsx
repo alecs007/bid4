@@ -52,6 +52,7 @@ export function Logo({
       priority
       // The file is an SVG, which the image optimizer refuses to touch.
       unoptimized
+      draggable={false}
     />
   );
 

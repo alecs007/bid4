@@ -217,6 +217,7 @@ export function Gallery({
                       unoptimized
                       sizes="64px"
                       className="object-cover"
+                      draggable={false}
                     />
                   </button>
                 );
@@ -252,6 +253,7 @@ export function Gallery({
               priority
               sizes="(min-width: 1024px) 45vw, 100vw"
               className="animate-fade-in object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+              draggable={false}
             />
             <span className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-xl bg-white/90 px-2.5 py-1.5 text-xs font-bold text-ink-700 opacity-0 transition group-hover:opacity-100">
               <Icons.search aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
@@ -311,6 +313,7 @@ export function Gallery({
                       priority={position <= 1}
                       sizes="100vw"
                       className="object-contain"
+                      draggable={false}
                     />
                   </button>
                 );

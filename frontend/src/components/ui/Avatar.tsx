@@ -61,6 +61,7 @@ export function Avatar({
             height={PX[size]}
             className="h-full w-full object-cover"
             unoptimized
+            draggable={false}
           />
         ) : isOrg ? (
           <Icons.organization aria-hidden="true" className="h-1/2 w-1/2" />

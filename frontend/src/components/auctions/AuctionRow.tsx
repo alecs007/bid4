@@ -73,7 +73,15 @@ export function AuctionRow({
             className={cn(THUMB, "relative overflow-hidden bg-ink-100")}
           >
             {cover ? (
-              <Image src={cover} alt="" fill unoptimized sizes="96px" className="object-cover" />
+              <Image
+                src={cover}
+                alt=""
+                fill
+                unoptimized
+                sizes="96px"
+                className="object-cover"
+                draggable={false}
+              />
             ) : null}
           </Link>
 
@@ -186,6 +194,7 @@ function CauseBlock({ auction }: { auction: AuctionDetail }) {
             unoptimized
             sizes="36px"
             className="object-cover"
+            draggable={false}
           />
         ) : null}
       </span>

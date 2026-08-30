@@ -50,7 +50,7 @@ export function Mascot({
       )}
       style={{ width: size, height: size }}
     >
-      <Image src={imageSrc} alt={title} width={size} height={size} priority />
+      <Image src={imageSrc} alt={title} width={size} height={size} priority draggable={false} />
     </div>
   );
 }

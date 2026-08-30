@@ -65,6 +65,7 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
             priority
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
+            draggable={false}
           />
         </div>
 
@@ -96,6 +97,7 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
                   unoptimized
                   sizes="80px"
                   className="object-cover"
+                  draggable={false}
                 />
               </button>
             ))}

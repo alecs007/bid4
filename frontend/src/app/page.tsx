@@ -71,6 +71,7 @@ export default function HomePage() {
                 priority
                 sizes="(min-width: 1024px) 560px, 100vw"
                 className="object-contain"
+                draggable={false}
               />
             </div>
           </div>
@@ -100,6 +101,7 @@ export default function HomePage() {
                       alt={step.title}
                       fill
                       className="object-contain object-center sm:object-left"
+                      draggable={false}
                     />
                   </div>
 
