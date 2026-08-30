@@ -591,7 +591,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
     auction.setCauseId(cause.getId());
     auction.setTitle(title);
     auction.setDescription(description);
-    auction.setImages(List.of(photo(title + "-1"), photo(title + "-2"), photo(title + "-3")));
+    auction.setImages(gallery(title));
     auction.setCategory(category);
     auction.setCondition(condition);
     auction.setWeightGrams(weightGrams);
@@ -677,6 +677,42 @@ public class DevCatalogSeeder implements ApplicationRunner {
    */
 
   private static final String PHOTO = "https://picsum.photos/seed/%s/800/600";
+
+  /**
+   * The cover each listing actually deserves: a photograph of the thing itself,
+   * served from the frontend's own `public/images/products`.
+   *
+   * <p>A random stock picture is believable as a photograph and useless as a
+   * listing — a mountain range under "Ceas de mână Certina" tells you nothing
+   * about how a real catalogue reads, and every judgement made against it is a
+   * judgement about the wrong page. Only the first frame is pinned; the rest of
+   * the gallery stays random, because what the carousel is being exercised with
+   * past frame one is its own behaviour, not the photography.
+   *
+   * <p>Keyed by title. A listing whose title is not here falls back to the
+   * placeholder service rather than to a broken image.
+   *
+   * <p>The slugs name files the frontend also seeds against, so a few of them
+   * read like order states rather than products: the file is the photograph, and
+   * both catalogues point at the same one instead of shipping it twice.
+   */
+  private static final Map<String, String> COVERS =
+      Map.of(
+          "Aparat foto Canon AE-1 Program cu obiectiv 50mm f/1.8", "canon",
+          "Tricou retro Steaua București, ediție aniversară", "tricou-retro",
+          "Bicicletă de oraș Pegas Practic, cadru 54", "bicicleta",
+          "Set de acuarele profesionale Winsor & Newton, 24 de culori", "acuarele",
+          "Colecție de cărți SF, 14 volume", "carti-sf",
+          "Boxă portabilă JBL Charge 5", "sold-confirmare",
+          "Ceas de mână Certina DS Podium, quartz", "ceas",
+          "Mașină de cusut Singer, model vintage", "masina-cusut");
+
+  /** The three frames for one listing: its own photograph, then two fillers. */
+  private static List<String> gallery(String title) {
+    String slug = COVERS.get(title);
+    String cover = slug != null ? "/images/products/" + slug + ".webp" : photo(title + "-1");
+    return List.of(cover, photo(title + "-2"), photo(title + "-3"));
+  }
 
   /** A different seed per image, or a gallery is one picture repeated three times. */
   private static String photo(String seed) {

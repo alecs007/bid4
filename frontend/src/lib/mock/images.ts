@@ -1,11 +1,12 @@
 import type { CauseCategoryId, AuctionCategoryId } from "@/lib/config";
 
 /**
- * Placeholder imagery as SVG data URIs: no network, no image hosts, and a
- * placeholder that can never contradict its listing. Deterministic in its seed.
+ * Imagery for the seeded world. Still no network and no image hosts: the
+ * photographs are files in `public`, and everything else is an SVG data URI
+ * built from its seed, so the same listing always looks the same.
  *
  * TODO(backend): once uploads exist these are only the fallback for a missing
- * image — the call sites already read the field, not the helper.
+ * image; the call sites already read the field, not the helper.
  */
 
 /** Stable 32-bit hash so a seed always maps to the same colours. */
@@ -128,15 +129,71 @@ export function auctionImage(
   });
 }
 
-/** A small gallery for one auction; each frame gets its own colourway. */
+/**
+ * Listings whose cover is a real photograph under `public/images/products`.
+ *
+ * <p>Listed rather than derived, because nothing can check the filesystem from
+ * the browser: a key missing from here falls back to a generated tile instead of
+ * rendering a broken image.
+ */
+const PHOTOGRAPHED = new Set([
+  "anulata",
+  "bicicleta",
+  "canon",
+  "carti",
+  "ceas",
+  "chitara",
+  "cort",
+  "draft-telefon",
+  "espressor",
+  "ghiozdan",
+  "ilustratie",
+  "lego",
+  "masina-cusut",
+  "nevanduta",
+  "nevanduta-2",
+  "review-consola",
+  "rochie",
+  "sold-anulat",
+  "sold-confirmare",
+  "sold-disputa",
+  "sold-disputa-rezolvata",
+  "sold-escrow",
+  "sold-esuata",
+  "sold-eticheta",
+  "sold-finalizat",
+  "sold-livrat",
+  "sold-locker",
+  "sold-plata",
+  "sold-predat",
+  "sold-rambursat",
+  "sold-tranzit",
+  "tablou",
+  "tricou-retro",
+  "vinil",
+]);
+
+/**
+ * A small gallery for one auction.
+ *
+ * <p>The first frame is a photograph of the thing itself, because that is the
+ * one a card shows and the one a buyer judges. A grid of tinted gradients told
+ * you the seed data was seed data at a glance, and nothing about how the page
+ * behaves once real sellers upload real pictures. The rest of the gallery stays
+ * generated: what is being tested past the first frame is the carousel, not the
+ * photography.
+ */
 export function auctionGallery(
   seed: string,
   category: AuctionCategoryId,
   count = 3,
 ): string[] {
-  return Array.from({ length: count }, (_, index) =>
-    auctionImage(seed, category, index),
+  const rest = Array.from({ length: count - 1 }, (_, index) =>
+    auctionImage(seed, category, index + 1),
   );
+  return PHOTOGRAPHED.has(seed)
+    ? [`/images/products/${seed}.webp`, ...rest]
+    : [auctionImage(seed, category, 0), ...rest];
 }
 
 export function causeImage(seed: string, category: CauseCategoryId): string {

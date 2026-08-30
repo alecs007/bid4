@@ -161,7 +161,7 @@ export const MOCK = {
   SIMULATION_WINDOW_SECONDS: 1800,
   /** localStorage key + schema version. Bump to invalidate a stale world. */
   STORAGE_KEY: "bid4.world",
-  SCHEMA_VERSION: 4,
+  SCHEMA_VERSION: 5,
   /**
    * Seeded auctions are dated from when the world was created, so an old world
    * ends up with everything closed. Past this age it is reseeded.
