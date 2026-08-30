@@ -1,4 +1,12 @@
 import { cn } from "@/lib/utils/cn";
+import {
+  CARD_BODY,
+  CARD_FOOTER,
+  CARD_MEDIA,
+  CARD_SHELL,
+  CARD_TITLE_BOX,
+  CARD_TITLE_TYPE,
+} from "@/components/auctions/cardChrome";
 
 /**
  * Skeletons mirror the real components box for box, so swapping placeholder for
@@ -56,17 +64,26 @@ export function SkeletonParagraph({
 /** Mirrors `<AuctionCard>`. */
 export function SkeletonAuctionCard() {
   return (
-    <div className="flex flex-col rounded-3xl bg-white ring-1 ring-edge p-2">
-      <Skeleton className="aspect-square w-full rounded-2xl" />
-      <div className="flex flex-1 flex-col px-2 pt-2 pb-1.5">
-        {/* The real title is clamped to two lines at min-h-[2.6em] = 42px. */}
-        <div className="flex flex-col gap-2.5">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/5" />
+    <div className={CARD_SHELL}>
+      <Skeleton className={CARD_MEDIA} />
+      <div className={CARD_BODY}>
+        {/* Sized in `em` inside the title's own type scale, so the two bars fill
+            exactly the box the real two clamped lines will occupy — at 13px on a
+            phone and at 16px from `sm`, without either size written twice. */}
+        <div
+          className={cn(
+            CARD_TITLE_TYPE,
+            CARD_TITLE_BOX,
+            "flex flex-col gap-[0.4em]",
+          )}
+        >
+          <Skeleton className="h-[1.1em] w-full rounded-md" />
+          <Skeleton className="h-[1.1em] w-3/5 rounded-md" />
         </div>
-        <div className="mt-auto flex items-end justify-between gap-1.5 pt-2.5">
-          <Skeleton className="h-6 w-20" />
-          <Skeleton className="h-4 w-14" />
+        <div className={CARD_FOOTER}>
+          {/* The price is text-lg then text-2xl; the countdown stays text-xs. */}
+          <Skeleton className="h-[18px] w-20 rounded-md sm:h-6" />
+          <Skeleton className="h-4 w-14 rounded-md" />
         </div>
       </div>
     </div>

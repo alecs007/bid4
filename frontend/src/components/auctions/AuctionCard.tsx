@@ -17,6 +17,14 @@ import type { AuctionDetail } from "@/lib/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { revealDelay } from "@/lib/utils/reveal";
 import { cn } from "@/lib/utils/cn";
+import {
+  CARD_BODY,
+  CARD_FOOTER,
+  CARD_MEDIA,
+  CARD_SHELL,
+  CARD_TITLE_BOX,
+  CARD_TITLE_TYPE,
+} from "./cardChrome";
 
 export function AuctionCard({
   auction,
@@ -60,12 +68,13 @@ export function AuctionCard({
   return (
     <article
       className={cn(
-        "group relative flex flex-col rounded-3xl bg-white ring-1 ring-edge p-2 transition-transform duration-200 hover:-translate-y-0.5",
+        CARD_SHELL,
+        "group relative transition-transform duration-200 hover:-translate-y-0.5",
         className,
       )}
       style={style}
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink-100">
+      <div className={cn(CARD_MEDIA, "bg-ink-100")}>
         <Image
           src={cover}
           alt=""
@@ -122,15 +131,20 @@ export function AuctionCard({
           />
         </button>
       </div>
-      <div className="flex flex-1 flex-col px-2 pt-2 pb-1.5">
+      <div className={CARD_BODY}>
         <Link
           href={`/licitatii/${auction.id}`}
-          className="font-display text-[15px] leading-[1.3] font-bold text-ink-900 after:absolute after:inset-0 sm:text-base"
+          className={cn(
+            CARD_TITLE_TYPE,
+            "font-bold text-ink-900 after:absolute after:inset-0",
+          )}
         >
-          <span className="line-clamp-2 min-h-[2.6em]">{auction.title}</span>
+          <span className={cn(CARD_TITLE_BOX, "line-clamp-2")}>
+            {auction.title}
+          </span>
         </Link>
-        <div className="mt-auto flex items-end justify-between gap-1.5 pt-2.5">
-          <span className="numeric shrink-0 font-display text-xl leading-none font-extrabold tracking-tight whitespace-nowrap text-ink-900 sm:text-2xl">
+        <div className={CARD_FOOTER}>
+          <span className="numeric shrink-0 font-display text-lg leading-none font-extrabold tracking-tight whitespace-nowrap text-ink-900 sm:text-2xl">
             {formatMoney(auction.currentPrice, { compact: true })}
           </span>
           {live ? (
