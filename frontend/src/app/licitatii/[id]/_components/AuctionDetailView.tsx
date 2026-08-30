@@ -66,6 +66,49 @@ function Section({
   );
 }
 
+const MARK_TONE = {
+  primary: "bg-primary-500/10",
+  neutral: "bg-ink-500/10",
+} as const;
+
+/**
+ * Size and padding travel together, every pair an eighth of the badge, so the
+ * ring is the same share of the mark whether it is 24px in a cost row or 80px
+ * above a dialog. Paired here rather than passed in: a caller free to choose
+ * both would eventually choose a combination that breaks the ratio.
+ */
+const MARK_SIZE = {
+  sm: "h-6 w-6 p-[3px]",
+  md: "h-12 w-12 p-1.5",
+  lg: "h-20 w-20 p-2.5",
+} as const;
+
+/** A mark on its own tint: the shield, and the courier icon beside it. */
+function CostMark({
+  size,
+  tone = "primary",
+  className,
+  children,
+}: {
+  size: keyof typeof MARK_SIZE;
+  tone?: keyof typeof MARK_TONE;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full",
+        MARK_SIZE[size],
+        MARK_TONE[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 function SellerStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="px-2 py-2.5 text-center">
@@ -365,12 +408,14 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <p className="mb-2 font-display text-sm font-extrabold text-ink-900">
                 Alte costuri
               </p>
-              <div className="flex items-start gap-2 py-1.5">
-                <Illustration
-                  src="protection-shield"
-                  className="mt-0.5 h-4 w-4"
-                  sizes="16px"
-                />
+              <div className="flex items-start gap-1.5 py-1.5">
+                <CostMark size="sm">
+                  <Illustration
+                    src="protection-shield"
+                    className="h-full w-full"
+                    sizes="14px"
+                  />
+                </CostMark>
                 {/* `min-w-fit` is what holds the promise that this never breaks
                     over two lines: it may grow to push the figure right, but it
                     cannot be shrunk under its own text and re-wrapped. */}
@@ -393,10 +438,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 </InfoHint>
               </div>
               <div className="flex items-start gap-2.5 py-1.5">
-                <Icons.delivery
-                  aria-hidden="true"
-                  className="mt-0.5 h-4 w-4 shrink-0 text-ink-400"
-                />
+                <CostMark size="sm" tone="neutral">
+                  <Icons.delivery
+                    aria-hidden="true"
+                    className="h-full w-full text-ink-500"
+                  />
+                </CostMark>
                 <span className="min-w-0 flex-1">
                   <span className="block text-ink-600 text-sm ">
                     Livrare {SHIPPING.COURIER_NAME}
@@ -445,11 +492,13 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               listing — what it costs, who gets the money. This is about the
               platform, and it says the same thing on every page. */}
           <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
-            <Illustration
-              src="protection-shield"
-              className="mt-0.5 h-6 w-6"
-              sizes="24px"
-            />
+            <CostMark size="md">
+              <Illustration
+                src="protection-shield"
+                className="h-full w-full"
+                sizes="32px"
+              />
+            </CostMark>
             <div className="min-w-0">
               <p className="font-display text-sm font-extrabold text-ink-900">
                 Cumpără și vinde în siguranță
@@ -591,7 +640,13 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         showClose={false}
         title={
           <span className="flex flex-col items-center gap-3 text-center">
-            <Illustration src="protection-shield" className="h-16 w-16" sizes="56px" />
+            <CostMark size="lg">
+              <Illustration
+                src="protection-shield"
+                className="h-full w-full"
+                sizes="68px"
+              />
+            </CostMark>
             Protecția cumpărătorului
           </span>
         }
