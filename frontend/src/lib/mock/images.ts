@@ -196,7 +196,34 @@ export function auctionGallery(
     : [auctionImage(seed, category, 0), ...rest];
 }
 
+/**
+ * Causes with a photograph of their own, keyed by slug.
+ *
+ * <p>Only the seeded ones. A cause somebody creates in the wizard has no file
+ * waiting for it, and falls back to a generated tile until its organiser
+ * uploads a cover.
+ */
+const CAUSE_PHOTOS = new Set([
+  "adapostul-labute-fericite",
+  "ambulanta-pentru-delta",
+  "aparat-rmn-spitalul-judetean",
+  "biblioteca-pentru-satul-vladeni",
+  "casa-comunitara-ferentari",
+  "cursuri-programare-liceeni",
+  "ghiozdane-pline-de-speranta",
+  "impreuna-pentru-ana",
+  "o-masa-calda-pentru-bunici",
+  "padurea-de-maine",
+  "renovare-camin-de-batrani",
+  "sprijin-familii-monoparentale",
+  "sterilizari-gratuite-in-cluj",
+  "tabere-de-vara-pentru-copii",
+  "terapie-pentru-copiii-cu-autism",
+]);
+
+/** The cause's own picture: on its card, and beside it on a listing. */
 export function causeImage(seed: string, category: CauseCategoryId): string {
+  if (CAUSE_PHOTOS.has(seed)) return `/images/causes/${seed}.webp`;
   return tile({
     seed,
     glyph: CAUSE_GLYPHS[category] ?? "\u{1F49A}",
@@ -221,7 +248,9 @@ export function causeGallery(
   );
 }
 
+/** The banner at the top of a cause. Same photograph, cropped wide by CSS. */
 export function causeCover(seed: string, category: CauseCategoryId): string {
+  if (CAUSE_PHOTOS.has(seed)) return `/images/causes/${seed}.webp`;
   return tile({
     seed: `${seed}-cover`,
     glyph: CAUSE_GLYPHS[category] ?? "\u{1F49A}",

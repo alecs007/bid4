@@ -398,3 +398,18 @@
     padding-bottom: 5rem;
   }
 }
+
+/* The margin around a photograph that does not fill its frame.
+
+   Sellers upload whatever their phone produced, so a portrait shot in a 4:3
+   frame leaves a bar down each side. Flat grey reads as part of the picture —
+   people take it for a badly cropped photo rather than the frame it is. A faint
+   hatch says the space is the frame's, and the picture ends where it ends. */
+.frame-empty {
+  background-color: var(--color-ink-50);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-ink-100) 0 1px,
+    transparent 1px 9px
+  );
+}

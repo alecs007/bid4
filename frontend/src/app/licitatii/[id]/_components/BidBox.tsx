@@ -243,7 +243,7 @@ function Result({
         {viewerWon ? "Ai câștigat!" : "Vândut"}
       </p>
       <p className="mt-2 text-sm text-ink-500">Preț final</p>
-      <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900">
+      <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
         {formatMoney(auction.currentPrice)}
       </p>
       <dl className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-[15px]">
@@ -332,7 +332,7 @@ export function BidBox({
       <p className="text-sm text-ink-500">
         {auction.bidCount > 0 ? "Oferta curentă" : "Preț de pornire"}
       </p>
-      <p className="numeric font-display text-3xl leading-none font-extrabold text-ink-900">
+      <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
         {formatMoney(auction.currentPrice, { compact: true })}
       </p>
     </div>

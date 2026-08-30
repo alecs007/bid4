@@ -411,8 +411,8 @@ export function buildCauses(): Cause[] {
       shortDescription: seed.shortDescription,
       story: seed.story,
       category: seed.category,
-      imageUrl: causeImage(seed.id, seed.category),
-      coverUrl: causeCover(seed.id, seed.category),
+      imageUrl: causeImage(seed.slug, seed.category),
+      coverUrl: causeCover(seed.slug, seed.category),
       gallery:
         seed.status === "DRAFT" ? [] : causeGallery(seed.id, seed.category),
       organizerId: seed.organizerId,

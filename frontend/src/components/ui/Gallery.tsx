@@ -237,7 +237,7 @@ export function Gallery({
         ) : null}
 
         <div className="min-w-0 flex-1">
-          <div className="group relative hidden aspect-4/3 w-full overflow-hidden rounded-2xl bg-ink-50 lg:block">
+          <div className="frame-empty group relative hidden aspect-4/3 w-full overflow-hidden rounded-2xl lg:block">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -283,7 +283,7 @@ export function Gallery({
               ref={trackRef}
               onScroll={onScroll}
               data-lenis-prevent
-              className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-2xl bg-ink-50"
+              className="frame-empty no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-2xl"
             >
               {slides.map((image, position) => {
                 // Clones stand outside the numbering: the copy at either end is

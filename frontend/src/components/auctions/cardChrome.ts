@@ -25,9 +25,9 @@ export const CARD_IMPACT =
 export const CARD_IMPACT_MARK =
   "relative h-4 w-4 shrink-0 overflow-hidden rounded bg-ink-100 sm:h-[18px] sm:w-[18px]";
 
-/** Green, not ink: the price is the number the card is for. */
+/** Coral, not ink: the price is the number the card is for. */
 export const CARD_PRICE =
-  "numeric shrink-0 font-display text-lg leading-none font-extrabold tracking-tight text-primary-800 whitespace-nowrap sm:text-2xl";
+  "numeric shrink-0 font-display text-lg leading-none font-extrabold tracking-tight text-accent-700 whitespace-nowrap sm:text-2xl";
 
 /** The price row: baseline-aligned, with the countdown or status opposite. */
 export const CARD_FOOTER =
