@@ -112,10 +112,6 @@ export function percentOf(amount: Bani, percent: number): Bani {
   return Math.round((amount * percent) / 100);
 }
 
-export function clampMoney(amount: Bani, min: Bani, max: Bani): Bani {
-  return Math.min(Math.max(amount, min), max);
-}
-
 export function sumMoney(...amounts: Bani[]): Bani {
   return amounts.reduce((total, amount) => total + amount, 0);
 }
@@ -165,11 +161,8 @@ export function computeFees({
 }: ComputeFeesInput): FeeBreakdown {
   const safePercent = Math.min(100, Math.max(0, donationPercent));
 
-  const buyerTax = clampMoney(
-    percentOf(finalPrice, FEES.BUYER_TAX_PERCENT),
-    FEES.BUYER_TAX_MIN,
-    FEES.BUYER_TAX_MAX,
-  );
+  const buyerTax =
+    percentOf(finalPrice, FEES.BUYER_TAX_PERCENT) + FEES.BUYER_TAX_FIXED;
 
   const donationAmount = percentOf(finalPrice, safePercent);
   const sellerShare = finalPrice - donationAmount;

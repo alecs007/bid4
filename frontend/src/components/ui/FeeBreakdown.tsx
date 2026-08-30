@@ -119,10 +119,10 @@ export function FeeBreakdown({
           <>
             <Row
               label="Taxă platformă"
-              hint={`${FEES.BUYER_TAX_PERCENT}% din preț, între ${formatMoney(
-                FEES.BUYER_TAX_MIN,
+              hint={`${FEES.BUYER_TAX_PERCENT}% din prețul final + ${formatMoney(
+                FEES.BUYER_TAX_FIXED,
                 { compact: true },
-              )} și ${formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}`}
+              )}`}
               value={`+ ${formatMoney(buyerTax)}`}
               icon={<Icons.wallet aria-hidden="true" className="h-4 w-4 shrink-0" />}
               tone="muted"

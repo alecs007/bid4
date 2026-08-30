@@ -11,8 +11,11 @@ import {
   ButtonLink,
   CategoryIcon,
   ErrorState,
+  Button,
   Gallery,
+  Illustration,
   InfoHint,
+  Modal,
   ProgressBar,
   Sheet,
   SkeletonDetail,
@@ -31,6 +34,7 @@ import { ACCOUNT_TYPE, AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi, useRevalidate } from "@/lib/hooks/useApi";
+import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import { countRo } from "@/lib/utils/plural";
 import { BidBox } from "./BidBox";
@@ -78,6 +82,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   const toast = useToast();
   const revalidate = useRevalidate();
   const [feesOpen, setFeesOpen] = useState(false);
+  const [protectionOpen, setProtectionOpen] = useState(false);
   const [watchOverride, setWatchOverride] = useState<boolean | null>(null);
 
   const {
@@ -122,6 +127,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     finalPrice: auction.currentPrice,
     donationPercent: auction.donationPercent,
   });
+  const deliveryEta = `în ${SHIPPING.DELIVERY_DAYS_MIN}-${SHIPPING.DELIVERY_DAYS_MAX} zile lucrătoare`;
   const watched = watchOverride ?? Boolean(auction.isWatched);
   const causePercent = progressPercent(
     auction.cause.raisedAmount,
@@ -230,7 +236,11 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </span>
               {category ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <CategoryIcon set="categories" id={category.id} className="h-4 w-4" />
+                  <CategoryIcon
+                    set="categories"
+                    id={category.id}
+                    className="h-4 w-4"
+                  />
                   {category.label}
                 </span>
               ) : null}
@@ -238,6 +248,12 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 &middot;
               </span>
               <span>{ITEM_CONDITION[auction.condition]}</span>
+              <span aria-hidden="true" className="text-ink-300">
+                &middot;
+              </span>
+              {/* How old the listing is belongs with the rest of what it is,
+                  not stranded in a heading further down the page. */}
+              <span>Publicat {formatRelativeRo(auction.createdAt)}</span>
               {auction.status !== "LIVE" ? (
                 <span className="rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
                   {AUCTION_STATUS[auction.status].label}
@@ -272,39 +288,48 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               }
             />
 
-            <Link
-              href={`/cauze/${auction.cause.slug}`}
-              className="group flex items-center gap-3 border-t border-line px-5 py-4.5 transition hover:bg-primary-50"
-            >
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-ink-100">
-                <Image
-                  src={auction.cause.imageUrl}
-                  alt=""
-                  fill
-                  unoptimized
-                  sizes="40px"
-                  className="object-cover"
-                  draggable={false}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-ink-700">
-                  <span className="numeric font-extrabold text-primary-800">
-                    {formatMoney(fees.donationAmount, { compact: true })}
-                  </span>{" "}
-                  merg la{" "}
-                  <span className="font-bold group-hover:underline">
-                    {auction.cause.name}
-                  </span>
-                </p>
-                <ProgressBar
-                  value={causePercent}
-                  size="sm"
-                  className="mt-1.5"
-                  label={`${Math.round(causePercent)}% din obiectivul cauzei`}
-                />
-              </div>
-            </Link>
+            <div className="border-t border-line">
+              <Link
+                href={`/cauze/${auction.cause.slug}`}
+                className="group flex items-center gap-3 px-5 pt-4.5 pb-3"
+              >
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-ink-100">
+                  <Image
+                    src={auction.cause.imageUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="40px"
+                    className="object-cover"
+                    draggable={false}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-ink-700">
+                    <span className="numeric font-extrabold text-primary-800">
+                      {formatMoney(fees.donationAmount, { compact: true })}
+                    </span>{" "}
+                    merg la{" "}
+                    <span className="font-bold group-hover:underline">
+                      {auction.cause.name}
+                    </span>
+                  </p>
+                  <ProgressBar
+                    value={causePercent}
+                    size="sm"
+                    className="mt-1.5"
+                    label={`${Math.round(causePercent)}% din obiectivul cauzei`}
+                  />
+                </div>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setFeesOpen(true)}
+                className="px-5 pb-4 text-sm font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800"
+              >
+                Cum se împart banii?
+              </button>
+            </div>
 
             <div className="border-t border-line px-5 py-4.5">
               <div className="mb-3 flex items-center gap-4 text-sm text-ink-600">
@@ -340,23 +365,31 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <p className="mb-2 font-display text-sm font-extrabold text-ink-900">
                 Alte costuri
               </p>
-              <div className="flex items-start gap-2.5 py-1.5">
-                <Icons.escrow
-                  aria-hidden="true"
-                  className="mt-0.5 h-4 w-4 shrink-0 text-ink-400"
+              <div className="flex items-start gap-2 py-1.5">
+                <Illustration
+                  src="protection-shield"
+                  className="mt-0.5 h-4 w-4"
+                  sizes="16px"
                 />
-                <span className="min-w-0 flex-1 text-ink-600">
+                {/* `min-w-fit` is what holds the promise that this never breaks
+                    over two lines: it may grow to push the figure right, but it
+                    cannot be shrunk under its own text and re-wrapped. */}
+                <span className="min-w-fit flex-1 whitespace-nowrap text-primary-800 text-sm">
                   Protecția cumpărătorului
                 </span>
-                <span className="numeric shrink-0 font-bold text-ink-900">
-                  {FEES.BUYER_TAX_PERCENT}%
+                {/* A rule rather than a price, so it takes the smaller size:
+                    that is what buys the long label its single line. */}
+                <span className="numeric shrink-0 text-xs font-bold whitespace-nowrap text-ink-900">
+                  {FEES.BUYER_TAX_PERCENT}% +{" "}
+                  {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
                 </span>
                 <InfoHint label="Ce include protecția cumpărătorului">
-                  {FEES.BUYER_TAX_PERCENT}% din prețul final, între{" "}
-                  {formatMoney(FEES.BUYER_TAX_MIN, { compact: true })} și{" "}
-                  {formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}. Ține
-                  banii la bid4 până confirmi coletul și acoperă disputele
-                  deschise în {ORDER.DISPUTE_WINDOW_HOURS} de ore de la livrare.
+                  Taxa de protecție este de {FEES.BUYER_TAX_PERCENT}% din prețul
+                  final + {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
+                  . Banii tăi sunt păstrați în siguranță până când confirmi
+                  comanda, iar reclamațiile trimise în primele{" "}
+                  {ORDER.DISPUTE_WINDOW_HOURS} de ore după livrare sunt
+                  acoperite integral.
                 </InfoHint>
               </div>
               <div className="flex items-start gap-2.5 py-1.5">
@@ -364,28 +397,31 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   aria-hidden="true"
                   className="mt-0.5 h-4 w-4 shrink-0 text-ink-400"
                 />
-                <span className="min-w-0 flex-1 text-ink-600">
-                  Livrare {SHIPPING.COURIER_NAME}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-ink-600 text-sm ">
+                    Livrare {SHIPPING.COURIER_NAME}
+                  </span>
+                  <span className="block text-xs text-ink-500">
+                    {deliveryEta}
+                  </span>
                 </span>
-                <span className="numeric shrink-0 font-bold text-ink-900">
+                <span className="numeric shrink-0 font-bold text-ink-900 text-xs">
                   de la{" "}
                   {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })}
                 </span>
                 <InfoHint label="Cum se calculează livrarea">
-                  {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })} la
-                  Easybox,{" "}
+                  Coletul tău este livrat de {SHIPPING.COURIER_NAME}{" "}
+                  {deliveryEta} după expediere. Alegi metoda de livrare la
+                  finalizarea comenzii:{" "}
+                  {formatMoney(SHIPPING_PRICES.EASYBOX, {
+                    compact: true,
+                  })}{" "}
+                  la Easybox sau{" "}
                   {formatMoney(SHIPPING_PRICES.HOME_COURIER, { compact: true })}{" "}
-                  cu livrare la adresă. Alegi metoda la finalizarea comenzii,
-                  iar AWB-ul se generează automat după plată.
+                  la adresa ta. AWB-ul este generat automat după confirmarea
+                  plății.
                 </InfoHint>
               </div>
-              <button
-                type="button"
-                onClick={() => setFeesOpen(true)}
-                className="mt-1.5 text-sm font-bold text-primary-700 underline underline-offset-4"
-              >
-                Cum se împart banii
-              </button>
             </div>
 
             <div className="border-t border-line px-5 py-4.5">
@@ -402,6 +438,33 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   </span>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Deliberately outside the box above. That one is about this
+              listing — what it costs, who gets the money. This is about the
+              platform, and it says the same thing on every page. */}
+          <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
+            <Illustration
+              src="protection-shield"
+              className="mt-0.5 h-6 w-6"
+              sizes="24px"
+            />
+            <div className="min-w-0">
+              <p className="font-display text-sm font-extrabold text-ink-900">
+                Cumpără și vinde în siguranță
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-ink-600">
+                Fiecare achiziție beneficiază de politica noastră de rambursare,
+                de tranzacții securizate și de asistență dedicată.{" "}
+                <button
+                  type="button"
+                  onClick={() => setProtectionOpen(true)}
+                  className="font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800"
+                >
+                  Vezi detalii
+                </button>
+              </p>
             </div>
           </div>
         </aside>
@@ -511,20 +574,112 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             </dd>
           </div>
           <p className="mt-2 border-t border-line pt-3 text-sm text-ink-500">
-            La final se adaugă livrarea și taxa platformei de{" "}
-            {FEES.BUYER_TAX_PERCENT}
-            %, între{" "}
+            La final se adaugă livrarea și taxa de protecție a cumpărătorului,
+            de {FEES.BUYER_TAX_PERCENT}% din prețul final +{" "}
             <span className="whitespace-nowrap">
-              {formatMoney(FEES.BUYER_TAX_MIN, { compact: true })}
-            </span>{" "}
-            și{" "}
-            <span className="whitespace-nowrap">
-              {formatMoney(FEES.BUYER_TAX_MAX, { compact: true })}
+              {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
             </span>
-            . Detaliile sunt afișate înainte de a confirma comanda.
+            . Toate costurile sunt afișate înainte de confirmarea comenzii.
           </p>
         </dl>
       </Sheet>
+
+      <Modal
+        open={protectionOpen}
+        onClose={() => setProtectionOpen(false)}
+        align="center"
+        showClose={false}
+        title={
+          <span className="flex flex-col items-center gap-3 text-center">
+            <Illustration src="protection-shield" className="h-16 w-16" sizes="56px" />
+            Protecția cumpărătorului
+          </span>
+        }
+        footer={
+          <Button onClick={() => setProtectionOpen(false)}>Am înțeles</Button>
+        }
+      >
+        <div className="flex flex-col gap-5 text-sm">
+          <p className="leading-relaxed text-ink-600">
+            Pentru fiecare achiziție efectuată pe bid4, ne asigurăm că ești
+            protejat.
+          </p>
+
+          <ProtectionPoint
+            icon={<Icons.wallet aria-hidden="true" className="h-5 w-5" />}
+            title="Politica de rambursare"
+          >
+            <p>Poți primi rambursarea în cazul în care comanda:</p>
+            <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5">
+              <li>nu a fost expediată deloc sau s-a pierdut</li>
+              <li>a sosit deteriorată</li>
+              <li>este neconformă cu descrierea.</li>
+            </ul>
+            <p className="mt-2.5">
+              Ai la dispoziție{" "}
+              <strong className="font-bold text-ink-900">
+                {ORDER.DISPUTE_WINDOW_HOURS} de ore pentru a trimite o
+                reclamație
+              </strong>{" "}
+              după ce primești notificarea că articolul a fost livrat, chiar
+              dacă acesta nu a sosit. Cumpărătorii suportă costul returnării
+              unui articol, dacă nu există alt acord.
+            </p>
+          </ProtectionPoint>
+
+          <ProtectionPoint
+            icon={<Icons.secure aria-hidden="true" className="h-5 w-5" />}
+            title="Tranzacții securizate"
+          >
+            <p>
+              Banii tăi sunt păstrați în siguranță pe toată durata tranzacției.
+              Nu îi vom elibera vânzătorului până când nu primești comanda și
+              confirmi că totul este în regulă. Dacă nu primim un răspuns, îi
+              eliberăm automat după {ORDER.AUTO_RELEASE_HOURS} de ore.
+            </p>
+            <p className="mt-2.5">
+              Plățile sunt criptate de către partenerul nostru de plată, astfel
+              încât banii tăi sunt întotdeauna trimiși și primiți în siguranță.{" "}
+              <strong className="font-bold text-ink-900">
+                Vânzătorul nu va vedea niciodată detaliile tale de plată.
+              </strong>
+            </p>
+          </ProtectionPoint>
+
+          <ProtectionPoint
+            icon={<Icons.help aria-hidden="true" className="h-5 w-5" />}
+            title="Asistența noastră"
+          >
+            <p>
+              Contactează oricând echipa noastră de asistență, îți stă la
+              dispoziție pentru a-ți oferi ajutor.
+            </p>
+          </ProtectionPoint>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** One promise in the protection modal: a marker, a heading, and the detail. */
+function ProtectionPoint({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-3">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+        {icon}
+      </span>
+      <div className="min-w-0 leading-relaxed text-ink-600">
+        <p className="font-display font-extrabold text-ink-900">{title}</p>
+        <div className="mt-1">{children}</div>
+      </div>
     </div>
   );
 }

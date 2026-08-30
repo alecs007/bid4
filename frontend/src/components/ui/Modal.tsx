@@ -20,6 +20,8 @@ export function Modal({
   children,
   footer,
   size = "md",
+  align = "start",
+  showClose = true,
   closeLabel = "Închide",
 }: {
   open: boolean;
@@ -29,6 +31,13 @@ export function Modal({
   children?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
+  /** Centre the heading when it carries its own artwork above the words. */
+  align?: "start" | "center";
+  /**
+   * The corner dismiss. Turn it off only where the footer already carries an
+   * unmissable way out, so the reader is never sealed in.
+   */
+  showClose?: boolean;
   closeLabel?: string;
 }) {
   const id = useId();
@@ -82,12 +91,17 @@ export function Modal({
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
         className={cn(
-          "relative w-full animate-pop-in rounded-t-3xl bg-white p-6 shadow-sm sm:rounded-3xl",
+          "relative flex max-h-[90dvh] w-full animate-pop-in flex-col rounded-t-3xl bg-white shadow-sm sm:max-h-[85dvh] sm:rounded-3xl",
           sizes[size],
         )}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div className="min-w-0">
+        <div
+          className={cn(
+            "flex shrink-0 items-start gap-4 px-6 pt-6 pb-4",
+            align === "center" ? "flex-col items-center" : "justify-between",
+          )}
+        >
+          <div className={cn("min-w-0", align === "center" && "text-center")}>
             <h2
               id={`${id}-title`}
               className="font-display text-xl font-extrabold text-ink-900"
@@ -100,21 +114,25 @@ export function Modal({
               </p>
             ) : null}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            onClick={onClose}
-            aria-label={closeLabel}
-          >
-            <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </Button>
+          {showClose ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              onClick={onClose}
+              aria-label={closeLabel}
+            >
+              <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
+            </Button>
+          ) : null}
         </div>
 
-        {children}
+        {/* min-h-0 is what lets this scroll: without it the flex item refuses
+            to shrink under its content and the panel grows past the cap. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6">{children}</div>
 
         {footer ? (
-          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="flex shrink-0 flex-col-reverse gap-2 px-6 pt-4 pb-6 sm:flex-row sm:justify-end">
             {footer}
           </div>
         ) : null}

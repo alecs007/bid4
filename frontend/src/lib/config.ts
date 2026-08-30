@@ -24,10 +24,16 @@ export const SHOW_DEV_TOOLS: boolean =
   process.env.NODE_ENV !== "production";
 
 export const FEES = {
-  /** Buyer-side platform tax: 5% of the hammer price, clamped to [5, 50] lei. */
+  /**
+   * Buyer-side protection fee: a percentage of the hammer price plus a fixed
+   * amount, quoted on the listing as "5% + 2 lei".
+   *
+   * <p>It was a percentage clamped to [5, 50] lei, which made a 20-lei item pay
+   * 5 lei, or 25% under a 5% label. The fixed part covers what every order costs
+   * regardless of price, so the percentage can stay honest at both ends.
+   */
   BUYER_TAX_PERCENT: 5,
-  BUYER_TAX_MIN: 5 * LEU,
-  BUYER_TAX_MAX: 50 * LEU,
+  BUYER_TAX_FIXED: 2.5 * LEU,
   /** 2% of the seller's share, so donating 100% costs the seller nothing. */
   SELLER_FEE_PERCENT: 2,
 } as const;
@@ -123,6 +129,9 @@ export const ORDER = {
 
 export const SHIPPING = {
   COURIER_NAME: "Sameday",
+  /** Working days from hand-off to delivery, quoted on the listing. */
+  DELIVERY_DAYS_MIN: 1,
+  DELIVERY_DAYS_MAX: 2,
   SERVICE_NAME: "Sameday Easybox",
   /** Mock AWB format: 24 digits, like the real Sameday ones. */
   AWB_PREFIX: "2SD",

@@ -24,7 +24,6 @@ import {
 import { ORDER } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { formatMoney, parseLeiInput } from "@/lib/money";
-import { formatDateTimeRo } from "@/lib/utils/date";
 import type { AuctionDetail } from "@/lib/types";
 import { errorMessage } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
@@ -378,13 +377,9 @@ export function BidBox({
     <>
       {celebrate > 0 ? <Confetti trigger={celebrate} count={30} /> : null}
 
-      <div className="border-b border-line px-5 pt-4 pb-3">
-        <p className="flex items-center gap-1.5 text-xs text-ink-500">
-          <Icons.calendar aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-          Publicată {formatDateTimeRo(auction.startTime)}
-        </p>
-      </div>
-
+      {/* The publish date used to open this box. It says what the listing is,
+          not what to do about it, so it moved up to the metadata beside the
+          title and left the box to start on the price. */}
       {live ? (
         <div className="hidden border-b border-line px-5 py-4 lg:block">
           <CountdownBoard
