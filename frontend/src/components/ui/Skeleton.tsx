@@ -2,6 +2,8 @@ import { cn } from "@/lib/utils/cn";
 import {
   CARD_BODY,
   CARD_FOOTER,
+  CARD_IMPACT,
+  CARD_IMPACT_MARK,
   CARD_MEDIA,
   CARD_SHELL,
   CARD_TITLE_BOX,
@@ -79,6 +81,10 @@ export function SkeletonAuctionCard() {
         >
           <Skeleton className="h-[1.1em] w-full rounded-md" />
           <Skeleton className="h-[1.1em] w-3/5 rounded-md" />
+        </div>
+        <div className={CARD_IMPACT}>
+          <Skeleton className={CARD_IMPACT_MARK} />
+          <Skeleton className="h-[1.1em] w-2/3 rounded-md" />
         </div>
         <div className={CARD_FOOTER}>
           {/* The price is text-lg then text-2xl; the countdown stays text-xs. */}

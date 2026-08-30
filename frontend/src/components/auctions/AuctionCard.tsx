@@ -20,7 +20,10 @@ import { cn } from "@/lib/utils/cn";
 import {
   CARD_BODY,
   CARD_FOOTER,
+  CARD_IMPACT,
+  CARD_IMPACT_MARK,
   CARD_MEDIA,
+  CARD_PRICE,
   CARD_SHELL,
   CARD_TITLE_BOX,
   CARD_TITLE_TYPE,
@@ -84,29 +87,6 @@ export function AuctionCard({
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           draggable={false}
         />
-        <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-lg bg-white/95 px-1.5 py-0.5 text-xs font-extrabold text-primary-800 backdrop-blur-sm sm:top-2.5 sm:left-2.5 sm:gap-1 sm:px-2 sm:py-1 sm:text-sm">
-          <Icons.donation
-            aria-hidden="true"
-            className="h-3 w-3 shrink-0 sm:h-4 sm:w-4"
-          />
-          {auction.donationPercent}%
-        </span>
-        <span className="absolute left-2 bottom-2 mr-2 flex items-center gap-1.5 rounded-lg bg-white/95 py-1 pr-2 pl-1 backdrop-blur-sm">
-          <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-md bg-ink-100">
-            <Image
-              src={auction.cause.imageUrl}
-              alt=""
-              fill
-              unoptimized
-              sizes="20px"
-              className="object-cover"
-              draggable={false}
-            />
-          </span>
-          <span className="min-w-0 truncate text-xs font-bold text-ink-700">
-            {auction.cause.name}
-          </span>
-        </span>
         <button
           type="button"
           onClick={handleWatch}
@@ -140,8 +120,32 @@ export function AuctionCard({
             {auction.title}
           </span>
         </Link>
+
+        {/* Off the photograph and onto its own line. Two pills over the picture
+            covered the thing being sold, which is the one part of a card nobody
+            can do without, and the cause still ended up truncated. */}
+        <div className={CARD_IMPACT}>
+          <span className={CARD_IMPACT_MARK}>
+            <Image
+              src={auction.cause.imageUrl}
+              alt=""
+              fill
+              unoptimized
+              sizes="18px"
+              className="object-cover"
+              draggable={false}
+            />
+          </span>
+          <span className="min-w-0 truncate text-ink-600">
+            <span className="font-extrabold text-primary-800">
+              {auction.donationPercent}%
+            </span>{" "}
+            către {auction.cause.name}
+          </span>
+        </div>
+
         <div className={CARD_FOOTER}>
-          <span className="numeric shrink-0 font-display text-lg leading-none font-extrabold tracking-tight whitespace-nowrap text-ink-900 sm:text-2xl">
+          <span className={CARD_PRICE}>
             {formatMoney(auction.currentPrice, { compact: true })}
           </span>
           {live ? (
