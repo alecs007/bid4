@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Icons } from "@/components/icons";
-import { Button, ButtonLink } from "@/components/ui";
+import { Button, ButtonLink, type ButtonVariant } from "@/components/ui";
 
 export interface RowActionItem {
   label: string;
@@ -36,7 +36,14 @@ export function RowActions({
   view,
   extra = [],
 }: {
-  primary?: { label: string; icon: ReactNode; href?: string; onClick?: () => void };
+  primary?: {
+    label: string;
+    icon: ReactNode;
+    href?: string;
+    onClick?: () => void;
+    /** Green unless the row's state is urgent, where coral says so. */
+    variant?: ButtonVariant;
+  };
   view: string;
   extra?: RowActionItem[];
 }) {
@@ -48,6 +55,7 @@ export function RowActions({
         primary.href ? (
           <ButtonLink
             href={primary.href}
+            variant={primary.variant}
             size="sm"
             leftIcon={primary.icon}
             className="[--btn-depth:0px]"
@@ -56,6 +64,7 @@ export function RowActions({
           </ButtonLink>
         ) : (
           <Button
+            variant={primary.variant}
             size="sm"
             leftIcon={primary.icon}
             onClick={primary.onClick}

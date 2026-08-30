@@ -53,10 +53,13 @@ const PRICE_STEP = 5_000;
 function Chip({
   active,
   onClick,
+  urgent = false,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  /** Selects the urgency colour when on, for the filter that means time. */
+  urgent?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -67,7 +70,9 @@ function Chip({
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition",
         active
-          ? "bg-primary-600 text-white"
+          ? urgent
+            ? "bg-accent-600 text-white"
+            : "bg-primary-600 text-white"
           : "bg-ink-100 text-ink-700 hover:bg-ink-200",
       )}
     >
@@ -279,6 +284,7 @@ export function AuctionBrowser() {
         <div className="flex flex-wrap gap-2">
           <Chip
             active={endingSoon}
+            urgent
             onClick={() =>
               update((next) => {
                 if (endingSoon) next.delete("endingSoon");

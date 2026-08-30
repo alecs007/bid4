@@ -131,7 +131,7 @@ export const BID_STATUS: Record<BidStatus, StatusMeta> = {
   ACTIVE: { label: "Ofertă plasată", tone: "sky" },
   OUTBID: {
     label: "Ai fost depășit",
-    tone: "warning",
+    tone: "accent",
     hint: "Cineva a licitat mai mult decât tine.",
   },
   WINNING: { label: "Ești pe primul loc", tone: "primary" },

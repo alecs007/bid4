@@ -8,9 +8,17 @@ import { cn } from "@/lib/utils/cn";
 
 type Urgency = "calm" | "soon" | "urgent";
 
+/**
+ * Coral is the platform's one word for "running out", so the window it covers
+ * has to be a window somebody can still act inside. An hour was too late to be
+ * worth colouring; six is the last stretch where seeing it changes anything.
+ */
+const URGENT_SECONDS = 6 * 3600;
+const SOON_SECONDS = 86_400;
+
 function urgencyOf(totalSeconds: number): Urgency {
-  if (totalSeconds <= 3600) return "urgent";
-  if (totalSeconds <= 86_400) return "soon";
+  if (totalSeconds <= URGENT_SECONDS) return "urgent";
+  if (totalSeconds <= SOON_SECONDS) return "soon";
   return "calm";
 }
 

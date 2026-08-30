@@ -49,12 +49,13 @@ const FILTERS: { value: Bucket; label: string }[] = [
 /**
  * The bidder's own standing, coloured to match what it means, and marked when it
  * is something to act on. Being outbid is the one line here that asks for a
- * decision, so it is red and carries a warning rather than sitting in the same
- * grey as everything else.
+ * decision, so it is coral and carries a warning rather than sitting in the same
+ * grey as everything else — coral and not red, because nothing has gone wrong;
+ * red is kept for the things that actually fail.
  */
 const OUTCOME: Record<BidStatus, { text: string; alert?: boolean }> = {
   ACTIVE: { text: "text-sky-700" },
-  OUTBID: { text: "text-danger-700", alert: true },
+  OUTBID: { text: "text-accent-700", alert: true },
   WINNING: { text: "text-primary-700" },
   WON: { text: "text-success-700" },
   LOST: { text: "text-ink-500" },
@@ -266,6 +267,8 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
             live && !leading
               ? {
                   label: "Mărește oferta",
+                  // The answer to the coral line above it, in the same colour.
+                  variant: "accent" as const,
                   icon: <Icons.auction aria-hidden="true" className="h-4 w-4 shrink-0" />,
                   href: `/licitatii/${auction.id}`,
                   onClick: undefined,
