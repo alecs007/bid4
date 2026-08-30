@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
-import { Avatar, ButtonLink, Logo, Skeleton } from "@/components/ui";
+import { Avatar, ButtonLink, CategoryIcon, Logo, Skeleton } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import { listMyAuctions } from "@/lib/api/auctions";
 import { listMyBids } from "@/lib/api/bids";
@@ -174,19 +173,12 @@ export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
             "bg-canvas text-ink-800 ring-edge hover:bg-white hover:ring-ink-300",
           )}
         >
-          <div
-            aria-hidden="true"
-            className="relative h-4.5 w-4.5 shrink-0 overflow-hidden"
-          >
-            <Image
-              src={`/images/illustrations/categories/${category.id}.webp`}
-              alt=""
-              fill
-              unoptimized
-              sizes="18px"
-              className="object-contain scale-[1.04]"
-            />
-          </div>
+          <CategoryIcon
+            set="categories"
+            id={category.id}
+            className="h-4.5 w-4.5"
+            sizes="18px"
+          />
           <span className="truncate">{category.label}</span>
         </Link>
       ))}

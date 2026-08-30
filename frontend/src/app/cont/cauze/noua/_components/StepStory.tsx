@@ -1,6 +1,15 @@
 "use client";
 
-import { Alert, Field, FileUpload, FileUploadGrid, Input, Select, Textarea } from "@/components/ui";
+import {
+  Alert,
+  CategoryIcon,
+  Field,
+  FileUpload,
+  FileUploadGrid,
+  Input,
+  Select,
+  Textarea,
+} from "@/components/ui";
 import { CAUSE, CAUSE_CATEGORIES, type CauseCategoryId } from "@/lib/config";
 import type { UploadedFileRef } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
@@ -10,7 +19,8 @@ import { StepHeader } from "./StepHeader";
 
 const CATEGORY_OPTIONS = CAUSE_CATEGORIES.map((category) => ({
   value: category.id,
-  label: `${category.emoji} ${category.label}`,
+  label: category.label,
+  prefix: <CategoryIcon set="causes" id={category.id} className="h-4 w-4" />,
 }));
 
 function Counter({ value, max }: { value: number; max: number }) {

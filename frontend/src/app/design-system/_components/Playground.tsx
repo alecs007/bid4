@@ -5,6 +5,7 @@ import { LuGift, LuPartyPopper, LuTrash2 } from "react-icons/lu";
 
 import {
   Button,
+  CategoryIcon,
   Checkbox,
   Confetti,
   Field,
@@ -53,10 +54,19 @@ export function FormPlayground() {
             value={category}
             onChange={(next) => setCategory(next as typeof category)}
             options={[
-              { value: "moda", label: "Modă", prefix: "👗" },
-              { value: "sport", label: "Sport & Outdoor", prefix: "⚽" },
-              { value: "arta", label: "Artă & Handmade", prefix: "🎨" },
-            ]}
+              { value: "moda", label: "Modă" },
+              { value: "sport", label: "Sport & Outdoor" },
+              { value: "arta", label: "Artă & Handmade" },
+            ].map((option) => ({
+              ...option,
+              prefix: (
+                <CategoryIcon
+                  set="categories"
+                  id={option.value}
+                  className="h-4 w-4"
+                />
+              ),
+            }))}
           />
         </Field>
       </div>

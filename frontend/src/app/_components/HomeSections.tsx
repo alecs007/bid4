@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import type { ReactNode } from "react";
+
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import { CauseGrid } from "@/components/causes/CauseCard";
 import {
   AnimatedNumber,
   Button,
   ButtonLink,
+  CategoryIcon,
   EmptyState,
   ErrorState,
+  Illustration,
 } from "@/components/ui";
 import { getFeaturedAuctions } from "@/lib/api/auctions";
 import { listTrendingCauses } from "@/lib/api/causes";
@@ -21,19 +24,24 @@ import { formatMoney, lei } from "@/lib/money";
 function RowHeader({
   id,
   title,
+  icon,
   href,
 }: {
   id: string;
   title: string;
+  /** Sits after the heading, decorative. Kept out of `title` so the heading
+      text stays the heading text for a screen reader and for search. */
+  icon?: ReactNode;
   href: string;
 }) {
   return (
     <div className="mb-4 flex items-baseline justify-between gap-3">
       <h2
         id={id}
-        className="font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
+        className="flex items-center gap-2 font-display text-xl font-extrabold text-ink-900 sm:text-2xl"
       >
         {title}
+        {icon}
       </h2>
       <ButtonLink
         href={href}
@@ -141,8 +149,9 @@ export function EndingSoonRow() {
       <section aria-labelledby="ending-soon">
         <RowHeader
           id="ending-soon"
-          title="Aproape de final 🔥"
-          href="/licitatii?endingSoon=1"
+          title="Aproape de final"
+          icon={<Illustration src="fire" className="h-6 w-6" sizes="24px" />}
+          href="/licitatii"
         />
         <AuctionGrid
           auctions={data?.endingSoon ?? []}
@@ -241,7 +250,6 @@ export function CategoryRow({
   categories: readonly {
     id: string;
     label: string;
-    emoji?: string;
     icon?: string;
   }[];
 }) {
@@ -260,17 +268,12 @@ export function CategoryRow({
             href={`/licitatii?category=${category.id}`}
             className="group flex flex-col items-center justify-between rounded-2xl bg-white p-5 text-center ring-1 ring-edge transition-all hover:-translate-y-0.5 hover:ring-primary-500"
           >
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden sm:h-20 sm:w-20">
-              <Image
-                src={`/images/illustrations/categories/${category.id}.webp`}
-                alt={`${category.label} illustration`}
-                fill
-                priority
-                sizes="80px"
-                unoptimized
-                className="object-contain scale-104"
-              />
-            </div>
+            <CategoryIcon
+              set="categories"
+              id={category.id}
+              className="h-16 w-16 sm:h-20 sm:w-20"
+              sizes="80px"
+            />
 
             <span className="mt-4 font-display text-base font-extrabold text-ink-900 group-hover:text-primary-600">
               {category.label}

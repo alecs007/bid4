@@ -27,7 +27,7 @@ export function CauseBrowserSkeleton() {
             aria-hidden="true"
             className="shimmer inline-flex items-center gap-1.5 rounded-md border border-line bg-ink-100 px-3 py-1.5 text-sm font-bold"
           >
-            <span className="invisible">{category.emoji}</span>
+            <span className="h-4 w-4 shrink-0" />
             <span className="invisible">{category.label}</span>
           </span>
         ))}

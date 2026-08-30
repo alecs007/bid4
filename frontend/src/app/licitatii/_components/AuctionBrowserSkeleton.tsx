@@ -9,13 +9,13 @@ import { AUCTION_STATUS } from "@/lib/labels";
  * so the rail wraps to the same number of rows.
  */
 
-function ChipGhost({ emoji, label }: { emoji?: string; label: string }) {
+function ChipGhost({ icon, label }: { icon?: boolean; label: string }) {
   return (
     <span
       aria-hidden="true"
       className="shimmer inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-ink-100 px-3 py-2 text-sm font-bold"
     >
-      {emoji ? <span className="invisible">{emoji}</span> : null}
+      {icon ? <span className="h-4 w-4 shrink-0" /> : null}
       <span className="invisible">{label}</span>
     </span>
   );
@@ -65,11 +65,7 @@ export function AuctionBrowserSkeleton() {
 
                 <FilterGroup labelWidth="w-20">
                   {AUCTION_CATEGORIES.map((category) => (
-                    <ChipGhost
-                      key={category.id}
-                      emoji={category.emoji}
-                      label={category.label}
-                    />
+                    <ChipGhost key={category.id} icon label={category.label} />
                   ))}
                 </FilterGroup>
 
@@ -78,7 +74,7 @@ export function AuctionBrowserSkeleton() {
                 <Skeleton className="h-12 w-full rounded-xl" />
 
                 <FilterGroup labelWidth="w-14">
-                  <ChipGhost emoji="⏰" label="Sub 24h" />
+                  <ChipGhost icon label="Sub 24h" />
                   {(["LIVE", "SCHEDULED", "SOLD", "UNSOLD"] as const).map(
                     (status) => (
                       <ChipGhost

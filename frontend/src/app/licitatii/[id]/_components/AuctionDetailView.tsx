@@ -8,10 +8,11 @@ import { Icons } from "@/components/icons";
 import {
   Avatar,
   Breadcrumbs,
-  Gallery,
   ButtonLink,
-  InfoHint,
+  CategoryIcon,
   ErrorState,
+  Gallery,
+  InfoHint,
   ProgressBar,
   Sheet,
   SkeletonDetail,
@@ -229,16 +230,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </span>
               {category ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden="true" className="relative h-4 w-4 shrink-0">
-                    <Image
-                      src={`/images/illustrations/categories/${category.id}.webp`}
-                      alt=""
-                      fill
-                      sizes="16px"
-                      unoptimized
-                      className="object-contain"
-                    />
-                  </span>
+                  <CategoryIcon set="categories" id={category.id} className="h-4 w-4" />
                   {category.label}
                 </span>
               ) : null}

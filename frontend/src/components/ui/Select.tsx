@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { Icons } from "@/components/icons";
 import { matchesSearch } from "@/lib/utils/search";
@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils/cn";
 export interface SelectOption<T extends string> {
   value: T;
   label: string;
-  prefix?: string;
+  /** Something small shown before the label, e.g. a category illustration. */
+  prefix?: ReactNode;
 }
 
 export function Select<T extends string>({

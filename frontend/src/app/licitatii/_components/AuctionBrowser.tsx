@@ -2,18 +2,18 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import Image from "next/image";
 import { Icons } from "@/components/icons";
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import {
   Button,
   ButtonLink,
+  CategoryIcon,
   EmptyState,
   ErrorState,
-  RangeSlider,
   Pagination,
-  Select,
+  RangeSlider,
   SearchField,
+  Select,
   Sheet,
   Skeleton,
   Slider,
@@ -242,19 +242,7 @@ export function AuctionBrowser() {
               active={categories.includes(category.id)}
               onClick={() => toggleValue("category", category.id)}
             >
-              <div
-                aria-hidden="true"
-                className="relative h-4 w-4 shrink-0 overflow-hidden"
-              >
-                <Image
-                  src={`/images/illustrations/categories/${category.id}.webp`}
-                  alt=""
-                  fill
-                  sizes="16px"
-                  unoptimized
-                  className="object-contain scale-[1.04]"
-                />
-              </div>
+              <CategoryIcon set="categories" id={category.id} className="h-4 w-4" />
               {category.label}
             </Chip>
           ))}

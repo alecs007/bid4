@@ -161,26 +161,26 @@ export const MOCK = {
 } as const;
 
 export const CAUSE_CATEGORIES = [
-  { id: "medical", label: "Sănătate", emoji: "🩺" },
-  { id: "educatie", label: "Educație", emoji: "📚" },
-  { id: "copii", label: "Copii", emoji: "🧸" },
-  { id: "animale", label: "Animale", emoji: "🐾" },
-  { id: "mediu", label: "Mediu", emoji: "🌱" },
-  { id: "varstnici", label: "Vârstnici", emoji: "👵" },
-  { id: "comunitate", label: "Comunitate", emoji: "🏘️" },
-  { id: "urgente", label: "Urgențe", emoji: "🚨" },
+  { id: "medical", label: "Sănătate" },
+  { id: "educatie", label: "Educație" },
+  { id: "copii", label: "Copii" },
+  { id: "animale", label: "Animale" },
+  { id: "mediu", label: "Mediu" },
+  { id: "varstnici", label: "Vârstnici" },
+  { id: "comunitate", label: "Comunitate" },
+  { id: "urgente", label: "Urgențe" },
 ] as const;
 
 export const AUCTION_CATEGORIES = [
-  { id: "moda", label: "Modă", emoji: "👗" },
-  { id: "electronice", label: "Electronice", emoji: "📱" },
-  { id: "casa", label: "Casă & Decor", emoji: "🏡" },
-  { id: "arta", label: "Artă & Handmade", emoji: "🎨" },
-  { id: "carti", label: "Cărți & Media", emoji: "📖" },
-  { id: "sport", label: "Sport & Outdoor", emoji: "⚽" },
-  { id: "jucarii", label: "Jucării", emoji: "🧩" },
-  { id: "colectii", label: "Colecții", emoji: "🏆" },
-  { id: "bijuterii", label: "Bijuterii", emoji: "💍" },
+  { id: "moda", label: "Modă" },
+  { id: "electronice", label: "Electronice" },
+  { id: "casa", label: "Casă & Decor" },
+  { id: "arta", label: "Artă & Handmade" },
+  { id: "carti", label: "Cărți & Media" },
+  { id: "sport", label: "Sport & Outdoor" },
+  { id: "jucarii", label: "Jucării" },
+  { id: "colectii", label: "Colecții" },
+  { id: "bijuterii", label: "Bijuterii" },
 ] as const;
 
 /** Every județ plus the capital, for beneficiary addresses. */

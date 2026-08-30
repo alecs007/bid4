@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Icons } from "@/components/icons";
-import { Alert, Badge } from "@/components/ui";
+import { Alert, Badge, CategoryIcon } from "@/components/ui";
 import { CAUSE, CAUSE_CATEGORIES } from "@/lib/config";
 import { BENEFICIARY_TYPE, EVIDENCE_TYPE, GUARDIAN_RELATION } from "@/lib/labels";
 import { formatMoney, parseLeiInput } from "@/lib/money";
@@ -130,7 +130,20 @@ export function StepSummary({
           <Row label="Titlu" value={draft.story.name} />
           <Row
             label="Categorie"
-            value={category ? `${category.emoji} ${category.label}` : ""}
+            value={
+              category ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <CategoryIcon
+                    set="causes"
+                    id={category.id}
+                    className="h-4 w-4"
+                  />
+                  {category.label}
+                </span>
+              ) : (
+                ""
+              )
+            }
           />
           <Row label="Unde" value={draft.story.location} />
           <Row label="Copertă" value={draft.story.coverImage?.fileName} />

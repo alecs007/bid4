@@ -1,5 +1,4 @@
 import type { CauseCategoryId, AuctionCategoryId } from "@/lib/config";
-import { CAUSE_CATEGORIES, AUCTION_CATEGORIES } from "@/lib/config";
 
 /**
  * Placeholder imagery as SVG data URIs: no network, no image hosts, and a
@@ -85,12 +84,38 @@ function tile({
   return svgToDataUri(svg);
 }
 
-const CATEGORY_GLYPHS = new Map(
-  AUCTION_CATEGORIES.map((category) => [category.id, category.emoji]),
-);
-const CAUSE_GLYPHS = new Map(
-  CAUSE_CATEGORIES.map((category) => [category.id, category.emoji]),
-);
+/**
+ * Glyphs for the stand-in photography, and only for that.
+ *
+ * <p>They used to be read off the category config, which is the only reason the
+ * config carried an emoji at all. Categories and causes are drawn with the
+ * illustrations under `/images/illustrations` now, so the config has no use for
+ * them — but a seeded auction still needs a cover, and a grid of identical
+ * gradients tells you nothing about what you are looking at. Kept here, beside
+ * the fake data they belong to, and gone with it once uploads land.
+ */
+const CATEGORY_GLYPHS: Record<AuctionCategoryId, string> = {
+  moda: "\u{1F457}",
+  electronice: "\u{1F4F1}",
+  casa: "\u{1F3E1}",
+  arta: "\u{1F3A8}",
+  carti: "\u{1F4D6}",
+  sport: "⚽",
+  jucarii: "\u{1F9E9}",
+  colectii: "\u{1F3C6}",
+  bijuterii: "\u{1F48D}",
+};
+
+const CAUSE_GLYPHS: Record<CauseCategoryId, string> = {
+  medical: "\u{1FA7A}",
+  educatie: "\u{1F4DA}",
+  copii: "\u{1F9F8}",
+  animale: "\u{1F43E}",
+  mediu: "\u{1F331}",
+  varstnici: "\u{1F475}",
+  comunitate: "\u{1F3D8}️",
+  urgente: "\u{1F6A8}",
+};
 
 export function auctionImage(
   seed: string,
@@ -99,7 +124,7 @@ export function auctionImage(
 ): string {
   return tile({
     seed: `${seed}-${index}`,
-    glyph: CATEGORY_GLYPHS.get(category) ?? "📦",
+    glyph: CATEGORY_GLYPHS[category] ?? "\u{1F4E6}",
   });
 }
 
@@ -117,7 +142,7 @@ export function auctionGallery(
 export function causeImage(seed: string, category: CauseCategoryId): string {
   return tile({
     seed,
-    glyph: CAUSE_GLYPHS.get(category) ?? "💚",
+    glyph: CAUSE_GLYPHS[category] ?? "\u{1F49A}",
     width: 800,
     height: 600,
   });
@@ -132,7 +157,7 @@ export function causeGallery(
   return Array.from({ length: count }, (_, index) =>
     tile({
       seed: `${seed}-photo-${index}`,
-      glyph: CAUSE_GLYPHS.get(category) ?? "💚",
+      glyph: CAUSE_GLYPHS[category] ?? "\u{1F49A}",
       width: 900,
       height: 675,
     }),
@@ -142,7 +167,7 @@ export function causeGallery(
 export function causeCover(seed: string, category: CauseCategoryId): string {
   return tile({
     seed: `${seed}-cover`,
-    glyph: CAUSE_GLYPHS.get(category) ?? "💚",
+    glyph: CAUSE_GLYPHS[category] ?? "\u{1F49A}",
     width: 1600,
     height: 600,
   });

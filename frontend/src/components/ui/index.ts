@@ -63,6 +63,8 @@ export { ShippingLabel, ShippingLabelPreview } from "./ShippingLabel";
 export { Confetti } from "./Confetti";
 export { ToastProvider, useToast } from "./Toast";
 export type { ToastOptions } from "./Toast";
+export { CategoryIcon, Illustration } from "./Illustration";
+export type { IconSet } from "./Illustration";
 export { Mascot } from "./Mascot";
 export type { MascotMood } from "./Mascot";
 export { Logo, LogoMark } from "./Logo";

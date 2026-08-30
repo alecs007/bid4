@@ -7,6 +7,7 @@ import { CauseGrid } from "@/components/causes/CauseCard";
 import {
   Button,
   ButtonLink,
+  CategoryIcon,
   EmptyState,
   ErrorState,
   SearchField,
@@ -105,7 +106,7 @@ export function CauseBrowser() {
                   : "border-line bg-white text-ink-700 hover:border-ink-300",
               )}
             >
-              <span aria-hidden="true">{category.emoji}</span>
+              <CategoryIcon set="causes" id={category.id} className="h-4 w-4" />
               {category.label}
             </button>
           );
