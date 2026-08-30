@@ -320,9 +320,7 @@ export function AuctionBrowser() {
       variant="secondary"
       size="sm"
       onClick={() => setSheetOpen(true)}
-      leftIcon={
-        <Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />
-      }
+      leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />}
     >
       Filtre
       {activeCount > 0 ? (
@@ -449,7 +447,7 @@ export function AuctionBrowser() {
                   title="Nicio licitație găsită"
                   action={
                     activeCount > 0 ? (
-                      <Button onClick={clearAll}>Resetează filtrele</Button>
+                      <Button onClick={clearAll}>Șterge filtrele</Button>
                     ) : (
                       <ButtonLink href="/cont/vanzari/nou">
                         Vinde acum

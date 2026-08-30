@@ -39,7 +39,7 @@ export function AuctionCard({
   /** The icon turns before the request leaves; a failed call puts it back. */
   const handleWatch = async () => {
     if (!user) {
-      toast.info("Intră în cont ca să salvezi licitații.");
+      toast.info("Intră în cont pentru a urmări licitații.");
       return;
     }
 
@@ -53,7 +53,7 @@ export function AuctionCard({
       setOverride(result.watched);
     } catch {
       setOverride(!next);
-      toast.error("Licitația nu a putut fi salvată.");
+      toast.error("Licitația nu a putut fi urmărită.");
     }
   };
 

@@ -61,15 +61,6 @@ function Section({
   );
 }
 
-function Spec({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="border-b border-line py-2.5 last:border-b-0">
-      <dt className="text-xs text-ink-500">{label}</dt>
-      <dd className="mt-0.5 font-bold text-ink-900">{value}</dd>
-    </div>
-  );
-}
-
 function SellerStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="px-2 py-2.5 text-center">
@@ -139,7 +130,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   /** The icon turns on the tap; the request only confirms it, or undoes it. */
   const handleWatch = async () => {
     if (!user) {
-      toast.info("Intră în cont ca să salvezi licitații.");
+      toast.info("Intră în cont pentru a urmări licitații.");
       return;
     }
 
@@ -153,7 +144,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       refresh();
     } catch {
       setWatchOverride(!next);
-      toast.error("Licitația nu a putut fi salvată.");
+      toast.error("Licitația nu a putut fi urmărită.");
     }
   };
 
@@ -227,7 +218,10 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-ink-600">
               <span className="inline-flex items-center gap-1.5 font-bold text-primary-800">
-                <Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <Icons.donation
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0"
+                />
                 {auction.donationPercent}% donație
               </span>
               <span aria-hidden="true" className="text-ink-300">
@@ -427,13 +421,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             </p>
           </Section>
 
-          <Section title="Detalii">
-            <dl className="grid gap-x-8 sm:grid-cols-2">
-              <Spec label="Stare" value={ITEM_CONDITION[auction.condition]} />
-              <Spec label="Categorie" value={category?.label} />
-            </dl>
-          </Section>
-
           <Section title="Vândut de">
             <Link
               href={`/profil/${auction.seller.username}`}
@@ -456,12 +443,18 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 <span className="mt-1 flex flex-wrap items-center gap-1.5">
                   {auction.seller.city ? (
                     <span className="inline-flex items-center gap-1 rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
-                      <Icons.locker aria-hidden="true" className="h-3 w-3 shrink-0" />
+                      <Icons.locker
+                        aria-hidden="true"
+                        className="h-3 w-3 shrink-0"
+                      />
                       {auction.seller.city}
                     </span>
                   ) : null}
                   <span className="inline-flex items-center gap-1 rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-900">
-                    <Icons.check aria-hidden="true" className="h-3 w-3 shrink-0" />
+                    <Icons.check
+                      aria-hidden="true"
+                      className="h-3 w-3 shrink-0"
+                    />
                     {ACCOUNT_TYPE[auction.seller.accountType]}
                   </span>
                 </span>
