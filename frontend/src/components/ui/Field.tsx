@@ -94,6 +94,14 @@ function useFieldProps() {
   };
 }
 
+/**
+ * Anything typed into is 16px on a phone and 15px from `sm` up.
+ *
+ * <p>Not a taste call: Safari on iOS zooms the page in when a focused field is
+ * under 16px, and it does not zoom back out afterwards — the reader is left on a
+ * form that no longer fits the screen. Sixteen is the threshold, so the smaller
+ * size is kept for the widths where there is a pointer and no zoom to trigger.
+ */
 const CONTROL_BASE =
   "w-full rounded-2xl bg-white text-ink-900 placeholder:text-ink-500 " +
   "ring-1 ring-ink-200 transition-[box-shadow] hover:ring-ink-300 " +
@@ -115,7 +123,7 @@ export function Input({ className, leading, trailing, ...props }: InputProps) {
       <input
         {...fieldProps}
         {...props}
-        className={cn(CONTROL_BASE, "h-12 px-4 text-[15px]", className)}
+        className={cn(CONTROL_BASE, "h-12 px-4 text-base sm:text-[15px]", className)}
       />
     );
   }
@@ -139,7 +147,7 @@ export function Input({ className, leading, trailing, ...props }: InputProps) {
       <input
         {...fieldProps}
         {...props}
-        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-900 placeholder:text-ink-400 focus:outline-none"
+        className="min-w-0 flex-1 bg-transparent text-base text-ink-900 placeholder:text-ink-400 focus:outline-none sm:text-[15px]"
       />
       {trailing ? (
         <span className="shrink-0 font-semibold text-ink-500">{trailing}</span>
@@ -159,7 +167,7 @@ export function Textarea({
       rows={rows}
       {...fieldProps}
       {...props}
-      className={cn(CONTROL_BASE, "resize-y px-4 py-3 text-[15px]", className)}
+      className={cn(CONTROL_BASE, "resize-y px-4 py-3 text-base sm:text-[15px]", className)}
     />
   );
 }

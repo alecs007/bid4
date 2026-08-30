@@ -211,7 +211,7 @@ export function Select<T extends string>({
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
                 aria-controls={`${id}-list`}
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-900 placeholder:text-ink-400 focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-base text-ink-900 placeholder:text-ink-400 focus:outline-none sm:text-[15px]"
               />
             </div>
           ) : null}

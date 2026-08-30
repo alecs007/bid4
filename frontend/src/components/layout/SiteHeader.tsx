@@ -138,7 +138,7 @@ function HeaderSearch({
         onChange={(event) => onChange(event.target.value)}
         placeholder="Caută pe bid4..."
         aria-label="Caută pe bid4..."
-        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none"
+        className="min-w-0 flex-1 bg-transparent text-base text-ink-900 placeholder:text-ink-500 focus:outline-none sm:text-[15px]"
       />
     </div>
   );
