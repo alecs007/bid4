@@ -679,33 +679,46 @@ public class DevCatalogSeeder implements ApplicationRunner {
   private static final String PHOTO = "https://picsum.photos/seed/%s/800/600";
 
   /**
-   * The cover each listing actually deserves: a photograph of the thing itself,
-   * served from the frontend's own `public/images/products`.
+   * The cover each listing actually deserves: a photograph of the thing itself, served from the
+   * frontend's own `public/images/products`.
    *
-   * <p>A random stock picture is believable as a photograph and useless as a
-   * listing — a mountain range under "Ceas de mână Certina" tells you nothing
-   * about how a real catalogue reads, and every judgement made against it is a
-   * judgement about the wrong page. Only the first frame is pinned; the rest of
-   * the gallery stays random, because what the carousel is being exercised with
+   * <p>A random stock picture is believable as a photograph and useless as a listing — a mountain
+   * range under "Ceas de mână Certina" tells you nothing about how a real catalogue reads, and
+   * every judgement made against it is a judgement about the wrong page. Only the first frame is
+   * pinned; the rest of the gallery stays random, because what the carousel is being exercised with
    * past frame one is its own behaviour, not the photography.
    *
-   * <p>Keyed by title. A listing whose title is not here falls back to the
-   * placeholder service rather than to a broken image.
+   * <p>Keyed by title. A listing whose title is not here falls back to the placeholder service
+   * rather than to a broken image.
    *
-   * <p>The slugs name files the frontend also seeds against, so a few of them
-   * read like order states rather than products: the file is the photograph, and
-   * both catalogues point at the same one instead of shipping it twice.
+   * <p>The slugs name files the frontend also seeds against, so a few of them read like order
+   * states rather than products: the file is the photograph, and both catalogues point at the same
+   * one instead of shipping it twice.
    */
   private static final Map<String, String> COVERS =
-      Map.of(
-          "Aparat foto Canon AE-1 Program cu obiectiv 50mm f/1.8", "canon",
-          "Tricou retro Steaua București, ediție aniversară", "tricou-retro",
-          "Bicicletă de oraș Pegas Practic, cadru 54", "bicicleta",
-          "Set de acuarele profesionale Winsor & Newton, 24 de culori", "acuarele",
-          "Colecție de cărți SF, 14 volume", "carti-sf",
-          "Boxă portabilă JBL Charge 5", "sold-confirmare",
-          "Ceas de mână Certina DS Podium, quartz", "ceas",
-          "Mașină de cusut Singer, model vintage", "masina-cusut");
+      Map.ofEntries(
+          Map.entry("Aparat foto Canon AE-1 Program cu obiectiv 50mm f/1.8", "canon"),
+          Map.entry("Tricou retro Steaua București, ediție aniversară", "tricou-retro"),
+          Map.entry("Bicicletă de oraș Pegas Practic, cadru 54", "bicicleta"),
+          Map.entry("Set de acuarele profesionale Winsor & Newton, 24 de culori", "acuarele"),
+          Map.entry("Colecție de cărți SF, 14 volume", "carti-sf"),
+          Map.entry("Boxă portabilă JBL Charge 5", "sold-confirmare"),
+          Map.entry("Boxă Bluetooth JBL Flip 5", "sold-confirmare"),
+          Map.entry("Ceas de mână Certina DS Podium, quartz", "ceas"),
+          Map.entry("Mașină de cusut Singer, model vintage", "masina-cusut"),
+          Map.entry("Chitară clasică Yamaha C40", "chitara"),
+          Map.entry("Tablou în ulei, peisaj de munte", "tablou"),
+          Map.entry("Enciclopedie ilustrată, 12 volume", "carti"),
+          Map.entry("Aparat de cafea Delonghi Dedica", "espressor"),
+          Map.entry("Rolă de patinaj, mărimea 42", "nevanduta-2"),
+          Map.entry("Trotinetă electrică Xiaomi Pro 2", "sold-plata"),
+          Map.entry("Ceas de buzunar mecanic, argintat", "ceas-buzunar"),
+          Map.entry("Lampă de birou din alamă, anii 60", "lampa-birou"),
+          Map.entry("Robot de bucătărie Bosch", "robot-bucatarie"),
+          Map.entry("Colecție de timbre românești interbelice", "timbre"),
+          Map.entry("Pătuț de lemn pentru copii", "patut-copii"),
+          Map.entry("Geacă de piele naturală, mărimea M", "geaca-piele"),
+          Map.entry("Servietă din piele, model clasic", "servieta"));
 
   /** The three frames for one listing: its own photograph, then two fillers. */
   private static List<String> gallery(String title) {

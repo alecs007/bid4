@@ -41,6 +41,12 @@
     "license": "CC BY-SA 4.0",
     "source": "https://commons.wikimedia.org/wiki/File%3AFossil_wristwatch_with_white_background.jpg"
   },
+  "ceas-buzunar": {
+    "author": "Franz van Duns",
+    "file": "File:Longines 4 Grand Prix pocket watch - clockwork visible - enhanced resolution DSF3402-PSMS.jpg",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File%3ALongines_4_Grand_Prix_pocket_watch_-_clockwork_visible_-_enhanced_resolution_DSF3402-PSMS.jpg"
+  },
   "chitara": {
     "author": "http://muzyczny.pl",
     "file": "File:Gitara klasyczna C30M firmy Yamaha.jpg",
@@ -65,6 +71,12 @@
     "license": "Public domain",
     "source": "https://commons.wikimedia.org/wiki/File%3AKrups_Vivo_F880_home_espresso_maker.jpg"
   },
+  "geaca-piele": {
+    "author": "W.carter",
+    "file": "File:Black worn leather jacket detail 1.jpg",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File%3ABlack_worn_leather_jacket_detail_1.jpg"
+  },
   "ghiozdan": {
     "author": "H. Knoflach",
     "file": "File:Rucksack mit Helmnetz.jpg",
@@ -76,6 +88,12 @@
     "file": "File:Dolceacqua43 - Artista locale mentre dipinge un acquarello.jpg",
     "license": "Public domain",
     "source": "https://commons.wikimedia.org/wiki/File%3ADolceacqua43_-_Artista_locale_mentre_dipinge_un_acquarello.jpg"
+  },
+  "lampa-birou": {
+    "author": "Christos Vittoratos",
+    "file": "File:Christian-dell molitor-office-work-lamp-light.jpg",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File%3AChristian-dell_molitor-office-work-lamp-light.jpg"
   },
   "lego": {
     "author": "Y.Leclercq",
@@ -101,17 +119,35 @@
     "license": "CC0",
     "source": "https://commons.wikimedia.org/wiki/File%3APair_of_Roller_skates.jpg"
   },
+  "patut-copii": {
+    "author": "unknown",
+    "file": "File:Baby in cot, child reading book, from Ein Regiment..., 1473 Wellcome L0006677.jpg",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File%3ABaby_in_cot%2C_child_reading_book%2C_from_Ein_Regiment...%2C_1473_Wellcome_L0006677.jpg"
+  },
   "review-consola": {
     "author": "Evan-Amos",
     "file": "File:Nintendo-Switch-Console-Docked-wJoyConRB.jpg",
     "license": "Public domain",
     "source": "https://commons.wikimedia.org/wiki/File%3ANintendo-Switch-Console-Docked-wJoyConRB.jpg"
   },
+  "robot-bucatarie": {
+    "author": "Shixart1985",
+    "file": "File:Kitchen mixer attachment hanging above a metal bowl on a kitchen counter.jpg",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File%3AKitchen_mixer_attachment_hanging_above_a_metal_bowl_on_a_kitchen_counter.jpg"
+  },
   "rochie": {
     "author": "Jason Hargrove",
     "file": "File:Lauren Lee Smith wearing Ines Di Santo - Heart and Stroke Foundation - The Heart Truth celebrity fashion show - Red Dress - Red Gown - Thursday February 8, 2012 - Creative Commons.jpg",
     "license": "CC BY 2.0",
     "source": "https://commons.wikimedia.org/wiki/File%3ALauren_Lee_Smith_wearing_Ines_Di_Santo_-_Heart_and_Stroke_Foundation_-_The_Heart_Truth_celebrity_fashion_show_-_Red_Dress_-_Red_Gown_-_Thursday_February_8%2C_2012_-_Creative_Commons.jpg"
+  },
+  "servieta": {
+    "author": "Antorini",
+    "file": "File:ANTORINI Executive Leather Briefcase.jpg",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File%3AANTORINI_Executive_Leather_Briefcase.jpg"
   },
   "sold-anulat": {
     "author": "Sandrine Z",
@@ -202,6 +238,12 @@
     "file": "File:Autumn landscape near Gullesfjordbotn, Hinnøya, 2010 September.jpg",
     "license": "CC BY-SA 3.0",
     "source": "https://commons.wikimedia.org/wiki/File%3AAutumn_landscape_near_Gullesfjordbotn%2C_Hinn%C3%B8ya%2C_2010_September.jpg"
+  },
+  "timbre": {
+    "author": "Vyacheslav Argenberg",
+    "file": "File:Music collection, Postage stamps, Rostov-on-Don, Russia.jpg",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File%3AMusic_collection%2C_Postage_stamps%2C_Rostov-on-Don%2C_Russia.jpg"
   },
   "tricou-retro": {
     "author": "Matti Blume",
