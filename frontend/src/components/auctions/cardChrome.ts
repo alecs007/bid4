@@ -12,7 +12,7 @@ export const CARD_BODY = "flex flex-1 flex-col px-2 py-2 sm:px-3 sm:py-2";
  * card actually uses, at both widths.
  */
 export const CARD_TITLE_TYPE =
-  "font-display text-[13px] leading-[1.3] sm:text-base";
+  "font-display text-[14px] leading-[1.3] sm:text-base";
 
 /** Two clamped lines. The skeleton fills the same box rather than guessing px. */
 export const CARD_TITLE_BOX = "min-h-[2.6em]";
