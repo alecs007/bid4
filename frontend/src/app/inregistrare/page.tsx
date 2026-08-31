@@ -8,7 +8,16 @@ import { RegisterFormSkeleton } from "./_components/RegisterFormSkeleton";
 export const metadata: Metadata = {
   title: "Cont nou",
   description:
-    "Creează-ți contul bid4: licitezi, vinzi și direcționezi o parte din fiecare vânzare către o cauză verificată.",
+    "Îți faci cont în câteva minute. Licitezi, vinzi ce nu mai folosești și alegi cât din preț merge mai departe la o cauză.",
+  keywords: ["cont bid4", "inregistrare", "vinde online"],
+  alternates: { canonical: "/inregistrare" },
+  openGraph: {
+    type: "website",
+    url: "/inregistrare",
+    title: "Cont nou | bid4",
+    description:
+      "Îți faci cont în câteva minute. Licitezi, vinzi și alegi cât din preț merge mai departe la o cauză.",
+  },
 };
 
 export default function RegisterPage() {

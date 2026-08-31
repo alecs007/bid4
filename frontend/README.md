@@ -21,6 +21,30 @@ pnpm lint      # eslint
 pnpm exec tsc --noEmit
 ```
 
+## Security
+
+The API authorises every request for itself; nothing here is a substitute for
+that. What the web app owns is the part the API cannot see.
+
+- **Response headers** — set in `next.config.ts`: a content policy, `nosniff`,
+  `DENY` framing, a referrer policy, and a permissions policy that grants no
+  hardware. `script-src` still carries `unsafe-inline`, because Next hydrates
+  through inline scripts and pinning them needs a per-request nonce; the
+  directives that do not depend on script injection — `frame-ancestors`,
+  `base-uri`, `form-action`, `object-src` — are enforced.
+- **Middleware** — a routing convenience, not a control. It reads a role from an
+  httpOnly cookie to decide where to send someone before a page renders; a forged
+  one renders a page whose data the API then refuses.
+- **Redirects** — `safeRedirect` resolves a `?redirect=` against a probe origin
+  and keeps it only if it lands on the same one. Pattern-matching for a leading
+  slash is not enough: browsers fold `/\` into `//`, so `/\evil.com` reads as
+  relative and resolves off-site.
+- **Tokens** — the access token lives in memory only. Nothing puts it in
+  `localStorage`, where any script on the page could read it.
+- **Cache** — signing out empties the SWR cache. Keys carry the viewer's id, so
+  one account cannot read another's entries, but the data does not need to
+  outlive the session on a shared machine.
+
 ## Data
 
 The app runs entirely on a mock layer today. `NEXT_PUBLIC_USE_MOCK=true`

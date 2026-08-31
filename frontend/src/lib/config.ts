@@ -18,6 +18,19 @@ export const USE_MOCK: boolean = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
 export const API_BASE: string =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
+/**
+ * Where the site answers from, used to make every canonical and every social
+ * card an absolute URL.
+ *
+ * <p>Relative metadata is legal and useless: a crawler resolving a preview image
+ * has no page to resolve it against, and a canonical that is not absolute cannot
+ * say which of two hosts is the real one. The localhost default keeps a clean
+ * clone working; set it per deployment.
+ */
+export const SITE_URL: string = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
+
 /** Dev-only affordances (role switcher, seed-account quick login). */
 export const SHOW_DEV_TOOLS: boolean =
   process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS !== "false" &&

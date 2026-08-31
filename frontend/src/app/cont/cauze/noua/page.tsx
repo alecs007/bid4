@@ -7,7 +7,8 @@ import { CauseWizard } from "./_components/CauseWizard";
 export const metadata: Metadata = {
   title: "Propune o cauză",
   description:
-    "Deschide o cauză pe bid4: prezinți situația, încarci documentele care o susțin, iar noi o verificăm înainte de publicare.",
+    "Ne spui despre ce este vorba și încarci documentele care o susțin. O verificăm înainte să apară pe site.",
+  robots: { index: false, follow: false },
 };
 
 export default function NewCausePage() {

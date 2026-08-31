@@ -6,9 +6,17 @@ import { CauseBrowser } from "./_components/CauseBrowser";
 import { CauseBrowserSkeleton } from "./_components/CauseBrowserSkeleton";
 
 export const metadata: Metadata = {
-  title: "Cauze",
+  title: "Cauze verificate",
   description:
-    "Cauzele verificate de pe bid4, cu documente confirmate și progres public către obiectiv.",
+    "Fiecare cauză este verificată cu documente înainte de a apărea aici. Vezi povestea, cât s-a strâns până acum și licitațiile care o susțin.",
+  keywords: ["cauze verificate", "donatii", "strangere de fonduri"],
+  alternates: { canonical: "/cauze" },
+  openGraph: {
+    type: "website",
+    url: "/cauze",
+    title: "Cauze verificate | bid4",
+    description: "Fiecare cauză este verificată cu documente înainte de a apărea aici. Vezi povestea, cât s-a strâns până acum și licitațiile care o susțin.",
+  },
 };
 
 export default function CausesPage() {

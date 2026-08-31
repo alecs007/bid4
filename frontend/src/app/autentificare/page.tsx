@@ -8,7 +8,11 @@ import { LoginFormSkeleton } from "./_components/LoginFormSkeleton";
 export const metadata: Metadata = {
   title: "Autentificare",
   description:
-    "Intră în contul tău bid4 pentru a licita, a vinde și a susține cauze verificate.",
+    "Intră în cont ca să licitezi, să îți urmărești ofertele și să vinzi în sprijinul unei cauze.",
+  alternates: { canonical: "/autentificare" },
+  // Indexable, but never the answer to a search: somebody looking for bid4
+  // should land on the catalogue, not on a form.
+  robots: { index: false, follow: true },
 };
 
 export default function LoginPage() {

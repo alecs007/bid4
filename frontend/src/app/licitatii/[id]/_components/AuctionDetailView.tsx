@@ -129,7 +129,11 @@ function SellerStat({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 text-center ring-1 ring-edge">
-      <Illustration src={illustration} className="h-10 w-10" sizes="40px" />
+      <Illustration
+        src={illustration}
+        className="h-8 w-8 sm:h-10 sm:w-10"
+        sizes="40px"
+      />
       <div>
         <dt className="numeric font-display text-lg sm:text-xl leading-none font-extrabold text-ink-900">
           {value}
@@ -609,7 +613,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 value={formatMoney(auction.seller.totalRaised, {
                   compact: true,
                 })}
-                label="donați"
+                label="donații"
               />
             </dl>
           </Section>

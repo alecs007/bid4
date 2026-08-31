@@ -125,7 +125,7 @@ export function progressPercent(raised: Bani, goal: Bani): number {
 export interface FeeBreakdown {
   /** Hammer price — what the winning bid was. */
   finalPrice: Bani;
-  /** Buyer-side platform tax: 5% clamped to [5, 50] lei. */
+  /** Buyer-side protection fee: a percentage of the price plus a fixed amount. */
   buyerTax: Bani;
   /** Delivery cost, paid by the buyer on top. */
   shipping: Bani;

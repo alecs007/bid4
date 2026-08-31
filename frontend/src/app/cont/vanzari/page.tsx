@@ -6,6 +6,7 @@ import { MySales } from "./_components/MySales";
 export const metadata: Metadata = {
   title: "Vânzările mele",
   description: "Ce ai pus la licitație, cu starea fiecărei vânzări.",
+  robots: { index: false, follow: false },
 };
 
 export default function MySalesPage() {
