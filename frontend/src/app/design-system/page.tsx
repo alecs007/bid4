@@ -54,6 +54,8 @@ import { PageTransition } from "@/components/layout/PageTransition";
 export const metadata: Metadata = {
   title: "Design system",
   description: "Componentele și tokenurile vizuale ale platformei bid4.",
+  // An internal reference, not a page of the product.
+  robots: { index: false, follow: false },
 };
 
 function Section({

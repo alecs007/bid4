@@ -31,7 +31,7 @@ and a Spring Boot backend that is now replacing it endpoint by endpoint.
 | `common/web/` | `PageResponse` (the paged wire shape) and the `X-Request-Id` filter |
 | `security/SecurityConfig.java` | The filter chain: CORS, headers, deny-by-default, JWT |
 | `security/jwt/JwtService.java` | Issues access and refresh tokens |
-| `security/ratelimit/` | Bucket4j buckets in Redis, three budgets, per caller |
+| `security/ratelimit/` | Bucket4j buckets in Redis, four budgets, per caller |
 | `identity/` | The users feature: entity, repository, service, controller, DTOs |
 
 `Dockerfile` builds the API image; `pom.xml` pins the dependencies and wires
@@ -107,14 +107,16 @@ so Flyway migrates on every run and a broken migration fails the build rather
 than the deploy. Docker Desktop has to be running.
 
 ```bash
-cd frontend && pnpm exec next typegen && pnpm exec tsc --noEmit && pnpm exec eslint src --max-warnings=1 && pnpm exec next build
+cd frontend && pnpm exec next typegen && pnpm exec tsc --noEmit && pnpm exec eslint src --max-warnings=0 && pnpm exec next build
 ```
 
 `next typegen` comes first because `PageProps` and `LayoutProps` are generated
 into `.next/types`, which `tsconfig.json` includes. On a clean clone, where no
 dev server has run, the typecheck cannot resolve them without it.
 
-One eslint warning is expected: the commented-out `DevRoleSwitcher` import.
+The lint budget is zero warnings. A warning is either worth fixing or worth
+silencing at its line with a reason; leaving one standing spends the budget that
+would have made the next one visible.
 
 ### Demo accounts
 

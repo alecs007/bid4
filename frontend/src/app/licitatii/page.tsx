@@ -6,9 +6,17 @@ import { AuctionBrowser } from "./_components/AuctionBrowser";
 import { AuctionBrowserSkeleton } from "./_components/AuctionBrowserSkeleton";
 
 export const metadata: Metadata = {
-  title: "Licitații",
+  title: "Licitații în desfășurare",
   description:
-    "Licitații active pe bid4, filtrate după categorie, cauză, preț și cât din preț ajunge la cauză.",
+    "Toate licitațiile deschise acum. Filtrezi după categorie, cauză sau preț și vezi din start cât din ofertă ajunge la cauză.",
+  keywords: ["licitatii online", "licitatii active", "obiecte second hand"],
+  alternates: { canonical: "/licitatii" },
+  openGraph: {
+    type: "website",
+    url: "/licitatii",
+    title: "Licitații în desfășurare | bid4",
+    description: "Toate licitațiile deschise acum. Filtrezi după categorie, cauză sau preț și vezi din start cât din ofertă ajunge la cauză.",
+  },
 };
 
 export default function AuctionsPage() {

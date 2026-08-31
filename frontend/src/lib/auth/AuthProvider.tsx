@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { useSWRConfig } from "swr";
+
 import * as authApi from "@/lib/api/auth";
 import type {
   AuthSession,
@@ -50,6 +52,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const { mutate } = useSWRConfig();
 
   // All state writes happen after an await, so the effect never triggers a
   // synchronous cascade.
@@ -98,7 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authApi.logout();
     setUser(null);
     setStatus("anonymous");
-  }, []);
+    // Every answer in the cache was fetched as somebody. Cache keys carry the
+    // viewer's id, so the next account cannot read the last one's entries — but
+    // the data is still sitting in memory on a machine its owner has just
+    // walked away from, and nothing needs it again.
+    await mutate(() => true, undefined, { revalidate: false });
+  }, [mutate]);
 
   const refresh = useCallback(async () => {
     if (!user) return;

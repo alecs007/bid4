@@ -66,10 +66,15 @@ jobs:
 
       # One warning is expected: the commented-out DevRoleSwitcher import.
       - name: lint
-        run: pnpm exec eslint src --max-warnings=1
+        run: pnpm exec eslint src --max-warnings=0
 
       # Catches what tsc cannot — a server/client boundary crossed, a bad route
       # export, a component that only fails when it is actually rendered.
+      # Before the build: a failing unit test should stop the run at the cheapest
+      # point, not after a full production compile.
+      - name: test
+        run: pnpm exec vitest run
+
       - name: build
         run: pnpm exec next build
         env:
