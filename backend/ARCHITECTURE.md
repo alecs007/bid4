@@ -86,6 +86,13 @@ A request passes these in order, and each one can end it:
   half, so an attempt spread over many IPs still trips a lockout. Every attempt,
   successful or not, lands in `login_attempts`. Login answers in constant time
   whether or not the address exists.
+
+  Counting per IP is only worth anything if the IP cannot be chosen by the
+  caller. `server.forward-headers-strategy` is `native`, so Tomcat's valve reads
+  `X-Forwarded-For` only from a peer matching `server.tomcat.remoteip.internal-proxies`.
+  Boot's `framework` strategy trusts that header from anyone, which turned the
+  per-IP budget into a per-header budget and cost nothing to defeat. Narrow the
+  proxy list to the balancer's own address when the deployment is known.
 - **DoS/DDoS** — Tomcat caps, per-route rate limits, request size limits, pagination
   ceilings, statement timeouts, and container CPU/memory limits. A single instance
   cannot absorb a real DDoS; the edge (CDN/WAF) has to, and this service is built
