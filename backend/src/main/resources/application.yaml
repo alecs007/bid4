@@ -117,7 +117,15 @@ server:
   # Behind a proxy that terminates TLS the application otherwise sees plain HTTP,
   # and every decision keyed on that — the Secure flag on the refresh cookie, the
   # scheme in a redirect — is made on the wrong information.
-  forward-headers-strategy: framework
+  #
+  # `native` rather than `framework`, because these headers are written by
+  # whoever sent the request. Boot's `framework` strategy rewrites the client
+  # address from X-Forwarded-For unconditionally, so anyone could hand the rate
+  # limiter a new address per request and guess passwords for as long as they
+  # liked. Tomcat's valve only listens to a peer that matches internal-proxies,
+  # which is the difference between a proxy speaking for a client and a client
+  # speaking for itself.
+  forward-headers-strategy: native
   error:
     # An error response says what went wrong in our own words, never in the
     # framework's: stack traces and binding details are a map of the internals.
@@ -127,6 +135,11 @@ server:
     include-exception: false
   max-http-request-header-size: 16KB
   tomcat:
+    remoteip:
+      # The peers allowed to speak for someone else: loopback and the private
+      # ranges a load balancer sits in. Narrow this to the balancer's own address
+      # if the deployment ever shares its network with anything untrusted.
+      internal-proxies: '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|0:0:0:0:0:0:0:1|::1'
     threads:
       max: 200
       min-spare: 20

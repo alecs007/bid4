@@ -1,9 +1,11 @@
 package ro.bid4.backend.catalog;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -407,13 +409,24 @@ class AuctionEndpointsTest {
   @Test
   @DisplayName("GET /auctions/featured answers both homepage rows")
   void featuredReturnsBothRows() throws Exception {
-    mvc.perform(get("/auctions/featured"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.endingSoon").isArray())
-        .andExpect(jsonPath("$.popular").isArray())
-        // Soonest closing first, and only what is actually running.
-        .andExpect(jsonPath("$.endingSoon[0].id").value(canon.getId().toString()))
-        .andExpect(jsonPath("$.endingSoon[?(@.status != 'LIVE')]").isEmpty());
+    String body =
+        mvc.perform(get("/auctions/featured"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.endingSoon").isArray())
+            .andExpect(jsonPath("$.popular").isArray())
+            // Only what is actually running.
+            .andExpect(jsonPath("$.endingSoon[?(@.status != 'LIVE')]").isEmpty())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    // The sort is asserted as a property of the answer rather than by naming
+    // which listing should be first. `featured` reads the whole catalogue and
+    // returns only a handful of it, and every test class shares this database:
+    // name a listing and the assertion breaks the moment another class seeds one
+    // that closes sooner, which says nothing about whether the sort works.
+    List<String> closing = JsonPath.read(body, "$.endingSoon[*].endTime");
+    assertThat(closing).isSorted();
   }
 
   @Test
