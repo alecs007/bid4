@@ -45,10 +45,6 @@ public class Bid {
   @Column(nullable = false)
   private BidStatus status = BidStatus.ACTIVE;
 
-  /** True when this bid pushed the closing time out. The history shows it. */
-  @Column(name = "triggered_extension", nullable = false)
-  private boolean triggeredExtension = false;
-
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt = Instant.now();
 

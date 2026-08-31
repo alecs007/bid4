@@ -1,6 +1,5 @@
 package ro.bid4.backend.catalog.service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -82,13 +81,9 @@ public class BidService {
         auctions.findByIdForUpdate(auctionId).orElseThrow(() -> ApiException.notFound("Licitația"));
 
     Instant now = Instant.now();
-    if (!auction.isLive(now)) {
-      log.debug(
-          "Bid refused on {}: not live (status {}, ends {})",
-          auctionId,
-          auction.getStatus(),
-          auction.getEndTime());
-      throw new ApiException(ErrorCode.AUCTION_NOT_LIVE, "Licitația nu mai acceptă oferte.");
+    if (!auction.isOpenForBids()) {
+      log.debug("Bid refused on {}: not open (status {})", auctionId, auction.getStatus());
+      throw new ApiException(ErrorCode.AUCTION_NOT_LIVE, "Anunțul nu mai acceptă oferte.");
     }
     if (viewer.is(auction.getSellerId())) {
       throw ApiException.forbidden("Nu poți licita la propriul anunț.");
@@ -133,28 +128,36 @@ public class BidService {
     // finger would be indefensible.
     long price = boughtNow ? auction.getBuyNowPrice() : amount;
 
-    bids.demoteAllFor(auctionId, boughtNow ? BidStatus.LOST : BidStatus.OUTBID);
+    // Everything standing drops a place — except the offer the seller has
+    // already accepted, if there is one. Demoting that would undo the acceptance
+    // while the auction row still names its bidder as the buyer.
+    BidStatus demoted = boughtNow ? BidStatus.LOST : BidStatus.OUTBID;
+    UUID accepted = auction.getAcceptedBidId();
+    if (accepted == null) {
+      bids.demoteAllFor(auctionId, demoted);
+    } else {
+      bids.demoteAllExcept(auctionId, demoted, accepted);
+    }
     bids.flush();
-
-    Integer extendedBySeconds = boughtNow ? null : extendIfSniped(auction, now);
 
     Bid bid = new Bid();
     bid.setAuctionId(auctionId);
     bid.setBidderId(viewer.id());
     bid.setAmount(price);
-    bid.setStatus(boughtNow ? BidStatus.WON : BidStatus.WINNING);
-    bid.setTriggeredExtension(extendedBySeconds != null);
+    bid.setStatus(boughtNow ? BidStatus.ACCEPTED : BidStatus.WINNING);
     bids.save(bid);
     bids.flush();
 
     auction.setCurrentPrice(price);
     auction.setBidCount((int) bids.countByAuctionId(auctionId));
     if (boughtNow) {
-      auction.setStatus(AuctionStatus.SOLD);
+      // Reserved rather than sold: the seller published this price and is bound
+      // by it, so no acceptance is needed — but nobody has paid yet, and SOLD is
+      // reserved for money that has actually arrived.
+      auction.setStatus(AuctionStatus.RESERVED);
       auction.setWinnerId(viewer.id());
-      // Closing the clock as well as the status, so nothing downstream has to
-      // special-case a sold auction that still looks like it is running.
-      auction.setEndTime(now);
+      auction.setAcceptedBidId(bid.getId());
+      auction.setAcceptedAt(now);
     }
     auctions.save(auction);
 
@@ -166,25 +169,20 @@ public class BidService {
           price,
           amount);
     } else {
-      log.info(
-          "Bid accepted on {}: {} bani by {}{}",
-          auctionId,
-          price,
-          viewer.id(),
-          extendedBySeconds == null ? "" : " (close pushed out " + extendedBySeconds + "s)");
+      log.info("Bid accepted on {}: {} bani by {}", auctionId, price, viewer.id());
     }
 
     AuctionResponse view = mapper.toResponse(auction, viewer.id());
     BidResponse placed = mapper.toBidResponse(bid, viewer.id());
-    return new PlaceBidResponse(placed, view, extendedBySeconds, boughtNow ? true : null);
+    return new PlaceBidResponse(placed, view, boughtNow ? true : null);
   }
 
   /**
    * DELETE /auctions/{id}/bids/mine
    *
-   * <p>Only the leader can pull back, and not in the closing minutes: retracting then is
-   * indistinguishable from bid shielding — pushing the price up to scare others off and stepping
-   * away before the clock runs out.
+   * <p>Only the leader can pull back, and only while the listing is still taking offers. The one
+   * offer that is never theirs to pull is the one the seller has accepted: walking away from that
+   * is breaking a deal, not withdrawing from one.
    */
   @Transactional
   public AuctionResponse retract(UUID auctionId, Viewer viewer) {
@@ -195,8 +193,10 @@ public class BidService {
     Auction auction =
         auctions.findByIdForUpdate(auctionId).orElseThrow(() -> ApiException.notFound("Licitația"));
 
-    if (!auction.isLive(Instant.now())) {
-      throw new ApiException(ErrorCode.RETRACT_NOT_ALLOWED, "Licitația s-a încheiat.");
+    if (!auction.isOpenForBids()) {
+      // Includes a listing whose seller has already accepted an offer: pulling the
+      // offer out from under an acceptance is not a retraction, it is a broken deal.
+      throw new ApiException(ErrorCode.RETRACT_NOT_ALLOWED, "Anunțul nu mai acceptă modificări.");
     }
 
     List<Bid> ordered = bids.findByAuctionIdOrderByAmountDesc(auctionId);
@@ -205,18 +205,19 @@ public class BidService {
           ErrorCode.RETRACT_NOT_ALLOWED, "Poți retrage doar propria ofertă aflată pe primul loc.");
     }
 
-    long secondsLeft = Duration.between(Instant.now(), auction.getEndTime()).toSeconds();
-    if (secondsLeft <= RETRACT_LOCK_SECONDS) {
-      throw new ApiException(
-          ErrorCode.RETRACT_NOT_ALLOWED, "Nu mai poți retrage oferta în ultimele 5 minute.");
-    }
-
     Bid top = ordered.getFirst();
+    // The one offer nobody may pull: the seller has taken it, and a buyer who
+    // walks away from an accepted offer is breaking a deal, not withdrawing one.
+    if (top.getId().equals(auction.getAcceptedBidId())) {
+      throw new ApiException(
+          ErrorCode.RETRACT_NOT_ALLOWED,
+          "Oferta ta a fost acceptată, așa că nu mai poate fi retrasă.");
+    }
     bids.delete(top);
     bids.flush();
 
     Bid next = ordered.size() > 1 ? ordered.get(1) : null;
-    if (next != null) {
+    if (next != null && !next.getId().equals(auction.getAcceptedBidId())) {
       next.setStatus(BidStatus.WINNING);
       bids.save(next);
     }
@@ -287,22 +288,6 @@ public class BidService {
           ErrorCode.BID_NOT_ALLOWED, "Alege o metodă de livrare implicită pentru a licita.");
     }
   }
-
-  /** A bid inside the closing window pushes the close out by the same amount. */
-  private static Integer extendIfSniped(Auction auction, Instant now) {
-    long msLeft = Duration.between(now, auction.getEndTime()).toMillis();
-    long windowMs = auction.getAntiSnipeSeconds() * 1000L;
-
-    if (msLeft <= 0 || msLeft > windowMs) {
-      return null;
-    }
-    auction.setEndTime(auction.getEndTime().plusSeconds(auction.getAntiSnipeSeconds()));
-    auction.setExtensionCount(auction.getExtensionCount() + 1);
-    return auction.getAntiSnipeSeconds();
-  }
-
-  /** Mirrors RETRACT_LOCK_SECONDS in frontend/src/lib/api/bids.ts. */
-  private static final long RETRACT_LOCK_SECONDS = 300;
 
   private static String formatLei(long bani) {
     return String.format(java.util.Locale.of("ro", "RO"), "%,.2f lei", bani / 100d);

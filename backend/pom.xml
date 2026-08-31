@@ -204,14 +204,6 @@
 						<MINIO_ROOT_USER>test-only-minio-user</MINIO_ROOT_USER>
 						<MINIO_ROOT_PASSWORD>test-only-minio-password</MINIO_ROOT_PASSWORD>
 					</environmentVariables>
-					<!-- The auction clock does not run under test. Several fixtures end
-					     a few seconds out to exercise the close, and a tick landing
-					     between the arrange and the assert would settle them out from
-					     under the test. Settlement is driven directly instead; the one
-					     class that wants the scheduler turns it back on itself. -->
-					<systemPropertyVariables>
-						<bid4.auctions.clock-enabled>false</bid4.auctions.clock-enabled>
-					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 			<plugin>

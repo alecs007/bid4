@@ -55,6 +55,31 @@ public interface BidRepository extends JpaRepository<Bid, UUID> {
   int demoteAllFor(@Param("auctionId") UUID auctionId, @Param("status") BidStatus status);
 
   /**
+   * The same, but leaving one row alone.
+   *
+   * <p>A reserved listing goes on taking offers, and each new one steps the rest down. The offer
+   * the seller has already accepted is not part of that: demoting it would quietly undo the
+   * acceptance while the auction row still points at it as the buyer.
+   */
+  @Modifying(flushAutomatically = true)
+  @Query("update Bid b set b.status = :status where b.auctionId = :auctionId and b.id <> :exceptId")
+  int demoteAllExcept(
+      @Param("auctionId") UUID auctionId,
+      @Param("status") BidStatus status,
+      @Param("exceptId") UUID exceptId);
+
+  /** The amounts behind a page of acceptances, for the listings that have one. */
+  @Query("select b.id as id, b.amount as amount from Bid b where b.id in :ids")
+  List<Amount> findAmounts(@Param("ids") Collection<UUID> ids);
+
+  /** One accepted offer's price, without loading the row. */
+  interface Amount {
+    UUID getId();
+
+    long getAmount();
+  }
+
+  /**
    * Sets one bid's status without going through the persistence context.
    *
    * <p>Settlement marks every bid on the auction and then lifts the winner back out, and a bulk

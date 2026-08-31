@@ -105,14 +105,9 @@ public class Auction {
   @Column(name = "buy_now_price")
   private Long buyNowPrice;
 
+  /** When it went up. There is no closing time: a listing runs until it is settled or withdrawn. */
   @Column(name = "start_time", nullable = false)
   private Instant startTime;
-
-  @Column(name = "end_time", nullable = false)
-  private Instant endTime;
-
-  @Column(name = "anti_snipe_seconds", nullable = false)
-  private int antiSnipeSeconds = 120;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
@@ -127,8 +122,26 @@ public class Auction {
   @Column(name = "watcher_count", nullable = false)
   private int watcherCount = 0;
 
-  @Column(name = "extension_count", nullable = false)
-  private int extensionCount = 0;
+  /**
+   * The offer the seller took, once they have taken one.
+   *
+   * <p>Not necessarily the highest. The seller reads the offers and picks, which is the whole point
+   * of a listing that does not close on a timer.
+   */
+  @Column(name = "accepted_bid_id")
+  private UUID acceptedBidId;
+
+  @Column(name = "accepted_at")
+  private Instant acceptedAt;
+
+  /**
+   * When the parcel is late.
+   *
+   * <p>Set when the money arrives, not when the offer is accepted: the seller's clock should not
+   * run while they are waiting to be paid.
+   */
+  @Column(name = "dispatch_deadline")
+  private Instant dispatchDeadline;
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt = Instant.now();
@@ -141,13 +154,36 @@ public class Auction {
     return reservePrice == null || currentPrice >= reservePrice;
   }
 
-  /** Whether an offer of this size takes the item outright. */
+  /** Whether an offer of this size takes the item outright, and may. */
   public boolean isBuyNowReachedBy(long amount) {
-    return buyNowPrice != null && amount >= buyNowPrice;
+    return isBuyNowAvailable() && amount >= buyNowPrice;
   }
 
-  public boolean isLive(Instant now) {
-    return status == AuctionStatus.LIVE && !startTime.isAfter(now) && endTime.isAfter(now);
+  /**
+   * Whether offers can still be placed.
+   *
+   * <p>No longer a question about time, and not closed by the acceptance either: a reserved listing
+   * is one the seller may still hand back, so the room goes on bidding against it. What closes it
+   * is the money arriving.
+   */
+  public boolean isOpenForBids() {
+    return status.isOpen();
+  }
+
+  /**
+   * Whether the final price is still on the table.
+   *
+   * <p>Narrower than {@link #isOpenForBids()}. Buy-now takes the item outright, and it cannot do
+   * that over the top of a buyer the seller has already accepted — that acceptance has to be
+   * released first, by the one person entitled to release it.
+   */
+  public boolean isBuyNowAvailable() {
+    return status == AuctionStatus.LIVE && buyNowPrice != null;
+  }
+
+  /** True once a buyer is attached, which is what makes the row undeletable. */
+  public boolean isCommitted() {
+    return status.isCommitted();
   }
 
   @Override

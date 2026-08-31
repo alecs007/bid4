@@ -1,6 +1,5 @@
 package ro.bid4.backend.catalog.service;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,6 +65,9 @@ public class AuctionService {
     if (query.category() != null && !query.category().isEmpty()) {
       filters.add(AuctionSpecifications.categoryIn(query.category()));
     }
+    if (query.condition() != null && !query.condition().isEmpty()) {
+      filters.add(AuctionSpecifications.conditionIn(query.condition()));
+    }
     if (query.causeId() != null) {
       filters.add(AuctionSpecifications.causeIs(query.causeId()));
     }
@@ -80,9 +82,6 @@ public class AuctionService {
     }
     if (query.minDonationPercent() != null) {
       filters.add(AuctionSpecifications.donationAtLeast(query.minDonationPercent()));
-    }
-    if (Boolean.TRUE.equals(query.endingSoon())) {
-      filters.add(AuctionSpecifications.endingSoon(Instant.now()));
     }
     if (!SearchTerms.words(query.q()).isEmpty()) {
       filters.add(AuctionSpecifications.matchesText(query.q()));
@@ -109,24 +108,22 @@ public class AuctionService {
 
   /** GET /auctions/featured — the two homepage rows. */
   public FeaturedAuctionsResponse featured(Viewer viewer) {
-    Instant now = Instant.now();
-    List<Auction> live = liveWindow(now);
+    List<Auction> live = liveWindow();
 
-    List<Auction> endingSoon = FeaturedRanking.endingSoon(live, CatalogRules.ENDING_SOON_COUNT);
-    List<Auction> popular = FeaturedRanking.popular(live, CatalogRules.POPULAR_COUNT, now);
+    List<Auction> mostWatched = FeaturedRanking.mostWatched(live, CatalogRules.MOST_WATCHED_COUNT);
+    List<Auction> popular = FeaturedRanking.popular(live, CatalogRules.POPULAR_COUNT);
 
     // The rows overlap, and mapping them separately would fetch the same
     // sellers and causes twice.
-    Map<UUID, AuctionResponse> mapped = mapTogether(viewer, endingSoon, popular);
+    Map<UUID, AuctionResponse> mapped = mapTogether(viewer, mostWatched, popular);
 
-    return new FeaturedAuctionsResponse(pick(endingSoon, mapped), pick(popular, mapped));
+    return new FeaturedAuctionsResponse(pick(mostWatched, mapped), pick(popular, mapped));
   }
 
   /** GET /auctions/{id}/related — "more like this", under an auction. */
   public List<AuctionResponse> related(UUID id, Viewer viewer) {
     Auction subject = load(id, viewer);
-    Instant now = Instant.now();
-    List<Auction> ranked = FeaturedRanking.related(subject, liveWindow(now), now);
+    List<Auction> ranked = FeaturedRanking.related(subject, liveWindow());
     return mapper.toResponses(ranked, viewer.id());
   }
 
@@ -158,7 +155,6 @@ public class AuctionService {
                   bid.getAmount(),
                   bid.getCreatedAt(),
                   bid.getStatus(),
-                  bid.isTriggeredExtension(),
                   shortName(bidder == null ? null : bidder.displayName()),
                   bidder == null ? "" : bidder.avatarUrl(),
                   "");
@@ -169,13 +165,12 @@ public class AuctionService {
   /**
    * The ranking window: live auctions, soonest closing first, capped.
    *
-   * <p>LIVE is the stored status, but a listing whose clock has run out and whose settlement has
-   * not caught up with it yet is not live in any sense a homepage should show, so the window is
-   * bounded by the times as well.
+   * <p>LIVE is the whole of it now. Nothing expires on its own, so a listing carrying that status
+   * is genuinely open, and the window is bounded by count alone.
    */
-  private List<Auction> liveWindow(Instant now) {
-    return auctions.findByStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanOrderByEndTimeAsc(
-        AuctionStatus.LIVE, now, now, Limit.of(CatalogRules.RANKING_WINDOW));
+  private List<Auction> liveWindow() {
+    return auctions.findByStatusOrderByCreatedAtDesc(
+        AuctionStatus.LIVE, Limit.of(CatalogRules.RANKING_WINDOW));
   }
 
   /**

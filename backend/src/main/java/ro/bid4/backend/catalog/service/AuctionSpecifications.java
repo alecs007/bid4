@@ -5,8 +5,6 @@ import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +12,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.catalog.domain.AuctionStatus;
+import ro.bid4.backend.catalog.domain.ItemCondition;
 import ro.bid4.backend.cause.domain.Cause;
 import ro.bid4.backend.common.text.SearchTerms;
 
@@ -35,6 +34,11 @@ final class AuctionSpecifications {
     return (root, query, cb) -> root.get("category").in(categories);
   }
 
+  /** The column is `item_condition`; the field on the entity is `condition`. */
+  static Specification<Auction> conditionIn(Collection<ItemCondition> conditions) {
+    return (root, query, cb) -> root.get("condition").in(conditions);
+  }
+
   static Specification<Auction> causeIs(UUID causeId) {
     return (root, query, cb) -> cb.equal(root.get("causeId"), causeId);
   }
@@ -54,16 +58,6 @@ final class AuctionSpecifications {
   static Specification<Auction> donationAtLeast(int percent) {
     return (root, query, cb) ->
         cb.greaterThanOrEqualTo(root.<Short>get("donationPercent"), (short) percent);
-  }
-
-  /** Live and inside the closing window — the same cut-off the badge uses. */
-  static Specification<Auction> endingSoon(Instant now) {
-    Instant cutoff = now.plus(Duration.ofHours(CatalogRules.ENDING_SOON_HOURS));
-    return (root, query, cb) ->
-        cb.and(
-            cb.equal(root.get("status"), AuctionStatus.LIVE),
-            cb.greaterThan(root.<Instant>get("endTime"), now),
-            cb.lessThanOrEqualTo(root.<Instant>get("endTime"), cutoff));
   }
 
   /**

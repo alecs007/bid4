@@ -13,9 +13,6 @@ public final class CatalogRules {
 
   private CatalogRules() {}
 
-  /** The "se termină curând" cut-off, shared by the filter and by the urgency weight. */
-  public static final long ENDING_SOON_HOURS = 24;
-
   /**
    * The largest offer the platform will accept, in bani — one million lei.
    *
@@ -26,18 +23,12 @@ public final class CatalogRules {
   public static final long MAX_BID = 1_000_000L * 100L;
 
   /**
-   * What a new listing must look like. Every bound mirrors AUCTION and DONATION in
-   * frontend/src/lib/config.ts and a CHECK constraint on the auctions table, so a value the form
-   * accepts is a value the service accepts is a value the table accepts.
-   *
-   * <p>The service checks them anyway rather than letting the database refuse: a constraint
-   * violation is a 500 and a Postgres error string, where the seller needs a sentence saying which
-   * field to fix.
-   */
-  /**
    * The categories a listing may claim, mirroring auctions_category_valid and AUCTION_CATEGORIES in
-   * frontend/src/lib/config.ts. Checked here so an unknown one is a sentence about the category
-   * rather than a constraint violation surfacing as a 500.
+   * frontend/src/lib/config.ts.
+   *
+   * <p>Like every bound below it, checked by the service rather than left to the table: a
+   * constraint violation reaches the seller as a 500 and a Postgres error string, where what they
+   * need is a sentence naming the field to fix.
    */
   public static final Set<String> CATEGORIES =
       Set.of(
@@ -65,26 +56,73 @@ public final class CatalogRules {
   public static final int MAX_DONATION_PERCENT = 100;
   public static final long MIN_STARTING_PRICE = 100L;
   public static final long MAX_STARTING_PRICE = 10_000_000L;
-  public static final long MIN_BID_INCREMENT = 100L;
-  public static final int MIN_ANTI_SNIPE_SECONDS = 30;
-  public static final int MAX_ANTI_SNIPE_SECONDS = 600;
-  public static final long MIN_DURATION_HOURS = 1;
-  public static final long MAX_DURATION_DAYS = 30;
 
-  /** How far ahead a listing may be scheduled to open. */
-  public static final long MAX_START_DELAY_DAYS = 30;
+  /**
+   * The ladder the bid step is read off, in bani: a listing at or below the first bound steps by
+   * the first amount, and so on up.
+   *
+   * <p>The seller does not choose it. A step they picked was either so small that outbidding
+   * somebody cost nothing and the price crawled a leu at a time, or so large that the second offer
+   * was out of reach — and either way it was one more decision in the way of publishing.
+   *
+   * <p>Roughly five per cent of the asking price, snapped to a number a person would say out loud.
+   * A step of 4,37 lei is arithmetically defensible and reads as a glitch.
+   */
+  private static final long[][] BID_STEP_LADDER = {
+    // The bottom two rungs exist because the ladder without them asked a 1-leu
+    // listing for a 5-leu raise: the second offer was six times the first,
+    // which is the very thing a derived step is supposed to prevent.
+    {1_000L, 50L}, // up to 10 lei: 0,50 lei
+    {5_000L, 250L}, // up to 50 lei: 2,50 lei
+    {10_000L, 500L}, // up to 100 lei: 5 lei
+    {50_000L, 1_000L}, // up to 500 lei: 10 lei
+    {100_000L, 2_500L}, // up to 1.000 lei: 25 lei
+    {500_000L, 5_000L}, // up to 5.000 lei: 50 lei
+    {1_000_000L, 10_000L}, // up to 10.000 lei: 100 lei
+  };
+
+  /** What every listing above the top of the ladder steps by: 250 lei. */
+  private static final long BID_STEP_ABOVE_LADDER = 25_000L;
+
+  /**
+   * The step for a listing that starts at this price.
+   *
+   * <p>Derived rather than stored on the way in, so a listing created before the ladder changed
+   * still steps by whatever the ladder says today, and there is one place to change it.
+   */
+  public static long bidStepFor(long startingPrice) {
+    for (long[] rung : BID_STEP_LADDER) {
+      if (startingPrice <= rung[0]) {
+        return rung[1];
+      }
+    }
+    return BID_STEP_ABOVE_LADDER;
+  }
 
   public static final int DEFAULT_PAGE_SIZE = 12;
   public static final int MAX_PAGE_SIZE = 60;
 
-  /** Weights of the popularity score: bids, watchers, urgency, donation share. */
+  /**
+   * Weights of the popularity score: bids, watchers, donation share.
+   *
+   * <p>There was a fourth, for how close a listing was to closing. Nothing closes any more.
+   */
   public static final double WEIGHT_BIDS = 3;
 
   public static final double WEIGHT_WATCHERS = 1;
-  public static final double WEIGHT_URGENCY = 4;
   public static final double WEIGHT_DONATION = 2;
 
-  public static final int ENDING_SOON_COUNT = 4;
+  /**
+   * How long a seller has to hand the parcel over once the money has arrived.
+   *
+   * <p>Counted from payment, not from acceptance: a seller should not be late for a parcel nobody
+   * has paid them for yet.
+   */
+  public static final long DISPATCH_DAYS = 7;
+
+  /** The homepage's first row: the listings the most people are following. */
+  public static final int MOST_WATCHED_COUNT = 4;
+
   public static final int POPULAR_COUNT = 8;
 
   /** "More like this": the cause outweighs the object, because it usually is the reason. */
@@ -93,7 +131,6 @@ public final class CatalogRules {
   public static final double RELATED_WEIGHT_SAME_CATEGORY = 5;
   public static final double RELATED_WEIGHT_SAME_SELLER = 2;
   public static final double RELATED_WEIGHT_PRICE_PROXIMITY = 2;
-  public static final double RELATED_WEIGHT_URGENCY = 1;
   public static final int RELATED_COUNT = 10;
   public static final int RELATED_MIN_COUNT = 6;
 
@@ -101,8 +138,8 @@ public final class CatalogRules {
    * How many live auctions the homepage and "more like this" rank over.
    *
    * <p>Ranking is done in memory, so it needs a ceiling that does not grow with the platform. The
-   * window is the soonest-closing listings, which is where urgency — one of the weights — already
-   * points.
+   * window is the newest listings: with no deadline left to sort on, recency is the only ordering
+   * that still says something about which listings are worth ranking.
    */
   public static final int RANKING_WINDOW = 500;
 }

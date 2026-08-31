@@ -42,13 +42,22 @@ public record AuctionResponse(
     Long reservePrice,
     Long buyNowPrice,
     Instant startTime,
-    Instant endTime,
-    int antiSnipeSeconds,
+    /** When the seller took an offer, or null while the listing is still open. */
+    Instant acceptedAt,
+    /**
+     * What the accepted offer was worth.
+     *
+     * <p>Not the same as {@code currentPrice}. A reserved listing goes on taking offers, so the
+     * highest can climb past the one the seller took — and the page has to say what was agreed, not
+     * what has been offered since.
+     */
+    Long acceptedAmount,
+    /** When the parcel is due, set once the sale has been paid for. */
+    Instant dispatchDeadline,
     AuctionStatus status,
     UUID winnerId,
     int bidCount,
     int watcherCount,
-    int extensionCount,
     Instant createdAt,
     PublicUserResponse seller,
     CauseSummaryResponse cause,

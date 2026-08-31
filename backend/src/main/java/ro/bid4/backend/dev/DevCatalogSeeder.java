@@ -23,6 +23,7 @@ import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.domain.ItemCondition;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
 import ro.bid4.backend.catalog.repo.BidRepository;
+import ro.bid4.backend.catalog.service.CatalogRules;
 import ro.bid4.backend.cause.domain.Cause;
 import ro.bid4.backend.cause.domain.CauseStatus;
 import ro.bid4.backend.cause.domain.VerificationStatus;
@@ -39,9 +40,12 @@ import ro.bid4.backend.identity.repo.UserAccountRepository;
  * Causes and listings for the four demo accounts, so /licitatii has something to show.
  *
  * <p>Runs after {@link DevDataSeeder}, under the same switch, and refuses a database that already
- * holds a cause. Everything is dated relative to startup rather than to fixed instants: a seeded
- * world where every auction has already closed teaches nothing, and one closing in four minutes
- * exercises the countdown and the anti-snipe window on the way past.
+ * holds a cause. Everything is dated relative to startup rather than to fixed instants, so a
+ * listing put up "four days ago" is four days old whenever the seed is run.
+ *
+ * <p>Every status the model has appears at least once, the two that carry a buyer included. Those
+ * are the ones worth looking at: a listing is reserved when its seller has taken an offer and is
+ * waiting to be paid, and sold once the money has arrived.
  *
  * <p>How much bidding there can be is set by the size of the demo cast. One offer per bidder per
  * auction is a unique index, and a seller may not bid on their own listing, so with four accounts
@@ -57,8 +61,13 @@ public class DevCatalogSeeder implements ApplicationRunner {
 
   private static final long LEU = 100;
 
-  /** An auction and how much bidding it should have when the world starts. */
-  private record Planned(Auction auction, int offers, boolean settled) {}
+  /**
+   * An auction and how much bidding it should have when the world starts.
+   *
+   * <p>What becomes of those offers is not a field. It is read off the listing's status, so the
+   * seed cannot describe a sold listing whose bids all still say they are running.
+   */
+  private record Planned(Auction auction, int offers) {}
 
   private final UserAccountRepository users;
   private final CauseRepository causes;
@@ -185,16 +194,13 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     850,
                     40,
                     250 * LEU,
-                    10 * LEU,
                     400 * LEU,
                     // Reachable, so the "cumpără acum" path is one click away
                     // in a seeded world.
                     600 * LEU,
                     now.minus(Duration.ofDays(6)),
-                    now.plus(Duration.ofMinutes(4)),
                     AuctionStatus.LIVE),
-                3,
-                false),
+                3),
             new Planned(
                 listing(
                     zambetId,
@@ -206,14 +212,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     320,
                     65,
                     90 * LEU,
-                    10 * LEU,
                     null,
                     250 * LEU,
                     now.minus(Duration.ofDays(2)),
-                    now.plus(Duration.ofHours(3)),
                     AuctionStatus.LIVE),
-                3,
-                false),
+                3),
             new Planned(
                 listing(
                     mariaId,
@@ -227,14 +230,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     14_000,
                     30,
                     400 * LEU,
-                    25 * LEU,
                     null,
                     null,
                     now.minus(Duration.ofDays(1)),
-                    now.plus(Duration.ofDays(2)),
                     AuctionStatus.LIVE),
-                2,
-                false),
+                2),
             new Planned(
                 listing(
                     zambetId,
@@ -248,14 +248,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     900,
                     100,
                     120 * LEU,
-                    10 * LEU,
                     null,
                     null,
                     now.minus(Duration.ofHours(10)),
-                    now.plus(Duration.ofDays(5)),
                     AuctionStatus.LIVE),
-                0,
-                false),
+                0),
             new Planned(
                 listing(
                     mariaId,
@@ -269,14 +266,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     5_200,
                     50,
                     80 * LEU,
-                    5 * LEU,
                     null,
                     null,
                     now.minus(Duration.ofDays(3)),
-                    now.plus(Duration.ofHours(20)),
                     AuctionStatus.LIVE),
-                3,
-                false),
+                3),
             new Planned(
                 listing(
                     zambetId,
@@ -290,14 +284,14 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     680,
                     25,
                     300 * LEU,
-                    20 * LEU,
                     null,
                     null,
-                    now.plus(Duration.ofDays(1)),
-                    now.plus(Duration.ofDays(8)),
-                    AuctionStatus.SCHEDULED),
-                0,
-                false),
+                    now.minus(Duration.ofDays(4)),
+                    // The shop window needs one listing caught between the
+                    // acceptance and the payment: its seller has chosen, and
+                    // chosen an offer that was not the highest.
+                    AuctionStatus.RESERVED),
+                3),
             new Planned(
                 listing(
                     mariaId,
@@ -311,14 +305,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     180,
                     75,
                     900 * LEU,
-                    50 * LEU,
                     null,
                     null,
                     now.minus(Duration.ofDays(10)),
-                    now.minus(Duration.ofDays(3)),
                     AuctionStatus.SOLD),
-                3,
-                true),
+                3),
             // Unpublished on purpose: the visibility rules need something that
             // its seller can see and nobody else can.
             new Planned(
@@ -334,14 +325,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     11_000,
                     45,
                     350 * LEU,
-                    25 * LEU,
                     null,
                     null,
                     now.minus(Duration.ofHours(4)),
-                    now.plus(Duration.ofDays(7)),
                     AuctionStatus.PENDING_REVIEW),
-                0,
-                false));
+                0));
 
     // The eight above are the shop window: real titles, real copy, and what the
     // homepage rows and the cause pages are composed from. The batch below is
@@ -350,13 +338,38 @@ public class DevCatalogSeeder implements ApplicationRunner {
     List<Planned> everything = new ArrayList<>(planned);
     everything.addAll(volume(mariaId, seededCauses.get("ana"), now));
 
-    // Saved before the bids, because a bid carries the id of its auction.
+    // Three passes, in the order the real thing happens in.
+    //
+    // A bid carries the id of its auction, and an acceptance carries the id of
+    // the bid it took, so a listing the seed describes as reserved or sold
+    // cannot be inserted that way — it would name an offer that does not exist
+    // yet, and the table checks. Every row goes in open, the offers are placed
+    // on it, and the acceptance is replayed once they have ids. The flushes are
+    // what make that ordering real rather than a hope about Hibernate's.
+    List<AuctionStatus> outcomes =
+        everything.stream().map(entry -> entry.auction().getStatus()).toList();
+    for (Planned entry : everything) {
+      if (entry.auction().getStatus().isCommitted()) {
+        entry.auction().setStatus(AuctionStatus.LIVE);
+      }
+    }
     auctions.saveAll(everything.stream().map(Planned::auction).toList());
+    auctions.flush();
 
     List<Bid> offers = new ArrayList<>();
+    List<List<Bid>> byListing = new ArrayList<>(everything.size());
     for (Planned entry : everything) {
-      place(entry, cast, now, offers);
+      List<Bid> placed = place(entry, cast, now);
+      byListing.add(placed);
+      offers.addAll(placed);
     }
+    bids.saveAll(offers);
+    bids.flush();
+
+    for (int index = 0; index < everything.size(); index++) {
+      settle(everything.get(index), outcomes.get(index), byListing.get(index), now);
+    }
+    auctions.saveAll(everything.stream().map(Planned::auction).toList());
     bids.saveAll(offers);
 
     log.warn(
@@ -371,9 +384,9 @@ public class DevCatalogSeeder implements ApplicationRunner {
    * A run of ordinary listings, so the account pages have something to page through.
    *
    * <p>One seller and every status, because that is what the two lists filter on: the seller's own
-   * page needs listings in review, running and finished, and the bidder pages need one account to
-   * have bid on more auctions than fit on a page. Written out rather than randomised — a seed that
-   * differs run to run is one that cannot be described in a bug report.
+   * page needs drafts, listings in review, listings running and listings sold, and the bidder pages
+   * need one account to have bid on more auctions than fit on a page. Written out rather than
+   * randomised — a seed that differs run to run is one that cannot be described in a bug report.
    */
   private List<Planned> volume(UUID sellerId, Cause cause, Instant now) {
     record Item(String title, String category, ItemCondition condition, long price, int offers) {}
@@ -405,15 +418,16 @@ public class DevCatalogSeeder implements ApplicationRunner {
             new Item("Tablou în ulei, peisaj de munte", "arta", ItemCondition.VERY_GOOD, 800, 1),
             new Item("Robot de bucătărie Bosch", "casa", ItemCondition.GOOD, 330, 0));
 
-    // Cycled rather than random, so the same index is always the same status.
+    // Cycled rather than random, so the same index is always the same status,
+    // and every status the model still has appears at least twice.
     AuctionStatus[] cycle = {
       AuctionStatus.LIVE,
       AuctionStatus.LIVE,
       AuctionStatus.SOLD,
       AuctionStatus.PENDING_REVIEW,
       AuctionStatus.LIVE,
-      AuctionStatus.UNSOLD,
-      AuctionStatus.SCHEDULED,
+      AuctionStatus.RESERVED,
+      AuctionStatus.DRAFT,
       AuctionStatus.CANCELLED
     };
 
@@ -421,28 +435,10 @@ public class DevCatalogSeeder implements ApplicationRunner {
     for (int index = 0; index < items.size(); index++) {
       Item item = items.get(index);
       AuctionStatus status = cycle[index % cycle.length];
-      boolean finished =
-          status == AuctionStatus.SOLD
-              || status == AuctionStatus.UNSOLD
-              || status == AuctionStatus.ENDED;
 
-      // A finished listing closed in the past. Anything still open has to close in
-      // the future measured from now, not from its own start: an auction that
-      // opened five days ago and runs for two is already over, and the clock
-      // would settle it on the first tick — leaving a seed that contradicts
-      // itself twenty seconds after boot.
-      Instant start =
-          status == AuctionStatus.SCHEDULED
-              ? now.plus(Duration.ofDays(1 + (index % 3)))
-              : now.minus(Duration.ofDays(1 + (index % 5)));
-      Instant end;
-      if (finished) {
-        end = now.minus(Duration.ofHours(2L + index));
-      } else if (status == AuctionStatus.SCHEDULED) {
-        end = start.plus(Duration.ofDays(2 + (index % 6)));
-      } else {
-        end = now.plus(Duration.ofDays(2 + (index % 6)));
-      }
+      // Everything is already up. Nothing is published into the future any more,
+      // and nothing has a closing time to be spread out between.
+      Instant start = now.minus(Duration.ofDays(1 + (index % 5)));
 
       generated.add(
           new Planned(
@@ -457,21 +453,14 @@ public class DevCatalogSeeder implements ApplicationRunner {
                   1_000 + (index * 250),
                   10 + ((index * 5) % 60),
                   item.price() * LEU,
-                  10 * LEU,
                   null,
                   null,
                   start,
-                  end,
                   status),
-              // Nothing that never opened has an offer on it: a listing still in
-              // review, one withdrawn before it started, and one that has not
-              // reached its start time have all had nobody able to bid.
-              status == AuctionStatus.CANCELLED
-                      || status == AuctionStatus.PENDING_REVIEW
-                      || status == AuctionStatus.SCHEDULED
-                  ? 0
-                  : item.offers(),
-              finished));
+              // Nothing that was never public has an offer on it: a draft, a
+              // listing still in review and one withdrawn before it opened have
+              // all had nobody able to bid.
+              status.isPublic() && status != AuctionStatus.CANCELLED ? item.offers() : 0));
     }
     return generated;
   }
@@ -579,11 +568,9 @@ public class DevCatalogSeeder implements ApplicationRunner {
       int weightGrams,
       int donationPercent,
       long startingPrice,
-      long bidIncrement,
       Long reservePrice,
       Long buyNowPrice,
       Instant startTime,
-      Instant endTime,
       AuctionStatus status) {
 
     Auction auction = new Auction();
@@ -598,11 +585,12 @@ public class DevCatalogSeeder implements ApplicationRunner {
     auction.setDonationPercent((short) donationPercent);
     auction.setStartingPrice(startingPrice);
     auction.setCurrentPrice(startingPrice);
-    auction.setBidIncrement(bidIncrement);
+    // Not a seeded choice either: the ladder decides, exactly as it does for a
+    // listing a real seller writes.
+    auction.setBidIncrement(CatalogRules.bidStepFor(startingPrice));
     auction.setReservePrice(reservePrice);
     auction.setBuyNowPrice(buyNowPrice);
     auction.setStartTime(startTime);
-    auction.setEndTime(endTime);
     auction.setStatus(status);
     auction.setCreatedAt(startTime);
     return auction;
@@ -611,13 +599,14 @@ public class DevCatalogSeeder implements ApplicationRunner {
   /**
    * Bids the ladder up from the starting price.
    *
-   * <p>A running auction has one leader and the rest outbid; a finished one has a winner and the
-   * rest lost. Exactly one WINNING row per auction is a partial unique index, which is also what
-   * the read path uses to answer who is ahead.
+   * <p>Always as an open listing reads: one leader, the rest outbid. What the seller then did about
+   * them is {@link #settle}'s business, and doing it in two passes is what lets the acceptance name
+   * a bid that exists. Exactly one WINNING row per auction is a partial unique index, which is also
+   * what the read path uses to answer who is ahead.
    */
-  private static void place(Planned entry, List<UUID> cast, Instant now, List<Bid> sink) {
+  private static List<Bid> place(Planned entry, List<UUID> cast, Instant now) {
     if (entry.offers() == 0) {
-      return;
+      return List.of();
     }
     Auction auction = entry.auction();
 
@@ -627,7 +616,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
             .limit(entry.offers())
             .toList();
     if (bidders.isEmpty()) {
-      return;
+      return List.of();
     }
 
     List<Bid> placed = new ArrayList<>(bidders.size());
@@ -638,29 +627,69 @@ public class DevCatalogSeeder implements ApplicationRunner {
       bid.setAuctionId(auction.getId());
       bid.setBidderId(bidders.get(index));
       bid.setAmount(amount);
-      bid.setStatus(entry.settled() ? BidStatus.LOST : BidStatus.OUTBID);
+      bid.setStatus(BidStatus.OUTBID);
       bid.setCreatedAt(now.minus(Duration.ofHours(bidders.size() - (long) index)));
       placed.add(bid);
       amount += auction.getBidIncrement();
     }
 
-    // Finished and won are not the same thing, and the table knows it: a winner
-    // is only legal on SOLD or ENDED, so an auction that missed its reserve is
-    // over with every bid lost and nobody holding it. Read off the status rather
-    // than off the flag, which cannot then disagree with the row it describes.
-    boolean hasWinner =
-        auction.getStatus() == AuctionStatus.SOLD || auction.getStatus() == AuctionStatus.ENDED;
-
     Bid leader = placed.getLast();
-    leader.setStatus(
-        entry.settled() ? (hasWinner ? BidStatus.WON : BidStatus.LOST) : BidStatus.WINNING);
+    leader.setStatus(BidStatus.WINNING);
     auction.setCurrentPrice(leader.getAmount());
     auction.setBidCount(placed.size());
-    if (hasWinner) {
-      auction.setWinnerId(leader.getBidderId());
+    return placed;
+  }
+
+  /**
+   * Replays what the seller did once the offers were in, matching OfferService step for step.
+   *
+   * <p>Nothing settles itself here, because nothing settles itself anywhere any more. A reserved
+   * listing is one whose seller has taken an offer and is waiting to be paid; a sold one has been
+   * paid for and now owes a parcel.
+   *
+   * <p>The reserved listing deliberately takes an offer from the middle of the ladder. A seed where
+   * the highest offer always wins is a seed that never shows the one thing the model is for.
+   */
+  private static void settle(Planned entry, AuctionStatus outcome, List<Bid> placed, Instant now) {
+    Auction auction = entry.auction();
+
+    if (outcome == AuctionStatus.CANCELLED) {
+      // Withdrawing releases anyone still holding an offer, exactly as
+      // ListingService does on the way out.
+      placed.forEach(bid -> bid.setStatus(BidStatus.LOST));
+      return;
+    }
+    if (!outcome.isCommitted()) {
+      return;
+    }
+    if (placed.isEmpty()) {
+      throw new IllegalStateException(
+          "Seeded listing \""
+              + auction.getTitle()
+              + "\" is "
+              + outcome
+              + " with no offer to accept");
     }
 
-    sink.addAll(placed);
+    boolean paid = outcome == AuctionStatus.SOLD;
+    Bid accepted = placed.get(paid ? placed.size() - 1 : placed.size() / 2);
+    Instant acceptedAt = now.minus(Duration.ofDays(paid ? 2 : 0)).minus(Duration.ofHours(6));
+
+    if (paid) {
+      // markPaid: everything loses, then the accepted offer is lifted back out.
+      placed.forEach(bid -> bid.setStatus(BidStatus.LOST));
+      accepted.setStatus(BidStatus.WON);
+      auction.setDispatchDeadline(acceptedAt.plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)));
+    } else {
+      // accept: the other offers are left standing, because the seller can still
+      // hand this one back to the room.
+      accepted.setStatus(BidStatus.ACCEPTED);
+    }
+
+    auction.setStatus(outcome);
+    auction.setWinnerId(accepted.getBidderId());
+    auction.setAcceptedBidId(accepted.getId());
+    auction.setAcceptedAt(acceptedAt);
   }
 
   /* --- placeholder imagery -------------------------------------------------

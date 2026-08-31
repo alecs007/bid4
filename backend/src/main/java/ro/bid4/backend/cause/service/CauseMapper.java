@@ -37,7 +37,7 @@ public class CauseMapper {
 
   /** A cause is publicly listed and can receive donations in these two states. */
   private static final Set<AuctionStatus> RUNNING =
-      Set.of(AuctionStatus.LIVE, AuctionStatus.SCHEDULED);
+      Set.of(AuctionStatus.LIVE, AuctionStatus.RESERVED);
 
   private final CauseRepository causes;
   private final CauseDocumentRepository documents;

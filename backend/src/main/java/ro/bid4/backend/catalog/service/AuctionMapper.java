@@ -79,6 +79,21 @@ public class AuctionMapper {
     Set<UUID> bidOn =
         viewerId == null ? Set.of() : Set.copyOf(bids.findAuctionIdsBidOnBy(viewerId, auctionIds));
 
+    // What each acceptance was worth. One query for the page, and only when the
+    // page holds an acceptance at all.
+    Set<UUID> acceptedBidIds = new HashSet<>();
+    for (Auction auction : auctions) {
+      if (auction.getAcceptedBidId() != null) {
+        acceptedBidIds.add(auction.getAcceptedBidId());
+      }
+    }
+    Map<UUID, Long> acceptedAmounts = new HashMap<>();
+    if (!acceptedBidIds.isEmpty()) {
+      for (BidRepository.Amount amount : bids.findAmounts(acceptedBidIds)) {
+        acceptedAmounts.put(amount.getId(), amount.getAmount());
+      }
+    }
+
     return auctions.stream()
         .map(
             auction ->
@@ -89,6 +104,9 @@ public class AuctionMapper {
                     leaders.get(auction.getId()),
                     watched.contains(auction.getId()),
                     bidOn.contains(auction.getId()),
+                    auction.getAcceptedBidId() == null
+                        ? null
+                        : acceptedAmounts.get(auction.getAcceptedBidId()),
                     viewerId))
         .toList();
   }
@@ -104,6 +122,7 @@ public class AuctionMapper {
       UUID leaderId,
       boolean watched,
       boolean hasBid,
+      Long acceptedAmount,
       UUID viewerId) {
 
     boolean viewerIsSeller = viewerId != null && viewerId.equals(auction.getSellerId());
@@ -127,13 +146,13 @@ public class AuctionMapper {
         viewerIsSeller ? auction.getReservePrice() : null,
         auction.getBuyNowPrice(),
         auction.getStartTime(),
-        auction.getEndTime(),
-        auction.getAntiSnipeSeconds(),
+        auction.getAcceptedAt(),
+        acceptedAmount,
+        auction.getDispatchDeadline(),
         auction.getStatus(),
         auction.getWinnerId(),
         auction.getBidCount(),
         auction.getWatcherCount(),
-        auction.getExtensionCount(),
         auction.getCreatedAt(),
         seller,
         cause,
@@ -167,7 +186,6 @@ public class AuctionMapper {
         bid.getAmount(),
         bid.getCreatedAt(),
         bid.getStatus(),
-        bid.isTriggeredExtension(),
         bidder == null ? "Ofertant" : bidder.displayName(),
         bidder == null ? "" : bidder.avatarUrl(),
         bidder == null ? "" : bidder.username());

@@ -25,6 +25,7 @@ import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.domain.ItemCondition;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
 import ro.bid4.backend.catalog.repo.BidRepository;
+import ro.bid4.backend.catalog.service.CatalogRules;
 import ro.bid4.backend.catalog.service.ListingService;
 import ro.bid4.backend.cause.domain.Cause;
 import ro.bid4.backend.cause.domain.CauseStatus;
@@ -131,23 +132,25 @@ class ListingWriteTest {
   }
 
   @Test
-  @DisplayName("a window that ends before it starts, or outlasts a month, is refused")
-  void impossibleWindowsAreRefused() {
-    Instant start = Instant.now().plus(Duration.ofHours(1));
+  @DisplayName("the bid step is read off the asking price, not off the seller")
+  void bidStepIsDerived() {
+    // 100 lei sits on the first rung of the ladder, which steps by 5.
+    AuctionResponse created = listings.create(request().build(), viewer(seller));
 
-    assertThatThrownBy(
-            () ->
-                listings.create(
-                    request().startTime(start).endTime(start.minusSeconds(60)).build(),
-                    viewer(seller)))
-        .isInstanceOf(ApiException.class);
+    assertThat(auctions.findById(created.id()).orElseThrow().getBidIncrement())
+        .isEqualTo(CatalogRules.bidStepFor(100 * LEU))
+        .isEqualTo(5 * LEU);
+  }
 
-    assertThatThrownBy(
-            () ->
-                listings.create(
-                    request().startTime(start).endTime(start.plus(Duration.ofDays(31))).build(),
-                    viewer(seller)))
-        .isInstanceOf(ApiException.class);
+  @Test
+  @DisplayName("a listing opens now, and has nothing to close")
+  void listingsHaveNoWindow() {
+    Instant before = Instant.now();
+    AuctionResponse created = listings.create(request().build(), viewer(seller));
+
+    assertThat(created.startTime()).isBetween(before, Instant.now());
+    assertThat(created.acceptedAt()).isNull();
+    assertThat(created.dispatchDeadline()).isNull();
   }
 
   @Test
@@ -189,15 +192,33 @@ class ListingWriteTest {
   }
 
   @Test
-  @DisplayName("a listing that already sold cannot be withdrawn")
+  @DisplayName("a listing with an accepted offer cannot be withdrawn until it is released")
+  void reservedCannotBeCancelled() {
+    Auction auction = liveAuction();
+    UserAccount buyer = user("Cumparator Retinut", UserRole.USER);
+    Bid offer = bid(auction, buyer.getId(), 200 * LEU, BidStatus.ACCEPTED);
+    reserve(auction, buyer, offer);
+
+    assertThatThrownBy(() -> listings.cancel(auction.getId(), viewer(seller)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("Anuleaz-o");
+    assertThat(auctions.findById(auction.getId()).orElseThrow().getStatus())
+        .isEqualTo(AuctionStatus.RESERVED);
+  }
+
+  @Test
+  @DisplayName("a listing that has been paid for cannot be withdrawn at all")
   void soldCannotBeCancelled() {
     Auction auction = liveAuction();
+    UserAccount buyer = user("Cumparator Platit", UserRole.USER);
+    Bid offer = bid(auction, buyer.getId(), 200 * LEU, BidStatus.WON);
+    reserve(auction, buyer, offer);
     auction.setStatus(AuctionStatus.SOLD);
     auctions.save(auction);
 
     assertThatThrownBy(() -> listings.cancel(auction.getId(), viewer(seller)))
         .isInstanceOf(ApiException.class)
-        .hasMessageContaining("încheiat");
+        .hasMessageContaining("vândut");
   }
 
   @Test
@@ -236,8 +257,6 @@ class ListingWriteTest {
     private String category = "electronice";
     private Long reservePrice;
     private Long buyNowPrice;
-    private Instant startTime = Instant.now().plus(Duration.ofHours(2));
-    private Instant endTime = Instant.now().plus(Duration.ofDays(5));
 
     Request(UUID causeId) {
       this.causeId = causeId;
@@ -263,16 +282,6 @@ class ListingWriteTest {
       return this;
     }
 
-    Request startTime(Instant value) {
-      this.startTime = value;
-      return this;
-    }
-
-    Request endTime(Instant value) {
-      this.endTime = value;
-      return this;
-    }
-
     CreateAuctionRequest build() {
       return new CreateAuctionRequest(
           "Aparat foto de colecție",
@@ -284,12 +293,8 @@ class ListingWriteTest {
           causeId,
           30,
           100 * LEU,
-          10 * LEU,
           reservePrice,
-          buyNowPrice,
-          startTime,
-          endTime,
-          120);
+          buyNowPrice);
     }
   }
 
@@ -308,9 +313,17 @@ class ListingWriteTest {
     auction.setCurrentPrice(100 * LEU);
     auction.setBidIncrement(10 * LEU);
     auction.setStartTime(Instant.now().minus(Duration.ofHours(1)));
-    auction.setEndTime(Instant.now().plus(Duration.ofDays(2)));
     auction.setStatus(AuctionStatus.LIVE);
     return auctions.save(auction);
+  }
+
+  /** Everything an acceptance writes at once, because the table refuses any half of it. */
+  private void reserve(Auction auction, UserAccount buyer, Bid offer) {
+    auction.setStatus(AuctionStatus.RESERVED);
+    auction.setWinnerId(buyer.getId());
+    auction.setAcceptedBidId(offer.getId());
+    auction.setAcceptedAt(Instant.now());
+    auctions.save(auction);
   }
 
   private Bid bid(Auction auction, UUID bidderId, long amount, BidStatus status) {

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import ro.bid4.backend.catalog.api.dto.AcceptOfferRequest;
 import ro.bid4.backend.catalog.api.dto.AuctionQuery;
 import ro.bid4.backend.catalog.api.dto.AuctionResponse;
 import ro.bid4.backend.catalog.api.dto.BidResponse;
@@ -26,6 +27,7 @@ import ro.bid4.backend.catalog.api.dto.PlaceBidResponse;
 import ro.bid4.backend.catalog.service.AuctionService;
 import ro.bid4.backend.catalog.service.BidService;
 import ro.bid4.backend.catalog.service.ListingService;
+import ro.bid4.backend.catalog.service.OfferService;
 import ro.bid4.backend.common.web.PageResponse;
 import ro.bid4.backend.common.web.PublicCaching;
 import ro.bid4.backend.security.web.Viewers;
@@ -45,11 +47,14 @@ public class AuctionController {
   private final AuctionService auctions;
   private final BidService bidding;
   private final ListingService listings;
+  private final OfferService offers;
 
-  public AuctionController(AuctionService auctions, BidService bidding, ListingService listings) {
+  public AuctionController(
+      AuctionService auctions, BidService bidding, ListingService listings, OfferService offers) {
     this.auctions = auctions;
     this.bidding = bidding;
     this.listings = listings;
+    this.offers = offers;
   }
 
   /**
@@ -110,6 +115,30 @@ public class AuctionController {
       @Valid @RequestBody PlaceBidRequest request,
       @AuthenticationPrincipal Jwt jwt) {
     return bidding.place(id, request.amount(), Viewers.from(jwt));
+  }
+
+  /**
+   * The seller takes one of the offers, and the listing is held for that buyer.
+   *
+   * <p>Which offer is the only choice in the body. Any of them will do — that is the point of a
+   * listing that does not close on a timer — but whose listing it is comes from the token.
+   */
+  @PostMapping("/{id}/accept")
+  AuctionResponse acceptOffer(
+      @PathVariable UUID id,
+      @Valid @RequestBody AcceptOfferRequest request,
+      @AuthenticationPrincipal Jwt jwt) {
+    return offers.accept(id, request.bidId(), Viewers.from(jwt));
+  }
+
+  /**
+   * The seller takes the acceptance back and the listing returns to the room.
+   *
+   * <p>Only while it is unpaid. After that it is a refund, which is not this route.
+   */
+  @DeleteMapping("/{id}/accept")
+  AuctionResponse releaseOffer(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    return offers.release(id, Viewers.from(jwt));
   }
 
   @DeleteMapping("/{id}/bids/mine")

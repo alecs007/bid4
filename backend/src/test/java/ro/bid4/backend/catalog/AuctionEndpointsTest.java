@@ -1,13 +1,16 @@
 package ro.bid4.backend.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import ro.bid4.backend.TestcontainersConfiguration;
@@ -66,8 +70,12 @@ class AuctionEndpointsTest {
   private UserAccount leader;
   private UserAccount staff;
 
+  /** A seller of their own, so the acceptance tests can mutate without moving anyone's totals. */
+  private UserAccount loner;
+
   private Cause medical;
   private Cause shelter;
+  private Cause lonerCause;
 
   private Auction canon;
   private Auction bicycle;
@@ -81,9 +89,11 @@ class AuctionEndpointsTest {
     rival = user("Vlad Petrescu", UserRole.USER);
     leader = user("Andrei Marinescu", UserRole.USER);
     staff = user("Cristina Dobre", UserRole.ADMIN);
+    loner = user("Dana Constantin", UserRole.USER);
 
     medical = cause(seller.getId(), "Operația Anei", "medical", 45_000 * LEU, 12_400 * LEU);
     shelter = cause(rival.getId(), "Adăpostul de la marginea orașului", "animale", 30_000 * LEU, 0);
+    lonerCause = cause(loner.getId(), "Atelier de robotică", "educatie", 8_000 * LEU, 0);
 
     Instant now = Instant.now();
 
@@ -98,7 +108,6 @@ class AuctionEndpointsTest {
             250 * LEU,
             400 * LEU,
             now.minus(Duration.ofDays(2)),
-            now.plus(Duration.ofHours(6)),
             AuctionStatus.LIVE);
 
     bicycle =
@@ -112,7 +121,6 @@ class AuctionEndpointsTest {
             400 * LEU,
             null,
             now.minus(Duration.ofDays(1)),
-            now.plus(Duration.ofDays(3)),
             AuctionStatus.LIVE);
 
     paints =
@@ -126,7 +134,6 @@ class AuctionEndpointsTest {
             120 * LEU,
             null,
             now.minus(Duration.ofHours(5)),
-            now.plus(Duration.ofDays(5)),
             AuctionStatus.LIVE);
 
     unpublished =
@@ -140,7 +147,6 @@ class AuctionEndpointsTest {
             350 * LEU,
             null,
             now.minus(Duration.ofHours(2)),
-            now.plus(Duration.ofDays(7)),
             AuctionStatus.PENDING_REVIEW);
 
     sold =
@@ -154,9 +160,16 @@ class AuctionEndpointsTest {
             900 * LEU,
             null,
             now.minus(Duration.ofDays(10)),
-            now.minus(Duration.ofDays(3)),
-            AuctionStatus.SOLD);
+            AuctionStatus.LIVE);
+    // Put up live and then sold, because the acceptance points at a bid: a row
+    // claiming a winner it has no offer for is one the table refuses.
+    Bid winning = bid(sold.getId(), leader.getId(), 900 * LEU, BidStatus.WON);
+    sold.setStatus(AuctionStatus.SOLD);
     sold.setWinnerId(leader.getId());
+    sold.setAcceptedBidId(winning.getId());
+    sold.setAcceptedAt(now.minus(Duration.ofDays(3)));
+    sold.setBidCount(1);
+    sold.setCurrentPrice(900 * LEU);
     auctions.save(sold);
 
     // Two offers on the Canon, so the leader and the outbid are both real.
@@ -178,23 +191,24 @@ class AuctionEndpointsTest {
         .andExpect(jsonPath("$.pageSize").value(12))
         .andExpect(jsonPath("$.total").value(2))
         .andExpect(jsonPath("$.totalPages").value(1))
-        // Default sort is ENDING_SOON, so the Canon comes first.
-        .andExpect(jsonPath("$.items[0].title").value("Aparat foto Canon AE-1 Program"))
-        .andExpect(jsonPath("$.items[0].sellerId").value(seller.getId().toString()))
-        .andExpect(jsonPath("$.items[0].causeId").value(medical.getId().toString()))
-        .andExpect(jsonPath("$.items[0].category").value("electronice"))
-        .andExpect(jsonPath("$.items[0].condition").value("VERY_GOOD"))
-        .andExpect(jsonPath("$.items[0].status").value("LIVE"))
-        .andExpect(jsonPath("$.items[0].donationPercent").value(40))
-        .andExpect(jsonPath("$.items[0].currentPrice").value(300 * LEU))
-        .andExpect(jsonPath("$.items[0].bidCount").value(2))
-        .andExpect(jsonPath("$.items[0].images").isArray())
-        .andExpect(jsonPath("$.items[0].seller.displayName").value("Maria Ionescu"))
-        .andExpect(jsonPath("$.items[0].seller.username").value(seller.getUsername()))
-        .andExpect(jsonPath("$.items[0].cause.name").value("Operația Anei"))
-        .andExpect(jsonPath("$.items[0].cause.slug").value(medical.getSlug()))
-        .andExpect(jsonPath("$.items[0].cause.goalAmount").value(45_000 * LEU))
-        .andExpect(jsonPath("$.items[0].cause.status").value("ACTIVE"));
+        // Default sort is NEWEST, and the bicycle went up a day after the Canon.
+        .andExpect(jsonPath("$.items[0].title").value("Bicicletă de oraș Pegas Practic"))
+        .andExpect(jsonPath("$.items[1].title").value("Aparat foto Canon AE-1 Program"))
+        .andExpect(jsonPath("$.items[1].sellerId").value(seller.getId().toString()))
+        .andExpect(jsonPath("$.items[1].causeId").value(medical.getId().toString()))
+        .andExpect(jsonPath("$.items[1].category").value("electronice"))
+        .andExpect(jsonPath("$.items[1].condition").value("VERY_GOOD"))
+        .andExpect(jsonPath("$.items[1].status").value("LIVE"))
+        .andExpect(jsonPath("$.items[1].donationPercent").value(40))
+        .andExpect(jsonPath("$.items[1].currentPrice").value(300 * LEU))
+        .andExpect(jsonPath("$.items[1].bidCount").value(2))
+        .andExpect(jsonPath("$.items[1].images").isArray())
+        .andExpect(jsonPath("$.items[1].seller.displayName").value("Maria Ionescu"))
+        .andExpect(jsonPath("$.items[1].seller.username").value(seller.getUsername()))
+        .andExpect(jsonPath("$.items[1].cause.name").value("Operația Anei"))
+        .andExpect(jsonPath("$.items[1].cause.slug").value(medical.getSlug()))
+        .andExpect(jsonPath("$.items[1].cause.goalAmount").value(45_000 * LEU))
+        .andExpect(jsonPath("$.items[1].cause.status").value("ACTIVE"));
   }
 
   @Test
@@ -217,7 +231,6 @@ class AuctionEndpointsTest {
             100 * LEU,
             null,
             Instant.now().minus(Duration.ofHours(1)),
-            Instant.now().plus(Duration.ofDays(4)),
             AuctionStatus.LIVE);
     bid(listing.getId(), rival.getId(), 100 * LEU, BidStatus.WINNING);
 
@@ -412,10 +425,10 @@ class AuctionEndpointsTest {
     String body =
         mvc.perform(get("/auctions/featured"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.endingSoon").isArray())
+            .andExpect(jsonPath("$.mostWatched").isArray())
             .andExpect(jsonPath("$.popular").isArray())
             // Only what is actually running.
-            .andExpect(jsonPath("$.endingSoon[?(@.status != 'LIVE')]").isEmpty())
+            .andExpect(jsonPath("$.mostWatched[?(@.status != 'LIVE')]").isEmpty())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -424,9 +437,9 @@ class AuctionEndpointsTest {
     // which listing should be first. `featured` reads the whole catalogue and
     // returns only a handful of it, and every test class shares this database:
     // name a listing and the assertion breaks the moment another class seeds one
-    // that closes sooner, which says nothing about whether the sort works.
-    List<String> closing = JsonPath.read(body, "$.endingSoon[*].endTime");
-    assertThat(closing).isSorted();
+    // with more followers, which says nothing about whether the sort works.
+    List<Integer> followers = JsonPath.read(body, "$.mostWatched[*].watcherCount");
+    assertThat(followers).isSortedAccordingTo(Comparator.reverseOrder());
   }
 
   @Test
@@ -436,6 +449,79 @@ class AuctionEndpointsTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(bicycle.getId().toString()))
         .andExpect(jsonPath("$[?(@.id == '" + canon.getId() + "')]").isEmpty());
+  }
+
+  /* --- the acceptance routes ------------------------------------------------ */
+
+  @Test
+  @DisplayName("The seller accepts an offer over HTTP, and can hand it back the same way")
+  void acceptAndReleaseRoutes() throws Exception {
+    Auction listing = ownListing();
+    Bid offer = bid(listing.getId(), rival.getId(), 100 * LEU, BidStatus.WINNING);
+
+    mvc.perform(
+            post("/auctions/" + listing.getId() + "/accept")
+                .header(HttpHeaders.AUTHORIZATION, bearer(loner))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bidId\":\"" + offer.getId() + "\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("RESERVED"))
+        .andExpect(jsonPath("$.winnerId").value(rival.getId().toString()))
+        .andExpect(jsonPath("$.acceptedAt").exists())
+        // Unpaid, so nothing is owed yet.
+        .andExpect(jsonPath("$.dispatchDeadline").doesNotExist());
+
+    mvc.perform(
+            delete("/auctions/" + listing.getId() + "/accept")
+                .header(HttpHeaders.AUTHORIZATION, bearer(loner)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("LIVE"))
+        .andExpect(jsonPath("$.winnerId").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("Accepting an offer on somebody else's listing is a 404, not a refusal")
+  void acceptRouteIsSellerOnly() throws Exception {
+    Auction listing = ownListing();
+    Bid offer = bid(listing.getId(), rival.getId(), 100 * LEU, BidStatus.WINNING);
+
+    mvc.perform(
+            post("/auctions/" + listing.getId() + "/accept")
+                .header(HttpHeaders.AUTHORIZATION, bearer(rival))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bidId\":\"" + offer.getId() + "\"}"))
+        .andExpect(status().isNotFound());
+
+    // Signing in is the floor: an anonymous caller never reaches the service.
+    mvc.perform(
+            post("/auctions/" + listing.getId() + "/accept")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bidId\":\"" + offer.getId() + "\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @DisplayName("The seller's offer list carries every offer, and opens for nobody else")
+  void sellerOffersRouteIsScopedToItsOwner() throws Exception {
+    Auction listing = ownListing();
+    bid(listing.getId(), rival.getId(), 100 * LEU, BidStatus.OUTBID);
+    bid(listing.getId(), leader.getId(), 200 * LEU, BidStatus.WINNING);
+
+    mvc.perform(
+            get("/users/me/auctions/" + listing.getId() + "/offers")
+                .header(HttpHeaders.AUTHORIZATION, bearer(loner)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        // Highest first, so the seller reads them in the order they will judge them.
+        .andExpect(jsonPath("$[0].amount").value(200 * LEU))
+        // Not the pseudonymised history: the person choosing a buyer gets the
+        // handle any public profile already shows.
+        .andExpect(jsonPath("$[0].bidderUsername").value(leader.getUsername()));
+
+    mvc.perform(
+            get("/users/me/auctions/" + listing.getId() + "/offers")
+                .header(HttpHeaders.AUTHORIZATION, bearer(rival)))
+        .andExpect(status().isNotFound());
   }
 
   /* --- the bid history ----------------------------------------------------- */
@@ -498,7 +584,6 @@ class AuctionEndpointsTest {
       long startingPrice,
       Long reservePrice,
       Instant startTime,
-      Instant endTime,
       AuctionStatus status) {
 
     Auction auction = new Auction();
@@ -516,18 +601,41 @@ class AuctionEndpointsTest {
     auction.setBidIncrement(10 * LEU);
     auction.setReservePrice(reservePrice);
     auction.setStartTime(startTime);
-    auction.setEndTime(endTime);
+    // Dated to when it went up, not to when the test ran: the default sort is
+    // newest first, so five fixtures created in the same millisecond would order
+    // themselves however the database felt like it.
+    auction.setCreatedAt(startTime);
     auction.setStatus(status);
     return auctions.save(auction);
   }
 
-  private void bid(UUID auctionId, UUID bidderId, long amount, BidStatus status) {
+  /**
+   * A fresh listing under a seller nobody else counts.
+   *
+   * <p>The acceptance tests mutate what they touch, and every test class shares this database. Put
+   * one of these under `seller` and the shelf totals two tests up start moving.
+   */
+  private Auction ownListing() {
+    return auction(
+        loner.getId(),
+        lonerCause.getId(),
+        "Anunț pentru ofertă acceptată " + UUID.randomUUID(),
+        "Descriere.",
+        "jucarii",
+        20,
+        100 * LEU,
+        null,
+        Instant.now().minus(Duration.ofHours(3)),
+        AuctionStatus.LIVE);
+  }
+
+  private Bid bid(UUID auctionId, UUID bidderId, long amount, BidStatus status) {
     Bid bid = new Bid();
     bid.setAuctionId(auctionId);
     bid.setBidderId(bidderId);
     bid.setAmount(amount);
     bid.setStatus(status);
-    bids.save(bid);
+    return bids.save(bid);
   }
 
   /** A real signed token rather than a stubbed principal, so the decoder is exercised too. */

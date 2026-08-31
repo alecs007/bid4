@@ -1,6 +1,5 @@
 package ro.bid4.backend.catalog.service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -58,8 +57,8 @@ public class ListingService {
    * POST /auctions — creates a listing and queues it for review.
    *
    * <p>PENDING_REVIEW, never live: an auction is a promise to hand over an object, and the one
-   * cheap moment to look at that promise is before anybody has bid on it. The clock only picks up
-   * SCHEDULED listings, so nothing here can open until a human has approved it.
+   * cheap moment to look at that promise is before anybody has bid on it. Only a moderator moves it
+   * to LIVE, so nothing here can start taking offers on its own.
    */
   @Transactional
   public AuctionResponse create(CreateAuctionRequest request, Viewer viewer) {
@@ -81,7 +80,6 @@ public class ListingService {
     }
 
     Instant now = Instant.now();
-    checkWindow(request, now);
     checkPrices(request);
 
     Auction auction = new Auction();
@@ -97,12 +95,14 @@ public class ListingService {
     auction.setStartingPrice(request.startingPrice());
     // Nothing has been offered yet, so the price on the card is the ask.
     auction.setCurrentPrice(request.startingPrice());
-    auction.setBidIncrement(request.bidIncrement());
+    // Not the seller's to choose. Derived from what they are asking, so the step
+    // is always a round number and always in proportion to the price.
+    auction.setBidIncrement(CatalogRules.bidStepFor(request.startingPrice()));
     auction.setReservePrice(request.reservePrice());
     auction.setBuyNowPrice(request.buyNowPrice());
-    auction.setStartTime(request.startTime());
-    auction.setEndTime(request.endTime());
-    auction.setAntiSnipeSeconds(request.antiSnipeSeconds());
+    // Published now. Nothing is scheduled for later any more, so there is no
+    // start to choose and no window to close.
+    auction.setStartTime(now);
     auction.setStatus(AuctionStatus.PENDING_REVIEW);
 
     Auction saved = auctions.save(auction);
@@ -142,9 +142,15 @@ public class ListingService {
     if (auction.getStatus() == AuctionStatus.CANCELLED) {
       return mapper.toResponse(auction, viewer.id());
     }
-    if (FINISHED.contains(auction.getStatus())) {
+    // The bar is a buyer, not a date. Once an offer is accepted somebody is
+    // waiting on this listing — and once it is paid for there is money against
+    // it — so withdrawing it would leave an order pointing at nothing.
+    if (auction.getStatus().isCommitted()) {
       throw new ApiException(
-          ErrorCode.VALIDATION_FAILED, "Licitația s-a încheiat deja și nu mai poate fi retrasă.");
+          ErrorCode.VALIDATION_FAILED,
+          auction.getStatus() == AuctionStatus.SOLD
+              ? "Anunțul este vândut și plătit, așa că nu mai poate fi retras."
+              : "Ai acceptat o ofertă. Anuleaz-o mai întâi, apoi poți retrage anunțul.");
     }
 
     // Anyone still holding a live offer is released. Without this their bid sits
@@ -157,43 +163,6 @@ public class ListingService {
     auctions.save(auction);
     log.info("Listing {} withdrawn by {}", id, viewer.id());
     return mapper.toResponse(auction, viewer.id());
-  }
-
-  /** Statuses past the point where withdrawing means anything. */
-  private static final java.util.Set<AuctionStatus> FINISHED =
-      java.util.Set.of(AuctionStatus.SOLD, AuctionStatus.ENDED, AuctionStatus.UNSOLD);
-
-  private void checkWindow(CreateAuctionRequest request, Instant now) {
-    Instant start = request.startTime();
-    Instant end = request.endTime();
-
-    if (!end.isAfter(start)) {
-      throw new ApiException(
-          ErrorCode.VALIDATION_FAILED, "Data de final trebuie să fie după data de start.");
-    }
-    // A little slack rather than a hard "not in the past": the seller's clock and
-    // ours disagree by seconds, and refusing a listing over that would be
-    // baffling from the form's side.
-    if (start.isBefore(now.minus(Duration.ofMinutes(5)))) {
-      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Data de start nu poate fi în trecut.");
-    }
-    if (start.isAfter(now.plus(Duration.ofDays(CatalogRules.MAX_START_DELAY_DAYS)))) {
-      throw new ApiException(
-          ErrorCode.VALIDATION_FAILED,
-          "Licitația poate începe în cel mult " + CatalogRules.MAX_START_DELAY_DAYS + " de zile.");
-    }
-
-    Duration length = Duration.between(start, end);
-    if (length.compareTo(Duration.ofHours(CatalogRules.MIN_DURATION_HOURS)) < 0) {
-      throw new ApiException(
-          ErrorCode.VALIDATION_FAILED,
-          "Licitația trebuie să dureze cel puțin " + CatalogRules.MIN_DURATION_HOURS + " oră.");
-    }
-    if (length.compareTo(Duration.ofDays(CatalogRules.MAX_DURATION_DAYS)) > 0) {
-      throw new ApiException(
-          ErrorCode.VALIDATION_FAILED,
-          "Licitația poate dura cel mult " + CatalogRules.MAX_DURATION_DAYS + " de zile.");
-    }
   }
 
   private void checkPrices(CreateAuctionRequest request) {
@@ -214,10 +183,6 @@ public class ListingService {
     if (buyNow != null && reserve != null && buyNow < reserve) {
       throw new ApiException(
           ErrorCode.VALIDATION_FAILED, "Prețul „Cumpără acum” nu poate fi sub prețul de rezervă.");
-    }
-    if (request.bidIncrement() > request.startingPrice()) {
-      throw new ApiException(
-          ErrorCode.VALIDATION_FAILED, "Pasul de licitare nu poate depăși prețul de pornire.");
     }
   }
 

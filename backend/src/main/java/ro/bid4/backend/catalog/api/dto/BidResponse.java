@@ -19,7 +19,6 @@ public record BidResponse(
     long amount,
     Instant createdAt,
     BidStatus status,
-    boolean triggeredExtension,
     String bidderDisplayName,
     String bidderAvatarUrl,
     String bidderUsername) {}

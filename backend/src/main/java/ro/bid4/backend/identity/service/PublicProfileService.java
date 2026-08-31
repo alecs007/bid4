@@ -21,7 +21,7 @@ import ro.bid4.backend.identity.repo.UserAccountRepository;
 public class PublicProfileService {
 
   private static final Set<AuctionStatus> RUNNING =
-      Set.of(AuctionStatus.LIVE, AuctionStatus.SCHEDULED);
+      Set.of(AuctionStatus.LIVE, AuctionStatus.RESERVED);
 
   private final UserAccountRepository users;
   private final AuctionRepository auctions;

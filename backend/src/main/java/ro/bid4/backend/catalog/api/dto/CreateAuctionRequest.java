@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import ro.bid4.backend.catalog.domain.ItemCondition;
@@ -18,8 +17,13 @@ import ro.bid4.backend.catalog.domain.ItemCondition;
  * else's name by editing the body — the same reason a bid carries only its amount.
  *
  * <p>Bounds here are shape: what a single field may hold on its own. Anything that needs another
- * field or a lookup — that the cause is approved, that the reserve sits above the starting price,
- * that the window is a sane length — lives in ListingService, where the refusal can say why.
+ * field or a lookup — that the cause is approved, that the reserve sits above the starting price —
+ * lives in ListingService, where the refusal can say why.
+ *
+ * <p>Three things a seller used to fill in are not here at all. The bid step is derived from the
+ * asking price rather than chosen; the start is now, because nothing is published into the future;
+ * and there is no end, because a listing runs until its seller settles it. Both prices below the
+ * starting price are optional, buy-now included.
  */
 public record CreateAuctionRequest(
     @NotBlank(message = "Adaugă un titlu.")
@@ -43,11 +47,5 @@ public record CreateAuctionRequest(
     @Min(value = 100, message = "Prețul de pornire este prea mic.")
         @Max(value = 10_000_000L, message = "Prețul de pornire depășește maximul acceptat.")
         long startingPrice,
-    @Min(value = 100, message = "Pasul de licitare este prea mic.") long bidIncrement,
     Long reservePrice,
-    Long buyNowPrice,
-    @NotNull(message = "Alege când începe licitația.") Instant startTime,
-    @NotNull(message = "Alege când se încheie licitația.") Instant endTime,
-    @Min(value = 30, message = "Prelungirea automată este între 30 și 600 de secunde.")
-        @Max(value = 600, message = "Prelungirea automată este între 30 și 600 de secunde.")
-        int antiSnipeSeconds) {}
+    Long buyNowPrice) {}

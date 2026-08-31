@@ -11,6 +11,14 @@ public enum BidStatus {
   ACTIVE,
   OUTBID,
   WINNING,
+
+  /**
+   * The seller has taken this offer, and the buyer has not paid yet.
+   *
+   * <p>Distinct from WON, which is what it becomes once the money arrives. In between, the seller
+   * can still release it and this goes back to ACTIVE.
+   */
+  ACCEPTED,
   WON,
   LOST
 }

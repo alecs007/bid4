@@ -29,12 +29,11 @@ public interface AuctionRepository
   /**
    * The ranking window for the homepage rows and for "more like this".
    *
-   * <p>Ordered by closing time and capped, so the work stays bounded by a constant rather than by
-   * how well the platform is doing. Urgency is one of the ranking weights anyway, which makes the
-   * soonest-closing listings the right ones to rank when there are more than fit.
+   * <p>Newest first and capped, so the work stays bounded by a constant rather than by how well the
+   * platform is doing. Nothing closes on a timer any more, so recency is what decides which
+   * listings are worth ranking when there are more of them than fit.
    */
-  List<Auction> findByStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanOrderByEndTimeAsc(
-      AuctionStatus status, Instant startedBy, Instant endsAfter, Limit limit);
+  List<Auction> findByStatusOrderByCreatedAtDesc(AuctionStatus status, Limit limit);
 
   List<Auction> findBySellerIdOrderByCreatedAtDesc(UUID sellerId);
 
@@ -50,21 +49,15 @@ public interface AuctionRepository
   Optional<Auction> findByIdForUpdate(@Param("id") UUID id);
 
   /**
-   * Ids of auctions the clock has caught up with, oldest first.
+   * Sales whose parcel is late, oldest first.
    *
-   * <p>Ids rather than entities, and paged: a backlog after downtime could be any size, and the
-   * point of this query is to hand the settler a bounded batch to work through one row lock at a
-   * time, not to pull a day of listings into memory.
+   * <p>Ids rather than entities, and paged: whoever chases these should work through a bounded
+   * batch one row at a time rather than pull every overdue sale into memory.
    */
   @Query(
-      "select a.id from Auction a where a.status = :status and a.endTime <= :now order by a.endTime asc")
-  List<UUID> findDueToClose(
-      @Param("status") AuctionStatus status, @Param("now") Instant now, Pageable page);
-
-  /** Ids of approved auctions whose opening time has arrived. */
-  @Query(
-      "select a.id from Auction a where a.status = :status and a.startTime <= :now order by a.startTime asc")
-  List<UUID> findDueToOpen(
+      "select a.id from Auction a where a.status = :status and a.dispatchDeadline <= :now"
+          + " order by a.dispatchDeadline asc")
+  List<UUID> findOverdueDispatches(
       @Param("status") AuctionStatus status, @Param("now") Instant now, Pageable page);
 
   List<Auction> findByIdIn(Collection<UUID> ids);

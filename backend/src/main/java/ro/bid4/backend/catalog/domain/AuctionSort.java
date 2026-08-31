@@ -9,8 +9,7 @@ import org.springframework.data.domain.Sort;
  * a column, so no query is ever built from a string that arrived over HTTP.
  */
 public enum AuctionSort {
-  ENDING_SOON(Sort.by(Sort.Direction.ASC, "endTime")),
-  NEWEST(Sort.by(Sort.Direction.DESC, "startTime")),
+  NEWEST(Sort.by(Sort.Direction.DESC, "createdAt")),
   PRICE_ASC(Sort.by(Sort.Direction.ASC, "currentPrice")),
   PRICE_DESC(Sort.by(Sort.Direction.DESC, "currentPrice")),
   MOST_BIDS(Sort.by(Sort.Direction.DESC, "bidCount")),
