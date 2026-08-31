@@ -5,16 +5,14 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Icons } from "@/components/icons";
-import {
-  CountdownInline,
-  SkeletonAuctionCard,
-  useToast,
-} from "@/components/ui";
+import { SkeletonAuctionCard, useToast } from "@/components/ui";
 import { toggleWatch } from "@/lib/api/auctions";
 import { AUCTION_STATUS } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
+import { isOfferable } from "@/lib/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { countRo } from "@/lib/utils/plural";
 import { revealDelay } from "@/lib/utils/reveal";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -44,7 +42,11 @@ export function AuctionCard({
   const [override, setOverride] = useState<boolean | null>(null);
   const watched = override ?? Boolean(auction.isWatched);
 
-  const live = auction.status === "LIVE";
+  // Reserved reads as open here, because it is: the listing still takes offers,
+  // and whose offer the seller took is between them and that buyer. A card that
+  // announced it would discourage exactly the better offer the seller left the
+  // listing up for.
+  const live = isOfferable(auction.status);
   const cover = auction.images[0] ?? "";
 
   /** The icon turns before the request leaves; a failed call puts it back. */
@@ -148,11 +150,17 @@ export function AuctionCard({
           <span className={CARD_PRICE}>
             {formatMoney(auction.currentPrice, { compact: true })}
           </span>
+          {/* Where the countdown was. A listing has no deadline to show, so the
+              slot carries the one number that still says how much interest it
+              has drawn — and nothing at all when there is none, because a row of
+              cards each announcing "no offers" reads as a catalogue nobody
+              wants. */}
           {live ? (
-            <CountdownInline
-              endTime={auction.endTime}
-              className="min-w-0 text-xs"
-            />
+            auction.bidCount > 0 ? (
+              <span className="min-w-0 truncate text-xs font-semibold text-ink-500">
+                {countRo(auction.bidCount, "ofertă", "oferte")}
+              </span>
+            ) : null
           ) : (
             <span
               className={cn(

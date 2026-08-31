@@ -23,7 +23,6 @@ const listing = {
   category: "electronice",
   condition: "VERY_GOOD",
   currentPrice: 125_050,
-  endTime: "2026-09-01T10:00:00Z",
   status: "LIVE",
   seller: { displayName: "Maria Ionescu", username: "maria", accountType: "INDIVIDUAL" },
 };
@@ -50,8 +49,10 @@ describe("auctionSchema", () => {
       (auctionSchema({ ...listing, status }).offers as Record<string, unknown>)
         .availability;
     expect(availability("LIVE")).toBe("https://schema.org/InStock");
+    // Spoken for but unpaid: not orderable by anyone else, and not yet sold.
+    expect(availability("RESERVED")).toBe("https://schema.org/BackOrder");
     expect(availability("SOLD")).toBe("https://schema.org/SoldOut");
-    expect(availability("UNSOLD")).toBe("https://schema.org/SoldOut");
+    expect(availability("CANCELLED")).toBe("https://schema.org/Discontinued");
   });
 
   it("names the seller as what they are", () => {

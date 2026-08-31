@@ -1,22 +1,22 @@
-import { AUCTION, type AuctionCategoryId } from "@/lib/config";
+import { AUCTION, bidStepFor, type AuctionCategoryId } from "@/lib/config";
 import { lei } from "@/lib/money";
 import type { Auction, AuctionStatus, Bid, ItemCondition } from "@/lib/types";
-import { isoAgo, isoIn } from "@/lib/utils/date";
+import { isoAgo } from "@/lib/utils/date";
 import { auctionGallery } from "../images";
 
 /**
- * `timing` places an auction relative to now, so the seeded world always has
- * something ending in a minute, something ending tomorrow and a shelf of
- * finished sales — without hard-coded dates that go stale.
+ * `age` places a listing relative to now, so the seeded world has a mix of fresh arrivals and
+ * things that have been up a while — without hard-coded dates that go stale.
+ *
+ * It used to be `timing`, and it named a deadline. Nothing has one: a listing runs until its
+ * seller settles it, so the only thing a date says about one is how long it has been up.
  */
-type Timing =
-  | "ENDING_SECONDS" // inside the anti-snipe window right now
-  | "ENDING_MINUTES" // last few minutes
-  | "ENDING_HOURS" // later today
-  | "ENDING_DAYS" // comfortable
-  | "SCHEDULED" // not started yet
-  | "FINISHED" // clock ran out
-  | "STATIC"; // draft / review / cancelled: dates do not matter
+type Age =
+  | "TODAY"
+  | "THIS_WEEK"
+  | "LAST_WEEK"
+  | "OLD"
+  | "STATIC"; // draft / review: the date says nothing
 
 interface ListingSeed {
   key: string;
@@ -29,12 +29,13 @@ interface ListingSeed {
   causeId: string;
   donationPercent: number;
   startLei: number;
-  incrementLei?: number;
   reserveLei?: number;
-  timing: Timing;
+  buyNowLei?: number;
+  age: Age;
   status: AuctionStatus;
-  /** How many bids to synthesise. Ignored for drafts and scheduled listings. */
+  /** How many offers to synthesise. Ignored for drafts and listings under review. */
   bids?: number;
+  /** The buyer, for a listing that has been reserved or sold. */
   winnerId?: string;
   /** Marks the listings the order seed attaches to. */
   orderKey?: string;
@@ -46,7 +47,7 @@ const LISTINGS: ListingSeed[] = [
     key: "tricou-retro",
     title: "Tricou retro Steaua București, ediție aniversară",
     description:
-      "Replică oficială a echipamentului din 1986, mărimea L. Nepurtat, cu etichetă. Ultimele minute de licitație: orice ofertă acum prelungește timpul cu două minute.",
+      "Replică oficială a echipamentului din 1986, mărimea L. Nepurtat, cu etichetă. Anunțul rămâne deschis până aleg o ofertă.",
     category: "moda",
     condition: "NEW",
     weightGrams: 320,
@@ -54,8 +55,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ferentari",
     donationPercent: 65,
     startLei: 90,
-    incrementLei: 10,
-    timing: "ENDING_SECONDS",
+    age: "TODAY",
     status: "LIVE",
     bids: 13,
   },
@@ -73,9 +73,8 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ana",
     donationPercent: 40,
     startLei: 250,
-    incrementLei: 10,
     reserveLei: 400,
-    timing: "ENDING_MINUTES",
+    age: "TODAY",
     status: "LIVE",
     bids: 14,
   },
@@ -91,8 +90,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_labute",
     donationPercent: 60,
     startLei: 180,
-    incrementLei: 10,
-    timing: "ENDING_MINUTES",
+    age: "TODAY",
     status: "LIVE",
     bids: 9,
   },
@@ -110,9 +108,8 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_padure",
     donationPercent: 30,
     startLei: 400,
-    incrementLei: 25,
     reserveLei: 650,
-    timing: "ENDING_HOURS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 11,
   },
@@ -128,8 +125,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ghiozdane",
     donationPercent: 50,
     startLei: 150,
-    incrementLei: 10,
-    timing: "ENDING_HOURS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 7,
   },
@@ -145,8 +141,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_labute",
     donationPercent: 100,
     startLei: 200,
-    incrementLei: 20,
-    timing: "ENDING_HOURS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 16,
   },
@@ -164,8 +159,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_autism",
     donationPercent: 75,
     startLei: 300,
-    incrementLei: 20,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 8,
   },
@@ -181,8 +175,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_biblioteca",
     donationPercent: 100,
     startLei: 90,
-    incrementLei: 10,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 12,
   },
@@ -198,9 +191,8 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_bunici",
     donationPercent: 25,
     startLei: 250,
-    incrementLei: 25,
     reserveLei: 400,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 5,
   },
@@ -216,8 +208,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ambulanta",
     donationPercent: 35,
     startLei: 320,
-    incrementLei: 20,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 6,
   },
@@ -233,8 +224,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_padure",
     donationPercent: 50,
     startLei: 380,
-    incrementLei: 20,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 4,
   },
@@ -250,8 +240,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ferentari",
     donationPercent: 45,
     startLei: 220,
-    incrementLei: 20,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 3,
   },
@@ -267,8 +256,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ghiozdane",
     donationPercent: 100,
     startLei: 80,
-    incrementLei: 5,
-    timing: "ENDING_DAYS",
+    age: "THIS_WEEK",
     status: "LIVE",
     bids: 10,
   },
@@ -286,9 +274,12 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_autism",
     donationPercent: 60,
     startLei: 180,
-    incrementLei: 10,
-    timing: "SCHEDULED",
-    status: "SCHEDULED",
+    age: "LAST_WEEK",
+    // The middle of the ladder, not the top: the seller took an offer that was
+    // not the highest, which is the whole point of a listing with no clock.
+    status: "RESERVED",
+    bids: 4,
+    winnerId: "usr_bogdan",
   },
   {
     key: "tablou",
@@ -302,9 +293,11 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_sterilizari",
     donationPercent: 80,
     startLei: 450,
-    incrementLei: 25,
-    timing: "SCHEDULED",
-    status: "SCHEDULED",
+    buyNowLei: 900,
+    age: "LAST_WEEK",
+    status: "RESERVED",
+    bids: 2,
+    winnerId: "usr_vlad",
   },
 
   // Seller-side lifecycle
@@ -320,7 +313,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ana",
     donationPercent: 30,
     startLei: 700,
-    timing: "STATIC",
+    age: "STATIC",
     status: "DRAFT",
   },
   {
@@ -335,8 +328,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ana",
     donationPercent: 50,
     startLei: 900,
-    incrementLei: 50,
-    timing: "STATIC",
+    age: "STATIC",
     status: "PENDING_REVIEW",
   },
   {
@@ -350,14 +342,14 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_bunici",
     donationPercent: 40,
     startLei: 300,
-    timing: "STATIC",
+    age: "STATIC",
     status: "CANCELLED",
   },
   {
     key: "nevanduta",
     title: "Imprimantă laser HP LaserJet P1102",
     description:
-      "Funcționează, dar are nevoie de toner nou. Nu a atins prețul de rezervă.",
+      "Funcționează, dar are nevoie de toner nou. Am retras anunțul până îl schimb.",
     category: "electronice",
     condition: "USED",
     weightGrams: 5600,
@@ -365,16 +357,15 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ferentari",
     donationPercent: 20,
     startLei: 120,
-    incrementLei: 10,
     reserveLei: 250,
-    timing: "FINISHED",
-    status: "UNSOLD",
+    age: "OLD",
+    status: "CANCELLED",
     bids: 3,
   },
   {
     key: "nevanduta-2",
     title: "Patine cu rotile mărimea 39",
-    description: "Nimeni nu a licitat de data asta. Le relistez săptămâna viitoare.",
+    description: "Nu a fost nicio ofertă. Le relistez săptămâna viitoare.",
     category: "sport",
     condition: "GOOD",
     weightGrams: 2800,
@@ -382,8 +373,8 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_padure",
     donationPercent: 50,
     startLei: 140,
-    timing: "FINISHED",
-    status: "UNSOLD",
+    age: "OLD",
+    status: "CANCELLED",
     bids: 0,
   },
 
@@ -399,8 +390,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ana",
     donationPercent: 40,
     startLei: 180,
-    incrementLei: 10,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 9,
     winnerId: "usr_maria",
@@ -417,8 +407,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_padure",
     donationPercent: 25,
     startLei: 600,
-    incrementLei: 50,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 12,
     winnerId: "usr_maria",
@@ -435,8 +424,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_bunici",
     donationPercent: 50,
     startLei: 120,
-    incrementLei: 10,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 6,
     winnerId: "usr_maria",
@@ -453,8 +441,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_padure",
     donationPercent: 35,
     startLei: 300,
-    incrementLei: 20,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 10,
     winnerId: "usr_maria",
@@ -471,8 +458,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_bunici",
     donationPercent: 60,
     startLei: 140,
-    incrementLei: 10,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 8,
     winnerId: "usr_ioana",
@@ -489,8 +475,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ghiozdane",
     donationPercent: 45,
     startLei: 200,
-    incrementLei: 20,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 7,
     winnerId: "usr_maria",
@@ -507,8 +492,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ambulanta",
     donationPercent: 30,
     startLei: 550,
-    incrementLei: 25,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 15,
     winnerId: "usr_maria",
@@ -525,8 +509,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_biblioteca",
     donationPercent: 70,
     startLei: 130,
-    incrementLei: 10,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 11,
     winnerId: "usr_maria",
@@ -543,8 +526,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_bunici",
     donationPercent: 55,
     startLei: 260,
-    incrementLei: 20,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 9,
     winnerId: "usr_maria",
@@ -561,8 +543,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ana",
     donationPercent: 50,
     startLei: 400,
-    incrementLei: 25,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 13,
     winnerId: "usr_maria",
@@ -579,8 +560,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ferentari",
     donationPercent: 20,
     startLei: 900,
-    incrementLei: 50,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 18,
     winnerId: "usr_maria",
@@ -597,8 +577,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ferentari",
     donationPercent: 30,
     startLei: 240,
-    incrementLei: 20,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 6,
     winnerId: "usr_ioana",
@@ -615,8 +594,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_bunici",
     donationPercent: 25,
     startLei: 300,
-    incrementLei: 20,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 5,
     winnerId: "usr_maria",
@@ -633,8 +611,7 @@ const LISTINGS: ListingSeed[] = [
     causeId: "cau_ghiozdane",
     donationPercent: 40,
     startLei: 350,
-    incrementLei: 25,
-    timing: "FINISHED",
+    age: "OLD",
     status: "SOLD",
     bids: 4,
     winnerId: "usr_radu",
@@ -654,24 +631,19 @@ const BIDDER_POOL = [
   "usr_paspas",
 ];
 
-function timingWindow(timing: Timing): { start: string; end: string } {
-  switch (timing) {
-    case "ENDING_SECONDS":
-      // Inside AUCTION.DEFAULT_ANTI_SNIPE_SECONDS, so a freshly seeded world
-      // shows the extension behaviour.
-      return { start: isoAgo(6, "days"), end: isoIn(1.5, "minutes") };
-    case "ENDING_MINUTES":
-      return { start: isoAgo(5, "days"), end: isoIn(9, "minutes") };
-    case "ENDING_HOURS":
-      return { start: isoAgo(6, "days"), end: isoIn(11, "hours") };
-    case "ENDING_DAYS":
-      return { start: isoAgo(2, "days"), end: isoIn(4, "days") };
-    case "SCHEDULED":
-      return { start: isoIn(2, "days"), end: isoIn(9, "days") };
-    case "FINISHED":
-      return { start: isoAgo(12, "days"), end: isoAgo(4, "days") };
+/** When the listing went up. Everything is already published — nothing waits for a start. */
+function startedAt(age: Age): string {
+  switch (age) {
+    case "TODAY":
+      return isoAgo(5, "hours");
+    case "THIS_WEEK":
+      return isoAgo(2, "days");
+    case "LAST_WEEK":
+      return isoAgo(6, "days");
+    case "OLD":
+      return isoAgo(12, "days");
     case "STATIC":
-      return { start: isoIn(3, "days"), end: isoIn(10, "days") };
+      return isoAgo(1, "days");
   }
 }
 
@@ -689,9 +661,11 @@ export function buildCatalog(): CatalogSeed {
 
   LISTINGS.forEach((seed, listingIndex) => {
     const auctionId = `auc_${seed.key}`;
-    const { start, end } = timingWindow(seed.timing);
-    const increment = lei(seed.incrementLei ?? 10);
+    const start = startedAt(seed.age);
     const startingPrice = lei(seed.startLei);
+    // Not a seeded choice: the ladder decides, exactly as it does for a listing
+    // a real seller writes.
+    const increment = bidStepFor(startingPrice);
 
     // Bid history
     const bidCount = seed.bids ?? 0;
@@ -709,26 +683,17 @@ export function buildCatalog(): CatalogSeed {
           ? seed.winnerId
           : BIDDER_POOL[(listingIndex + index) % BIDDER_POOL.length]!;
 
-      // Spread the history across the auction window, densest near the end.
-      const minutesBeforeEnd = Math.round(
-        (bidCount - index) *
-          (seed.timing === "ENDING_SECONDS"
-            ? 18
-            : seed.timing === "ENDING_MINUTES"
-              ? 24
-              : 190),
-      );
+      // Spread the history from the listing's start towards now, densest at the
+      // recent end — offers arrive faster once something has been noticed.
+      const minutesAgo = Math.round((bidCount - index) * 190);
 
       auctionBids.push({
         id: `bid_${seed.key}_${index + 1}`,
         auctionId,
         bidderId,
         amount,
-        createdAt: new Date(
-          Date.parse(end) - minutesBeforeEnd * 60_000,
-        ).toISOString(),
+        createdAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
         status: "OUTBID",
-        triggeredExtension: false,
       });
       currentPrice = amount;
     }
@@ -739,20 +704,43 @@ export function buildCatalog(): CatalogSeed {
     auctionBids.forEach((bid) => latest.set(bid.bidderId, bid));
     const keptBids = auctionBids.filter((bid) => latest.get(bid.bidderId) === bid);
 
+    // What became of those offers is read off the listing's status, so the seed
+    // cannot describe a sold listing whose bids all still say they are running.
+    let acceptedBid: Bid | undefined;
     if (keptBids.length > 0) {
-      const last = keptBids[keptBids.length - 1]!;
-      last.status =
-        seed.status === "SOLD" ? "WON" : seed.status === "LIVE" ? "WINNING" : "LOST";
-      if (seed.status === "UNSOLD") {
-        keptBids.forEach((bid) => {
-          bid.status = "LOST";
-        });
+      switch (seed.status) {
+        case "LIVE":
+          keptBids[keptBids.length - 1]!.status = "WINNING";
+          break;
+        case "RESERVED":
+          // Deliberately not the top offer where there is a choice. A seed where
+          // the highest always wins never shows what the model is for, and the
+          // rest are left standing because the seller can still release this one.
+          acceptedBid = keptBids[Math.floor((keptBids.length - 1) / 2)]!;
+          acceptedBid.status = "ACCEPTED";
+          if (keptBids[keptBids.length - 1] !== acceptedBid) {
+            keptBids[keptBids.length - 1]!.status = "WINNING";
+          }
+          break;
+        case "SOLD":
+          keptBids.forEach((bid) => {
+            bid.status = "LOST";
+          });
+          acceptedBid = keptBids[keptBids.length - 1]!;
+          acceptedBid.status = "WON";
+          break;
+        default:
+          keptBids.forEach((bid) => {
+            bid.status = "LOST";
+          });
       }
     }
     bids.push(...keptBids);
 
     // Auction
     const reservePrice = seed.reserveLei ? lei(seed.reserveLei) : undefined;
+    const committed = seed.status === "RESERVED" || seed.status === "SOLD";
+    const acceptedAt = committed ? isoAgo(seed.status === "SOLD" ? 2 : 1, "days") : undefined;
 
     auctions.push({
       id: auctionId,
@@ -769,14 +757,20 @@ export function buildCatalog(): CatalogSeed {
       currentPrice,
       bidIncrement: increment,
       reservePrice,
+      buyNowPrice: seed.buyNowLei ? lei(seed.buyNowLei) : undefined,
       startTime: start,
-      endTime: end,
-      antiSnipeSeconds: AUCTION.DEFAULT_ANTI_SNIPE_SECONDS,
+      acceptedAt,
+      // The dispatch clock starts at payment, so it belongs only to a paid sale.
+      dispatchDeadline:
+        seed.status === "SOLD" && acceptedAt
+          ? new Date(
+              Date.parse(acceptedAt) + AUCTION.DISPATCH_DAYS * 86_400_000,
+            ).toISOString()
+          : undefined,
       status: seed.status,
-      winnerId: seed.status === "SOLD" ? seed.winnerId : undefined,
+      winnerId: committed ? (acceptedBid?.bidderId ?? seed.winnerId) : undefined,
       bidCount: keptBids.length,
       watcherCount: 3 + ((listingIndex * 7) % 41),
-      extensionCount: 0,
       createdAt: start,
     });
 

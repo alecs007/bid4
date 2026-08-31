@@ -321,14 +321,13 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               {/* How old the listing is belongs with the rest of what it is,
                   not stranded in a heading further down the page. */}
               <span>Publicat {formatRelativeRo(auction.createdAt)}</span>
-              {auction.status !== "LIVE" ? (
+              {/* Reserved is left unmarked on purpose. The listing still takes
+                  offers, and the acceptance is the seller's business and the
+                  buyer's — badging it here would announce a private decision
+                  and put a discouraging label on something still open. */}
+              {auction.status !== "LIVE" && auction.status !== "RESERVED" ? (
                 <span className="rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
                   {AUCTION_STATUS[auction.status].label}
-                </span>
-              ) : null}
-              {auction.extensionCount > 0 ? (
-                <span className="rounded-lg bg-sun-100 px-2 py-0.5 text-xs font-bold text-sun-900">
-                  prelungită de {auction.extensionCount} ori
                 </span>
               ) : null}
             </div>

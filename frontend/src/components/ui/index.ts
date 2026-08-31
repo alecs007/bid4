@@ -48,13 +48,6 @@ export type { StepperStep } from "./Stepper";
 export { FileUpload, FileUploadGrid } from "./FileUpload";
 export type { SegmentOption, NavTabItem } from "./Tabs";
 
-export {
-  Countdown,
-  CountdownInline,
-  CountdownBoard,
-  CountdownBar,
-} from "./Countdown";
-export type { CountdownProps } from "./Countdown";
 
 export { FeeBreakdown } from "./FeeBreakdown";
 export type { FeePerspective } from "./FeeBreakdown";

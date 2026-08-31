@@ -23,7 +23,10 @@ export function writeToken(token: string | null): void {
 export interface HttpOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Query string parameters; undefined and null values are dropped. */
-  query?: Record<string, string | number | boolean | undefined | null | string[]>;
+  query?: Record<
+    string,
+    string | number | boolean | undefined | null | readonly string[]
+  >;
 }
 
 function buildUrl(path: string, query?: HttpOptions["query"]): string {

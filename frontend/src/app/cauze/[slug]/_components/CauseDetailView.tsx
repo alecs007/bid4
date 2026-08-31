@@ -26,24 +26,27 @@ import { formatMemberSince } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
 const SORTS: { value: AuctionSort; label: string }[] = [
-  { value: "ENDING_SOON", label: "Aproape de final" },
   { value: "NEWEST", label: "Cele mai noi" },
   { value: "MOST_BIDS", label: "Cele mai licitate" },
   { value: "PRICE_DESC", label: "Preț descrescător" },
 ];
 
-type StatusFilter = "ALL" | "LIVE" | "ENDED";
+type StatusFilter = "ALL" | "OPEN" | "SETTLED";
 
 const STATUS_TABS: { value: StatusFilter; label: string }[] = [
   { value: "ALL", label: "Toate" },
-  { value: "LIVE", label: "Active" },
-  { value: "ENDED", label: "Încheiate" },
+  { value: "OPEN", label: "Deschise" },
+  { value: "SETTLED", label: "Finalizate" },
 ];
 
+/**
+ * "Deschis" is the only honest word for a listing with no clock: it is taking offers. RESERVED
+ * sits under "finalizate" with SOLD, because from a reader's side the item is spoken for.
+ */
 const STATUS_MAP: Record<StatusFilter, AuctionStatus[] | undefined> = {
   ALL: undefined,
-  LIVE: ["LIVE", "SCHEDULED"],
-  ENDED: ["SOLD", "ENDED", "UNSOLD"],
+  OPEN: ["LIVE"],
+  SETTLED: ["RESERVED", "SOLD"],
 };
 
 function CauseHead({ cause }: { cause: CauseDetail }) {
@@ -174,7 +177,7 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
 export function CauseDetailView({ slug }: { slug: string }) {
   const { user } = useAuth();
   const [status, setStatus] = useState<StatusFilter>("ALL");
-  const [sort, setSort] = useState<AuctionSort>("ENDING_SOON");
+  const [sort, setSort] = useState<AuctionSort>("NEWEST");
   const [docsOpen, setDocsOpen] = useState(false);
 
   const {
@@ -335,7 +338,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
               value={sort}
               options={SORTS}
               onChange={(next) =>
-                setSort((next || "ENDING_SOON") as AuctionSort)
+                setSort((next || "NEWEST") as AuctionSort)
               }
             />
           </div>
@@ -347,9 +350,9 @@ export function CauseDetailView({ slug }: { slug: string }) {
           emptyState={
             <EmptyState
               title={
-                status === "LIVE"
-                  ? "Nicio licitație activă acum"
-                  : "Nicio licitație aici încă"
+                status === "OPEN"
+                  ? "Niciun anunț deschis acum"
+                  : "Niciun anunț aici încă"
               }
               action={
                 <ButtonLink href="/cont/vanzari/nou">Vinde acum</ButtonLink>

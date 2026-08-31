@@ -12,7 +12,8 @@ import { createWorld, type World } from "./seed";
  * refresh; on the server it is rebuilt per process, which is fine because every
  * mutable screen fetches through a client component.
  *
- * `syncWorld()` runs before every read and write, walking the clock forward.
+ * `syncWorld()` runs before every read and write, walking the orders forward. Listings have no
+ * clock of their own to walk — one moves only when its seller acts on it.
  */
 
 let world: World | null = null;
@@ -221,36 +222,29 @@ function releaseFunds(current: World, order: Order): void {
   );
 }
 
-/** Settles a finished auction into SOLD (with an order) or UNSOLD. */
-function settleAuction(current: World, auctionId: ID): void {
+/**
+ * Opens the order an acceptance implies.
+ *
+ * <p>Nothing settles itself any more, so this is no longer reached by a clock: the seller taking
+ * an offer is what starts a purchase, and this is that seam. The listing stays RESERVED — the
+ * order is what carries it from here to paid, and only then does the listing become SOLD.
+ *
+ * <p>Idempotent, because releasing an acceptance and taking it again must not leave two orders
+ * pointing at one listing.
+ */
+export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {
+  const current = getWorld();
   const auction = current.auctions.find((item) => item.id === auctionId);
   if (!auction) return;
+  if (current.orders.some((order) => order.auctionId === auctionId)) return;
 
-  const auctionBids = current.bids
-    .filter((bid) => bid.auctionId === auctionId)
-    .sort((a, b) => b.amount - a.amount);
-  const top = auctionBids[0];
-  const reserveMet =
-    auction.reservePrice === undefined ||
-    auction.currentPrice >= auction.reservePrice;
-
-  if (!top || !reserveMet) {
-    auction.status = "UNSOLD";
-    auctionBids.forEach((bid) => {
-      bid.status = "LOST";
-    });
-    return;
-  }
-
-  auction.status = "SOLD";
-  auction.winnerId = top.bidderId;
-  top.status = "WON";
-  auctionBids.slice(1).forEach((bid) => {
-    bid.status = "LOST";
-  });
+  const accepted = current.bids.find(
+    (bid) => bid.auctionId === auctionId && bid.bidderId === buyerId,
+  );
+  if (!accepted) return;
 
   const fees = computeFees({
-    finalPrice: auction.currentPrice,
+    finalPrice: accepted.amount,
     donationPercent: auction.donationPercent,
     shipping: 0,
   });
@@ -259,7 +253,7 @@ function settleAuction(current: World, auctionId: ID): void {
     id: nextId("ord"),
     reference: `CMD-2026-${Math.floor(Math.random() * 9000 + 1000)}`,
     auctionId: auction.id,
-    buyerId: top.bidderId,
+    buyerId,
     sellerId: auction.sellerId,
     causeId: auction.causeId,
     finalPrice: fees.finalPrice,
@@ -275,7 +269,7 @@ function settleAuction(current: World, auctionId: ID): void {
       {
         id: nextId("evt"),
         status: "AWAITING_CONFIRMATION",
-        label: "Ai câștigat licitația. Confirmă datele de livrare.",
+        label: "Vânzătorul ți-a acceptat oferta. Confirmă datele de livrare.",
         at: new Date().toISOString(),
       },
     ],
@@ -313,18 +307,9 @@ export function syncWorld(force = false): void {
   const current = world;
   let changed = false;
 
-  // Auctions
-  for (const auction of current.auctions) {
-    if (auction.status === "SCHEDULED" && now >= Date.parse(auction.startTime)) {
-      auction.status = "LIVE";
-      changed = true;
-    }
-    if (auction.status === "LIVE" && now >= Date.parse(auction.endTime)) {
-      auction.status = "ENDED";
-      settleAuction(current, auction.id);
-      changed = true;
-    }
-  }
+  // Listings are not walked forward. Nothing about one is a function of the
+  // time: it stays open until its seller accepts an offer or takes it down, and
+  // both of those are things a person does.
 
   // Orders
   for (const order of current.orders) {

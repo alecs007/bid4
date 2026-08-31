@@ -46,7 +46,7 @@ export async function getPublicProfile(
     activeAuctionCount: world.auctions.filter(
       (auction) =>
         auction.sellerId === user.id &&
-        (auction.status === "LIVE" || auction.status === "SCHEDULED"),
+        (auction.status === "LIVE" || auction.status === "RESERVED"),
     ).length,
     completedSaleCount: world.orders.filter(
       (order) => order.sellerId === user.id && order.status === "COMPLETED",

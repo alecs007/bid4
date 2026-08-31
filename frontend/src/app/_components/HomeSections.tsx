@@ -128,7 +128,7 @@ function useFeatured() {
   );
 }
 
-export function EndingSoonRow() {
+export function MostWatchedRow() {
   const { data, loading, error, reload } = useFeatured();
 
   if (error) {
@@ -146,22 +146,25 @@ export function EndingSoonRow() {
 
   return (
     <>
-      <section aria-labelledby="ending-soon">
+      {/* The row used to lead with whatever was closing soonest. Nothing
+          closes, so it leads with what the most people are following — the same
+          place on the page, the same fire, a different question answered. */}
+      <section aria-labelledby="most-watched">
         <RowHeader
-          id="ending-soon"
-          title="Aproape de final"
+          id="most-watched"
+          title="Cele mai urmărite"
           icon={
             <Illustration src="fire" className="h-5.5 w-5.5" sizes="24px" />
           }
           href="/licitatii"
         />
         <AuctionGrid
-          auctions={data?.endingSoon ?? []}
+          auctions={data?.mostWatched ?? []}
           loading={loading}
           skeletonCount={4}
           emptyState={
             <EmptyState
-              title="Nicio licitație aproape de final"
+              title="Nicio licitație urmărită deocamdată"
               action={
                 <ButtonLink href="/licitatii">
                   Explorează licitațiile
@@ -182,7 +185,7 @@ export function PopularRow() {
   return (
     <>
       <section aria-labelledby="popular">
-        <RowHeader id="popular" title="Cele mai urmărite" href="/licitatii" />
+        <RowHeader id="popular" title="Cele mai populare" href="/licitatii" />
         <AuctionGrid
           auctions={data?.popular ?? []}
           loading={loading}

@@ -3,9 +3,11 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils/cn";
 
-/** The lockup carries ~10% empty canvas, so the box is drawn taller than it reads. */
+/** The lockup carries some empty canvas, so the box is drawn taller than it reads. */
 const HEIGHTS = { sm: 33, md: 40, lg: 55 } as const;
-const LOGO_RATIO = 1024 / 426;
+
+/** The file's own dimensions. Anything else stretches it, because the box is what is drawn. */
+const LOGO_RATIO = 1402 / 648;
 
 export function LogoMark({
   size = 32,
@@ -45,12 +47,15 @@ export function Logo({
 
   const content = (
     <Image
-      src="/images/logo.webp"
+      src="/images/bid4-logo.webp"
       alt="bid4"
       width={Math.round(height * LOGO_RATIO)}
       height={height}
-      priority
-      // The file is an SVG, which the image optimizer refuses to touch.
+      // In the header on every route, so it is never a lazy load.
+      loading="eager"
+      fetchPriority="high"
+      // Already WebP and a few kilobytes: a round trip through the optimizer
+      // would cost more than it saves.
       unoptimized
       draggable={false}
     />

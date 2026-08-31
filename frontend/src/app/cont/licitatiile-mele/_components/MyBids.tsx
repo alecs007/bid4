@@ -32,18 +32,18 @@ import {
 /**
  * Where a bidder finds out what happened.
  *
- * <p>Until auctions actually closed there was nothing to show here: every offer
- * sat at "Câștigi" forever, because no winner was ever recorded. Active, won and
- * lost are the three answers settlement produces.
+ * <p>Nothing settles on a clock, so the answer arrives when a seller chooses. "Câștigate" now
+ * covers both halves of that: the offer the seller took, and the one that has since been paid
+ * for.
  */
 
 type Bucket = "all" | "active" | "won" | "lost";
 
 const FILTERS: { value: Bucket; label: string }[] = [
   { value: "all", label: "Toate" },
-  { value: "active", label: "În desfășurare" },
-  { value: "won", label: "Câștigate" },
-  { value: "lost", label: "Încheiate" },
+  { value: "active", label: "În așteptare" },
+  { value: "won", label: "Acceptate" },
+  { value: "lost", label: "Neacceptate" },
 ];
 
 /**
@@ -57,6 +57,7 @@ const OUTCOME: Record<BidStatus, { text: string; alert?: boolean }> = {
   ACTIVE: { text: "text-sky-700" },
   OUTBID: { text: "text-accent-700", alert: true },
   WINNING: { text: "text-primary-700" },
+  ACCEPTED: { text: "text-success-700" },
   WON: { text: "text-success-700" },
   LOST: { text: "text-ink-500" },
 };
@@ -64,6 +65,7 @@ const OUTCOME: Record<BidStatus, { text: string; alert?: boolean }> = {
 /** Decided by the bid rather than the auction: it is the bidder's outcome. */
 function bucketOf(summary: MyBidSummary): Bucket {
   switch (summary.myTopBid.status) {
+    case "ACCEPTED":
     case "WON":
       return "won";
     case "LOST":
@@ -216,7 +218,7 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
         ? leading
           ? "positive"
           : "negative"
-        : myTopBid.status === "WON"
+        : myTopBid.status === "WON" || myTopBid.status === "ACCEPTED"
           ? "positive"
           : undefined,
       note: live && leading ? "oferta ta" : undefined,
@@ -256,9 +258,9 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
       }
       stats={stats}
       footnote={
-        settled
-          ? `Încheiată la ${formatDateTimeRo(auction.endTime)}`
-          : `Se încheie la ${formatDateTimeRo(auction.endTime)}`
+        auction.acceptedAt
+          ? `Vânzătorul a ales la ${formatDateTimeRo(auction.acceptedAt)}`
+          : `Publicată la ${formatDateTimeRo(auction.startTime)}`
       }
       actions={
         <RowActions

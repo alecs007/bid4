@@ -7,7 +7,6 @@ import {
 } from "date-fns";
 import { ro } from "date-fns/locale";
 
-import { AUCTION } from "@/lib/config";
 import type { ISODateString } from "@/lib/types";
 
 function toDate(value: ISODateString | Date): Date {
@@ -44,11 +43,6 @@ export function formatRelativeRo(value: ISODateString | Date): string {
 /** "membru din august 2026" */
 export function formatMemberSince(value: ISODateString | Date): string {
   return format(toDate(value), "MMMM yyyy", { locale: ro });
-}
-
-export function isEndingSoon(endTime: ISODateString): boolean {
-  const hours = differenceInHours(parseISO(endTime), new Date());
-  return hours >= 0 && hours <= AUCTION.ENDING_SOON_HOURS;
 }
 
 export function hoursUntil(value: ISODateString): number {

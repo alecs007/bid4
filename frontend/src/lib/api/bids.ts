@@ -22,6 +22,7 @@ import type {
   PlaceBidResult,
   User,
 } from "@/lib/types";
+import { isOfferable } from "@/lib/types";
 
 import { http } from "./http";
 
@@ -147,8 +148,10 @@ export async function placeBid(
   const auction = world.auctions.find((item) => item.id === payload.auctionId);
   if (!auction) notFound("Licitația");
 
-  if (auction.status !== "LIVE") {
-    badRequest("Licitația nu mai acceptă oferte.", "AUCTION_NOT_LIVE");
+  // Reserved still takes offers: the seller can release an acceptance, so a
+  // better offer arriving during the wait is worth making.
+  if (!isOfferable(auction.status)) {
+    badRequest("Anunțul nu mai acceptă oferte.", "AUCTION_NOT_LIVE");
   }
   if (auction.sellerId === bidderId) {
     forbidden("Nu poți licita la propriul anunț.");
@@ -161,8 +164,20 @@ export async function placeBid(
     badRequest(eligibility.reason ?? "Nu poți licita încă.", "BID_NOT_ALLOWED");
   }
 
+  // The final price is settled before the increment is enforced. A seller who
+  // names a price they would simply accept has made an offer to the room, and a
+  // step that happens to reach over it must not put it out of range: with a 50
+  // lei step on a 100 lei standing offer, a 120 lei final price would otherwise
+  // be unreachable in either direction.
+  // Buy-now cannot take the item over the top of a buyer the seller has already
+  // accepted, so it is only on the table while the listing is genuinely open.
+  const boughtNow =
+    auction.status === "LIVE" &&
+    auction.buyNowPrice !== undefined &&
+    payload.amount >= auction.buyNowPrice;
+
   const minimum = minimumBid(auction);
-  if (payload.amount < minimum) {
+  if (!boughtNow && payload.amount < minimum) {
     badRequest(
       `Oferta minimă este ${formatMoney(minimum)}.`,
       "BID_TOO_LOW",
@@ -174,39 +189,29 @@ export async function placeBid(
     (bid) => !(bid.auctionId === auction.id && bid.bidderId === bidderId),
   );
 
-  // Everyone else's bids drop to OUTBID.
+  // Everyone else's bids drop a place — except the one the seller has already
+  // accepted, which would otherwise be undone by a stranger's offer.
   world.bids
-    .filter((bid) => bid.auctionId === auction.id)
+    .filter(
+      (bid) => bid.auctionId === auction.id && bid.status !== "ACCEPTED",
+    )
     .forEach((bid) => {
       bid.status = "OUTBID";
     });
 
-  // The seller's final price ends it outright, and at that price rather than at
-  // whatever was typed — the same rule the server applies.
-  const boughtNow =
-    auction.buyNowPrice !== undefined && payload.amount >= auction.buyNowPrice;
+  // Settled at the advertised price, never at whatever was typed: the number on
+  // the page is what the buyer agreed to, and charging more for a fat finger
+  // would be indefensible.
   const price = boughtNow ? auction.buyNowPrice! : payload.amount;
-
-  const msLeft = Date.parse(auction.endTime) - Date.now();
-  const windowMs = auction.antiSnipeSeconds * 1000;
-  let extendedBySeconds: number | undefined;
-
-  if (!boughtNow && msLeft > 0 && msLeft <= windowMs) {
-    auction.endTime = new Date(
-      Date.parse(auction.endTime) + windowMs,
-    ).toISOString();
-    auction.extensionCount += 1;
-    extendedBySeconds = auction.antiSnipeSeconds;
-  }
+  const now = new Date().toISOString();
 
   const bid: Bid = {
     id: nextId("bid"),
     auctionId: auction.id,
     bidderId,
     amount: price,
-    createdAt: new Date().toISOString(),
-    status: boughtNow ? "WON" : "WINNING",
-    triggeredExtension: extendedBySeconds !== undefined,
+    createdAt: now,
+    status: boughtNow ? "ACCEPTED" : "WINNING",
   };
 
   world.bids.push(bid);
@@ -221,18 +226,55 @@ export async function placeBid(
       .forEach((item) => {
         item.status = "LOST";
       });
-    auction.status = "SOLD";
+    // Reserved rather than sold: the seller published this price and is bound
+    // by it, so no acceptance is needed — but nobody has paid yet, and SOLD is
+    // kept for money that has actually arrived.
+    auction.status = "RESERVED";
     auction.winnerId = bidderId;
-    auction.endTime = new Date().toISOString();
+    auction.acceptedAt = now;
   }
   commit();
 
-  return {
-    bid,
-    auction,
-    extendedBySeconds,
-    boughtNow: boughtNow || undefined,
-  };
+  return { bid, auction, boughtNow: boughtNow || undefined };
+}
+
+/**
+ * GET /users/me/auctions/{id}/offers — every offer on one of the seller's own listings.
+ *
+ * The listing that does not close on a timer needs this: the seller reads what has been offered
+ * and picks, so they have to see all of it, highest first, with a name against each one. The
+ * public history on the listing page shortens those names because it is read by strangers; the
+ * person deciding who to sell to is not a stranger, and gets what any public profile shows.
+ */
+export async function listOffersOnMyAuction(
+  auctionId: ID,
+  userId: ID,
+): Promise<BidWithBidder[]> {
+  if (!USE_MOCK) {
+    return http<BidWithBidder[]>(`/users/me/auctions/${auctionId}/offers`);
+  }
+
+  await delay();
+  maybeFailRead("ofertele primite");
+  const world = getWorld();
+
+  const auction = world.auctions.find((item) => item.id === auctionId);
+  // Not found rather than forbidden: whether somebody else's listing exists is
+  // not something this caller gets to confirm.
+  if (!auction || auction.sellerId !== userId) notFound("Licitația");
+
+  return world.bids
+    .filter((bid) => bid.auctionId === auctionId)
+    .sort((a, b) => b.amount - a.amount)
+    .map((bid) => {
+      const bidder = world.users.find((user) => user.id === bid.bidderId);
+      return {
+        ...bid,
+        bidderDisplayName: bidder?.displayName ?? "Ofertant",
+        bidderAvatarUrl: bidder?.avatarUrl ?? "",
+        bidderUsername: bidder?.username ?? "",
+      };
+    });
 }
 
 export interface MyBidSummary {
@@ -270,7 +312,12 @@ export async function listMyBids(userId: ID): Promise<MyBidSummary[]> {
     summaries.push({
       auction: detail,
       myTopBid,
-      isWinning: highest?.bidderId === userId,
+      // Accepted counts as ahead: the seller has chosen this offer, and telling
+      // its bidder they are losing would be the opposite of what happened.
+      isWinning:
+        myTopBid.status === "ACCEPTED" ||
+        myTopBid.status === "WON" ||
+        highest?.bidderId === userId,
     });
   }
 
@@ -280,38 +327,38 @@ export async function listMyBids(userId: ID): Promise<MyBidSummary[]> {
   );
 }
 
-/**
- * Retracting in the closing moments is indistinguishable from bid shielding, so
- * the window locks once anti-sniping territory starts.
- */
-export const RETRACT_LOCK_SECONDS = 300;
-
 export interface RetractEligibility {
   canRetract: boolean;
   reason?: string;
 }
 
-/** Whether the signed-in user may pull back their current top bid. */
+/**
+ * Whether the signed-in user may pull back their current top offer.
+ *
+ * The bar used to be the clock: retracting in the closing minutes was indistinguishable from bid
+ * shielding. There are no closing minutes now, so the bar is the acceptance instead — pulling an
+ * offer out from under a seller who has taken it is not a retraction, it is a broken deal.
+ */
 export function checkRetractEligibility(
-  auction: Pick<AuctionDetail, "status" | "endTime" | "viewerBidStatus">,
+  auction: Pick<AuctionDetail, "status" | "viewerBidStatus" | "winnerId">,
   viewerId?: ID,
 ): RetractEligibility {
   if (!viewerId) return { canRetract: false };
-  if (auction.status !== "LIVE") {
-    return { canRetract: false, reason: "Licitația s-a încheiat." };
+  if (!isOfferable(auction.status)) {
+    return { canRetract: false, reason: "Anunțul nu mai acceptă modificări." };
+  }
+  // The one offer nobody may pull: walking away from an accepted offer is
+  // breaking a deal, not withdrawing from one.
+  if (auction.status === "RESERVED" && auction.winnerId === viewerId) {
+    return {
+      canRetract: false,
+      reason: "Oferta ta a fost acceptată, așa că nu mai poate fi retrasă.",
+    };
   }
   // Where the viewer stands already travels with the auction, so this needs no
   // second source of truth and works identically against the API.
   if (auction.viewerBidStatus !== "WINNING") {
     return { canRetract: false };
-  }
-
-  const secondsLeft = (Date.parse(auction.endTime) - Date.now()) / 1000;
-  if (secondsLeft <= RETRACT_LOCK_SECONDS) {
-    return {
-      canRetract: false,
-      reason: "Nu mai poți retrage oferta în ultimele 5 minute.",
-    };
   }
 
   return { canRetract: true };

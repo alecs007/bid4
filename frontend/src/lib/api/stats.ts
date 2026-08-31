@@ -115,7 +115,7 @@ export async function getUserStats(userId: ID): Promise<UserDashboardStats> {
     activeListingCount: world.auctions.filter(
       (auction) =>
         auction.sellerId === userId &&
-        (auction.status === "LIVE" || auction.status === "SCHEDULED"),
+        (auction.status === "LIVE" || auction.status === "RESERVED"),
     ).length,
     ordersNeedingActionCount: world.orders.filter(
       (order) =>

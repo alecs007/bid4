@@ -61,12 +61,13 @@ const CONDITION: Record<string, string> = {
   GOOD: "https://schema.org/UsedCondition",
 };
 
-/** Only a live listing can still be bid on. */
+/** Only a live listing can still be offered on. */
 const AVAILABILITY: Record<string, string> = {
   LIVE: "https://schema.org/InStock",
-  SCHEDULED: "https://schema.org/PreOrder",
+  // Spoken for but not yet paid. Not orderable by anyone else, which is what
+  // BackOrder says more honestly than SoldOut would.
+  RESERVED: "https://schema.org/BackOrder",
   SOLD: "https://schema.org/SoldOut",
-  UNSOLD: "https://schema.org/SoldOut",
   CANCELLED: "https://schema.org/Discontinued",
 };
 
@@ -78,7 +79,6 @@ export interface AuctionSchemaInput {
   category?: string;
   condition?: string;
   currentPrice?: number;
-  endTime?: string;
   status?: string;
   seller?: { displayName?: string; username?: string; accountType?: string };
 }
@@ -87,8 +87,8 @@ export interface AuctionSchemaInput {
  * A listing, as a product with one offer on it.
  *
  * <p>Price is in lei because schema.org money is a decimal amount, while the
- * API and everything above it count whole bani. `priceValidUntil` is the close:
- * an offer on an auction is exactly as good as the time left on it.
+ * API and everything above it count whole bani. There is no `priceValidUntil`:
+ * the offer has no expiry to name, because the listing has none.
  */
 export function auctionSchema(auction: AuctionSchemaInput): Record<string, unknown> {
   const url = `${SITE_URL}/licitatii/${auction.id}`;
@@ -117,7 +117,6 @@ export function auctionSchema(auction: AuctionSchemaInput): Record<string, unkno
         typeof auction.currentPrice === "number"
           ? (auction.currentPrice / 100).toFixed(2)
           : undefined,
-      priceValidUntil: auction.endTime,
       availability: auction.status ? AVAILABILITY[auction.status] : undefined,
       seller: seller?.displayName
         ? {

@@ -35,21 +35,16 @@ import { useToast } from "@/components/ui";
  * own terms, so a listing that settled a second ago is refused there rather than
  * trusted here.
  */
-const WITHDRAWABLE = new Set<AuctionStatus>([
-  "DRAFT",
-  "PENDING_REVIEW",
-  "SCHEDULED",
-  "LIVE",
-]);
+const WITHDRAWABLE = new Set<AuctionStatus>(["DRAFT", "PENDING_REVIEW", "LIVE"]);
 
-type Bucket = "all" | "review" | "scheduled" | "live" | "closed";
+type Bucket = "all" | "review" | "live" | "reserved" | "closed";
 
 const FILTERS: { value: Bucket; label: string }[] = [
   { value: "all", label: "Toate" },
   { value: "review", label: "În verificare" },
-  { value: "scheduled", label: "Programate" },
   { value: "live", label: "În desfășurare" },
-  { value: "closed", label: "Încheiate" },
+  { value: "reserved", label: "Așteaptă plata" },
+  { value: "closed", label: "Finalizate" },
 ];
 
 function bucketOf(auction: AuctionDetail): Bucket {
@@ -57,10 +52,10 @@ function bucketOf(auction: AuctionDetail): Bucket {
     case "DRAFT":
     case "PENDING_REVIEW":
       return "review";
-    case "SCHEDULED":
-      return "scheduled";
     case "LIVE":
       return "live";
+    case "RESERVED":
+      return "reserved";
     default:
       return "closed";
   }
@@ -80,23 +75,23 @@ function statsFor(auction: AuctionDetail, onSeeBidders: () => void): RowStat[] {
   switch (auction.status) {
     case "DRAFT":
     case "PENDING_REVIEW":
-    case "SCHEDULED":
       return [{ ...start, emphasis: true }];
+    case "RESERVED":
     case "SOLD":
       return [
         start,
         {
-          label: "Preț final",
-          value: formatMoney(auction.currentPrice),
+          label:
+            auction.status === "SOLD" ? "Preț final" : "Ofertă acceptată",
+          // What was agreed, not what has been offered since: a reserved
+          // listing goes on taking offers, so the two numbers part company.
+          value: formatMoney(auction.acceptedAmount ?? auction.currentPrice),
           emphasis: true,
           // Green like the running figure it grew out of: it is the number that
           // went the seller's way, and it is what the donation comes out of.
           tone: "positive",
         },
       ];
-    case "UNSOLD":
-    case "ENDED":
-      return [start, highest(auction, onSeeBidders, "Cea mai mare ofertă")].filter(present);
     case "CANCELLED":
       return [start];
     default:
@@ -141,22 +136,25 @@ function highest(
   };
 }
 
-/** When the clock matters, and what it is doing. */
+/** The one date that still says something about where the listing stands. */
 function footnoteFor(auction: AuctionDetail): string {
   switch (auction.status) {
     case "PENDING_REVIEW":
     case "DRAFT":
       return "Se publică după verificare";
-    case "SCHEDULED":
-      return `Începe la ${formatDateTimeRo(auction.startTime)}`;
     case "CANCELLED":
       return "Retras de tine";
+    case "RESERVED":
+      return auction.acceptedAt
+        ? `Acceptată la ${formatDateTimeRo(auction.acceptedAt)}`
+        : "Așteaptă plata";
     case "SOLD":
-    case "UNSOLD":
-    case "ENDED":
-      return `Încheiată la ${formatDateTimeRo(auction.endTime)}`;
+      // The only deadline left anywhere, and it is the seller's own.
+      return auction.dispatchDeadline
+        ? `Expediază până la ${formatDateTimeRo(auction.dispatchDeadline)}`
+        : "Plătită";
     default:
-      return `Se încheie la ${formatDateTimeRo(auction.endTime)}`;
+      return `Publicată la ${formatDateTimeRo(auction.startTime)}`;
   }
 }
 
@@ -267,7 +265,11 @@ export function MySales() {
                         onClick: () => setPendingWithdrawal(auction),
                         unavailable: WITHDRAWABLE.has(auction.status)
                           ? undefined
-                          : "Licitația s-a încheiat și nu mai poate fi retrasă.",
+                          : auction.status === "RESERVED"
+                            ? "Ai acceptat o ofertă. Anuleaz-o mai întâi."
+                            : auction.status === "SOLD"
+                              ? "Anunțul este plătit și nu mai poate fi retras."
+                              : "Anunțul este deja retras.",
                       },
                     ]}
                   />
@@ -287,6 +289,7 @@ export function MySales() {
         auction={bidders}
         open={bidders !== null}
         onClose={() => setBidders(null)}
+        sellerId={userId ?? undefined}
       />
 
       <Modal

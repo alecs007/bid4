@@ -112,7 +112,7 @@ export function toCauseDetail(cause: Cause): CauseDetail {
   const activeAuctionCount = world.auctions.filter(
     (auction) =>
       auction.causeId === cause.id &&
-      (auction.status === "LIVE" || auction.status === "SCHEDULED"),
+      (auction.status === "LIVE" || auction.status === "RESERVED"),
   ).length;
 
   return { ...cause, organizer, activeAuctionCount };

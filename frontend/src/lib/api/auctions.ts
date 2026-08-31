@@ -1,5 +1,5 @@
-import { AUCTION, PAGINATION, USE_MOCK } from "@/lib/config";
-import { pickEndingSoon, pickPopular, pickRelated } from "@/lib/featured";
+import { AUCTION, PAGINATION, USE_MOCK, bidStepFor } from "@/lib/config";
+import { pickMostWatched, pickPopular, pickRelated } from "@/lib/featured";
 import { toAuctionDetail } from "@/lib/mock/join";
 import { auctionGallery } from "@/lib/mock/images";
 import {
@@ -11,6 +11,7 @@ import {
   maybeFailRead,
   nextId,
   notFound,
+  openOrderForAcceptance,
 } from "@/lib/mock/store";
 import type {
   Auction,
@@ -18,9 +19,11 @@ import type {
   AuctionFilters,
   AuctionSort,
   CreateAuctionPayload,
+  FeaturedAuctions,
   ID,
   Page,
 } from "@/lib/types";
+import { PUBLIC_AUCTION_STATUSES, isCommitted } from "@/lib/types";
 
 import { matchesSearch } from "@/lib/utils/search";
 
@@ -44,16 +47,12 @@ function paginate<T>(items: T[], page = 1, pageSize: number): Page<T> {
   };
 }
 
-function sortAuctions(items: AuctionDetail[], sort: AuctionSort = "ENDING_SOON") {
+function sortAuctions(items: AuctionDetail[], sort: AuctionSort = "NEWEST") {
   const sorted = [...items];
   switch (sort) {
-    case "ENDING_SOON":
-      return sorted.sort(
-        (a, b) => Date.parse(a.endTime) - Date.parse(b.endTime),
-      );
     case "NEWEST":
       return sorted.sort(
-        (a, b) => Date.parse(b.startTime) - Date.parse(a.startTime),
+        (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
       );
     case "PRICE_ASC":
       return sorted.sort((a, b) => a.currentPrice - b.currentPrice);
@@ -77,12 +76,12 @@ export async function listAuctions(
         q: filters.q,
         status: filters.status,
         category: filters.category,
+        condition: filters.condition,
         causeId: filters.causeId,
         sellerId: filters.sellerId,
         minPrice: filters.minPrice,
         maxPrice: filters.maxPrice,
         minDonationPercent: filters.minDonationPercent,
-        endingSoon: filters.endingSoon,
         sort: filters.sort,
         page: filters.page,
         pageSize: filters.pageSize,
@@ -94,21 +93,13 @@ export async function listAuctions(
   maybeFailRead("licitațiile");
   const world = getWorld();
 
-  // Only publicly visible states unless a specific seller's shelf is requested.
-  const publicStatuses: Auction["status"][] = [
-    "LIVE",
-    "SCHEDULED",
-    "ENDED",
-    "SOLD",
-    "UNSOLD",
-  ];
-
   const details = world.auctions
     .map((auction) => toAuctionDetail(auction, viewerId))
     .filter((item): item is AuctionDetail => item !== null)
+    // Only publicly visible states unless a specific seller's shelf is asked for.
     .filter((auction) => {
       if (filters.sellerId) return auction.sellerId === filters.sellerId;
-      return publicStatuses.includes(auction.status);
+      return PUBLIC_AUCTION_STATUSES.includes(auction.status);
     })
     .filter((auction) => {
       if (filters.status?.length) {
@@ -116,6 +107,9 @@ export async function listAuctions(
       }
       if (filters.category?.length) {
         if (!filters.category.includes(auction.category)) return false;
+      }
+      if (filters.condition?.length) {
+        if (!filters.condition.includes(auction.condition)) return false;
       }
       if (filters.causeId && auction.causeId !== filters.causeId) return false;
       if (filters.minPrice && auction.currentPrice < filters.minPrice) return false;
@@ -125,13 +119,6 @@ export async function listAuctions(
         auction.donationPercent < filters.minDonationPercent
       ) {
         return false;
-      }
-      if (filters.endingSoon) {
-        const hoursLeft =
-          (Date.parse(auction.endTime) - Date.now()) / 3_600_000;
-        if (auction.status !== "LIVE" || hoursLeft > AUCTION.ENDING_SOON_HOURS) {
-          return false;
-        }
       }
       if (filters.q) {
         const haystack = `${auction.title} ${auction.description} ${auction.cause.name}`;
@@ -166,15 +153,10 @@ export async function getAuction(
 }
 
 /** GET /auctions/featured — the homepage rows. */
-export async function getFeaturedAuctions(viewerId?: ID): Promise<{
-  endingSoon: AuctionDetail[];
-  popular: AuctionDetail[];
-}> {
-  if (!USE_MOCK) {
-    return http<{ endingSoon: AuctionDetail[]; popular: AuctionDetail[] }>(
-      "/auctions/featured",
-    );
-  }
+export async function getFeaturedAuctions(
+  viewerId?: ID,
+): Promise<FeaturedAuctions> {
+  if (!USE_MOCK) return http<FeaturedAuctions>("/auctions/featured");
 
   await delay();
   maybeFailRead("licitațiile recomandate");
@@ -184,7 +166,7 @@ export async function getFeaturedAuctions(viewerId?: ID): Promise<{
     .filter((item): item is AuctionDetail => item !== null);
 
   return {
-    endingSoon: pickEndingSoon(details),
+    mostWatched: pickMostWatched(details),
     popular: pickPopular(details),
   };
 }
@@ -223,7 +205,7 @@ export async function listMyAuctions(userId: ID): Promise<AuctionDetail[]> {
     .filter((auction) => auction.sellerId === userId)
     .map((auction) => toAuctionDetail(auction, userId))
     .filter((item): item is AuctionDetail => item !== null)
-    .sort((a, b) => Date.parse(b.startTime) - Date.parse(a.startTime));
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
 /** POST /auctions */
@@ -256,11 +238,32 @@ export async function createAuction(
   if (payload.startingPrice < AUCTION.MIN_STARTING_PRICE) {
     badRequest("Prețul de pornire este prea mic.");
   }
-  if (Date.parse(payload.endTime) <= Date.parse(payload.startTime)) {
-    badRequest("Data de final trebuie să fie după data de start.");
+  if (
+    payload.reservePrice !== undefined &&
+    payload.reservePrice < payload.startingPrice
+  ) {
+    badRequest("Prețul de rezervă nu poate fi sub prețul de pornire.");
+  }
+  if (
+    payload.buyNowPrice !== undefined &&
+    payload.buyNowPrice <= payload.startingPrice
+  ) {
+    badRequest(
+      "Prețul „Cumpără acum” trebuie să fie peste prețul de pornire.",
+    );
+  }
+  if (
+    payload.buyNowPrice !== undefined &&
+    payload.reservePrice !== undefined &&
+    payload.buyNowPrice < payload.reservePrice
+  ) {
+    badRequest(
+      "Prețul „Cumpără acum” nu poate fi sub prețul de rezervă.",
+    );
   }
 
   const auctionId = nextId("auc");
+  const now = new Date().toISOString();
 
   const auction: Auction = {
     id: auctionId,
@@ -276,18 +279,20 @@ export async function createAuction(
     weightGrams: payload.weightGrams,
     donationPercent: payload.donationPercent,
     startingPrice: payload.startingPrice,
+    // Nothing has been offered yet, so the price on the card is the ask.
     currentPrice: payload.startingPrice,
-    bidIncrement: payload.bidIncrement,
+    // Not the seller's to choose. Derived from what they are asking, so the
+    // step is always a round number and always in proportion to the price.
+    bidIncrement: bidStepFor(payload.startingPrice),
     reservePrice: payload.reservePrice,
-    startTime: payload.startTime,
-    endTime: payload.endTime,
-    antiSnipeSeconds: payload.antiSnipeSeconds,
+    buyNowPrice: payload.buyNowPrice,
+    // Published now. Nothing is scheduled for later, and nothing closes.
+    startTime: now,
     // New listings queue for a staff spot-check before they go live.
     status: "PENDING_REVIEW",
     bidCount: 0,
     watcherCount: 0,
-    extensionCount: 0,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
   };
 
   world.auctions.push(auction);
@@ -309,13 +314,140 @@ export async function cancelAuction(id: ID, userId: ID): Promise<Auction> {
   if (auction.sellerId !== userId) {
     forbidden("Poți retrage doar propriile anunțuri.");
   }
-  if (auction.status === "SOLD" || auction.status === "ENDED") {
-    badRequest("Licitația s-a încheiat deja și nu mai poate fi retrasă.");
+  if (auction.status === "CANCELLED") return auction;
+  // The bar is a buyer, not a date. Once an offer is accepted somebody is
+  // waiting on this listing — and once it is paid for there is money against
+  // it — so withdrawing it would leave an order pointing at nothing.
+  if (isCommitted(auction.status)) {
+    badRequest(
+      auction.status === "SOLD"
+        ? "Anunțul este vândut și plătit, așa că nu mai poate fi retras."
+        : "Ai acceptat o ofertă. Anuleaz-o mai întâi, apoi poți retrage anunțul.",
+    );
+  }
+
+  // Anyone still holding a live offer is released. Without this their bid sits
+  // at "Ești pe primul loc" against a listing that no longer exists.
+  for (const bid of world.bids) {
+    if (bid.auctionId === auction.id) bid.status = "LOST";
   }
 
   auction.status = "CANCELLED";
   commit();
   return auction;
+}
+
+/**
+ * POST /auctions/{id}/accept — the seller takes one of the offers.
+ *
+ * Any of them, not just the highest: that is the point of a listing with no clock. The listing
+ * stops taking offers and is held for that buyer until they pay.
+ */
+export async function acceptOffer(
+  auctionId: ID,
+  bidId: ID,
+  userId: ID,
+): Promise<AuctionDetail> {
+  if (!USE_MOCK) {
+    return http<AuctionDetail>(`/auctions/${auctionId}/accept`, {
+      method: "POST",
+      body: { bidId },
+    });
+  }
+
+  await delay();
+  const world = getWorld();
+  const auction = world.auctions.find((item) => item.id === auctionId);
+  // Not found rather than forbidden: whether somebody else's listing exists is
+  // not something this caller gets to confirm.
+  if (!auction || auction.sellerId !== userId) notFound("Licitația");
+  // One acceptance at a time. The listing goes on taking offers while reserved,
+  // but switching to a better one means letting the first buyer go first.
+  if (auction.status === "RESERVED") {
+    badRequest(
+      "Ai deja o ofertă acceptată. Anuleaz-o mai întâi, apoi poți accepta alta.",
+    );
+  }
+  if (auction.status !== "LIVE") {
+    badRequest("Anunțul nu mai acceptă oferte.");
+  }
+
+  const offer = world.bids.find(
+    (bid) => bid.id === bidId && bid.auctionId === auctionId,
+  );
+  if (!offer) notFound("Oferta");
+  if (offer.status === "LOST") badRequest("Oferta a fost retrasă.");
+
+  // The other offers are left exactly as they are. The seller can still release
+  // this one, and demoting the rest now would mean resurrecting them if they do.
+  offer.status = "ACCEPTED";
+  auction.status = "RESERVED";
+  auction.winnerId = offer.bidderId;
+  auction.acceptedAt = new Date().toISOString();
+  auction.acceptedAmount = offer.amount;
+  // The buyer's side of the handoff. On the server this is where the payment
+  // subsystem takes over; here the mock order carries it the rest of the way.
+  openOrderForAcceptance(auction.id, offer.bidderId);
+  commit();
+
+  const detail = toAuctionDetail(auction, userId);
+  if (!detail) notFound("Licitația");
+  return detail;
+}
+
+/**
+ * DELETE /auctions/{id}/accept — the seller takes the acceptance back.
+ *
+ * Only while it is unpaid. The room goes back to reading the way it did before: everyone outbid,
+ * and whoever holds the highest offer leading again. Recomputed rather than handed back, because
+ * the offer that was accepted was not necessarily the top one.
+ */
+export async function releaseOffer(
+  auctionId: ID,
+  userId: ID,
+): Promise<AuctionDetail> {
+  if (!USE_MOCK) {
+    return http<AuctionDetail>(`/auctions/${auctionId}/accept`, {
+      method: "DELETE",
+    });
+  }
+
+  await delay();
+  const world = getWorld();
+  const auction = world.auctions.find((item) => item.id === auctionId);
+  if (!auction || auction.sellerId !== userId) notFound("Licitația");
+  if (auction.status === "SOLD") badRequest("Comanda este deja plătită.");
+  if (auction.status !== "RESERVED") {
+    badRequest("Anunțul nu are o ofertă acceptată.");
+  }
+
+  const offers = world.bids.filter((bid) => bid.auctionId === auctionId);
+  for (const bid of offers) bid.status = "OUTBID";
+
+  const top = offers.reduce<(typeof offers)[number] | undefined>(
+    (best, bid) =>
+      !best ||
+      bid.amount > best.amount ||
+      (bid.amount === best.amount &&
+        Date.parse(bid.createdAt) < Date.parse(best.createdAt))
+        ? bid
+        : best,
+    undefined,
+  );
+  if (top) top.status = "WINNING";
+
+  auction.status = "LIVE";
+  auction.winnerId = undefined;
+  auction.acceptedAt = undefined;
+  auction.acceptedAmount = undefined;
+  // The order goes with the acceptance. It was never paid — release refuses
+  // once it has been — so there is nothing to refund and nothing to keep.
+  world.orders = world.orders.filter((order) => order.auctionId !== auction.id);
+  commit();
+
+  const detail = toAuctionDetail(auction, userId);
+  if (!detail) notFound("Licitația");
+  return detail;
 }
 
 /** PUT/DELETE /auctions/{id}/watch */

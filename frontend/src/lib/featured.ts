@@ -3,20 +3,15 @@ import { progressPercent } from "@/lib/money";
 import type { Auction, Cause } from "@/lib/types";
 
 /**
- * "Popular" balances four signals so the row never fills with one kind of listing:
- * bids, watchers, time left and donation share. The weights are in `lib/config.ts`.
+ * The client-side twin of FeaturedRanking.java. Kept identical on purpose: the homepage renders
+ * whichever half is answering, and a row that reorders itself when the mock layer is switched
+ * off would be a bug nobody could reproduce.
+ *
+ * "Popular" balances three signals so the row never fills with one kind of listing: bids,
+ * watchers and donation share. There was a fourth, for time left. Nothing runs out of time now.
  */
 
-/** 1 when the auction is closing right now, 0 outside the ending-soon window. */
-export function urgencyFactor(auction: Auction, now = Date.now()): number {
-  const msLeft = Date.parse(auction.endTime) - now;
-  if (msLeft <= 0) return 0;
-  const hoursLeft = msLeft / 3_600_000;
-  if (hoursLeft >= AUCTION.ENDING_SOON_HOURS) return 0;
-  return 1 - hoursLeft / AUCTION.ENDING_SOON_HOURS;
-}
-
-export function popularityScore(auction: Auction, now = Date.now()): number {
+export function popularityScore(auction: Auction): number {
   // Diminishing returns: the 30th bid should not outweigh everything else.
   const bidSignal = Math.log2(auction.bidCount + 1);
   const watchSignal = Math.log2(auction.watcherCount + 1);
@@ -24,48 +19,53 @@ export function popularityScore(auction: Auction, now = Date.now()): number {
   return (
     FEATURED.WEIGHT_BIDS * bidSignal +
     FEATURED.WEIGHT_WATCHERS * watchSignal +
-    FEATURED.WEIGHT_URGENCY * urgencyFactor(auction, now) +
     FEATURED.WEIGHT_DONATION * (auction.donationPercent / 100)
   );
 }
 
-export function isLive(auction: Auction, now = Date.now()): boolean {
-  return (
-    auction.status === "LIVE" &&
-    Date.parse(auction.startTime) <= now &&
-    Date.parse(auction.endTime) > now
-  );
-}
-
-export function isEndingSoon(auction: Auction, now = Date.now()): boolean {
-  return isLive(auction, now) && urgencyFactor(auction, now) > 0;
+/**
+ * Whether the listing is still taking offers.
+ *
+ * No longer a question about time. A listing is open while it is LIVE and closed the moment its
+ * seller accepts something or takes it down.
+ */
+export function isLive(auction: Auction): boolean {
+  return auction.status === "LIVE";
 }
 
 export function isHot(auction: Auction): boolean {
   return auction.bidCount >= AUCTION.HOT_BID_THRESHOLD;
 }
 
-/** Soonest deadline first; only live auctions qualify. */
-export function pickEndingSoon<T extends Auction>(
+/**
+ * The listings the most people are following.
+ *
+ * What the homepage leads with now that nothing is about to close. Watchers rather than bids:
+ * following something is a quieter signal than bidding on it and a better one for "worth a
+ * look", since a bid is also a commitment and most people make far fewer of them.
+ */
+export function pickMostWatched<T extends Auction>(
   auctions: T[],
-  count = FEATURED.ENDING_SOON_COUNT,
-  now = Date.now(),
+  count: number = FEATURED.MOST_WATCHED_COUNT,
 ): T[] {
   return auctions
-    .filter((auction) => isLive(auction, now))
-    .sort((a, b) => Date.parse(a.endTime) - Date.parse(b.endTime))
+    .filter(isLive)
+    .sort(
+      (a, b) =>
+        b.watcherCount - a.watcherCount ||
+        Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    )
     .slice(0, count);
 }
 
 /** Highest score first, one listing per seller so the row is not one shop window. */
 export function pickPopular<T extends Auction>(
   auctions: T[],
-  count = FEATURED.POPULAR_COUNT,
-  now = Date.now(),
+  count: number = FEATURED.POPULAR_COUNT,
 ): T[] {
   const ranked = auctions
-    .filter((auction) => isLive(auction, now))
-    .sort((a, b) => popularityScore(b, now) - popularityScore(a, now));
+    .filter(isLive)
+    .sort((a, b) => popularityScore(b) - popularityScore(a));
 
   const picked: T[] = [];
   const sellersSeen = new Set<string>();
@@ -90,12 +90,11 @@ export function pickPopular<T extends Auction>(
 export function pickTrendingCauses(
   causes: Cause[],
   auctions: Auction[],
-  count = FEATURED.TRENDING_CAUSES_COUNT,
-  now = Date.now(),
+  count: number = FEATURED.TRENDING_CAUSES_COUNT,
 ): Cause[] {
   const liveByCause = new Map<string, number>();
   for (const auction of auctions) {
-    if (!isLive(auction, now)) continue;
+    if (!isLive(auction)) continue;
     liveByCause.set(auction.causeId, (liveByCause.get(auction.causeId) ?? 0) + 1);
   }
 
@@ -128,7 +127,6 @@ export function relatedScore(
   subject: Auction,
   candidate: Auction,
   subjectCategory: string,
-  now = Date.now(),
 ): number {
   let score = 0;
 
@@ -143,25 +141,21 @@ export function relatedScore(
   score +=
     RELATED.WEIGHT_PRICE_PROXIMITY *
     priceProximity(subject.currentPrice, candidate.currentPrice);
-  score += RELATED.WEIGHT_URGENCY * urgencyFactor(candidate, now);
 
   return score;
 }
 
 /**
  * Qualifying is separate from ranking. An auction earns its place by sharing the
- * cause, the kind of object, or the seller; price and urgency only order those.
+ * cause, the kind of object, or the seller; price only orders those.
  */
-export function pickRelated<
-  T extends Auction,
->(
+export function pickRelated<T extends Auction>(
   subject: T,
   auctions: T[],
-  count = RELATED.COUNT,
-  now = Date.now(),
+  count: number = RELATED.COUNT,
 ): T[] {
   const others = auctions.filter(
-    (auction) => auction.id !== subject.id && isLive(auction, now),
+    (auction) => auction.id !== subject.id && isLive(auction),
   );
 
   const matched = others
@@ -173,7 +167,7 @@ export function pickRelated<
     )
     .map((auction) => ({
       auction,
-      score: relatedScore(subject, auction, subject.category, now),
+      score: relatedScore(subject, auction, subject.category),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, count)
@@ -186,7 +180,7 @@ export function pickRelated<
   const taken = new Set(matched.map((auction) => auction.id));
   const filler = others
     .filter((auction) => !taken.has(auction.id))
-    .sort((a, b) => popularityScore(b, now) - popularityScore(a, now))
+    .sort((a, b) => popularityScore(b) - popularityScore(a))
     .slice(0, RELATED.MIN_COUNT - matched.length);
 
   return [...matched, ...filler];

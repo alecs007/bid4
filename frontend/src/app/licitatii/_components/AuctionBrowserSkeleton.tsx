@@ -1,6 +1,6 @@
 import { Skeleton, SkeletonGrid } from "@/components/ui";
 import { PAGINATION, AUCTION_CATEGORIES } from "@/lib/config";
-import { AUCTION_STATUS } from "@/lib/labels";
+import { ITEM_CONDITION } from "@/lib/labels";
 
 /**
  * Used by `loading.tsx` and by the page's own Suspense fallback, so whichever the
@@ -69,21 +69,23 @@ export function AuctionBrowserSkeleton() {
                   ))}
                 </FilterGroup>
 
+                {/* Same order as the real panel, and the same labels: the two
+                    have drifted before, and a skeleton that reflows on load is
+                    worse than none. */}
+                <FilterGroup labelWidth="w-14">
+                  {(
+                    ["NEW", "LIKE_NEW", "VERY_GOOD", "GOOD", "USED"] as const
+                  ).map((condition) => (
+                    <ChipGhost
+                      key={condition}
+                      label={ITEM_CONDITION[condition]}
+                    />
+                  ))}
+                </FilterGroup>
+
                 {/* The two sliders: label and track share one 48px row. */}
                 <Skeleton className="h-12 w-full rounded-xl" />
                 <Skeleton className="h-12 w-full rounded-xl" />
-
-                <FilterGroup labelWidth="w-14">
-                  <ChipGhost icon label="Sub 24h" />
-                  {(["LIVE", "SCHEDULED", "SOLD", "UNSOLD"] as const).map(
-                    (status) => (
-                      <ChipGhost
-                        key={status}
-                        label={AUCTION_STATUS[status].label}
-                      />
-                    ),
-                  )}
-                </FilterGroup>
               </div>
             </div>
           </div>

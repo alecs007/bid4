@@ -25,16 +25,16 @@ import {
   AUCTION_CATEGORIES,
   type AuctionCategoryId,
 } from "@/lib/config";
-import { AUCTION_STATUS } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
-import type { AuctionSort, AuctionStatus } from "@/lib/types";
+import { ITEM_CONDITION } from "@/lib/labels";
+import type { AuctionSort, ItemCondition } from "@/lib/types";
+import { OFFERABLE_AUCTION_STATUSES } from "@/lib/types";
 import { countRo } from "@/lib/utils/plural";
 import { cn } from "@/lib/utils/cn";
 
 const SORTS: { value: AuctionSort; label: string }[] = [
-  { value: "ENDING_SOON", label: "Aproape de final" },
   { value: "NEWEST", label: "Cele mai noi" },
   { value: "MOST_BIDS", label: "Cele mai licitate" },
   { value: "PRICE_ASC", label: "Preț crescător" },
@@ -42,9 +42,44 @@ const SORTS: { value: AuctionSort; label: string }[] = [
   { value: "DONATION_DESC", label: "Donație maximă" },
 ];
 
-const STATUS_FILTERS: AuctionStatus[] = ["LIVE", "SCHEDULED", "SOLD", "UNSOLD"];
-
 const HEADER_HEIGHT = 64;
+
+/**
+ * The five states a listing can declare, best first.
+ *
+ * <p>Written out rather than derived from the ITEM_CONDITION map, because that is keyed for
+ * lookup and its order is an implementation detail; the order a buyer scans them in is a
+ * decision, and this is where it is made.
+ */
+const CONDITION_FILTERS: ItemCondition[] = [
+  "NEW",
+  "LIKE_NEW",
+  "VERY_GOOD",
+  "GOOD",
+  "USED",
+];
+
+/** Mirrors the @Size bound on AuctionQuery.q. */
+const MAX_SEARCH_LENGTH = 120;
+
+/** Rejects a hand-typed causeId before it reaches the API and comes back a 400. */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A query-string number, or the fallback when it is missing or not one. */
+function readNumber(raw: string | null, fallback: number): number {
+  if (raw === null || raw.trim() === "") return fallback;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value));
+}
+
+function orderedRange(low: number, high: number): [number, number] {
+  return low <= high ? [low, high] : [high, low];
+}
 
 const PRICE_MIN = 0;
 const PRICE_MAX = 500_000;
@@ -53,13 +88,10 @@ const PRICE_STEP = 5_000;
 function Chip({
   active,
   onClick,
-  urgent = false,
   children,
 }: {
   active: boolean;
   onClick: () => void;
-  /** Selects the urgency colour when on, for the filter that means time. */
-  urgent?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -70,9 +102,7 @@ function Chip({
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition",
         active
-          ? urgent
-            ? "bg-accent-600 text-white"
-            : "bg-primary-600 text-white"
+          ? "bg-primary-600 text-white"
           : "bg-ink-100 text-ink-700 hover:bg-ink-200",
       )}
     >
@@ -109,22 +139,65 @@ export function AuctionBrowser() {
     };
   }, []);
 
-  const q = params.get("q") ?? "";
-  const sort = (params.get("sort") as AuctionSort | null) ?? "ENDING_SOON";
-  const categories = params.getAll("category") as AuctionCategoryId[];
-  const statuses = params.getAll("status") as AuctionStatus[];
-  const causeId = params.get("causeId") ?? undefined;
-  const endingSoon = params.get("endingSoon") === "1";
-  const minDonation = Number(params.get("minDonation") ?? 0);
-  const minPrice = Number(params.get("minPrice") ?? PRICE_MIN);
-  const maxPrice = Number(params.get("maxPrice") ?? PRICE_MAX);
-  const page = Number(params.get("page") ?? 1);
+  // Trimmed to the column's own width. The API refuses anything longer, and a
+  // pasted paragraph should narrow the results, not blank the page with a 400.
+  const q = (params.get("q") ?? "").slice(0, MAX_SEARCH_LENGTH);
+  // Everything below is read off a URL anybody can type, share or edit, so none
+  // of it is trusted: an unknown sort, a category that does not exist, a price
+  // of "abc" or a range the wrong way round all have to land somewhere sane
+  // rather than reaching the API as NaN or a 400.
+  const sort = SORTS.some((option) => option.value === params.get("sort"))
+    ? (params.get("sort") as AuctionSort)
+    : "NEWEST";
+  const categories = params
+    .getAll("category")
+    .filter((value): value is AuctionCategoryId =>
+      AUCTION_CATEGORIES.some((category) => category.id === value),
+    );
+  const conditions = params
+    .getAll("condition")
+    .filter((value): value is ItemCondition =>
+      CONDITION_FILTERS.includes(value as ItemCondition),
+    );
+  const causeId = UUID_PATTERN.test(params.get("causeId") ?? "")
+    ? params.get("causeId")!
+    : undefined;
+  const minDonation = clamp(readNumber(params.get("minDonation"), 0), 0, 100);
+  // Read as a pair: a range typed the wrong way round is a range, not an empty
+  // result, so the two ends are sorted rather than passed straight through.
+  const [minPrice, maxPrice] = orderedRange(
+    clamp(readNumber(params.get("minPrice"), PRICE_MIN), PRICE_MIN, PRICE_MAX),
+    clamp(readNumber(params.get("maxPrice"), PRICE_MAX), PRICE_MIN, PRICE_MAX),
+  );
+  const page = Math.max(1, Math.floor(readNumber(params.get("page"), 1)));
 
   const [priceDraft, setPriceDraft] = useState<[number, number]>([
     minPrice,
     maxPrice,
   ]);
   const [donationDraft, setDonationDraft] = useState(minDonation);
+
+  // The sliders hold a draft so they do not fire a request per pixel, which
+  // means they can fall out of step with the URL — on back and forward, or on a
+  // link someone else sent. The URL is the truth; the draft follows it.
+  //
+  // Adjusted during render rather than in an effect, which is what React asks
+  // for when state has to follow something outside it: no second paint, and no
+  // frame where the sliders disagree with the results beside them.
+  const [urlFilter, setUrlFilter] = useState({
+    minPrice,
+    maxPrice,
+    minDonation,
+  });
+  if (
+    urlFilter.minPrice !== minPrice ||
+    urlFilter.maxPrice !== maxPrice ||
+    urlFilter.minDonation !== minDonation
+  ) {
+    setUrlFilter({ minPrice, maxPrice, minDonation });
+    setPriceDraft([minPrice, maxPrice]);
+    setDonationDraft(minDonation);
+  }
 
   const [navigating, startNavigation] = useTransition();
 
@@ -135,9 +208,12 @@ export function AuctionBrowser() {
           q: q || undefined,
           sort,
           category: categories.length ? categories : undefined,
-          status: statuses.length ? statuses : undefined,
+          condition: conditions.length ? conditions : undefined,
+          // Fixed, and not readable from the URL. This page is a catalogue of
+          // things you can still make an offer on; a sold listing is history,
+          // and belongs on the seller's own shelf rather than here.
+          status: OFFERABLE_AUCTION_STATUSES,
           causeId,
-          endingSoon: endingSoon || undefined,
           minDonationPercent: minDonation || undefined,
           minPrice: minPrice > PRICE_MIN ? minPrice : undefined,
           maxPrice: maxPrice < PRICE_MAX ? maxPrice : undefined,
@@ -145,7 +221,22 @@ export function AuctionBrowser() {
         },
         user?.id,
       ),
-    `auctions:${params.toString()}:${user?.id ?? "anon"}`,
+    // Keyed off what is actually being asked for rather than off the raw query
+    // string: two URLs that sanitise to the same filter are the same request,
+    // and ?minPrice=abc must not get a cache entry of its own.
+    [
+      "auctions",
+      q,
+      sort,
+      categories.join(","),
+      conditions.join(","),
+      causeId ?? "",
+      minDonation,
+      minPrice,
+      maxPrice,
+      page,
+      user?.id ?? "anon",
+    ].join(":"),
   );
 
   const { data: causes } = useApi(() => listCauses(), "causes-for-filter");
@@ -198,9 +289,8 @@ export function AuctionBrowser() {
 
   const activeCount =
     categories.length +
-    statuses.length +
+    conditions.length +
     (causeId ? 1 : 0) +
-    (endingSoon ? 1 : 0) +
     (minDonation ? 1 : 0) +
     (minPrice > PRICE_MIN ? 1 : 0) +
     (maxPrice < PRICE_MAX ? 1 : 0);
@@ -247,7 +337,11 @@ export function AuctionBrowser() {
               active={categories.includes(category.id)}
               onClick={() => toggleValue("category", category.id)}
             >
-              <CategoryIcon set="categories" id={category.id} className="h-4 w-4" />
+              <CategoryIcon
+                set="categories"
+                id={category.id}
+                className="h-4 w-4"
+              />
               {category.label}
             </Chip>
           ))}
@@ -282,26 +376,13 @@ export function AuctionBrowser() {
       <div>
         <p className="mb-2.5 text-sm font-bold text-ink-700">Stare</p>
         <div className="flex flex-wrap gap-2">
-          <Chip
-            active={endingSoon}
-            urgent
-            onClick={() =>
-              update((next) => {
-                if (endingSoon) next.delete("endingSoon");
-                else next.set("endingSoon", "1");
-              })
-            }
-          >
-            <Icons.urgent aria-hidden="true" className="h-4 w-4 shrink-0" />
-            Sub 24h
-          </Chip>
-          {STATUS_FILTERS.map((status) => (
+          {CONDITION_FILTERS.map((condition) => (
             <Chip
-              key={status}
-              active={statuses.includes(status)}
-              onClick={() => toggleValue("status", status)}
+              key={condition}
+              active={conditions.includes(condition)}
+              onClick={() => toggleValue("condition", condition)}
             >
-              {AUCTION_STATUS[status].label}
+              {ITEM_CONDITION[condition]}
             </Chip>
           ))}
         </div>
@@ -314,7 +395,9 @@ export function AuctionBrowser() {
       variant="secondary"
       size="sm"
       onClick={() => setSheetOpen(true)}
-      leftIcon={<Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />}
+      leftIcon={
+        <Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />
+      }
     >
       Filtre
       {activeCount > 0 ? (
@@ -350,7 +433,7 @@ export function AuctionBrowser() {
       value={sort}
       options={SORTS}
       onChange={(next) =>
-        update((params) => params.set("sort", next || "ENDING_SOON"))
+        update((params) => params.set("sort", next || "NEWEST"))
       }
     />
   );

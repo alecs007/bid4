@@ -44,20 +44,18 @@ export const AUCTION_STATUS: Record<AuctionStatus, StatusMeta> = {
     tone: "sun",
     hint: "Echipa bid4 verifică anunțul înainte de publicare.",
   },
-  SCHEDULED: {
-    label: "Programată",
+  LIVE: {
+    label: "În desfășurare",
+    tone: "primary",
+    hint: "Poți face o ofertă acum.",
+  },
+  RESERVED: {
+    label: "Ofertă acceptată",
     tone: "sky",
-    hint: "Licitația începe la data programată.",
+    hint: "Vânzătorul a ales o ofertă și așteaptă plata.",
   },
-  LIVE: { label: "În desfășurare", tone: "primary", hint: "Poți licita acum." },
-  ENDED: { label: "Încheiată", tone: "neutral" },
   SOLD: { label: "Vândut", tone: "success" },
-  UNSOLD: {
-    label: "Fără câștigător",
-    tone: "neutral",
-    hint: "Nu s-a atins prețul de rezervă.",
-  },
-  CANCELLED: { label: "Anulată", tone: "danger" },
+  CANCELLED: { label: "Retras", tone: "neutral" },
 };
 
 export const ORDER_STATUS: Record<OrderStatus, StatusMeta> = {
@@ -132,9 +130,14 @@ export const BID_STATUS: Record<BidStatus, StatusMeta> = {
   OUTBID: {
     label: "Ai fost depășit",
     tone: "accent",
-    hint: "Cineva a licitat mai mult decât tine.",
+    hint: "Cineva a oferit mai mult decât tine.",
   },
   WINNING: { label: "Ești pe primul loc", tone: "primary" },
+  ACCEPTED: {
+    label: "Oferta ta a fost acceptată",
+    tone: "success",
+    hint: "Vânzătorul te-a ales. Urmează plata.",
+  },
   WON: { label: "Ai câștigat", tone: "success" },
   LOST: { label: "Nu ai câștigat", tone: "neutral" },
 };
@@ -218,4 +221,8 @@ export const COPY = {
     "Procentul stabilit de vânzător din prețul final ajunge la cauza verificată imediat ce comanda este finalizată.",
   bidGateExplainer:
     "Pentru a licita ai nevoie de un card salvat și de o metodă de livrare implicită, astfel încât comanda să pornească imediat ce câștigi.",
+  noClockExplainer:
+    "Anunțul rămâne deschis până când vânzătorul alege o ofertă. Nu există numărătoare inversă.",
+  sellerChoosesExplainer:
+    "Vânzătorul poate accepta orice ofertă, nu doar pe cea mai mare.",
 } as const;

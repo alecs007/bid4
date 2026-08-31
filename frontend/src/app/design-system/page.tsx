@@ -9,8 +9,6 @@ import {
   ButtonLink,
   Card,
   CardHeader,
-  Countdown,
-  CountdownInline,
   DonationBadge,
   EmptyState,
   ErrorState,
@@ -21,7 +19,6 @@ import {
   Mascot,
   MetaChip,
   ProgressBar,
-  SectionLabel,
   ShippingLabelPreview,
   Skeleton,
   SkeletonAuctionCard,
@@ -40,7 +37,7 @@ import {
 import { SHIPPING, SHIPPING_PRICES } from "@/lib/config";
 import { computeFees, formatMoney, lei } from "@/lib/money";
 import type { ShippingLabelData } from "@/lib/types";
-import { isoAgo, isoIn } from "@/lib/utils/date";
+import { isoAgo } from "@/lib/utils/date";
 import {
   ButtonStatesDemo,
   ConfettiDemo,
@@ -162,12 +159,6 @@ export default function DesignSystemPage() {
     shipping: SHIPPING_PRICES.EASYBOX,
   });
   const sellerFees = computeFees({ finalPrice: lei(320), donationPercent: 40 });
-
-  const inTwoDays = isoIn(51, "hours");
-  const inThreeMinutes = isoIn(3, "minutes");
-  const inTwentyHours = isoIn(20, "hours");
-  const justEnded = isoAgo(1, "minutes");
-  const startedDaysAgo = isoAgo(5, "days");
 
   return (
     <PageTransition>
@@ -476,59 +467,6 @@ export default function DesignSystemPage() {
                 <ProgressBar value={25} size="sm" label="Exemplu 25%" />
                 <ProgressBar value={60} tone="accent" label="Exemplu 60%" />
                 <ProgressBar value={90} tone="sky" size="lg" label="Exemplu 90%" />
-              </div>
-            </Card>
-          </Section>
-          <Section
-            id="countdown"
-            title="Countdown live"
-            description="Un singur rând de cifre, cu unitățile discrete lângă ele. Se actualizează în fiecare secundă și își schimbă culoarea pe măsură ce timpul se scurge."
-          >
-            <div className="grid gap-5 md:grid-cols-3">
-              <Card>
-                <SectionLabel className="mb-3">Peste 24h, calm</SectionLabel>
-                <Countdown endTime={inTwoDays} startTime={startedDaysAgo} showProgress />
-              </Card>
-              <Card>
-                <SectionLabel className="mb-3">Ultima zi, atenție</SectionLabel>
-                <Countdown
-                  endTime={inTwentyHours}
-                  startTime={startedDaysAgo}
-                  showProgress
-                />
-              </Card>
-              <Card>
-                <SectionLabel className="mb-3">Ultima oră, urgent</SectionLabel>
-                <Countdown
-                  endTime={inThreeMinutes}
-                  startTime={startedDaysAgo}
-                  showProgress
-                />
-              </Card>
-            </div>
-            <Card className="mt-5">
-              <CardHeader title="Variante compacte" subtitle="Pentru carduri și liste" />
-              <div className="flex flex-wrap items-end gap-8">
-                <div>
-                  <SectionLabel className="mb-2">Mare, pe pagina licitației</SectionLabel>
-                  <Countdown endTime={inTwentyHours} size="lg" />
-                </div>
-                <div>
-                  <SectionLabel className="mb-2">Fără etichetă</SectionLabel>
-                  <Countdown endTime={inThreeMinutes} size="sm" />
-                </div>
-                <div>
-                  <SectionLabel className="mb-2">Într-un rând de listă</SectionLabel>
-                  <div className="flex flex-col gap-1">
-                    <CountdownInline endTime={inTwoDays} />
-                    <CountdownInline endTime={inThreeMinutes} />
-                    <CountdownInline endTime={justEnded} />
-                  </div>
-                </div>
-                <div>
-                  <SectionLabel className="mb-2">Încheiată</SectionLabel>
-                  <Countdown endTime={justEnded} />
-                </div>
               </div>
             </Card>
           </Section>

@@ -4,7 +4,7 @@ import { ButtonLink, Mascot } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import {
   CategoryRow,
-  EndingSoonRow,
+  MostWatchedRow,
   ImpactLine,
   PopularRow,
   TrendingCauses,
@@ -77,7 +77,7 @@ export default function HomePage() {
           </div>
         </section>
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-10 sm:px-6 lg:gap-14 lg:px-8 lg:py-14">
-          <EndingSoonRow />
+          <MostWatchedRow />
           <CategoryRow categories={AUCTION_CATEGORIES} />{" "}
           <section
             aria-labelledby="how"

@@ -86,19 +86,34 @@ export const CAUSE = {
 } as const;
 
 export const AUCTION = {
-  /** A bid inside this window pushes `endTime` out by the same amount. */
-  DEFAULT_ANTI_SNIPE_SECONDS: 120,
-  MIN_ANTI_SNIPE_SECONDS: 30,
-  MAX_ANTI_SNIPE_SECONDS: 600,
-
   MIN_STARTING_PRICE: 1 * LEU,
   MAX_STARTING_PRICE: 100_000 * LEU,
-  DEFAULT_BID_INCREMENT: 5 * LEU,
-  MIN_BID_INCREMENT: 1 * LEU,
 
-  MIN_DURATION_HOURS: 1,
-  MAX_DURATION_DAYS: 30,
-  DEFAULT_DURATION_DAYS: 7,
+  /**
+   * The ladder the bid step is read off, in bani: a listing at or below the first bound steps
+   * by the first amount, and so on up. Mirrors CatalogRules.BID_STEP_LADDER on the server.
+   *
+   * The seller does not choose it. A step they picked was either so small that outbidding
+   * somebody cost nothing, or so large that the second offer was out of reach — and either
+   * way it was one more decision in the way of publishing.
+   */
+  BID_STEP_LADDER: [
+    // The bottom two rungs exist because the ladder without them asked a 1-leu
+    // listing for a 5-leu raise: the second offer was six times the first, which
+    // is the very thing a derived step is supposed to prevent.
+    [10 * LEU, LEU / 2],
+    [50 * LEU, 2.5 * LEU],
+    [100 * LEU, 5 * LEU],
+    [500 * LEU, 10 * LEU],
+    [1_000 * LEU, 25 * LEU],
+    [5_000 * LEU, 50 * LEU],
+    [10_000 * LEU, 100 * LEU],
+  ] as const,
+  /** What every listing above the top of the ladder steps by. */
+  BID_STEP_ABOVE_LADDER: 250 * LEU,
+
+  /** How long a seller has to hand the parcel over, counted from payment. */
+  DISPATCH_DAYS: 7,
 
   /** A listing with no photo does not sell, and the first one is the card. */
   MIN_IMAGES: 1,
@@ -111,11 +126,22 @@ export const AUCTION = {
   MIN_WEIGHT_GRAMS: 1,
   MAX_WEIGHT_GRAMS: 15_000,
 
-  /** "Se termină curând" cut-off used by the homepage and the filters. */
-  ENDING_SOON_HOURS: 24,
   /** An auction is "hot" from this many bids up. */
   HOT_BID_THRESHOLD: 8,
 } as const;
+
+/**
+ * The step for a listing that starts at this price — the twin of CatalogRules.bidStepFor.
+ *
+ * Derived rather than stored, so a listing created before the ladder changed still steps by
+ * whatever the ladder says today, and there is one place to change it.
+ */
+export function bidStepFor(startingPrice: Bani): Bani {
+  for (const [bound, step] of AUCTION.BID_STEP_LADDER) {
+    if (startingPrice <= bound) return step;
+  }
+  return AUCTION.BID_STEP_ABOVE_LADDER;
+}
 
 export const DONATION = {
   MIN_PERCENT: 5,
@@ -220,13 +246,16 @@ export type CauseCategoryId = (typeof CAUSE_CATEGORIES)[number]["id"];
 export type AuctionCategoryId = (typeof AUCTION_CATEGORIES)[number]["id"];
 
 export const FEATURED = {
-  /** Weights of the popularity score: bids, watchers, urgency, donation share. */
+  /**
+   * Weights of the popularity score: bids, watchers, donation share.
+   *
+   * There was a fourth, for how close a listing was to closing. Nothing closes any more.
+   */
   WEIGHT_BIDS: 3,
   WEIGHT_WATCHERS: 1,
-  WEIGHT_URGENCY: 4,
   WEIGHT_DONATION: 2,
   /** How many cards each homepage row shows. */
-  ENDING_SOON_COUNT: 4,
+  MOST_WATCHED_COUNT: 4,
   POPULAR_COUNT: 8,
   TRENDING_CAUSES_COUNT: 3,
 } as const;
@@ -238,8 +267,6 @@ export const RELATED = {
   WEIGHT_SAME_SELLER: 2,
   /** Awarded in full at an identical price, tapering to nothing at 4x. */
   WEIGHT_PRICE_PROXIMITY: 2,
-  /** Breaks ties towards what is worth acting on now. */
-  WEIGHT_URGENCY: 1,
   COUNT: 10,
   /** Below this the row is not worth swiping, so it is topped up. */
   MIN_COUNT: 6,

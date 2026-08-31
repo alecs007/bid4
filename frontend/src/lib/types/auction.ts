@@ -13,22 +13,50 @@ export type ItemCondition =
 /**
  * DRAFT          — being composed by the seller.
  * PENDING_REVIEW — staff spot-check before it goes live.
- * SCHEDULED      — approved, `startTime` is in the future.
- * LIVE           — accepting bids.
- * ENDED          — clock ran out, settlement in progress.
- * SOLD           — had a winner above reserve; an Order exists.
- * UNSOLD         — no bids, or reserve not met.
+ * LIVE           — taking offers, for as long as the seller leaves it up.
+ * RESERVED       — the seller took an offer and is waiting to be paid. Reversible.
+ * SOLD           — paid for. The seller now owes a parcel, and the row cannot be withdrawn.
  * CANCELLED      — pulled by the seller or staff.
+ *
+ * There is no state for "the time ran out". A listing has no clock: it stays open until its
+ * seller settles it or takes it down.
  */
 export type AuctionStatus =
   | "DRAFT"
   | "PENDING_REVIEW"
-  | "SCHEDULED"
   | "LIVE"
-  | "ENDED"
+  | "RESERVED"
   | "SOLD"
-  | "UNSOLD"
   | "CANCELLED";
+
+/** The states a stranger may see. A draft and a listing under review are private. */
+export const PUBLIC_AUCTION_STATUSES: readonly AuctionStatus[] = [
+  "LIVE",
+  "RESERVED",
+  "SOLD",
+  "CANCELLED",
+];
+
+/** Past the point of no return: a buyer is attached, so the listing cannot be withdrawn. */
+export function isCommitted(status: AuctionStatus): boolean {
+  return status === "RESERVED" || status === "SOLD";
+}
+
+/**
+ * The statuses a buyer can still act on, and the only ones /licitatii lists.
+ *
+ * <p>RESERVED belongs here. The seller has taken an offer but nobody has paid, so they may still
+ * release it and take a better one — which makes an offer against a reserved listing worth
+ * making. SOLD is where the room closes.
+ */
+export const OFFERABLE_AUCTION_STATUSES: readonly AuctionStatus[] = [
+  "LIVE",
+  "RESERVED",
+];
+
+export function isOfferable(status: AuctionStatus): boolean {
+  return status === "LIVE" || status === "RESERVED";
+}
 
 /**
  * An auction is the object and the sale together. There is no separate product:
@@ -55,27 +83,36 @@ export interface Auction {
 
   startingPrice: Bani;
   currentPrice: Bani;
+  /**
+   * The smallest raise, derived from the asking price rather than chosen. Read-only to the
+   * seller: it comes back on every listing, but there is no field for it on the way in.
+   */
   bidIncrement: Bani;
   /** Hidden from buyers; only "rezerva a fost atinsă" is shown. */
   reservePrice?: Bani;
   /**
-   * The price that ends the auction outright. Public, unlike the reserve — an
-   * offer nobody can take without being told the number. Absent when the seller
-   * named none.
+   * The price that takes the item outright. Public, unlike the reserve — an offer nobody can
+   * take without being told the number. Absent when the seller named none, which is the
+   * ordinary case.
    */
   buyNowPrice?: Bani;
 
+  /** When it went up. There is no closing time: a listing runs until it is settled. */
   startTime: ISODateString;
-  endTime: ISODateString;
-  /** A bid inside this window at the end pushes `endTime` out. */
-  antiSnipeSeconds: number;
+  /** When the seller took an offer. Absent while the listing is still open. */
+  acceptedAt?: ISODateString;
+  /**
+   * What the accepted offer was worth. Not the same as `currentPrice`: a reserved listing goes on
+   * taking offers, so the highest can climb past the one the seller took.
+   */
+  acceptedAmount?: Bani;
+  /** When the parcel is due. Set only once the sale has been paid for. */
+  dispatchDeadline?: ISODateString;
 
   status: AuctionStatus;
   winnerId?: ID;
   bidCount: number;
   watcherCount: number;
-  /** How many times `endTime` was pushed out by anti-sniping. */
-  extensionCount: number;
 
   createdAt: ISODateString;
 }
@@ -101,7 +138,17 @@ export interface AuctionDetail extends Auction {
   viewerBidStatus?: "WINNING" | "OUTBID" | "NONE";
 }
 
-export type BidStatus = "ACTIVE" | "OUTBID" | "WINNING" | "WON" | "LOST";
+/**
+ * ACCEPTED sits between WINNING and WON: the seller has taken this offer and the buyer has not
+ * paid yet. It goes back to OUTBID if the seller releases it, and on to WON if they pay.
+ */
+export type BidStatus =
+  | "ACTIVE"
+  | "OUTBID"
+  | "WINNING"
+  | "ACCEPTED"
+  | "WON"
+  | "LOST";
 
 export interface Bid {
   id: ID;
@@ -110,8 +157,6 @@ export interface Bid {
   amount: Bani;
   createdAt: ISODateString;
   status: BidStatus;
-  /** True when this bid pushed `endTime` out. Shown in the history. */
-  triggeredExtension?: boolean;
 }
 
 export interface BidWithBidder extends Bid {
@@ -129,16 +174,20 @@ export interface PlaceBidPayload {
 export interface PlaceBidResult {
   bid: Bid;
   auction: Auction;
-  /** Set when the bid triggered anti-snipe, so the UI can celebrate it. */
-  extendedBySeconds?: number;
   /**
-   * Set when the offer reached `buyNowPrice` and took the item there and then.
-   * The auction in the same response is already SOLD.
+   * Set when the offer reached `buyNowPrice` and took the item there and then. The auction in
+   * the same response comes back RESERVED, not SOLD: the seller is bound by the price they
+   * published, but nobody has paid yet.
    */
   boughtNow?: boolean;
 }
 
-/** Everything the seller supplies. The rest is derived or assigned on create. */
+/**
+ * Everything the seller supplies. The rest is derived or assigned on create.
+ *
+ * <p>Three things a seller used to fill in are gone: the bid step is read off the asking price,
+ * the listing opens now, and there is no end to choose.
+ */
 export type CreateAuctionPayload = Pick<
   Auction,
   | "title"
@@ -150,31 +199,34 @@ export type CreateAuctionPayload = Pick<
   | "causeId"
   | "donationPercent"
   | "startingPrice"
-  | "bidIncrement"
-  | "startTime"
-  | "endTime"
-  | "antiSnipeSeconds"
 > & { reservePrice?: Bani; buyNowPrice?: Bani };
 
 export interface AuctionFilters {
   q?: string;
-  status?: AuctionStatus[];
+  status?: readonly AuctionStatus[];
   category?: AuctionCategoryId[];
+  /** The seller's five choices, not free text. */
+  condition?: readonly ItemCondition[];
   causeId?: ID;
   sellerId?: ID;
   minPrice?: Bani;
   maxPrice?: Bani;
   minDonationPercent?: number;
-  endingSoon?: boolean;
   sort?: AuctionSort;
   page?: number;
   pageSize?: number;
 }
 
 export type AuctionSort =
-  | "ENDING_SOON"
   | "NEWEST"
   | "PRICE_ASC"
   | "PRICE_DESC"
   | "MOST_BIDS"
   | "DONATION_DESC";
+
+/** The two homepage rows, as `GET /auctions/featured` answers them. */
+export interface FeaturedAuctions {
+  /** What the page leads with now that nothing is about to close. */
+  mostWatched: AuctionDetail[];
+  popular: AuctionDetail[];
+}

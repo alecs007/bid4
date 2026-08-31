@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
-import { Avatar, ButtonLink, CategoryIcon, Logo, Skeleton } from "@/components/ui";
+import {
+  Avatar,
+  ButtonLink,
+  CategoryIcon,
+  Logo,
+  Skeleton,
+} from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import { listMyAuctions } from "@/lib/api/auctions";
 import { listMyBids } from "@/lib/api/bids";
@@ -33,10 +39,20 @@ const ACCOUNT_LINKS: {
 }[] = [
   { href: "/cont", label: "Contul meu", icon: "account" },
 
-  { href: "/cont/licitatiile-mele", label: "Licitațiile mele", icon: "auction", group: true },
+  {
+    href: "/cont/licitatiile-mele",
+    label: "Licitațiile mele",
+    icon: "auction",
+    group: true,
+  },
   { href: "/cont/comenzi", label: "Comenzile mele", icon: "parcel" },
 
-  { href: "/cont/vanzari", label: "Vânzările mele", icon: "wallet", group: true },
+  {
+    href: "/cont/vanzari",
+    label: "Vânzările mele",
+    icon: "wallet",
+    group: true,
+  },
   { href: "/cont/cauze", label: "Cauzele mele", icon: "cause" },
 
   { href: "/cont/setari", label: "Setări", icon: "settings", group: true },
@@ -245,10 +261,13 @@ export function SiteHeader() {
   // number that never goes down and so never means anything.
   const counts: Record<string, number | undefined> = {
     "/cont/licitatiile-mele": myBids?.filter(
-      (item) => item.myTopBid.status !== "WON" && item.myTopBid.status !== "LOST",
+      (item) =>
+        item.myTopBid.status !== "WON" && item.myTopBid.status !== "LOST",
     ).length,
+    // Reserved counts: the seller has chosen and now owes the buyer a delivery,
+    // which is exactly the kind of thing a badge should keep in front of them.
     "/cont/vanzari": mySales?.filter(
-      (item) => item.status === "LIVE" || item.status === "SCHEDULED",
+      (item) => item.status === "LIVE" || item.status === "RESERVED",
     ).length,
     "/cont/cauze": myCauses?.filter(
       (item) => item.status === "ACTIVE" || item.status === "APPROVED",
@@ -343,8 +362,8 @@ export function SiteHeader() {
         >
           <MenuToggle open={openPanel === "nav"} />
         </button>
-        <Logo size="sm" className="shrink-0 lg:hidden" />
-        <Logo size="md" className="hidden shrink-0 lg:inline-flex" />
+        <Logo size="sm" className="shrink-0 mb-1 sm:mb-2" />
+
         <nav aria-label="Navigare principală" className="ml-3 hidden lg:flex">
           <div
             className="relative"
@@ -478,7 +497,10 @@ export function SiteHeader() {
                               border on the row it followed the rounded corners
                               and read as a box with a lid. */}
                           {item.group ? (
-                            <span aria-hidden="true" className="my-1 block h-px bg-line" />
+                            <span
+                              aria-hidden="true"
+                              className="my-1 block h-px bg-line"
+                            />
                           ) : null}
                           <Link
                             href={item.href}
@@ -502,19 +524,28 @@ export function SiteHeader() {
 
                     {isStaff ? (
                       <>
-                      <span aria-hidden="true" className="my-1 block h-px bg-line" />
-                      <Link
-                        href={isAdmin ? "/admin" : "/operator/cauze"}
-                        role="menuitem"
-                        className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
-                      >
-                        <Icons.secure aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
-                        {isAdmin ? "Administrare" : "Zona operator"}
-                      </Link>
+                        <span
+                          aria-hidden="true"
+                          className="my-1 block h-px bg-line"
+                        />
+                        <Link
+                          href={isAdmin ? "/admin" : "/operator/cauze"}
+                          role="menuitem"
+                          className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
+                        >
+                          <Icons.secure
+                            aria-hidden="true"
+                            className="h-4.5 w-4.5 shrink-0"
+                          />
+                          {isAdmin ? "Administrare" : "Zona operator"}
+                        </Link>
                       </>
                     ) : null}
 
-                    <span aria-hidden="true" className="my-1 block h-px bg-line" />
+                    <span
+                      aria-hidden="true"
+                      className="my-1 block h-px bg-line"
+                    />
                     <button
                       type="button"
                       role="menuitem"
@@ -524,7 +555,10 @@ export function SiteHeader() {
                       }}
                       className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[15px] font-semibold text-danger-700 transition hover:bg-danger-50"
                     >
-                      <Icons.signOut aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
+                      <Icons.signOut
+                        aria-hidden="true"
+                        className="h-4.5 w-4.5 shrink-0"
+                      />
                       Ieși din cont
                     </button>
                   </div>
