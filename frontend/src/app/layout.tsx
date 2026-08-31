@@ -39,7 +39,7 @@ const baloo = Baloo_2({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "bid4 | Investește în bine prin licitații",
+    default: "bid4 | Cumperi sau vinzi, faci un bine",
     template: "%s | bid4",
   },
   description:
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     locale: "ro_RO",
     siteName: "bid4",
     url: "/",
-    title: "bid4 | Investește în bine prin licitații",
+    title: "bid4 | Cumperi sau vinzi, faci un bine",
     description:
       "Lucrurile nefolosite pot face mai mult decât să ocupe spațiu. Licitezi pentru ce îți place, iar o parte din preț merge la o cauză verificată.",
     images: [
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "bid4 | Investește în bine prin licitații",
+    title: "bid4 | Cumperi sau vinzi, faci un bine",
     description:
       "Lucrurile nefolosite pot face mai mult decât să ocupe spațiu. Licitezi pentru ce îți place, iar o parte din preț merge la o cauză verificată.",
     images: ["/og.png"],

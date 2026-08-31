@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
+import { CategoryTrail } from "./CategoryTrail";
 import {
   Avatar,
   ButtonLink,
@@ -347,6 +348,20 @@ export function SiteHeader() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
+  /**
+   * Where the category rail belongs: the home page, and any single listing or
+   * cause. Those are the pages where somebody is looking at one thing and might
+   * want a different kind of thing.
+   *
+   * Deliberately not on /licitatii or /cauze, whose own filters already do this
+   * better, and not on the account pages, where it would hang a shop window
+   * across somebody's admin.
+   */
+  const showTrail =
+    pathname === "/" ||
+    /^\/licitatii\/[^/]+$/.test(pathname) ||
+    /^\/cauze\/[^/]+$/.test(pathname);
+
   return (
     <header className="sticky top-0 z-40 bg-white">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
@@ -572,6 +587,12 @@ export function SiteHeader() {
           )}
         </div>
       </div>
+
+      {/* Inside the header, so it sticks with it and shares its stacking
+          context rather than chasing it with a second sticky. Hidden while a
+          mobile panel is open: the panel drops over this space, and a rail
+          showing through under it reads as two menus at once. */}
+      {showTrail && !panelIsOpen ? <CategoryTrail /> : null}
 
       <button
         type="button"

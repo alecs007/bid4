@@ -239,7 +239,21 @@ export function AuctionBrowser() {
     ].join(":"),
   );
 
-  const { data: causes } = useApi(() => listCauses(), "causes-for-filter");
+  // The list of causes is a separate request, and it can fail on its own while
+  // the results beside it load fine. Dropping its loading and error states left
+  // an empty dropdown with nothing to pick and no reason given — which reads,
+  // correctly, as a broken filter.
+  const {
+    data: causes,
+    loading: causesLoading,
+    error: causesError,
+  } = useApi(() => listCauses(), "causes-for-filter");
+
+  const causePlaceholder = causesError
+    ? "Cauzele nu s-au încărcat"
+    : causesLoading
+      ? "Se încarcă…"
+      : "Toate cauzele";
 
   const busy = navigating || loading;
 
@@ -310,7 +324,7 @@ export function AuctionBrowser() {
           ariaLabel="Cauză"
           size="sm"
           value={causeId ?? ""}
-          placeholder="Toate cauzele"
+          placeholder={causePlaceholder}
           searchable
           searchPlaceholder="Caută o cauză"
           clearLabel="Toate cauzele"

@@ -37,9 +37,9 @@ export default function HomePage() {
           <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 pb-8 sm:px-6 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8 lg:pt-6 lg:pb-16">
             <div>
               <h1 className="font-display text-[2.1rem] leading-[1.05] font-extrabold text-ink-900 sm:text-5xl lg:text-6xl">
-                Investește în bine
+                Cumperi sau vinzi,
                 <br />
-                prin <span className="text-primary-600">licitații.</span>
+                <span className="text-primary-600">faci un bine.</span>
               </h1>
               <p className="mt-3 max-w-lg text-ink-600 sm:mt-4 sm:text-lg">
                 Lucrurile nefolosite pot face mai mult decât să ocupe spațiu.
