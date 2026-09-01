@@ -3,6 +3,7 @@ package ro.bid4.backend.identity.repo;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ro.bid4.backend.identity.domain.UserAccount;
@@ -11,7 +12,8 @@ import ro.bid4.backend.identity.domain.UserAccount;
  * Spring Data derives the SQL from the method name and always binds parameters, which is why no
  * query in this project concatenates user input into a statement.
  */
-public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
+public interface UserAccountRepository
+    extends JpaRepository<UserAccount, UUID>, JpaSpecificationExecutor<UserAccount> {
 
   Optional<UserAccount> findByEmail(String email);
 

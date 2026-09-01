@@ -124,7 +124,9 @@ public class SecurityConfig {
                     // One segment only, so this opens the public profile at
                     // /users/{username} and never /users/me/anything, which
                     // falls through to the last rule and stays authenticated.
-                    .requestMatchers(HttpMethod.GET, "/users/*")
+                    // "/users" itself is the member search, which is public for
+                    // the same reason the profiles it links to are.
+                    .requestMatchers(HttpMethod.GET, "/users", "/users/*")
                     .permitAll()
                     .anyRequest()
                     .authenticated())
