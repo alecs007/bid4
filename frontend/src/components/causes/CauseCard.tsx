@@ -43,7 +43,13 @@ export function CauseCard({
           fill
           unoptimized
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          // Same fade as the auction card: the grey box is the placeholder and
+          // the photo arrives over it. See AuctionCard for why onLoad is safe
+          // for a cached image.
+          onLoad={(event) =>
+            event.currentTarget.setAttribute("data-loaded", "true")
+          }
+          className="object-cover opacity-0 transition-[opacity,transform,translate,scale,rotate] duration-500 group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
           draggable={false}
         />
         <div

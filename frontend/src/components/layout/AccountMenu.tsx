@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 
 import { Icons } from "@/components/icons";
-import { ButtonLink } from "@/components/ui";
+import { Avatar, ButtonLink } from "@/components/ui";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
@@ -25,6 +25,9 @@ export interface AccountLink {
  *
  * <p>Signed out it is a pitch rather than a menu. A bare "Intră în cont" says what the button
  * does; it does not say why anyone would.
+ *
+ * <p>Either way it opens on whoever is holding the phone: a mark, a name and, once there is an
+ * account behind it, the handle that names them everywhere else on the site.
  */
 export function AccountMenu({
   user,
@@ -48,11 +51,26 @@ export function AccountMenu({
 }) {
   if (!user) {
     return (
-      <div className="flex flex-col gap-3">
-        <p className="text-sm leading-snug text-ink-600">
-          Licitează, urmărește ce îți place și vezi cât ai strâns pentru cauzele
-          susținute.
-        </p>
+      <div className="flex flex-col gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            {/* The same 36px circle the avatar occupies once there is one, so
+                signing in fills this mark rather than moving it. */}
+            <span
+              aria-hidden="true"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-100 text-ink-500"
+            >
+              <Icons.accountRound className="h-5 w-5" />
+            </span>
+            <p className="min-w-0 truncate font-display font-bold text-ink-900">
+              Salut, utilizator anonim
+            </p>
+          </div>
+          <p className="mt-2 text-[13px] leading-snug text-ink-600">
+            Te așteptăm cu cele mai deosebite licitații atunci când ești
+            pregătit să te autentifici.
+          </p>
+        </div>
         <div className="flex flex-col gap-2">
           <ButtonLink href="/autentificare" fullWidth onClick={onNavigate}>
             Intră în cont
@@ -76,9 +94,23 @@ export function AccountMenu({
 
   return (
     <>
-      <p className="truncate px-2.5 pt-1.5 pb-2 font-display font-bold text-ink-900">
-        {user.displayName}
-      </p>
+      <div className="flex items-center gap-3 px-2.5 pt-1.5 pb-2.5">
+        <Avatar
+          name={user.displayName}
+          src={user.avatarUrl}
+          accountType={user.accountType}
+          size="sm"
+        />
+        <div className="min-w-0">
+          <p className="truncate font-display font-bold text-ink-900">
+            {user.displayName}
+          </p>
+          {/* The handle, because it is what the profile is reached by and what
+              other people see. */}
+          <p className="truncate text-[13px] text-ink-500">@{user.username}</p>
+        </div>
+      </div>
+      {rule}
 
       {links.map((link) => {
         const Icon = Icons[link.icon];
@@ -91,7 +123,10 @@ export function AccountMenu({
               href={link.href}
               role={itemRole}
               onClick={onNavigate}
-              className={cn(item, "text-ink-700 hover:bg-ink-50 hover:text-ink-900")}
+              className={cn(
+                item,
+                "text-ink-700 hover:bg-ink-50 hover:text-ink-900",
+              )}
             >
               <Icon
                 aria-hidden="true"

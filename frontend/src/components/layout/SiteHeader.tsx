@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
 import { AccountMenu } from "./AccountMenu";
 import { CategoryTrail } from "./CategoryTrail";
@@ -482,13 +482,22 @@ export function SiteHeader() {
           </Link>
 
           {status === "loading" ? (
-            /* Shaped like the trigger it becomes, so nothing shifts when the
-               session resolves — which for most visits is to signed out. */
-            <Skeleton className="hidden h-9 w-32 rounded-2xl lg:block" />
+            /* The signed-out trigger's own 149px footprint, which is what most
+               visits resolve to, so that swap moves nothing. Reserving the
+               wider signed-in row instead would hold every visitor's header
+               open around a button most of them never get. */
+            <Skeleton className="hidden h-9 w-[149px] rounded-2xl lg:block" />
           ) : (
             <>
               {user ? (
-                <ButtonLink href="/cont/vanzari/nou" size="sm">
+                /* Flat: --btn-depth off. The 3D edge is for buttons on a
+                   page, and among the bar's other controls a raised one
+                   reads as a stray card. */
+                <ButtonLink
+                  href="/cont/vanzari/nou"
+                  size="sm"
+                  className="animate-pop-in [--btn-depth:0px]"
+                >
                   Vinde acum
                 </ButtonLink>
               ) : null}
@@ -501,7 +510,11 @@ export function SiteHeader() {
                   aria-haspopup="menu"
                   aria-label="Contul meu"
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-2xl px-2.5 py-1.5 font-display text-[15px] font-bold whitespace-nowrap transition",
+                    // h-9 whoever is looking, so signing in swaps what is
+                    // inside the trigger without resizing the trigger. The
+                    // avatar is xs for the same reason: sm is 36px and would
+                    // fill the pill edge to edge.
+                    "inline-flex h-9 animate-pop-in items-center gap-2 rounded-2xl px-2.5 font-display text-[15px] font-bold whitespace-nowrap transition",
                     openPanel === "account"
                       ? "bg-ink-100 text-ink-900"
                       : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
@@ -512,7 +525,7 @@ export function SiteHeader() {
                       name={user.displayName}
                       src={user.avatarUrl}
                       accountType={user.accountType}
-                      size="sm"
+                      size="xs"
                     />
                   ) : (
                     <>
@@ -537,8 +550,8 @@ export function SiteHeader() {
                     role="menu"
                     className={cn(
                       // z-50: the category rail and the page below both paint
-                      // after this in document order, and the menu has to clear
-                      // them both.
+                      // after this in document order, and the menu has to
+                      // clear them both.
                       "absolute top-full right-0 z-50 mt-2 animate-pop-in rounded-2xl bg-white shadow-sm ring-1 ring-line",
                       user ? "w-72 p-1.5" : "w-80 p-4",
                     )}
@@ -653,12 +666,6 @@ export function SiteHeader() {
             label="Vezi licitațiile"
             onNavigate={close}
           />
-
-          {user ? (
-            <ButtonLink href="/cont/vanzari/nou" className="mt-1 sm:hidden">
-              Vinde pe bid4
-            </ButtonLink>
-          ) : null}
         </nav>
       </Panel>
     </header>

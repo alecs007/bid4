@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import useSWRInfinite from "swr/infinite";
 
 import { ApiError } from "@/lib/types";
+import type { Page } from "@/lib/types";
 
 export interface ApiState<T> {
   data: T | null;
@@ -60,6 +62,80 @@ export function useApi<T>(
     // The previous answer stays on screen while the next one loads, so a
     // skeleton belongs behind `loading && !data` rather than `loading`.
     loading: enabled && isLoading,
+    reload,
+  };
+}
+
+export interface PagedState<T> {
+  items: T[];
+  /** How many there are in total, known from the first page and not from what has arrived. */
+  total: number | null;
+  error: string | null;
+  /** The first page is still in flight, so there is nothing to show yet. */
+  loading: boolean;
+  /** A further page is in flight, under results that are already on screen. */
+  loadingMore: boolean;
+  hasMore: boolean;
+  loadMore: () => void;
+  reload: () => void;
+}
+
+/**
+ * The same read as {@link useApi}, one page at a time.
+ *
+ * <p>For lists long enough that asking for all of them is the wrong request: the caller renders
+ * what has arrived and calls `loadMore` when the reader nears the end. `total` comes off the first
+ * page, so a count can be shown in full while only a fraction has been fetched.
+ *
+ * <p>`loadMore` is deliberately inert while a page is already in flight or the last one has
+ * landed. An intersection observer fires far more often than a list needs to grow — every scroll
+ * that keeps the sentinel in view is another call — and without this guard each of them would be
+ * a request.
+ */
+export function useApiPages<T>(
+  loader: (page: number) => Promise<Page<T>>,
+  key: string,
+  options: { enabled?: boolean } = {},
+): PagedState<T> {
+  const { enabled = true } = options;
+
+  const { data, error, size, setSize, isLoading, isValidating, mutate } =
+    useSWRInfinite<Page<T>>(
+      (index, previous) => {
+        if (!enabled) return null;
+        // Stop asking once the server has said this is the last page, rather
+        // than fetching an empty one to find out.
+        if (previous && previous.page >= previous.totalPages) return null;
+        return `${key}#${index + 1}`;
+      },
+      (pageKey: string) => loader(Number(pageKey.slice(pageKey.lastIndexOf("#") + 1))),
+      // The first page is not re-fetched every time a later one is asked for.
+      // Without this, growing a list of five pages costs six requests.
+      { revalidateFirstPage: false },
+    );
+
+  const pages = data ?? [];
+  const last = pages.at(-1) ?? null;
+  const loadingMore = size > pages.length;
+  const hasMore = last ? last.page < last.totalPages : false;
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || isValidating || !hasMore) return;
+    void setSize((current) => current + 1);
+  }, [loadingMore, isValidating, hasMore, setSize]);
+
+  const reload = useCallback(() => {
+    void mutate();
+  }, [mutate]);
+
+  return {
+    items: pages.flatMap((page) => page.items),
+    total: pages[0]?.total ?? null,
+    error: error ? errorMessage(error) : null,
+    loading: enabled && isLoading,
+    loadingMore,
+    hasMore,
+    loadMore,
     reload,
   };
 }

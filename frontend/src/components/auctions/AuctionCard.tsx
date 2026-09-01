@@ -86,7 +86,20 @@ export function AuctionCard({
           fill
           unoptimized
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          // Faded in rather than swapped in. next/image fires this after
+          // decode(), and fires it too for an image already complete before
+          // hydration, so the attribute always lands and a photo is never left
+          // at zero. Without it a grid of cards snaps in one card at a time, in
+          // whatever order the network answers.
+          //
+          // The transition names translate/scale/rotate as well, which is what
+          // `transition-transform` is short for in Tailwind v4: `scale-*` sets
+          // the standalone `scale` property, so a list of just `transform`
+          // leaves the hover zoom to jump.
+          onLoad={(event) =>
+            event.currentTarget.setAttribute("data-loaded", "true")
+          }
+          className="object-cover opacity-0 transition-[opacity,transform,translate,scale,rotate] duration-500 group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
           draggable={false}
         />
         <button
