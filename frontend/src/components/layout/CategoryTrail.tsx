@@ -72,7 +72,7 @@ export function CategoryTrail({ className }: { className?: string }) {
         <div
           ref={railRef}
           data-lenis-prevent
-          className="no-scrollbar flex items-center gap-1.5 overflow-x-auto scroll-smooth py-2 lg:justify-between lg:gap-2"
+          className="no-scrollbar flex items-center gap-1.5 overflow-x-auto scroll-smooth pb-2 lg:justify-between lg:gap-2"
         >
           {AUCTION_CATEGORIES.map((category) => (
             <Link

@@ -88,7 +88,10 @@ export function Select<T extends string>({
   }, [open, activeIndex]);
 
   useEffect(() => {
-    if (open && searchable) searchRef.current?.focus();
+    // preventScroll for the same reason the header's search box needs it: this
+    // menu opens inside a sticky filter panel, and revealing the box it just
+    // focused would drag the page away from the results being filtered.
+    if (open && searchable) searchRef.current?.focus({ preventScroll: true });
   }, [open, searchable]);
 
   const openList = () => {

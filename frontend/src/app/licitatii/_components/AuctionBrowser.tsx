@@ -42,7 +42,8 @@ const SORTS: { value: AuctionSort; label: string }[] = [
   { value: "DONATION_DESC", label: "Donație maximă" },
 ];
 
-const HEADER_HEIGHT = 64;
+/** The header bar's height at lg, where this toolbar's stuck state is measured. */
+const HEADER_HEIGHT = 56;
 
 /**
  * The five states a listing can declare, best first.
@@ -480,7 +481,7 @@ export function AuctionBrowser() {
       <div
         aria-hidden={!stuck}
         className={cn(
-          "fixed inset-x-0 top-14 z-30 border-b border-line bg-white/95 px-4 py-2 backdrop-blur-sm transition-[opacity,translate,visibility] duration-300 ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-16 sm:px-6 lg:hidden",
+          "fixed inset-x-0 top-12 z-30 border-b border-line bg-white/95 px-4 py-2 backdrop-blur-sm transition-[opacity,translate,visibility] duration-300 ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-14 sm:px-6 lg:hidden",
           stuck
             ? "visible translate-y-0 opacity-100"
             : "invisible -translate-y-full opacity-0",

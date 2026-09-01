@@ -3,8 +3,13 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils/cn";
 
-/** The lockup carries some empty canvas, so the box is drawn taller than it reads. */
-const HEIGHTS = { sm: 33, md: 40, lg: 55 } as const;
+/**
+ * The lockup carries some empty canvas, so the box is drawn taller than it reads.
+ *
+ * <p>Sized against the header bar rather than on its own: at 48px tall on a phone and 56 at sm,
+ * these leave the same air above and below the mark as the icon buttons beside it do.
+ */
+const HEIGHTS = { sm: 26, md: 32, lg: 55 } as const;
 
 /** The file's own dimensions. Anything else stretches it, because the box is what is drawn. */
 const LOGO_RATIO = 1402 / 648;
@@ -58,6 +63,9 @@ export function Logo({
       // would cost more than it saves.
       unoptimized
       draggable={false}
+      // block, or the image sits on the text baseline and the bar ends up with
+      // a few more pixels under the mark than above it.
+      className="block"
     />
   );
 

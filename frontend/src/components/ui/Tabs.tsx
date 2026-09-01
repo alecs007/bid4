@@ -17,6 +17,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   size = "md",
+  variant = "track",
   className,
   ariaLabel,
 }: {
@@ -24,15 +25,24 @@ export function SegmentedControl<T extends string>({
   value: T;
   onChange: (value: T) => void;
   size?: "sm" | "md";
+  /**
+   * "track" groups the options inside one grey rail — right when they are a small switch beside
+   * a heading. "bubbles" drops the rail and lets each option stand on its own, for a row wide
+   * enough that the rail would read as a grey band across the page.
+   */
+  variant?: "track" | "bubbles";
   className?: string;
   ariaLabel: string;
 }) {
+  const track = variant === "track";
+
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-ink-100 p-1",
+        "inline-flex max-w-full gap-1 overflow-x-auto",
+        track && "rounded-full bg-ink-100 p-1",
         className,
       )}
     >
@@ -48,9 +58,13 @@ export function SegmentedControl<T extends string>({
             className={cn(
               "inline-flex shrink-0 items-center gap-2 rounded-full font-display font-bold whitespace-nowrap transition",
               size === "sm" ? "px-3 py-1.5 text-sm" : "px-4 py-2 text-[15px]",
-              selected
-                ? "bg-white text-ink-900"
-                : "text-ink-600 hover:text-ink-900",
+              track
+                ? selected
+                  ? "bg-white text-ink-900"
+                  : "text-ink-600 hover:text-ink-900"
+                : selected
+                  ? "bg-primary-600 text-white"
+                  : "bg-ink-100 text-ink-700 hover:bg-ink-200",
             )}
           >
             {option.label}
@@ -59,7 +73,9 @@ export function SegmentedControl<T extends string>({
                 className={cn(
                   "numeric rounded-full px-1.5 py-0.5 text-xs font-extrabold",
                   selected
-                    ? "bg-primary-100 text-primary-900"
+                    ? track
+                      ? "bg-primary-100 text-primary-900"
+                      : "bg-white/25 text-white"
                     : "bg-ink-200 text-ink-700",
                 )}
               >

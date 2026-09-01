@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
+import { AccountMenu } from "./AccountMenu";
 import { CategoryTrail } from "./CategoryTrail";
 import {
   Avatar,
   ButtonLink,
   CategoryIcon,
+  Illustration,
   Logo,
   Skeleton,
 } from "@/components/ui";
@@ -90,15 +92,24 @@ function MenuToggle({ open }: { open: boolean }) {
  */
 function Panel({
   open,
+  tone = "plain",
   children,
 }: {
   open: boolean;
+  /** "muted" tints the sheet so white boxes inside it read as raised. */
+  tone?: "plain" | "muted";
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "absolute inset-x-0 top-full origin-top border-t border-slate-50 bg-white px-4 pt-3 pb-4 shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:px-6 lg:hidden",
+        // top-12/14 rather than top-full: the header now carries the category
+        // rail as well, and top-full would drop the panel below it. Pinned to
+        // the bar's own height, the panel opens over the rail, which can then
+        // stay mounted instead of vanishing and shifting the page. These two
+        // numbers are the bar's height and have to move with it.
+        "absolute inset-x-0 top-12 origin-top px-4 pt-3 pb-4 shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-14 sm:px-6 lg:hidden",
+        tone === "muted" ? "bg-ink-50" : "bg-white",
         open
           ? "visible translate-y-0 opacity-100"
           : "invisible -translate-y-2 opacity-0",
@@ -106,6 +117,42 @@ function Panel({
     >
       {children}
     </div>
+  );
+}
+
+/**
+ * One destination in the mobile menu.
+ *
+ * <p>A label and a mark, and no explanatory line: "Vezi licitațiile" does not need one, and a
+ * second line under every row turns a short menu into a wall. The one entry that is a pitch
+ * rather than a place is built separately, so it can look like a pitch.
+ */
+function PanelRow({
+  href,
+  icon,
+  label,
+  onNavigate,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className="group flex items-center gap-2.5 rounded-2xl px-3 py-3 font-display text-[15px] font-bold text-ink-800 ring-1 ring-edge transition hover:bg-ink-50 hover:text-ink-900"
+    >
+      <span aria-hidden="true" className="text-ink-500">
+        {icon}
+      </span>
+      {label}
+      <Icons.forward
+        aria-hidden="true"
+        className="ml-auto h-4.5 w-4.5 shrink-0 text-ink-400 transition-transform group-hover:translate-x-0.5"
+      />
+    </Link>
   );
 }
 
@@ -132,7 +179,11 @@ function HeaderSearch({
     const attempt = () => {
       const input = ref.current;
       if (!input) return;
-      input.focus();
+      // preventScroll, because this panel is absolutely positioned inside a
+      // sticky header: in the document's own coordinates it sits at the very
+      // top, so a plain focus() asks the browser to scroll there to reveal it
+      // and the page jumps away from wherever the reader actually was.
+      input.focus({ preventScroll: true });
       if (document.activeElement !== input && tries++ < 10) {
         timer = window.setTimeout(attempt, 30);
       }
@@ -143,7 +194,7 @@ function HeaderSearch({
   }, [focused]);
 
   return (
-    <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-ink-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500">
+    <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-ink-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500 lg:h-9">
       <Icons.search
         aria-hidden="true"
         className="h-4 w-4 shrink-0 text-ink-500"
@@ -225,6 +276,12 @@ export function SiteHeader() {
 
   const openPanel = panel.path === pathname ? panel.which : null;
   const close = () => setPanel({ path: pathname, which: null });
+
+  const signOut = async () => {
+    close();
+    await logout();
+    router.push("/");
+  };
   const toggle = (which: "nav" | "account" | "search" | "auctions") =>
     setPanel((current) => ({
       path: pathname,
@@ -276,7 +333,6 @@ export function SiteHeader() {
   };
 
   const [query, setQuery] = useState("");
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -295,25 +351,6 @@ export function SiteHeader() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [openPanel, pathname]);
-
-  // Closing waits a beat, so the pointer can cross the gap to the panel.
-  const hoverTimer = useRef(0);
-  const openAuctions = () => {
-    window.clearTimeout(hoverTimer.current);
-    setPanel({ path: pathname, which: "auctions" });
-  };
-  const closeAuctions = () => {
-    window.clearTimeout(hoverTimer.current);
-    hoverTimer.current = window.setTimeout(
-      () =>
-        setPanel((current) =>
-          current.which === "auctions"
-            ? { path: pathname, which: null }
-            : current,
-        ),
-      120,
-    );
-  };
 
   // The page behind the panel holds still. The scrollbar's width is paid back to
   // <body>, or the header jumps sideways as it disappears.
@@ -339,8 +376,10 @@ export function SiteHeader() {
   const search = (event: React.FormEvent) => {
     event.preventDefault();
     const trimmed = query.trim();
+    // Everything, not just the catalogue: somebody typing a name is looking for
+    // a member, and sending them to a listing filter answered the wrong question.
     router.push(
-      trimmed ? `/licitatii?q=${encodeURIComponent(trimmed)}` : "/licitatii",
+      trimmed ? `/cautare?q=${encodeURIComponent(trimmed)}` : "/cautare",
     );
     close();
   };
@@ -364,7 +403,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 bg-white">
-      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-12 w-full max-w-7xl items-center gap-2 px-4 sm:h-14 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={() => toggle("nav")}
@@ -380,47 +419,10 @@ export function SiteHeader() {
         <Logo size="sm" className="shrink-0 mb-1 sm:mb-2" />
 
         <nav aria-label="Navigare principală" className="ml-3 hidden lg:flex">
-          <div
-            className="relative"
-            onMouseEnter={openAuctions}
-            onMouseLeave={closeAuctions}
-          >
-            <button
-              type="button"
-              onClick={() => toggle("auctions")}
-              aria-expanded={openPanel === "auctions"}
-              aria-haspopup="true"
-              className={cn(
-                "inline-flex items-center gap-1 rounded-xl px-3 py-2 font-display text-[15px] font-bold whitespace-nowrap transition",
-                isActive("/licitatii") || openPanel === "auctions"
-                  ? "text-primary-700"
-                  : "text-ink-700 hover:text-ink-900",
-              )}
-            >
-              Licitații
-              <Icons.expand
-                aria-hidden="true"
-                className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  openPanel === "auctions" && "rotate-180",
-                )}
-              />
-            </button>
-
-            <div
-              role="menu"
-              className={cn(
-                "absolute top-full left-0 z-10 mt-1 w-[30rem] rounded-2xl bg-white p-2 shadow-sm ring-1 ring-line transition-[opacity,translate,visibility] duration-200 ease-[cubic-bezier(0.2,0.7,0.3,1)]",
-                openPanel === "auctions"
-                  ? "visible translate-y-0 opacity-100"
-                  : "invisible -translate-y-1 opacity-0",
-              )}
-            >
-              <CategoryTiles onNavigate={close} />
-            </div>
-          </div>
-
-          {NAV.filter((item) => item.href !== "/licitatii").map((item) => (
+          {/* Licitații used to open a panel of categories. The rail under the
+              header carries those now, and a menu that repeats what is already
+              on screen is one more thing to dismiss. */}
+          {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -468,131 +470,102 @@ export function SiteHeader() {
             )}
           </button>
 
+          {/* Saved listings, beside the account rather than inside it: it is a
+              place people come back to, and a menu is where things go to be
+              looked for. */}
+          <Link
+            href="/cont/salvate"
+            aria-label="Anunțuri salvate"
+            className={iconButton(isActive("/cont/salvate"))}
+          >
+            <Icons.watchlist aria-hidden="true" className="h-5 w-5 shrink-0" />
+          </Link>
+
           {status === "loading" ? (
-            /* Shaped like the sign-in button, not an avatar: most visits resolve to
-               signed out, so nothing shifts when it does. */
-            <Skeleton className="h-9 w-28 rounded-2xl" />
-          ) : user ? (
+            /* Shaped like the trigger it becomes, so nothing shifts when the
+               session resolves — which for most visits is to signed out. */
+            <Skeleton className="hidden h-9 w-32 rounded-2xl lg:block" />
+          ) : (
             <>
-              <ButtonLink href="/cont/vanzari/nou" size="sm">
-                Vinde acum
-              </ButtonLink>
+              {user ? (
+                <ButtonLink href="/cont/vanzari/nou" size="sm">
+                  Vinde acum
+                </ButtonLink>
+              ) : null}
               {/* flex, or the inline-level button rides 2px above the other controls. */}
-              <div className="relative flex" ref={accountRef}>
+              <div className="relative hidden lg:flex" ref={accountRef}>
                 <button
                   type="button"
                   onClick={() => toggle("account")}
                   aria-expanded={openPanel === "account"}
                   aria-haspopup="menu"
                   aria-label="Contul meu"
-                  className={iconButton(openPanel === "account")}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-2xl px-2.5 py-1.5 font-display text-[15px] font-bold whitespace-nowrap transition",
+                    openPanel === "account"
+                      ? "bg-ink-100 text-ink-900"
+                      : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
+                  )}
                 >
-                  <Avatar
-                    name={user.displayName}
-                    src={user.avatarUrl}
-                    accountType={user.accountType}
-                    size="sm"
+                  {user ? (
+                    <Avatar
+                      name={user.displayName}
+                      src={user.avatarUrl}
+                      accountType={user.accountType}
+                      size="sm"
+                    />
+                  ) : (
+                    <>
+                      <Icons.accountRound
+                        aria-hidden="true"
+                        className="h-5 w-5 shrink-0"
+                      />
+                      Contul meu
+                    </>
+                  )}
+                  <Icons.expand
+                    aria-hidden="true"
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-ink-500 transition-transform duration-200",
+                      openPanel === "account" && "rotate-180",
+                    )}
                   />
                 </button>
 
                 {openPanel === "account" ? (
                   <div
                     role="menu"
-                    className="absolute top-full right-0 mt-2 w-56 animate-pop-in rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line"
+                    className={cn(
+                      // z-50: the category rail and the page below both paint
+                      // after this in document order, and the menu has to clear
+                      // them both.
+                      "absolute top-full right-0 z-50 mt-2 animate-pop-in rounded-2xl bg-white shadow-sm ring-1 ring-line",
+                      user ? "w-72 p-1.5" : "w-80 p-4",
+                    )}
                   >
-                    <p className="truncate px-2.5 pt-1.5 pb-2 font-display font-bold text-ink-900">
-                      {user.displayName}
-                    </p>
-
-                    {ACCOUNT_LINKS.map((item) => {
-                      const Icon = Icons[item.icon];
-                      return (
-                        <Fragment key={item.href}>
-                          {/* A rule of its own where the subject changes. As a
-                              border on the row it followed the rounded corners
-                              and read as a box with a lid. */}
-                          {item.group ? (
-                            <span
-                              aria-hidden="true"
-                              className="my-1 block h-px bg-line"
-                            />
-                          ) : null}
-                          <Link
-                            href={item.href}
-                            role="menuitem"
-                            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-ink-700 transition hover:bg-ink-50 hover:text-ink-900"
-                          >
-                            <Icon
-                              aria-hidden="true"
-                              className="h-4.5 w-4.5 shrink-0 text-ink-500"
-                            />
-                            <span className="flex-1">{item.label}</span>
-                            {counts[item.href] ? (
-                              <span className="numeric rounded-lg bg-primary-50 px-1.5 py-0.5 text-xs font-extrabold text-primary-800">
-                                {counts[item.href]}
-                              </span>
-                            ) : null}
-                          </Link>
-                        </Fragment>
-                      );
-                    })}
-
-                    {isStaff ? (
-                      <>
-                        <span
-                          aria-hidden="true"
-                          className="my-1 block h-px bg-line"
-                        />
-                        <Link
-                          href={isAdmin ? "/admin" : "/operator/cauze"}
-                          role="menuitem"
-                          className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-semibold text-sky-700 transition hover:bg-sky-50"
-                        >
-                          <Icons.secure
-                            aria-hidden="true"
-                            className="h-4.5 w-4.5 shrink-0"
-                          />
-                          {isAdmin ? "Administrare" : "Zona operator"}
-                        </Link>
-                      </>
-                    ) : null}
-
-                    <span
-                      aria-hidden="true"
-                      className="my-1 block h-px bg-line"
+                    <AccountMenu
+                      user={user}
+                      isStaff={isStaff}
+                      isAdmin={isAdmin}
+                      links={ACCOUNT_LINKS}
+                      counts={counts}
+                      onNavigate={close}
+                      onSignOut={signOut}
+                      itemRole="menuitem"
                     />
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={async () => {
-                        await logout();
-                        router.push("/");
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[15px] font-semibold text-danger-700 transition hover:bg-danger-50"
-                    >
-                      <Icons.signOut
-                        aria-hidden="true"
-                        className="h-4.5 w-4.5 shrink-0"
-                      />
-                      Ieși din cont
-                    </button>
                   </div>
                 ) : null}
               </div>
             </>
-          ) : (
-            <ButtonLink href="/autentificare" size="sm">
-              Intră în cont
-            </ButtonLink>
           )}
         </div>
       </div>
 
       {/* Inside the header, so it sticks with it and shares its stacking
-          context rather than chasing it with a second sticky. Hidden while a
-          mobile panel is open: the panel drops over this space, and a rail
-          showing through under it reads as two menus at once. */}
-      {showTrail && !panelIsOpen ? <CategoryTrail /> : null}
+          context rather than chasing it with a second sticky. It stays mounted
+          while a mobile panel is open — the panel is drawn over it — because
+          unmounting it moved the whole page up by its height. */}
+      {showTrail ? <CategoryTrail /> : null}
 
       <button
         type="button"
@@ -600,7 +573,7 @@ export function SiteHeader() {
         onClick={close}
         tabIndex={panelIsOpen ? 0 : -1}
         className={cn(
-          "fixed inset-0 top-14 -z-10 cursor-default bg-ink-900/20 transition-[opacity,visibility] duration-[260ms] sm:top-16 lg:hidden",
+          "fixed inset-0 top-12 -z-10 cursor-default bg-ink-900/20 transition-[opacity,visibility] duration-[260ms] sm:top-14 lg:hidden",
           panelIsOpen ? "visible opacity-100" : "invisible opacity-0",
         )}
       />
@@ -616,86 +589,73 @@ export function SiteHeader() {
       </Panel>
 
       <Panel open={openPanel === "nav"}>
-        <nav aria-label="Navigare" className="flex flex-col gap-0.5">
-          <button
-            type="button"
-            onClick={() => setCategoriesOpen((current) => !current)}
-            aria-expanded={categoriesOpen}
-            className={cn(
-              "flex items-center justify-between rounded-xl px-3 py-2.5 font-display text-base font-bold transition",
-              isActive("/licitatii")
-                ? "text-primary-700"
-                : "text-ink-800 hover:text-ink-900",
-            )}
-          >
-            Licitații
-            <Icons.expand
-              aria-hidden="true"
-              className={cn(
-                "h-4 w-4 text-ink-400 transition-transform duration-300",
-                categoriesOpen && "rotate-180",
-              )}
-            />
-          </button>
+        <nav aria-label="Navigare" className="flex flex-col gap-2">
+          {/* The account comes first: on a phone there is no corner to hang a
+              dropdown off, so it lives inline.
 
-          {/* 0fr to 1fr: the rows animate, so the panel grows rather than jumps */}
-          <div
-            className={cn(
-              "grid transition-[grid-template-rows,opacity] duration-[320ms] ease-[cubic-bezier(0.2,0.7,0.3,1)]",
-              categoriesOpen
-                ? "grid-rows-[1fr] opacity-100"
-                : "grid-rows-[0fr] opacity-0",
-            )}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <div className="px-1 pt-1 pb-2">
-                <CategoryTiles onNavigate={close} />
-              </div>
+              The tint belongs to the band, not the box. Negative margins pull it
+              out to the sheet's edges so it reads as a section of its own, with
+              the account sitting on it as a white card. Everything below stays on
+              the sheet's white. */}
+          <div className="-mx-4 -mt-3 bg-ink-50 px-4 py-3 sm:-mx-6 sm:px-6">
+            <div className="rounded-2xl bg-white p-3">
+              <AccountMenu
+                user={user}
+                isStaff={isStaff}
+                isAdmin={isAdmin}
+                links={ACCOUNT_LINKS}
+                counts={counts}
+                onNavigate={close}
+                onSignOut={signOut}
+              />
             </div>
           </div>
 
-          {NAV.filter((item) => item.href !== "/licitatii").map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive(item.href) ? "page" : undefined}
-              className={cn(
-                "rounded-xl px-3 py-2.5 font-display text-base font-bold transition",
-                isActive(item.href)
-                  ? "text-primary-700"
-                  : "text-ink-800 hover:text-ink-900",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-
+          {/* The one thing on this menu that is an invitation rather than a
+              destination, so it is shaped like one and nothing else is. */}
           <Link
             href="/cont/cauze/noua"
-            className="group mt-2 flex items-center gap-3 rounded-2xl bg-primary-50 p-2.5 transition hover:bg-primary-100"
+            onClick={close}
+            className="group relative overflow-hidden rounded-2xl bg-primary-50 p-3.5 transition hover:bg-primary-100"
           >
-            <span
-              aria-hidden="true"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-500 text-white"
-            >
-              <Icons.donation className="h-5.5 w-5.5" />
+            <p className="max-w-[60%] font-display text-base leading-snug font-extrabold text-primary-900">
+              Strânge fonduri pentru cei care au nevoie
+            </p>
+
+            <span className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary-600/90 text-white px-3 py-2 font-display text-sm font-bold transition">
+              Propune o cauză
+              <Icons.forward
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+              />
             </span>
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="font-display font-bold text-primary-900">
-                Strânge fonduri
-              </span>
-              <span className="text-sm leading-tight text-primary-900/80">
-                pentru o cauză care necesită sprijin
-              </span>
-            </span>
-            <Icons.forward
+            {/* Bottom-right, behind the text. Swap the source for the artwork
+                you want; the box is sized so a taller one crops rather than
+                pushing the button around. */}
+            <Illustration
+              src="mascot-heart"
+              alt=""
               aria-hidden="true"
-              className="mr-1 ml-auto h-5 w-5 shrink-0 text-primary-700 transition-transform group-hover:translate-x-0.5"
+              className="pointer-events-none absolute right-2 -bottom-1 h-24 w-24"
+              sizes="96px"
             />
           </Link>
 
+          <PanelRow
+            href="/cauze"
+            icon={<Icons.cause className="h-5 w-5 shrink-0" />}
+            label="Descoperă cauzele"
+            onNavigate={close}
+          />
+          <PanelRow
+            href="/licitatii"
+            icon={<Icons.auction className="h-5 w-5 shrink-0" />}
+            label="Vezi licitațiile"
+            onNavigate={close}
+          />
+
           {user ? (
-            <ButtonLink href="/cont/vanzari/nou" className="mt-2 sm:hidden">
+            <ButtonLink href="/cont/vanzari/nou" className="mt-1 sm:hidden">
               Vinde pe bid4
             </ButtonLink>
           ) : null}

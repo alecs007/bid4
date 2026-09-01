@@ -47,6 +47,7 @@ import {
   LuTruck,
   LuUpload,
   LuUser,
+  LuUserRound,
   LuUserCog,
   LuUsers,
   LuWallet,
@@ -157,6 +158,8 @@ export const Icons = {
 
   settings: LuSettings,
   account: LuUser,
+  /** The signed-out stand-in for an avatar: rounded already, so it needs no ring. */
+  accountRound: LuUserRound,
   menu: LuMenu,
   roleSwitch: LuUserCog,
   signOut: LuLogOut,

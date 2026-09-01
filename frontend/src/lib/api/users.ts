@@ -19,6 +19,8 @@ import type {
   UserStatus,
 } from "@/lib/types";
 
+import { matchesSearch } from "@/lib/utils/search";
+
 import { http } from "./http";
 
 export interface PublicProfile {
@@ -27,6 +29,35 @@ export interface PublicProfile {
   activeAuctionCount: number;
   completedSaleCount: number;
   causeCount: number;
+}
+
+/**
+ * GET /users?q= — members whose name or handle matches, for the search page.
+ *
+ * Name and handle only. Searching an email address would make this a way of asking whether
+ * somebody has an account here, which is not a stranger's question to put; the server enforces
+ * the same rule and caps how many come back.
+ */
+export async function searchUsers(term: string): Promise<PublicUser[]> {
+  const trimmed = term.trim();
+  if (!trimmed) return [];
+
+  if (!USE_MOCK) {
+    return http<PublicUser[]>("/users", { query: { q: trimmed } });
+  }
+
+  await delay();
+  maybeFailRead("membrii");
+  const world = getWorld();
+
+  return world.users
+    .filter(
+      (user) =>
+        user.status !== "SUSPENDED" &&
+        matchesSearch(`${user.displayName} ${user.username}`, trimmed),
+    )
+    .map(toPublicUser)
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, "ro"));
 }
 
 /** GET /users/{username} — the public profile page. */
