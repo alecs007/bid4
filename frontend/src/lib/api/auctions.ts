@@ -1,5 +1,5 @@
 import { AUCTION, PAGINATION, USE_MOCK, bidStepFor } from "@/lib/config";
-import { pickMostWatched, pickPopular, pickRelated } from "@/lib/featured";
+import { pickLatest, pickMostWatched, pickRelated } from "@/lib/featured";
 import { toAuctionDetail } from "@/lib/mock/join";
 import { auctionGallery } from "@/lib/mock/images";
 import {
@@ -167,7 +167,7 @@ export async function getFeaturedAuctions(
 
   return {
     mostWatched: pickMostWatched(details),
-    popular: pickPopular(details),
+    latest: pickLatest(details),
   };
 }
 

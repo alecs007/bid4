@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import { CauseGrid } from "@/components/causes/CauseCard";
@@ -11,6 +11,7 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  LoadMore,
   SegmentedControl,
   Skeleton,
   SkeletonGrid,
@@ -20,7 +21,7 @@ import { listCauses } from "@/lib/api/causes";
 import { searchUsers } from "@/lib/api/users";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { PAGINATION } from "@/lib/config";
-import { useApi, useApiPages } from "@/lib/hooks/useApi";
+import { useApi, useApiPages, useWindowedList } from "@/lib/hooks/useApi";
 import { OFFERABLE_AUCTION_STATUSES } from "@/lib/types";
 import { countRo } from "@/lib/utils/plural";
 
@@ -103,8 +104,8 @@ export function SearchResults() {
   // what arrived rather than over what was asked for. It saves no request, but
   // it does stop fifty cards and fifty photographs being built for somebody who
   // will look at six.
-  const shownCauses = useWindow(causes.data, term, STEP);
-  const shownMembers = useWindow(members.data, term, STEP);
+  const shownCauses = useWindowedList(causes.data, term, STEP);
+  const shownMembers = useWindowedList(members.data, term, STEP);
 
   const choose = (next: Tab) => {
     setTab(next);
@@ -186,7 +187,7 @@ export function SearchResults() {
                   {countRo(auctions.total ?? items.length, "rezultat", "rezultate")}
                 </p>
                 <AuctionGrid auctions={items} columns={4} />
-                <More
+                <LoadMore
                   hasMore={auctions.hasMore}
                   loading={auctions.loadingMore}
                   onReach={auctions.loadMore}
@@ -210,9 +211,8 @@ export function SearchResults() {
             {(items) => (
               <>
                 <CauseGrid causes={items} />
-                <More
+                <LoadMore
                   hasMore={shownCauses.hasMore}
-                  loading={false}
                   onReach={shownCauses.loadMore}
                 />
               </>
@@ -255,9 +255,8 @@ export function SearchResults() {
                     </li>
                   ))}
                 </ul>
-                <More
+                <LoadMore
                   hasMore={shownMembers.hasMore}
-                  loading={false}
                   onReach={shownMembers.loadMore}
                 />
               </>
@@ -298,94 +297,6 @@ function MemberSkeleton() {
       ))}
     </div>
   );
-}
-
-/**
- * A list the API only answers in full, revealed a step at a time.
- *
- * <p>The count resets when the term does, which is the only thing that makes the list a different
- * list. Adjusted during render against a remembered term rather than in an effect — the same
- * pattern the open tab uses above, and for the same reason.
- */
-function useWindow<T>(
-  all: T[] | null,
-  resetKey: string,
-  step: number,
-): { items: T[] | null; hasMore: boolean; loadMore: () => void } {
-  const [shown, setShown] = useState(step);
-  const [lastKey, setLastKey] = useState(resetKey);
-  if (lastKey !== resetKey) {
-    setLastKey(resetKey);
-    setShown(step);
-  }
-
-  const loadMore = useCallback(
-    () => setShown((current) => current + step),
-    [step],
-  );
-
-  return {
-    items: all ? all.slice(0, shown) : null,
-    hasMore: (all?.length ?? 0) > shown,
-    loadMore,
-  };
-}
-
-/**
- * The bottom of a list that is not finished yet.
- *
- * <p>The sentinel is disconnected while a page is in flight and once there is nothing left to
- * ask for. An observer left watching re-fires on every scroll that keeps it in view, and each of
- * those would otherwise be a request; this way there is at most one outstanding, ever.
- */
-function More({
-  hasMore,
-  loading,
-  onReach,
-  waiting,
-}: {
-  hasMore: boolean;
-  loading: boolean;
-  onReach: () => void;
-  /** Shown in place of the results that are on their way. */
-  waiting?: React.ReactNode;
-}) {
-  if (!hasMore && !loading) return null;
-
-  return (
-    <div className="mt-3 sm:mt-4">
-      {loading ? waiting : null}
-      <Sentinel active={hasMore && !loading} onReach={onReach} />
-    </div>
-  );
-}
-
-function Sentinel({
-  active,
-  onReach,
-}: {
-  active: boolean;
-  onReach: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || !active) return;
-
-    // 400px of lead, so the next results are usually in by the time the reader
-    // arrives — and not so much that a tall screen pulls three pages at once.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) onReach();
-      },
-      { rootMargin: "400px 0px" },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [active, onReach]);
-
-  return <div ref={ref} aria-hidden="true" className="h-px w-full" />;
 }
 
 /**

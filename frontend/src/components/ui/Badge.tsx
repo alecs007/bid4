@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import type { StatusMeta, Tone } from "@/lib/labels";
+import type { AccountType } from "@/lib/types";
 
 const SOFT: Record<Tone, string> = {
   primary: "bg-primary-50 text-primary-900 border-primary-200",
@@ -185,6 +186,41 @@ export function MetaChip({
         </span>
       ) : null}
       {children}
+    </span>
+  );
+}
+
+/**
+ * "Vânzător verificat", "Organizație verificată", or nothing at all.
+ *
+ * <p>What stood here before was the account type — "Persoană fizică" or "Organizație" — in a green
+ * chip with a tick beside it. It said nothing about the person, and it looked exactly like a check
+ * the platform had carried out. Whether somebody is an individual or an organisation is not news;
+ * whether bid4 verified them is, and only that earns a tag.
+ *
+ * <p>One component rather than the condition written out at each call site, so a profile and a
+ * listing cannot end up disagreeing about who is verified.
+ */
+export function VerifiedTag({
+  user,
+  className,
+}: {
+  user: { accountType: AccountType; verified?: boolean };
+  className?: string;
+}) {
+  if (!user.verified) return null;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-900",
+        className,
+      )}
+    >
+      <Icons.check aria-hidden="true" className="h-3 w-3 shrink-0" />
+      {user.accountType === "ORGANIZATION"
+        ? "Organizație verificată"
+        : "Vânzător verificat"}
     </span>
   );
 }

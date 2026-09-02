@@ -92,14 +92,16 @@ export function AuctionCard({
           // at zero. Without it a grid of cards snaps in one card at a time, in
           // whatever order the network answers.
           //
-          // The transition names translate/scale/rotate as well, which is what
-          // `transition-transform` is short for in Tailwind v4: `scale-*` sets
-          // the standalone `scale` property, so a list of just `transform`
-          // leaves the hover zoom to jump.
+          // Written out as one `transition` because the two need different
+          // speeds: the photograph should arrive in about a fifth of a second,
+          // where the hover zoom is a 500ms move. It names translate/scale/
+          // rotate as well, which is what `transition-transform` is short for
+          // in Tailwind v4 — `scale-*` sets the standalone `scale` property, so
+          // a list of just `transform` leaves the zoom to jump.
           onLoad={(event) =>
             event.currentTarget.setAttribute("data-loaded", "true")
           }
-          className="object-cover opacity-0 transition-[opacity,transform,translate,scale,rotate] duration-500 group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
+          className="object-cover opacity-0 [transition:opacity_220ms_ease-out,transform_500ms,translate_500ms,scale_500ms,rotate_500ms] group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
           draggable={false}
         />
         <button

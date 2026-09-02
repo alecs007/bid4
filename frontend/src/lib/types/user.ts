@@ -28,6 +28,14 @@ export interface User {
 
   avatarUrl: string;
   bio: string;
+  /**
+   * Checked by bid4, and the only thing that earns a tag beside the name.
+   *
+   * TODO(backend): no column and no field on PublicUserResponse yet, so this is
+   * undefined against the real API and the tag simply does not appear. The
+   * account type never belonged here — being an organisation is not a check.
+   */
+  verified?: boolean;
   city?: string;
   createdAt: ISODateString;
 
@@ -55,6 +63,7 @@ export type PublicUser = Pick<
   | "orgLegalName"
   | "avatarUrl"
   | "bio"
+  | "verified"
   | "city"
   | "createdAt"
   | "rating"

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { AUCTION, bidStepFor } from "@/lib/config";
 import { lei } from "@/lib/money";
 import type { Auction } from "@/lib/types";
-import { isLive, pickMostWatched, popularityScore } from "./featured";
+import { isLive, pickLatest, pickMostWatched, popularityScore } from "./featured";
 
 /**
  * What replaced the clock.
@@ -118,6 +118,44 @@ describe("the homepage's first row", () => {
     const rows = pickMostWatched([
       auction({ id: "sold", watcherCount: 99, status: "SOLD" }),
       auction({ id: "live", watcherCount: 1 }),
+    ]);
+
+    expect(rows.map((row) => row.id)).toEqual(["live"]);
+  });
+});
+
+describe("the homepage's second row", () => {
+  it("is newest first, by when the listing went up", () => {
+    const rows = pickLatest(
+      [
+        auction({ id: "old", startTime: "2026-08-01T10:00:00Z" }),
+        auction({ id: "newest", startTime: "2026-08-30T10:00:00Z" }),
+        auction({ id: "middle", startTime: "2026-08-15T10:00:00Z" }),
+      ],
+      3,
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(["newest", "middle", "old"]);
+  });
+
+  it("keeps every listing a seller put up, unlike the row it replaced", () => {
+    // The popularity row showed one per seller. This one is chronological, and
+    // dropping a seller's second listing would make "Ultimele" untrue.
+    const rows = pickLatest(
+      [
+        auction({ id: "first", sellerId: "same", startTime: "2026-08-30T10:00:00Z" }),
+        auction({ id: "second", sellerId: "same", startTime: "2026-08-29T10:00:00Z" }),
+      ],
+      8,
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(["first", "second"]);
+  });
+
+  it("shows only what is still taking offers", () => {
+    const rows = pickLatest([
+      auction({ id: "sold", status: "SOLD", startTime: "2026-09-01T10:00:00Z" }),
+      auction({ id: "live", startTime: "2026-08-01T10:00:00Z" }),
     ]);
 
     expect(rows.map((row) => row.id)).toEqual(["live"]);

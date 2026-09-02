@@ -250,7 +250,8 @@ export function Gallery({
               alt={alt}
               fill
               unoptimized
-              priority
+              loading="eager"
+              fetchPriority="high"
               sizes="(min-width: 1024px) 45vw, 100vw"
               className="animate-fade-in object-contain transition-transform duration-300 group-hover:scale-[1.02]"
               draggable={false}
@@ -310,7 +311,8 @@ export function Gallery({
                       alt={!clone && real === 0 ? alt : ""}
                       fill
                       unoptimized
-                      priority={position <= 1}
+                      loading={position <= 1 ? "eager" : "lazy"}
+                      fetchPriority={position <= 1 ? "high" : "auto"}
                       sizes="100vw"
                       className="object-contain"
                       draggable={false}

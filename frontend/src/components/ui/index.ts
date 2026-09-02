@@ -3,7 +3,7 @@ export type { ButtonProps, ButtonLinkProps, ButtonVariant, ButtonSize } from "./
 
 export { Card, CardHeader, IconBubble, SectionLabel } from "./Card";
 export { CardRail } from "./CardRail";
-export { Badge, StatusBadge, DonationBadge, MetaChip } from "./Badge";
+export { Badge, StatusBadge, DonationBadge, MetaChip, VerifiedTag } from "./Badge";
 export { Alert } from "./Alert";
 export { InfoHint } from "./InfoHint";
 export { Gallery } from "./Gallery";
@@ -37,9 +37,9 @@ export {
 } from "./Skeleton";
 
 export { EmptyState, ErrorState } from "./EmptyState";
-export { Stat, StatInline } from "./Stat";
+export { Stat, StatInline, StatTile, StatTiles } from "./Stat";
 export { Modal } from "./Modal";
-export { Pagination } from "./Pagination";
+export { Pagination, LoadMore } from "./Pagination";
 export { Sheet } from "./Sheet";
 export { Slider, RangeSlider } from "./Slider";
 export { SegmentedControl, NavTabs } from "./Tabs";

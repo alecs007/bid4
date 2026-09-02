@@ -12,15 +12,18 @@ import {
   ButtonLink,
   EmptyState,
   ErrorState,
+  LoadMore,
   Select,
   Sheet,
   SkeletonCauseDetail,
+  SkeletonGrid,
 } from "@/components/ui";
 import { listAuctions } from "@/lib/api/auctions";
+import { PAGINATION } from "@/lib/config";
 import { getCause } from "@/lib/api/causes";
 import { formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useApi } from "@/lib/hooks/useApi";
+import { useApi, useApiPages } from "@/lib/hooks/useApi";
 import type { AuctionSort, AuctionStatus, CauseDetail } from "@/lib/types";
 import { formatMemberSince } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
@@ -65,7 +68,8 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
             alt={`${cause.name}, imaginea ${active + 1}`}
             fill
             unoptimized
-            priority
+            loading="eager"
+            fetchPriority="high"
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
             draggable={false}
@@ -186,10 +190,19 @@ export function CauseDetailView({ slug }: { slug: string }) {
     error,
   } = useApi(() => getCause(slug), `cause:${slug}`);
 
-  const { data: auctions, loading: auctionsLoading } = useApi(
-    () =>
+  // Twelve at a time, then more as the reader nears the end of them. A cause
+  // that caught on has hundreds of listings against it, and asking for
+  // twenty-four of them to show four was the wrong request either way.
+  const auctions = useApiPages(
+    (page) =>
       listAuctions(
-        { causeId: cause?.id, status: STATUS_MAP[status], sort, pageSize: 24 },
+        {
+          causeId: cause?.id,
+          status: STATUS_MAP[status],
+          sort,
+          page,
+          pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+        },
         user?.id,
       ),
     `cause-auctions:${cause?.id ?? ""}:${status}:${sort}:${user?.id ?? "anon"}`,
@@ -344,9 +357,9 @@ export function CauseDetailView({ slug }: { slug: string }) {
           </div>
         </div>
         <AuctionGrid
-          auctions={auctions?.items ?? []}
-          loading={auctionsLoading}
-          skeletonCount={4}
+          auctions={auctions.items}
+          loading={auctions.loading}
+          skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
           emptyState={
             <EmptyState
               title={
@@ -360,6 +373,12 @@ export function CauseDetailView({ slug }: { slug: string }) {
               compact
             />
           }
+        />
+        <LoadMore
+          hasMore={auctions.hasMore}
+          loading={auctions.loadingMore}
+          onReach={auctions.loadMore}
+          waiting={<SkeletonGrid count={4} />}
         />
       </section>
       <Sheet

@@ -6,7 +6,7 @@ import {
   CategoryRow,
   MostWatchedRow,
   ImpactLine,
-  PopularRow,
+  LatestRow,
   TrendingCauses,
 } from "./_components/HomeSections";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -65,10 +65,11 @@ export default function HomePage() {
             </div>
             <div className="relative order-first aspect-[3/2] w-full lg:order-none">
               <Image
-                src="/images/hero-mascot-illustration.avif"
+                src="/images/bid4-mascot-illustration.webp"
                 alt="Mascota bid4 ține o cutie cu donații, lângă haine și lucruri pregătite de trimis."
                 fill
-                priority
+                loading="eager"
+                fetchPriority="high"
                 sizes="(min-width: 1024px) 560px, 100vw"
                 className="object-contain"
                 draggable={false}
@@ -149,7 +150,7 @@ export default function HomePage() {
               </div>
             </div>
           </section>{" "}
-          <PopularRow />
+          <LatestRow />
           <section className="rounded-3xl bg-white ring-1 ring-edge px-5 py-10 text-center sm:px-12">
             <Mascot mood="idea" size={156} className="mx-auto" />
             <h2 className="mt-3 font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">

@@ -49,7 +49,7 @@ export function CauseCard({
           onLoad={(event) =>
             event.currentTarget.setAttribute("data-loaded", "true")
           }
-          className="object-cover opacity-0 transition-[opacity,transform,translate,scale,rotate] duration-500 group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
+          className="object-cover opacity-0 [transition:opacity_220ms_ease-out,transform_500ms,translate_500ms,scale_500ms,rotate_500ms] group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
           draggable={false}
         />
         <div

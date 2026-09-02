@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
@@ -118,4 +120,75 @@ export function Pagination({
       </button>
     </nav>
   );
+}
+
+/**
+ * How much of the page below the fold counts as "nearly there".
+ *
+ * <p>Generous on purpose. A card in these grids is around 500px tall, so this is two rows of
+ * warning: by the time the last loaded row reaches the screen the next page is usually already in,
+ * and the list grows without ever showing its own bottom. Small margins are what make an infinite
+ * list feel like it stops and starts.
+ */
+const LEAD_PX = 1200;
+
+/**
+ * The bottom of a list that has more to give.
+ *
+ * <p>Everything scroll-loaded on the site goes through this, so the lists all wait the same
+ * distance from the end and stop the same way.
+ *
+ * <p>The observer is disconnected while a page is in flight and once there is nothing left to ask
+ * for. One left watching re-fires on every scroll that keeps it in view, and each of those would
+ * be a request; this way there is at most one outstanding, ever.
+ */
+export function LoadMore({
+  hasMore,
+  loading = false,
+  onReach,
+  waiting,
+  className,
+}: {
+  hasMore: boolean;
+  /** A page is already on its way. */
+  loading?: boolean;
+  onReach: () => void;
+  /** Drawn in place of the results that are coming, so the list does not jump when they land. */
+  waiting?: React.ReactNode;
+  className?: string;
+}) {
+  if (!hasMore && !loading) return null;
+
+  return (
+    <div className={cn("mt-3 sm:mt-4", className)}>
+      {loading ? waiting : null}
+      <Sentinel active={hasMore && !loading} onReach={onReach} />
+    </div>
+  );
+}
+
+function Sentinel({
+  active,
+  onReach,
+}: {
+  active: boolean;
+  onReach: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !active) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) onReach();
+      },
+      { rootMargin: `${LEAD_PX}px 0px` },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [active, onReach]);
+
+  return <div ref={ref} aria-hidden="true" className="h-px w-full" />;
 }

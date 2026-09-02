@@ -249,14 +249,15 @@ export const FEATURED = {
   /**
    * Weights of the popularity score: bids, watchers, donation share.
    *
-   * There was a fourth, for how close a listing was to closing. Nothing closes any more.
+   * There was a fourth, for how close a listing was to closing. Nothing closes any more. The
+   * homepage no longer ranks by this either — it is what tops up a short "more like this" row.
    */
   WEIGHT_BIDS: 3,
   WEIGHT_WATCHERS: 1,
   WEIGHT_DONATION: 2,
   /** How many cards each homepage row shows. */
   MOST_WATCHED_COUNT: 4,
-  POPULAR_COUNT: 8,
+  LATEST_COUNT: 8,
   TRENDING_CAUSES_COUNT: 3,
 } as const;
 
@@ -275,4 +276,12 @@ export const RELATED = {
 export const PAGINATION = {
   DEFAULT_PAGE_SIZE: 12,
   MAX_PAGE_SIZE: 60,
+  /**
+   * How long the placeholders stand once the page has reached the top, before the new results
+   * are revealed.
+   *
+   * <p>A beat, not a delay. Without it a cached page swaps in the same frame the scroll lands and
+   * the whole change happens at once, which reads as a flicker rather than as a new page.
+   */
+  REVEAL_HOLD_MS: 260,
 } as const;

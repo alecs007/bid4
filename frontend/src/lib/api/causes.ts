@@ -44,7 +44,7 @@ export async function listCauses(
   filters: CauseFilters = {},
 ): Promise<CauseDetail[]> {
   if (!USE_MOCK) {
-    return http<CauseDetail[]>("/causes", {
+    const answer = await http<CauseDetail[]>("/causes", {
       query: {
         q: filters.q,
         category: filters.category,
@@ -52,6 +52,16 @@ export async function listCauses(
         organizerId: filters.organizerId,
       },
     });
+
+    // TODO(backend): CauseController.list takes q, category and limit, and
+    // nothing else — organizerId rides along in the query string and is
+    // dropped. Until it is a parameter there, a caller asking for one member's
+    // causes was being handed the platform's, which is what made every public
+    // profile look like it ran three of them. Narrowed here rather than left
+    // wrong, and the mock already filters, so this is a no-op against it.
+    return filters.organizerId
+      ? answer.filter((cause) => cause.organizer.id === filters.organizerId)
+      : answer;
   }
 
   await delay();

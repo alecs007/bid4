@@ -179,15 +179,18 @@ export function MostWatchedRow() {
   );
 }
 
-export function PopularRow() {
+export function LatestRow() {
+  // The same SWR key as the row above, so both rows are one request rather than
+  // two: the endpoint answers with both, and asking twice for the same body is
+  // the cost this page can least afford.
   const { data, loading } = useFeatured();
 
   return (
     <>
-      <section aria-labelledby="popular">
-        <RowHeader id="popular" title="Cele mai populare" href="/licitatii" />
+      <section aria-labelledby="latest">
+        <RowHeader id="latest" title="Ultimele licitații" href="/licitatii" />
         <AuctionGrid
-          auctions={data?.popular ?? []}
+          auctions={data?.latest ?? []}
           loading={loading}
           skeletonCount={8}
           emptyState={

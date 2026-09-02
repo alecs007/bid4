@@ -18,6 +18,7 @@ import {
   Skeleton,
   Slider,
 } from "@/components/ui";
+import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { listAuctions } from "@/lib/api/auctions";
 import { listCauses } from "@/lib/api/causes";
 import {
@@ -256,7 +257,26 @@ export function AuctionBrowser() {
       ? "Se încarcă…"
       : "Toate cauzele";
 
-  const busy = navigating || loading;
+  /**
+   * How many placeholders to draw while a page change is in flight.
+   *
+   * <p>Captured rather than read off `data`: a page that has been visited
+   * before is already in the cache, so `data` becomes the incoming page in the
+   * same frame as the click and the count read from it would be the wrong one
+   * at the wrong time.
+   */
+  const [placeholders, setPlaceholders] = useState<number | null>(null);
+
+  /**
+   * The page a click asked for, so the control can answer at once rather than a
+   * second later, once the glide is over.
+   */
+  const [pending, setPending] = useState<number | null>(null);
+
+  /** Placeholders stand from the click until the new page is ready to be seen. */
+  const [holding, setHolding] = useState(false);
+
+  const busy = navigating || loading || holding;
 
   const update = (
     mutate: (next: URLSearchParams) => void,
@@ -264,7 +284,12 @@ export function AuctionBrowser() {
   ) => {
     const next = new URLSearchParams(params.toString());
     mutate(next);
-    if (!keepPage) next.delete("page");
+    // A filter change goes back to page one and cannot know its own size, so
+    // the count from the last page click must not be carried into it.
+    if (!keepPage) {
+      setPlaceholders(null);
+      next.delete("page");
+    }
     const query = next.toString();
     // The filter lives in the URL, and useSearchParams only catches up once the
     // router has navigated. Until then the key has not changed, nothing is
@@ -494,7 +519,7 @@ export function AuctionBrowser() {
       </div>
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
-          <div className="sticky top-24">
+          <div className="sticky top-18">
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
               <div className="mb-5 flex items-center justify-between gap-2 border-b border-line pb-2">
                 <h2 className="font-display text-lg font-extrabold text-ink-900">
@@ -531,9 +556,16 @@ export function AuctionBrowser() {
               auctions={data?.items ?? []}
               loading={busy}
               columns={3}
-              // As many placeholders as there were cards, so swapping one set
-              // for the other does not resize the page under the reader.
-              skeletonCount={data?.items.length || PAGINATION.DEFAULT_PAGE_SIZE}
+              // Placeholders for what is *coming*, not for what is leaving.
+              // Standing in for the outgoing page means twelve of them and then
+              // a collapse to the two rows that actually arrive — the shift
+              // lands after the scroll, once the reader has stopped expecting
+              // movement, which is what made the last page of a filter jump.
+              skeletonCount={
+                placeholders ??
+                data?.items.length ??
+                PAGINATION.DEFAULT_PAGE_SIZE
+              }
               emptyState={
                 <EmptyState
                   title="Nicio licitație găsită"
@@ -553,14 +585,49 @@ export function AuctionBrowser() {
 
           {data ? (
             <Pagination
-              page={data.page}
+              page={pending ?? data.page}
               totalPages={data.totalPages}
               className="mt-8"
               onChange={(next) => {
+                if (next === data.page) return;
+
+                // The whole change in order: placeholders now, the page goes
+                // up, and only once it is there are the results revealed.
+                //
+                // The placeholders are the *outgoing* page's size to begin
+                // with, which is what keeps the glide smooth: swapping twelve
+                // cards for two placeholders collapses the document under the
+                // scroll, the browser clamps it, and the glide becomes a lurch.
+                setPending(next);
+                setPlaceholders(data.items.length);
+                setHolding(true);
                 update((params) => params.set("page", String(next)), {
                   keepPage: true,
                 });
-                window.scrollTo({ top: 0, behavior: "smooth" });
+
+                // Through Lenis: a native smooth scroll fights it for the same
+                // property and the page arrives, then lurches.
+                scrollPageTo(0, {
+                  onComplete: () => {
+                    // At the top now, where a change of height moves nothing —
+                    // so the placeholders can take the incoming page's size
+                    // before the cards replace them one for one.
+                    setPlaceholders(
+                      Math.max(
+                        0,
+                        Math.min(
+                          data.pageSize,
+                          data.total - (next - 1) * data.pageSize,
+                        ),
+                      ),
+                    );
+                    window.setTimeout(() => {
+                      setHolding(false);
+                      setPending(null);
+                      setPlaceholders(null);
+                    }, PAGINATION.REVEAL_HOLD_MS);
+                  },
+                });
               }}
             />
           ) : (

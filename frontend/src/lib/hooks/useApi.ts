@@ -141,6 +141,41 @@ export function useApiPages<T>(
 }
 
 /**
+ * A list the API only answers in full, revealed a step at a time.
+ *
+ * <p>`/causes` and `/users` take no page parameter, so there is nothing to ask for a second time.
+ * Windowing what arrived saves no request; it saves fifty cards and fifty photographs being built
+ * for somebody who will look at six, and it lets those lists behave like the paged ones.
+ *
+ * <p>The count resets when `resetKey` does — the term, the profile, whatever makes it a different
+ * list. Adjusted during render against a remembered key rather than in an effect, which is what
+ * React asks for when state has to follow something outside it.
+ */
+export function useWindowedList<T>(
+  all: T[] | null,
+  resetKey: string,
+  step: number,
+): { items: T[] | null; hasMore: boolean; loadMore: () => void } {
+  const [shown, setShown] = useState(step);
+  const [lastKey, setLastKey] = useState(resetKey);
+  if (lastKey !== resetKey) {
+    setLastKey(resetKey);
+    setShown(step);
+  }
+
+  const loadMore = useCallback(
+    () => setShown((current) => current + step),
+    [step],
+  );
+
+  return {
+    items: all ? all.slice(0, shown) : null,
+    hasMore: (all?.length ?? 0) > shown,
+    loadMore,
+  };
+}
+
+/**
  * Drops every cached answer whose key starts with one of these prefixes.
  *
  * <p>Placing a bid changes the listing, the history, the homepage rows and the

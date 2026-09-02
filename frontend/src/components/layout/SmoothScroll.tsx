@@ -16,6 +16,72 @@ export function setPageScrollLocked(locked: boolean): void {
   else instance?.start();
 }
 
+/**
+ * Lenis glides for 0.9s; this is the backstop that guarantees `onComplete` regardless.
+ *
+ * <p>Comfortably longer than the glide, so a scroll that runs its course reports its own arrival
+ * rather than being cut off here, and short enough that a list waiting on it is never stuck.
+ */
+const SCROLL_TIMEOUT_MS = 1100;
+
+/**
+ * Move the page from code — a new page of results, a filter, anything that should put the reader
+ * back at the top of what they asked for.
+ *
+ * <p>Never `window.scrollTo({ behavior: "smooth" })` while Lenis is running. Lenis holds its own
+ * target and animates towards it every frame; a native smooth scroll animates the same property at
+ * the same time, and the two fight — the page lurches, or arrives and is dragged back. Going
+ * through Lenis is the difference between the paged lists gliding and stuttering.
+ *
+ * <p>Falls back to the native call when Lenis is absent, which is the case under
+ * `prefers-reduced-motion` — where an instant jump is the right answer anyway.
+ */
+export function scrollPageTo(
+  target: number | HTMLElement,
+  {
+    immediate = false,
+    offset = 0,
+    onComplete,
+  }: {
+    immediate?: boolean;
+    offset?: number;
+    /** Called once the page has arrived — or given up on arriving. */
+    onComplete?: () => void;
+  } = {},
+): void {
+  // Fired once, and fired no matter what. A caller holding its placeholders
+  // until the page lands must not be left holding them because the reader
+  // grabbed the wheel mid-glide, or because Lenis is not running at all.
+  let settled = false;
+  const done = () => {
+    if (settled) return;
+    settled = true;
+    onComplete?.();
+  };
+  if (onComplete) window.setTimeout(done, SCROLL_TIMEOUT_MS);
+
+  const top =
+    typeof target === "number"
+      ? target + offset
+      : target.getBoundingClientRect().top + window.scrollY + offset;
+
+  // Already there. Nothing to animate, and holding a page of skeletons for a
+  // scroll that never happens is worse than the jump it was there to cover.
+  if (Math.abs(window.scrollY - top) < 2) {
+    done();
+    return;
+  }
+
+  const lenis = instance;
+  if (lenis) {
+    lenis.scrollTo(target, { offset, immediate, onComplete: done });
+    return;
+  }
+
+  window.scrollTo({ top, behavior: immediate ? "instant" : "smooth" });
+  if (immediate) done();
+}
+
 export function SmoothScroll() {
   const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);

@@ -390,12 +390,19 @@ export function SkeletonCauseDetail() {
 }
 
 /** Full `/profil/[username]` page. */
+/**
+ * Mirrors `<ProfileView>` box for box.
+ *
+ * <p>It had drifted: three wide `Stat` cards stacked on a phone, where the page now shows the same
+ * three tiles the listing page uses, three across at every width. And no floor, so the footer rode
+ * up while the profile loaded and dropped again when it arrived.
+ */
 export function SkeletonProfile() {
   return (
     <div
       role="status"
       aria-label="Se încarcă"
-      className="flex flex-col gap-6 sm:gap-8"
+      className="flex min-h-[70vh] flex-col gap-6 sm:gap-8"
     >
       <Skeleton className="h-5 w-48" />
 
@@ -408,22 +415,24 @@ export function SkeletonProfile() {
         </div>
       </SkeletonCard>
 
-      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+      {/* The three tiles: a drawing over a figure over a label, centred, and
+          three across on a phone as well — the shape StatTiles renders. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <SkeletonCard key={index} className="flex items-start gap-3">
-            <Skeleton className="h-11 w-11 rounded-2xl" />
-            <div className="flex-1">
-              <Skeleton className="mb-2 h-8 w-24" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-          </SkeletonCard>
+          <div
+            key={index}
+            className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 ring-1 ring-edge"
+          >
+            <Skeleton className="h-8 w-8 rounded-xl sm:h-10 sm:w-10" />
+            <Skeleton className="h-[18px] w-12 rounded-md sm:h-5" />
+            <Skeleton className="h-3 w-16 rounded-md" />
+          </div>
         ))}
       </div>
 
-      <div>
-        <Skeleton className="mb-4 h-11 w-64 rounded-2xl" />
-        <SkeletonGrid count={4} />
-      </div>
+      {/* No tab row: it is drawn only for a profile that has both kinds, and
+          which that is cannot be known while this is on screen. */}
+      <SkeletonGrid count={12} />
     </div>
   );
 }

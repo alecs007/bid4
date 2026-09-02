@@ -19,7 +19,10 @@ import {
   ProgressBar,
   Sheet,
   SkeletonDetail,
+  StatTile,
+  StatTiles,
   useToast,
+  VerifiedTag,
 } from "@/components/ui";
 import { getAuction, toggleWatch } from "@/lib/api/auctions";
 import { listBids } from "@/lib/api/bids";
@@ -30,7 +33,7 @@ import {
   SHIPPING,
   SHIPPING_PRICES,
 } from "@/lib/config";
-import { ACCOUNT_TYPE, AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
+import { AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi, useRevalidate } from "@/lib/hooks/useApi";
@@ -107,40 +110,6 @@ function CostMark({
     >
       {children}
     </span>
-  );
-}
-
-/**
- * One of the three figures under a seller's name.
- *
- * <p>The drawings carry their own colour and their own soft shadow, so they sit
- * straight on the card: a tinted disc behind one is a second background under a
- * mark that already has one, and it flattens the artwork rather than lifting it.
- */
-function SellerStat({
-  illustration,
-  value,
-  label,
-}: {
-  /** File under `public/images/illustrations`, without the extension. */
-  illustration: string;
-  value: string;
-  label: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 text-center ring-1 ring-edge">
-      <Illustration
-        src={illustration}
-        className="h-8 w-8 sm:h-10 sm:w-10"
-        sizes="40px"
-      />
-      <div>
-        <dt className="numeric font-display text-lg sm:text-xl leading-none font-extrabold text-ink-900">
-          {value}
-        </dt>
-        <dd className="mt-1 text-xs leading-tight text-ink-500">{label}</dd>
-      </div>
-    </div>
   );
 }
 
@@ -434,7 +403,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <div className="flex items-center gap-1.5 py-1.5">
                 <CostMark size="sm">
                   <Illustration
-                    src="protection-shield"
+                    src="shield-check"
                     className="h-full w-full"
                     sizes="14px"
                   />
@@ -517,7 +486,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
             <CostMark size="md">
               <Illustration
-                src="protection-shield"
+                src="shield-check"
                 className="h-full w-full"
                 sizes="32px"
               />
@@ -578,13 +547,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                       {auction.seller.city}
                     </span>
                   ) : null}
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-900">
-                    <Icons.check
-                      aria-hidden="true"
-                      className="h-3 w-3 shrink-0"
-                    />
-                    {ACCOUNT_TYPE[auction.seller.accountType]}
-                  </span>
+                  <VerifiedTag user={auction.seller} />
                 </span>
               </span>
             </Link>
@@ -592,13 +555,13 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             {/* Three cards rather than one panel split by hairlines: each
                 figure carries its own mark now, and a divider between two
                 illustrations reads as a seam rather than a separation. */}
-            <dl className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-              <SellerStat
+            <StatTiles className="mt-4">
+              <StatTile
                 illustration="rating"
                 value={auction.seller.rating.toFixed(1).replace(".", ",")}
                 label="rating"
               />
-              <SellerStat
+              <StatTile
                 illustration="reviews-count"
                 value={String(auction.seller.ratingCount)}
                 label={pluralRo(
@@ -607,14 +570,14 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   "evaluări",
                 )}
               />
-              <SellerStat
+              <StatTile
                 illustration="amount-donated"
                 value={formatMoney(auction.seller.totalRaised, {
                   compact: true,
                 })}
                 label="donații"
               />
-            </dl>
+            </StatTiles>
           </Section>
         </div>
       </div>
@@ -671,7 +634,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           <span className="flex flex-col items-center gap-3 text-center">
             <CostMark size="lg">
               <Illustration
-                src="protection-shield"
+                src="shield-check"
                 className="h-full w-full"
                 sizes="68px"
               />

@@ -7,20 +7,23 @@ import { CauseGrid } from "@/components/causes/CauseCard";
 import { Icons } from "@/components/icons";
 import {
   Avatar,
-  Badge,
   Breadcrumbs,
   ButtonLink,
-  EmptyState,
   ErrorState,
+  LoadMore,
   SegmentedControl,
+  SkeletonGrid,
   SkeletonProfile,
-  Stat,
+  StatTile,
+  StatTiles,
+  VerifiedTag,
 } from "@/components/ui";
 import { listAuctions } from "@/lib/api/auctions";
 import { listCauses } from "@/lib/api/causes";
 import { getPublicProfile } from "@/lib/api/users";
+import { PAGINATION } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
-import { useApi } from "@/lib/hooks/useApi";
+import { useApi, useApiPages, useWindowedList } from "@/lib/hooks/useApi";
 import { formatMemberSince } from "@/lib/utils/date";
 
 type Tab = "listings" | "causes";
@@ -37,8 +40,15 @@ export function ProfileView({ username }: { username: string }) {
 
   const sellerId = profile?.user.id;
 
-  const { data: auctions, loading: auctionsLoading } = useApi(
-    () => listAuctions({ sellerId, pageSize: 12 }),
+  // Paged, like the catalogue and the search page: a seller with two hundred
+  // listings should cost the same first screen as a seller with four.
+  const auctions = useApiPages(
+    (page) =>
+      listAuctions({
+        sellerId,
+        page,
+        pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+      }),
     `profile-auctions:${sellerId ?? ""}`,
     { enabled: Boolean(sellerId) },
   );
@@ -47,6 +57,13 @@ export function ProfileView({ username }: { username: string }) {
     () => listCauses({ organizerId: sellerId }),
     `profile-causes:${sellerId ?? ""}`,
     { enabled: Boolean(sellerId) },
+  );
+
+  // /causes has no page to ask for, so this one is windowed over what arrived.
+  const shownCauses = useWindowedList(
+    causes,
+    sellerId ?? "",
+    PAGINATION.DEFAULT_PAGE_SIZE,
   );
 
   if (loading && !profile) return <SkeletonProfile />;
@@ -63,8 +80,31 @@ export function ProfileView({ username }: { username: string }) {
   const { user } = profile;
   const isOrganization = user.accountType === "ORGANIZATION";
 
+  // What this account actually has, once both answers are in. A tab row is a
+  // question — "which of these two?" — and there is no question to ask when
+  // only one of them exists, or neither. Both lists are asked for up front, so
+  // the row appears at most once and never flickers between them.
+  const listingsLoading = auctions.loading;
+  const hasListings = auctions.items.length > 0;
+  const hasCauses = (causes?.length ?? 0) > 0;
+  const bothKinds = hasListings && hasCauses;
+  const settled = !listingsLoading && !causesLoading;
+  // With only one kind there is nothing to switch to, so the panel shown is
+  // whichever one exists rather than whichever the tab last said. Until both
+  // answers are in, the tab's own choice stands — deciding early puts the cause
+  // panel up while the listings are still arriving.
+  const showing: Tab = !settled
+    ? tab
+    : bothKinds
+      ? tab
+      : hasListings
+        ? "listings"
+        : "causes";
+
   return (
-    <div className="animate-reveal flex flex-col gap-6 sm:gap-8">
+    // A floor under the page, the same one the search results stand on, so a
+    // profile with two listings does not pull the footer halfway up the screen.
+    <div className="animate-reveal flex min-h-[70vh] flex-col gap-6 sm:gap-8">
       <Breadcrumbs
         items={[{ label: "Acasă", href: "/" }, { label: user.displayName }]}
       />
@@ -83,9 +123,7 @@ export function ProfileView({ username }: { username: string }) {
             <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
               {user.displayName}
             </h1>
-            <Badge tone={isOrganization ? "sky" : "neutral"} variant="soft">
-              {isOrganization ? "Organizație" : "Persoană"}
-            </Badge>
+            <VerifiedTag user={user} />
           </div>
 
           {/* Only when it says something the display name does not. */}
@@ -113,70 +151,79 @@ export function ProfileView({ username }: { username: string }) {
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-        <Stat
-          icon={<Icons.donation aria-hidden="true" className="h-5 w-5 shrink-0" />}
-          tone="primary"
-          label="Strâns pentru cauze"
+      {/* The same three tiles the listing page puts under a seller's name, so
+          the two places that summarise a person summarise them the same way —
+          three across on a phone as well, rather than a stack of three cards. */}
+      <StatTiles>
+        <StatTile
+          illustration="amount-donated"
           value={formatMoney(user.totalRaised, { compact: true })}
+          label="strâns pentru cauze"
         />
-        <Stat
-          icon={<Icons.auction aria-hidden="true" className="h-5 w-5 shrink-0" />}
-          tone="sky"
-          label="Licitații active"
+        <StatTile
+          illustration="active-auctions"
           value={String(profile.activeAuctionCount)}
+          label="licitații active"
         />
-        <Stat
-          icon={<Icons.success aria-hidden="true" className="h-5 w-5 shrink-0" />}
-          tone="success"
-          label="Vânzări încheiate"
+        <StatTile
+          illustration="completed-sales"
           value={String(profile.completedSaleCount)}
+          label="vânzări încheiate"
         />
-      </div>
+      </StatTiles>
 
-      <section>
-        <SegmentedControl
-          ariaLabel="Ce arată profilul"
-          value={tab}
-          onChange={setTab}
-          className="mb-4"
-          options={[
-            { value: "listings" as Tab, label: "Anunțuri" },
-            {
-              value: "causes" as Tab,
-              label: `Cauze${profile.causeCount ? ` (${profile.causeCount})` : ""}`,
-            },
-          ]}
-        />
+      {/* Nothing at all for an account with neither: an empty state under an
+          empty tab row is two pieces of furniture around an absence. */}
+      {settled && !hasListings && !hasCauses ? null : (
+        <section>
+          {bothKinds ? (
+            <SegmentedControl
+              ariaLabel="Ce arată profilul"
+              value={tab}
+              onChange={setTab}
+              className="mb-4"
+              options={[
+                {
+                  value: "listings" as Tab,
+                  label: `Anunțuri (${auctions.total ?? auctions.items.length})`,
+                },
+                {
+                  value: "causes" as Tab,
+                  label: `Cauze (${causes?.length ?? 0})`,
+                },
+              ]}
+            />
+          ) : null}
 
-        {tab === "listings" ? (
-          <AuctionGrid
-            auctions={auctions?.items ?? []}
-            loading={auctionsLoading}
-            skeletonCount={4}
-            emptyState={
-              <EmptyState
-                title="Niciun anunț public"
-                description={`${user.displayName} nu are licitații publicate acum.`}
-                compact
+          {showing === "listings" ? (
+            <>
+              <AuctionGrid
+                auctions={auctions.items}
+                loading={listingsLoading}
+                skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
               />
-            }
-          />
-        ) : (
-          <CauseGrid
-            causes={causes ?? []}
-            loading={causesLoading}
-            skeletonCount={3}
-            emptyState={
-              <EmptyState
-                title="Nicio cauză deschisă"
-                description={`${user.displayName} nu strânge fonduri pentru o cauză acum.`}
-                compact
+              <LoadMore
+                hasMore={auctions.hasMore}
+                loading={auctions.loadingMore}
+                onReach={auctions.loadMore}
+                waiting={<SkeletonGrid count={4} />}
               />
-            }
-          />
-        )}
-      </section>
+            </>
+          ) : (
+            <>
+              <CauseGrid
+                causes={shownCauses.items ?? []}
+                loading={causesLoading}
+                skeletonCount={3}
+              />
+              <LoadMore
+                hasMore={shownCauses.hasMore}
+                onReach={shownCauses.loadMore}
+              />
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

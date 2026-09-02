@@ -7,8 +7,9 @@ import type { Auction, Cause } from "@/lib/types";
  * whichever half is answering, and a row that reorders itself when the mock layer is switched
  * off would be a bug nobody could reproduce.
  *
- * "Popular" balances three signals so the row never fills with one kind of listing: bids,
+ * `popularityScore` balances three signals so a row never fills with one kind of listing: bids,
  * watchers and donation share. There was a fourth, for time left. Nothing runs out of time now.
+ * The homepage no longer ranks by it — it is what tops up a short "more like this" row.
  */
 
 export function popularityScore(auction: Auction): number {
@@ -58,32 +59,30 @@ export function pickMostWatched<T extends Auction>(
     .slice(0, count);
 }
 
-/** Highest score first, one listing per seller so the row is not one shop window. */
-export function pickPopular<T extends Auction>(
+/**
+ * The listings that went up most recently.
+ *
+ * The second row was a popularity score, one listing per seller. It answered nearly the same
+ * question as the row above it — both were "what is doing well" — and between them the newest
+ * listing on the platform could appear on neither. This one asks what the other cannot: what is
+ * new.
+ *
+ * By `startTime`, which is when a listing was published rather than when it was drafted, and with
+ * no de-duplication by seller: somebody who listed three things this morning did list three things
+ * this morning, and hiding two would make the row untrue to its own name.
+ */
+export function pickLatest<T extends Auction>(
   auctions: T[],
-  count: number = FEATURED.POPULAR_COUNT,
+  count: number = FEATURED.LATEST_COUNT,
 ): T[] {
-  const ranked = auctions
+  return auctions
     .filter(isLive)
-    .sort((a, b) => popularityScore(b) - popularityScore(a));
-
-  const picked: T[] = [];
-  const sellersSeen = new Set<string>();
-
-  for (const auction of ranked) {
-    if (sellersSeen.has(auction.sellerId)) continue;
-    picked.push(auction);
-    sellersSeen.add(auction.sellerId);
-    if (picked.length === count) return picked;
-  }
-
-  // Not enough distinct sellers — top up with the next best regardless.
-  for (const auction of ranked) {
-    if (picked.includes(auction)) continue;
-    picked.push(auction);
-    if (picked.length === count) break;
-  }
-  return picked;
+    .sort(
+      (a, b) =>
+        Date.parse(b.startTime) - Date.parse(a.startTime) ||
+        Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    )
+    .slice(0, count);
 }
 
 /** Causes with live listings, closest to a milestone: finish something, not start everything. */

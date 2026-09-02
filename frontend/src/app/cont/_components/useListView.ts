@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { PAGINATION } from "@/lib/config";
 
 /**
@@ -64,8 +65,21 @@ export function useListView<T, F extends string>({
   const [page, setPage] = useState(1);
   const [settling, setSettling] = useState(false);
   const [outgoing, setOutgoing] = useState(0);
+
+  // What the reader just pressed, held only so the control can answer at once.
+  // The list itself does not move until the page has reached the top, and a
+  // button that stays unlit for the length of that glide reads as a dead one.
+  const [pendingPage, setPendingPage] = useState<number | null>(null);
+  const [pendingFilter, setPendingFilter] = useState<F | null>(null);
   const timer = useRef<number | null>(null);
 
+  // Cleanup only, and nothing that has to be put back on the way in. A liveness
+  // ref stood here and was the bug: an effect with a teardown and no setup body
+  // runs mount, teardown, mount again under React's development double-invoke,
+  // so the flag went false on that first teardown and nothing ever set it true.
+  // Every page change after that returned early and the placeholders stayed up
+  // for good. Setting state after unmount is a no-op in React 18 and later, so
+  // the guard was buying nothing to begin with.
   useEffect(
     () => () => {
       if (timer.current !== null) window.clearTimeout(timer.current);
@@ -140,37 +154,73 @@ export function useListView<T, F extends string>({
   // expecting movement. Standing in for what is coming puts the whole change at
   // the click, where it was asked for, and the placeholder is then the height of
   // its own replacement.
-  const settle = useCallback((count: number) => {
-    setOutgoing(count);
-    setSettling(true);
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setSettling(false), 180);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  /**
+   * Up first, then the change, then a beat, then the rows.
+   *
+   * <p>The list stays exactly as it is while the page glides back to the top. Putting the
+   * placeholders up first was the mistake: a page of twelve rows becoming a page of two collapses
+   * the document under the scroll, the browser clamps it, and the glide turns into a lurch. Once
+   * the top is reached a change of height cannot move anything, so that is where the swap goes.
+   *
+   * <p>Through Lenis, never `window.scrollTo`: it owns the scroll position while it runs, and a
+   * native smooth scroll animating the same property at the same time is the other half of what
+   * made these lists stutter.
+   */
+  const settle = useCallback(
+    (leaving: number, arriving: number, apply: () => void) => {
+      // Placeholders from the click, at the size of the page that is leaving.
+      // They are what the reader watches on the way up, and holding the old
+      // page's height is what keeps that glide smooth — collapsing twelve rows
+      // to two under a running scroll makes the browser clamp it, and the glide
+      // turns into a lurch.
+      setOutgoing(leaving);
+      setSettling(true);
+
+      scrollPageTo(0, {
+        onComplete: () => {
+          // At the top, where a change of height moves nothing. The
+          // placeholders take the incoming size, then a beat, then the rows.
+          setOutgoing(arriving);
+          apply();
+          setPendingPage(null);
+          setPendingFilter(null);
+          if (timer.current !== null) window.clearTimeout(timer.current);
+          timer.current = window.setTimeout(
+            () => setSettling(false),
+            PAGINATION.REVEAL_HOLD_MS,
+          );
+        },
+      });
+    },
+    [],
+  );
 
   const choose = useCallback(
     (next: F) => {
-      settle(onPage(sizeOf(next), 1));
-      setFilter(next);
-      setPage(1);
+      setPendingFilter(next);
+      setPendingPage(1);
+      settle(shown.length, onPage(sizeOf(next), 1), () => {
+        setFilter(next);
+        setPage(1);
+      });
     },
-    [settle, sizeOf],
+    [settle, sizeOf, shown.length],
   );
 
   const goToPage = useCallback(
     (next: number) => {
-      settle(onPage(matching.length, next));
-      setPage(next);
+      setPendingPage(next);
+      settle(shown.length, onPage(matching.length, next), () => setPage(next));
     },
-    [settle, matching.length],
+    [settle, matching.length, shown.length],
   );
 
   return {
     shown,
     matching,
-    filter: active,
+    filter: pendingFilter ?? active,
     choose,
-    page: current,
+    page: pendingPage ?? current,
     totalPages,
     goToPage,
     options,

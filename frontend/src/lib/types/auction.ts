@@ -228,5 +228,6 @@ export type AuctionSort =
 export interface FeaturedAuctions {
   /** What the page leads with now that nothing is about to close. */
   mostWatched: AuctionDetail[];
-  popular: AuctionDetail[];
+  /** Newest first. The row below asks what is new, where the one above asks what is doing well. */
+  latest: AuctionDetail[];
 }
