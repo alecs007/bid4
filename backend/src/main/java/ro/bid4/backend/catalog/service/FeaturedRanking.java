@@ -1,5 +1,6 @@
 package ro.bid4.backend.catalog.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -45,38 +46,25 @@ final class FeaturedRanking {
         .toList();
   }
 
-  /** Highest score first, one listing per seller so the row is not one shop window. */
-  static List<Auction> popular(List<Auction> live, int count) {
-    List<Auction> ranked =
-        live.stream()
-            .sorted(Comparator.comparingDouble((Auction a) -> popularity(a)).reversed())
-            .toList();
-
-    List<Auction> picked = new ArrayList<>(count);
-    Set<UUID> sellersSeen = new HashSet<>();
-
-    for (Auction auction : ranked) {
-      if (!sellersSeen.add(auction.getSellerId())) {
-        continue;
-      }
-      picked.add(auction);
-      if (picked.size() == count) {
-        return picked;
-      }
-    }
-
-    // Not enough distinct sellers — top up with the next best regardless.
-    Set<UUID> taken = new HashSet<>(picked.stream().map(Auction::getId).toList());
-    for (Auction auction : ranked) {
-      if (taken.contains(auction.getId())) {
-        continue;
-      }
-      picked.add(auction);
-      if (picked.size() == count) {
-        break;
-      }
-    }
-    return picked;
+  /**
+   * The listings that went up most recently.
+   *
+   * <p>The second row was a popularity score balancing bids, watchers and donation share, one per
+   * seller. It answered nearly the same question as the row above it — both were "what is doing
+   * well" — and between them the newest listing on the platform could appear on neither. This one
+   * asks something the other cannot: what is new.
+   *
+   * <p>By {@code startTime}, which is when a listing was published rather than when it was drafted,
+   * and no de-duplication by seller: a seller who lists three things this morning did list three
+   * things this morning, and hiding two of them would make the row untrue to its own name.
+   */
+  static List<Auction> latest(List<Auction> live, int count) {
+    return live.stream()
+        .sorted(
+            Comparator.comparing(Auction::getStartTime, Comparator.<Instant>reverseOrder())
+                .thenComparing(Auction::getCreatedAt, Comparator.reverseOrder()))
+        .limit(count)
+        .toList();
   }
 
   /** 1 at the same price, tapering to 0 as one is four times the other. */

@@ -22,6 +22,7 @@ public record PublicUserResponse(
     String bio,
     String city,
     Instant createdAt,
+    boolean verified,
     double rating,
     int ratingCount,
     long totalRaised) {}

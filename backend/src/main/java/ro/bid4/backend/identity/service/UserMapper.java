@@ -63,6 +63,7 @@ public class UserMapper {
         user.getBio(),
         user.getCity(),
         user.getCreatedAt(),
+        user.isVerified(),
         user.getRating().doubleValue(),
         user.getRatingCount(),
         user.getTotalRaised());

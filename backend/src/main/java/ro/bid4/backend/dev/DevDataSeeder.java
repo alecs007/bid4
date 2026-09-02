@@ -75,7 +75,8 @@ public class DevDataSeeder implements ApplicationRunner {
                     null),
                 "4.8",
                 37,
-                1_245_000L),
+                1_245_000L,
+                true),
             standing(
                 account(
                     hash,
@@ -88,7 +89,8 @@ public class DevDataSeeder implements ApplicationRunner {
                     "Asociația Zâmbet pentru Mâine"),
                 "4.9",
                 126,
-                8_630_000L),
+                8_630_000L,
+                true),
             standing(
                 account(
                     hash,
@@ -138,9 +140,19 @@ public class DevDataSeeder implements ApplicationRunner {
    */
   private static UserAccount standing(
       UserAccount user, String rating, int ratingCount, long totalRaisedBani) {
+    return standing(user, rating, ratingCount, totalRaisedBani, false);
+  }
+
+  /**
+   * The last argument is the verification tag, which staff would otherwise have to set by hand on
+   * every fresh database — and unverified everywhere, the tag has no way of being seen at all.
+   */
+  private static UserAccount standing(
+      UserAccount user, String rating, int ratingCount, long totalRaisedBani, boolean verified) {
     user.setRating(new BigDecimal(rating));
     user.setRatingCount(ratingCount);
     user.setTotalRaised(totalRaisedBani);
+    user.setVerified(verified);
     return user;
   }
 

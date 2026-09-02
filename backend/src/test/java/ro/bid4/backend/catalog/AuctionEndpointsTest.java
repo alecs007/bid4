@@ -426,9 +426,10 @@ class AuctionEndpointsTest {
         mvc.perform(get("/auctions/featured"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mostWatched").isArray())
-            .andExpect(jsonPath("$.popular").isArray())
-            // Only what is actually running.
+            .andExpect(jsonPath("$.latest").isArray())
+            // Only what is actually running, in either row.
             .andExpect(jsonPath("$.mostWatched[?(@.status != 'LIVE')]").isEmpty())
+            .andExpect(jsonPath("$.latest[?(@.status != 'LIVE')]").isEmpty())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -440,6 +441,11 @@ class AuctionEndpointsTest {
     // with more followers, which says nothing about whether the sort works.
     List<Integer> followers = JsonPath.read(body, "$.mostWatched[*].watcherCount");
     assertThat(followers).isSortedAccordingTo(Comparator.reverseOrder());
+
+    // The second row is chronological for the same reason: newest first, asserted
+    // as a property rather than by naming which listing should lead it.
+    List<String> published = JsonPath.read(body, "$.latest[*].startTime");
+    assertThat(published).isSortedAccordingTo(Comparator.reverseOrder());
   }
 
   @Test

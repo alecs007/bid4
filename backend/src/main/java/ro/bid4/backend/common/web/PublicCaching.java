@@ -34,11 +34,31 @@ public final class PublicCaching {
 
   private PublicCaching() {}
 
-  /** For a body that is the same whoever asks. */
+  /**
+   * For a body that is the same whoever asks.
+   *
+   * <p>{@code Vary: Authorization} even here, and deliberately. Nothing in this body depends on the
+   * token, but the same URL served to a signed-in caller may not be: an endpoint that answers
+   * shared while signed out and per-viewer while signed in is exactly the shape below, and without
+   * the header a shared cache would hand one caller's copy to the other.
+   */
   public static <T> ResponseEntity<T> shared(T body) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.maxAge(SHARED_TTL).cachePublic())
+        .header(HttpHeaders.VARY, HttpHeaders.AUTHORIZATION)
         .body(body);
+  }
+
+  /**
+   * Shared while signed out, private while signed in.
+   *
+   * <p>For a browsing answer that carries a little of the viewer in it — whether they follow a
+   * listing, where they stand in the bidding. Signed out there is none of that, the body is the
+   * same for every visitor, and it can be held for a minute by any cache between here and them.
+   * That is most of the traffic a homepage gets.
+   */
+  public static <T> ResponseEntity<T> browsing(T body, boolean anonymous) {
+    return anonymous ? shared(body) : perViewer(body);
   }
 
   /**

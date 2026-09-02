@@ -76,6 +76,16 @@ public class UserAccount {
 
   private String city;
 
+  /**
+   * Checked by bid4, and the only thing that earns a tag beside the name.
+   *
+   * <p>Staff set it; there is no self-serve route and no endpoint yet. What stood in its place was
+   * the account type, which said nothing about the person and looked exactly like a check the
+   * platform had carried out.
+   */
+  @Column(nullable = false)
+  private boolean verified = false;
+
   @Column(name = "stripe_ready", nullable = false)
   private boolean stripeReady = false;
 

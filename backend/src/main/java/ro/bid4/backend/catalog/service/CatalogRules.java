@@ -123,7 +123,7 @@ public final class CatalogRules {
   /** The homepage's first row: the listings the most people are following. */
   public static final int MOST_WATCHED_COUNT = 4;
 
-  public static final int POPULAR_COUNT = 8;
+  public static final int LATEST_COUNT = 8;
 
   /** "More like this": the cause outweighs the object, because it usually is the reason. */
   public static final double RELATED_WEIGHT_SAME_CAUSE = 10;

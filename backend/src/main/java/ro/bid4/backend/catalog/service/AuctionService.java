@@ -111,13 +111,13 @@ public class AuctionService {
     List<Auction> live = liveWindow();
 
     List<Auction> mostWatched = FeaturedRanking.mostWatched(live, CatalogRules.MOST_WATCHED_COUNT);
-    List<Auction> popular = FeaturedRanking.popular(live, CatalogRules.POPULAR_COUNT);
+    List<Auction> latest = FeaturedRanking.latest(live, CatalogRules.LATEST_COUNT);
 
     // The rows overlap, and mapping them separately would fetch the same
     // sellers and causes twice.
-    Map<UUID, AuctionResponse> mapped = mapTogether(viewer, mostWatched, popular);
+    Map<UUID, AuctionResponse> mapped = mapTogether(viewer, mostWatched, latest);
 
-    return new FeaturedAuctionsResponse(pick(mostWatched, mapped), pick(popular, mapped));
+    return new FeaturedAuctionsResponse(pick(mostWatched, mapped), pick(latest, mapped));
   }
 
   /** GET /auctions/{id}/related — "more like this", under an auction. */

@@ -30,6 +30,7 @@ import ro.bid4.backend.catalog.service.ListingService;
 import ro.bid4.backend.catalog.service.OfferService;
 import ro.bid4.backend.common.web.PageResponse;
 import ro.bid4.backend.common.web.PublicCaching;
+import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.security.web.Viewers;
 
 /**
@@ -85,7 +86,9 @@ public class AuctionController {
   /** Before {@code /{id}}: a literal segment wins over a variable one, so this is not ambiguous. */
   @GetMapping("/featured")
   ResponseEntity<FeaturedAuctionsResponse> featured(@AuthenticationPrincipal Jwt jwt) {
-    return PublicCaching.perViewer(auctions.featured(Viewers.from(jwt)));
+    Viewer viewer = Viewers.from(jwt);
+    // Both homepage rows in one body, so the page is one request rather than two.
+    return PublicCaching.browsing(auctions.featured(viewer), viewer.isAnonymous());
   }
 
   @GetMapping("/{id}")
