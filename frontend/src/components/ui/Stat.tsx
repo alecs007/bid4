@@ -128,9 +128,7 @@ export function StatInline({
       <p className="numeric font-display text-2xl leading-none font-extrabold text-ink-900 sm:text-3xl">
         {value}
       </p>
-      <p className="mt-1 text-sm font-bold text-ink-600">
-        {label}
-      </p>
+      <p className="mt-1 text-sm font-bold text-ink-600">{label}</p>
     </div>
   );
 }

@@ -132,17 +132,6 @@ export function useListView<T, F extends string>({
   );
 
 
-  /** How many rows a bucket holds, without having to switch to it first. */
-  const sizeOf = useCallback(
-    (bucket: F) =>
-      bucket === all ? items.length : items.filter((row) => bucketOf(row) === bucket).length,
-    [items, bucketOf, all],
-  );
-
-  /** How many of those land on a given page. */
-  const onPage = (total: number, page: number) =>
-    Math.max(0, Math.min(PAGINATION.DEFAULT_PAGE_SIZE, total - (page - 1) * PAGINATION.DEFAULT_PAGE_SIZE));
-
   // Rows already in hand, so a filter costs nothing to apply and the list would
   // otherwise swap under the cursor between one frame and the next. A brief
   // placeholder is the same beat the catalogue has, where the pause is a real
@@ -166,53 +155,49 @@ export function useListView<T, F extends string>({
    * native smooth scroll animating the same property at the same time is the other half of what
    * made these lists stutter.
    */
-  const settle = useCallback(
-    (leaving: number, arriving: number, apply: () => void) => {
-      // Placeholders from the click, at the size of the page that is leaving.
-      // They are what the reader watches on the way up, and holding the old
-      // page's height is what keeps that glide smooth — collapsing twelve rows
-      // to two under a running scroll makes the browser clamp it, and the glide
-      // turns into a lurch.
-      setOutgoing(leaving);
-      setSettling(true);
+  const settle = useCallback((leaving: number, apply: () => void) => {
+    // Placeholders from the click, at the size of the page that is leaving, and
+    // at that size until the rows themselves replace them. They are what the
+    // reader watches on the way up, and holding the old page's height is the
+    // whole of what keeps that glide smooth: shrink twelve rows to two while the
+    // scroll is still running and the browser clamps it to what is left, which
+    // drags the reader down the page instead of up it.
+    setOutgoing(leaving);
+    setSettling(true);
 
-      scrollPageTo(0, {
-        onComplete: () => {
-          // At the top, where a change of height moves nothing. The
-          // placeholders take the incoming size, then a beat, then the rows.
-          setOutgoing(arriving);
-          apply();
-          setPendingPage(null);
-          setPendingFilter(null);
-          if (timer.current !== null) window.clearTimeout(timer.current);
-          timer.current = window.setTimeout(
-            () => setSettling(false),
-            PAGINATION.REVEAL_HOLD_MS,
-          );
-        },
-      });
-    },
-    [],
-  );
+    scrollPageTo(0, {
+      onComplete: () => {
+        // At the top, where a change of height moves nothing.
+        apply();
+        setPendingPage(null);
+        setPendingFilter(null);
+        if (timer.current !== null) window.clearTimeout(timer.current);
+        timer.current = window.setTimeout(
+          () => setSettling(false),
+          PAGINATION.REVEAL_HOLD_MS,
+        );
+      },
+    });
+  }, []);
 
   const choose = useCallback(
     (next: F) => {
       setPendingFilter(next);
       setPendingPage(1);
-      settle(shown.length, onPage(sizeOf(next), 1), () => {
+      settle(shown.length, () => {
         setFilter(next);
         setPage(1);
       });
     },
-    [settle, sizeOf, shown.length],
+    [settle, shown.length],
   );
 
   const goToPage = useCallback(
     (next: number) => {
       setPendingPage(next);
-      settle(shown.length, onPage(matching.length, next), () => setPage(next));
+      settle(shown.length, () => setPage(next));
     },
-    [settle, matching.length, shown.length],
+    [settle, shown.length],
   );
 
   return {

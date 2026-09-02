@@ -135,7 +135,10 @@ export function ProfileView({ username }: { username: string }) {
 
           <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
             <span className="inline-flex items-center gap-1.5">
-              <Icons.rating aria-hidden="true" className="h-4 w-4 text-sun-500" />
+              <Icons.rating
+                aria-hidden="true"
+                className="h-4 w-4 text-sun-500"
+              />
               <span className="numeric font-bold text-ink-800">
                 {user.rating.toFixed(1).replace(".", ",")}
               </span>
@@ -158,7 +161,7 @@ export function ProfileView({ username }: { username: string }) {
         <StatTile
           illustration="amount-donated"
           value={formatMoney(user.totalRaised, { compact: true })}
-          label="strâns pentru cauze"
+          label="donații"
         />
         <StatTile
           illustration="active-auctions"

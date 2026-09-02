@@ -50,12 +50,66 @@ export function CardRail({
     };
   }, []);
 
-  const scrollBy = (direction: 1 | -1) => {
+  /**
+   * One press moves a whole view of cards and lands on a card's edge.
+   *
+   * <p>It used to move 80% of the rail's width, which is not a whole number of
+   * anything: the press ended mid-card, and because the rail snaps mandatorily
+   * the browser then pulled it to whichever card happened to be nearest. Two
+   * presses from the same place could land differently, and on a phone — where
+   * 80% of a narrow rail is barely more than one card — it looked random.
+   *
+   * <p>The stops are where the rail sits when each card leads it, measured from
+   * the cards themselves rather than computed from a width written down twice.
+   * A press moves from the current stop to the one a full view along, so it
+   * always lands where the snapping would have put it anyway.
+   */
+  const scrollByView = (direction: 1 | -1) => {
     const rail = railRef.current;
     if (!rail) return;
-    // Just under a full view, so the card at the edge stays as an anchor.
-    rail.scrollBy({
-      left: direction * rail.clientWidth * 0.8,
+
+    const items = Array.from(rail.children).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    const first = items[0];
+    if (!first) return;
+
+    const railLeft = rail.getBoundingClientRect().left;
+    // scroll-padding is where a snapped card comes to rest, not the rail's edge.
+    const padding = Number.parseFloat(
+      getComputedStyle(rail).scrollPaddingLeft || "0",
+    );
+    const stops = items.map(
+      (item) =>
+        rail.scrollLeft +
+        (item.getBoundingClientRect().left - railLeft) -
+        (Number.isFinite(padding) ? padding : 0),
+    );
+
+    // Card plus gap, taken as the distance between two stops so the gap is
+    // counted once and never guessed.
+    const cardWidth = first.getBoundingClientRect().width;
+    const step = stops.length > 1 ? stops[1]! - stops[0]! : cardWidth;
+    if (step <= 0) return;
+    // How many whole cards a view holds: n cards and n-1 gaps must fit.
+    const perView = Math.max(
+      1,
+      Math.floor((rail.clientWidth + step - cardWidth) / step),
+    );
+
+    // The card currently leading the rail: the last stop at or before it.
+    let lead = 0;
+    for (let index = 0; index < stops.length; index += 1) {
+      if (stops[index]! <= rail.scrollLeft + 2) lead = index;
+    }
+
+    const target = Math.min(
+      Math.max(lead + direction * perView, 0),
+      items.length - 1,
+    );
+    const furthest = rail.scrollWidth - rail.clientWidth;
+    rail.scrollTo({
+      left: Math.min(Math.max(stops[target] ?? 0, 0), furthest),
       behavior: "smooth",
     });
   };
@@ -105,7 +159,7 @@ export function CardRail({
     return (
       <button
         type="button"
-        onClick={() => scrollBy(direction)}
+        onClick={() => scrollByView(direction)}
         disabled={!enabled}
         aria-label={direction === -1 ? "Înapoi" : "Înainte"}
         className={cn(

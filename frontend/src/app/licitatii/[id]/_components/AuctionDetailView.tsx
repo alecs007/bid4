@@ -403,9 +403,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <div className="flex items-center gap-1.5 py-1.5">
                 <CostMark size="sm">
                   <Illustration
-                    src="shield-check"
+                    src="shield-badge"
                     className="h-full w-full"
-                    sizes="14px"
+                    sizes="16px"
                   />
                 </CostMark>
                 {/* `min-w-fit` is what holds the promise that this never breaks
@@ -486,9 +486,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
             <CostMark size="md">
               <Illustration
-                src="shield-check"
+                src="shield-badge"
                 className="h-full w-full"
-                sizes="32px"
+                sizes="24px"
               />
             </CostMark>
             <div className="min-w-0">
@@ -634,9 +634,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           <span className="flex flex-col items-center gap-3 text-center">
             <CostMark size="lg">
               <Illustration
-                src="shield-check"
+                src="shield-badge"
                 className="h-full w-full"
-                sizes="68px"
+                sizes="64px"
               />
             </CostMark>
             Protecția cumpărătorului

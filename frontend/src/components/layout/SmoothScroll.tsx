@@ -17,12 +17,27 @@ export function setPageScrollLocked(locked: boolean): void {
 }
 
 /**
- * Lenis glides for 0.9s; this is the backstop that guarantees `onComplete` regardless.
+ * How a page change travels: a second and a bit, easing in as well as out.
  *
- * <p>Comfortably longer than the glide, so a scroll that runs its course reports its own arrival
- * rather than being cut off here, and short enough that a list waiting on it is never stuck.
+ * <p>Lenis's own default starts at full speed and decelerates, which from halfway down a
+ * catalogue reads as being thrown at the top rather than taken there. Easing both ends costs
+ * a couple of hundred milliseconds and is the whole difference.
  */
-const SCROLL_TIMEOUT_MS = 1100;
+const PAGE_SCROLL_SECONDS = 1.2;
+
+/** Symmetric ease. Slow at both ends, quickest in the middle where nothing is being read. */
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/**
+ * The backstop that guarantees `onComplete` even when the glide never reports back.
+ *
+ * <p>Derived from the duration rather than picked, and comfortably past it: a backstop that can
+ * fire mid-scroll is worse than none, because whatever was waiting on it then changes the page
+ * out from under a scroll that is still running.
+ */
+const SCROLL_TIMEOUT_MS = PAGE_SCROLL_SECONDS * 1000 + 400;
 
 /**
  * Move the page from code — a new page of results, a filter, anything that should put the reader
@@ -74,7 +89,13 @@ export function scrollPageTo(
 
   const lenis = instance;
   if (lenis) {
-    lenis.scrollTo(target, { offset, immediate, onComplete: done });
+    lenis.scrollTo(target, {
+      offset,
+      immediate,
+      duration: immediate ? undefined : PAGE_SCROLL_SECONDS,
+      easing: easeInOutCubic,
+      onComplete: done,
+    });
     return;
   }
 

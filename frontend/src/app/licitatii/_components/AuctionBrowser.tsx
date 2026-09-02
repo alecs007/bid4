@@ -258,12 +258,19 @@ export function AuctionBrowser() {
       : "Toate cauzele";
 
   /**
-   * How many placeholders to draw while a page change is in flight.
+   * How many placeholders to draw while a page change is in flight, at the size
+   * of the page that is leaving — and at that size for the whole of it.
    *
-   * <p>Captured rather than read off `data`: a page that has been visited
-   * before is already in the cache, so `data` becomes the incoming page in the
-   * same frame as the click and the count read from it would be the wrong one
-   * at the wrong time.
+   * <p>They used to take the incoming page's size once the scroll reported back.
+   * That is where the lurch came from: twelve rows becoming two takes 1300px out
+   * of the document, and if the glide has not finished the browser clamps the
+   * scroll to whatever is left and drags the reader down instead of up. Nothing
+   * shrinks until the results themselves arrive, by which time the page is at
+   * the top and a change of height moves nothing.
+   *
+   * <p>Captured rather than read off `data`: a page visited before is already in
+   * the cache, so `data` becomes the incoming page in the same frame as the
+   * click and the count read from it would be the wrong one at the wrong time.
    */
   const [placeholders, setPlaceholders] = useState<number | null>(null);
 
@@ -609,18 +616,6 @@ export function AuctionBrowser() {
                 // property and the page arrives, then lurches.
                 scrollPageTo(0, {
                   onComplete: () => {
-                    // At the top now, where a change of height moves nothing —
-                    // so the placeholders can take the incoming page's size
-                    // before the cards replace them one for one.
-                    setPlaceholders(
-                      Math.max(
-                        0,
-                        Math.min(
-                          data.pageSize,
-                          data.total - (next - 1) * data.pageSize,
-                        ),
-                      ),
-                    );
                     window.setTimeout(() => {
                       setHolding(false);
                       setPending(null);
