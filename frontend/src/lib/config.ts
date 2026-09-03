@@ -115,6 +115,42 @@ export const AUCTION = {
   /** How long a seller has to hand the parcel over, counted from payment. */
   DISPATCH_DAYS: 7,
 
+  /**
+   * The three parcels a seller picks between, instead of typing a weight.
+   *
+   * <p>Nobody knows what their jacket weighs in grams, and the number was only ever there to land
+   * in a courier band. So the seller picks the band directly, from examples of things they can
+   * recognise, and `weightGrams` is the top of it — the price quoted is then the one the courier
+   * charges rather than an optimistic guess.
+   *
+   * <p>`illustration` names a file under `public/images/illustrations`. Left null the picker draws
+   * the parcel icon instead, so the three are usable before the artwork exists and need no code
+   * change when it arrives.
+   */
+  PARCEL_TYPES: [
+    {
+      id: "small",
+      label: "Colet mic",
+      examples: "O carte, un tricou, un accesoriu",
+      weightGrams: 1_000,
+      illustration: null as string | null,
+    },
+    {
+      id: "medium",
+      label: "Colet mediu",
+      examples: "Pantofi, o geacă, un aparat mic",
+      weightGrams: 5_000,
+      illustration: null as string | null,
+    },
+    {
+      id: "large",
+      label: "Colet mare",
+      examples: "Un obiect voluminos sau greu",
+      weightGrams: 15_000,
+      illustration: null as string | null,
+    },
+  ],
+
   /** A listing with no photo does not sell, and the first one is the card. */
   MIN_IMAGES: 1,
   MAX_IMAGES: 8,

@@ -148,6 +148,8 @@ export function LoadMore({
   onReach,
   waiting,
   className,
+  root,
+  orientation = "vertical",
 }: {
   hasMore: boolean;
   /** A page is already on its way. */
@@ -156,13 +158,32 @@ export function LoadMore({
   /** Drawn in place of the results that are coming, so the list does not jump when they land. */
   waiting?: React.ReactNode;
   className?: string;
+  /**
+   * The scroller to watch, when it is not the page.
+   *
+   * <p>A rail scrolls sideways inside itself, and its end never enters the viewport however far
+   * the reader pushes it — so an observer left rooted at the page would never fire.
+   */
+  root?: React.RefObject<HTMLElement | null>;
+  /** Which way the lead distance is measured. */
+  orientation?: "vertical" | "horizontal";
 }) {
   if (!hasMore && !loading) return null;
 
   return (
-    <div className={cn("mt-3 sm:mt-4", className)}>
+    <div
+      className={cn(
+        orientation === "horizontal" ? "flex shrink-0 items-center" : "mt-3 sm:mt-4",
+        className,
+      )}
+    >
       {loading ? waiting : null}
-      <Sentinel active={hasMore && !loading} onReach={onReach} />
+      <Sentinel
+        active={hasMore && !loading}
+        onReach={onReach}
+        root={root}
+        orientation={orientation}
+      />
     </div>
   );
 }
@@ -170,9 +191,13 @@ export function LoadMore({
 function Sentinel({
   active,
   onReach,
+  root,
+  orientation,
 }: {
   active: boolean;
   onReach: () => void;
+  root?: React.RefObject<HTMLElement | null>;
+  orientation: "vertical" | "horizontal";
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -184,11 +209,23 @@ function Sentinel({
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) onReach();
       },
-      { rootMargin: `${LEAD_PX}px 0px` },
+      {
+        root: root?.current ?? null,
+        rootMargin:
+          orientation === "horizontal"
+            ? `0px ${LEAD_PX}px`
+            : `${LEAD_PX}px 0px`,
+      },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [active, onReach]);
+  }, [active, onReach, root, orientation]);
 
-  return <div ref={ref} aria-hidden="true" className="h-px w-full" />;
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className={orientation === "horizontal" ? "h-full w-px" : "h-px w-full"}
+    />
+  );
 }
