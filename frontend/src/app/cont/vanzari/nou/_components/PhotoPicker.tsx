@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
+import { FadeImage } from "@/components/ui";
 import { CARD_MEDIA } from "@/components/auctions/cardChrome";
 import { AUCTION, CAUSE } from "@/lib/config";
 import { toFileRef } from "@/lib/mock/uploads";
@@ -178,7 +178,12 @@ export function PhotoPicker({
                 setDragged(index);
               }}
             >
-              <Photo src={photo.previewUrl} />
+              {photo.previewUrl ? (
+                <FadeImage
+                  src={photo.previewUrl}
+                  sizes="(max-width: 640px) 33vw, 25vw"
+                />
+              ) : null}
 
               <button
                 type="button"
@@ -236,43 +241,5 @@ export function PhotoPicker({
         </p>
       ) : null}
     </div>
-  );
-}
-
-/**
- * A photograph that arrives rather than appears.
- *
- * <p>A picture chosen from the camera roll can take a moment to decode, and the slot went from
- * empty to full in one frame. It fades up over a pulsing ground instead, so a row of them being
- * added reads as a row filling in.
- */
-function Photo({ src }: { src?: string }) {
-  const [loaded, setLoaded] = useState(false);
-
-  return (
-    <>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "absolute inset-0 bg-ink-100 transition-opacity duration-300 ease-[var(--ease-out-soft)]",
-          loaded ? "opacity-0" : "animate-pulse opacity-100",
-        )}
-      />
-      {src ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          unoptimized
-          sizes="(max-width: 640px) 33vw, 25vw"
-          onLoad={() => setLoaded(true)}
-          className={cn(
-            "object-cover transition-opacity duration-300 ease-[var(--ease-out-soft)]",
-            loaded ? "opacity-100" : "opacity-0",
-          )}
-          draggable={false}
-        />
-      ) : null}
-    </>
   );
 }

@@ -364,5 +364,5 @@ export const PAGINATION = {
    * <p>A beat, not a delay. Without it a cached page swaps in the same frame the scroll lands and
    * the whole change happens at once, which reads as a flicker rather than as a new page.
    */
-  REVEAL_HOLD_MS: 260,
+  REVEAL_HOLD_MS: 140,
 } as const;

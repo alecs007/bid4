@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { preload } from "react-dom";
@@ -13,6 +12,7 @@ import {
   Checkbox,
   CategoryIcon,
   Confetti,
+  FadeImage,
   Field,
   Illustration,
   Input,
@@ -460,15 +460,7 @@ export function ListingForm() {
                 {cause ? (
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-ink-100">
-                      <Image
-                        src={cause.imageUrl}
-                        alt=""
-                        fill
-                        unoptimized
-                        sizes="36px"
-                        className="object-cover"
-                        draggable={false}
-                      />
+                      <FadeImage src={cause.imageUrl} sizes="36px" />
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate font-display text-sm font-extrabold text-ink-900">

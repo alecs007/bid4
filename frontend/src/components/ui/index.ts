@@ -56,6 +56,7 @@ export {
 
 export { EmptyState, ErrorState } from "./EmptyState";
 export { Stat, StatInline, StatTile, StatTiles } from "./Stat";
+export { FadeImage } from "./FadeImage";
 export { Modal } from "./Modal";
 export { Pagination, LoadMore } from "./Pagination";
 export { Sheet } from "./Sheet";

@@ -194,7 +194,7 @@ function HeaderSearch({
   }, [focused]);
 
   return (
-    <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-ink-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500 lg:h-9">
+    <div className="flex h-11 w-full items-center gap-2 rounded-xl bg-white px-3.5 ring-1 ring-ink-200 transition hover:ring-ink-300 focus-within:ring-primary-500 lg:h-9">
       <Icons.search
         aria-hidden="true"
         className="h-4 w-4 shrink-0 text-ink-500"

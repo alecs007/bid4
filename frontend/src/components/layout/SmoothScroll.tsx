@@ -17,13 +17,14 @@ export function setPageScrollLocked(locked: boolean): void {
 }
 
 /**
- * How a page change travels: a second and a bit, easing in as well as out.
+ * How a page change travels: long enough to be followed, short enough not to be waited on.
  *
  * <p>Lenis's own default starts at full speed and decelerates, which from halfway down a
- * catalogue reads as being thrown at the top rather than taken there. Easing both ends costs
- * a couple of hundred milliseconds and is the whole difference.
+ * catalogue reads as being thrown at the top rather than taken there. Easing both ends is the
+ * whole difference, and at 1.2s it was the reader watching an animation finish before their
+ * results appeared — the glide and the hold after it are spent twice on every page button.
  */
-const PAGE_SCROLL_SECONDS = 1.2;
+const PAGE_SCROLL_SECONDS = 0.7;
 
 /** Symmetric ease. Slow at both ends, quickest in the middle where nothing is being read. */
 function easeInOutCubic(t: number): number {

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { Icons } from "@/components/icons";
 
+import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 
@@ -112,9 +113,14 @@ export function Modal({
     };
   }, [pulling, onClose]);
 
+  // Deliberately not keyed on `onClose`: callers pass an inline arrow, so this
+  // would tear down and set up again on every render, and with it the scroll it
+  // remembered. The Escape listener, which does need the current one, is its own
+  // effect below.
   useEffect(() => {
     if (!open) return;
 
+    const returnTo = window.scrollY;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
@@ -123,20 +129,28 @@ export function Modal({
       "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
     );
     // preventScroll, or the browser brings the focused control into view by
-    // scrolling the page behind the modal — which is still there when it
-    // closes, so opening one quietly moved the reader somewhere else.
+    // scrolling the page behind the modal.
     focusable?.focus({ preventScroll: true });
 
+    return () => {
+      document.body.style.overflow = overflow;
+      previouslyFocused.current?.focus({ preventScroll: true });
+      // A phone raises its keyboard for a field inside the modal and scrolls
+      // the page underneath to make room for it. That scroll outlives the
+      // modal, so the reader is put back where they opened it from.
+      if (Math.abs(window.scrollY - returnTo) > 1) {
+        scrollPageTo(returnTo, { immediate: true });
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = overflow;
-      previouslyFocused.current?.focus({ preventScroll: true });
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
   if (!open || typeof document === "undefined") return null;

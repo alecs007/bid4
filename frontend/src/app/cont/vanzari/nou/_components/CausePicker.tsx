@@ -1,10 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
-import { CategoryIcon, Input, LoadMore, Skeleton } from "@/components/ui";
+import {
+  CategoryIcon,
+  FadeImage,
+  Input,
+  LoadMore,
+  Skeleton,
+} from "@/components/ui";
 import { listCauses } from "@/lib/api/causes";
 import {
   CAUSE_CATEGORIES,
@@ -98,6 +103,20 @@ export function CausePicker({
           onClick={() => setCategory("")}
           label="Toate"
         />
+        {loading && !data
+          ? // The same box as a real one, so the row keeps its height when the
+            // categories land in it.
+            ["Sănătate", "Educație", "Animale"].map((label) => (
+              <span
+                key={label}
+                aria-hidden="true"
+                className="shimmer inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-ink-100 px-3 text-sm font-bold"
+              >
+                <span className="h-4 w-4 shrink-0" />
+                <span className="invisible">{label}</span>
+              </span>
+            ))
+          : null}
         {populated.map((entry) => (
           <Filter
             key={entry.id}
@@ -129,9 +148,17 @@ export function CausePicker({
       >
         {loading && !data
           ? Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="w-[72px] shrink-0">
+              // Box for box with `CauseChoice`: a 56px portrait, the 6px
+              // the flex column puts under it, and two lines of an 11px name.
+              <div
+                key={index}
+                className="flex w-[72px] shrink-0 flex-col items-center gap-1.5"
+              >
                 <Skeleton className="h-14 w-14 rounded-full" />
-                <Skeleton className="mt-1.5 h-3 w-full" />
+                <div className="flex w-full flex-col items-center gap-0.5">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
               </div>
             ))
           : (shown.items ?? []).map((cause) => (
@@ -208,15 +235,7 @@ function ChosenCause({ cause }: { cause: CauseDetail }) {
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-canvas p-2.5">
       <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-ink-100">
-        <Image
-          src={cause.imageUrl}
-          alt=""
-          fill
-          unoptimized
-          sizes="40px"
-          className="object-cover"
-          draggable={false}
-        />
+        <FadeImage src={cause.imageUrl} sizes="40px" />
       </span>
 
       <div className="min-w-0 flex-1">
@@ -315,14 +334,10 @@ function CauseChoice({
               : "ring-1 ring-black/5 group-hover:ring-ink-300",
           )}
         >
-          <Image
+          <FadeImage
             src={cause.imageUrl}
-            alt=""
-            fill
-            unoptimized
             sizes="56px"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            draggable={false}
+            className="transition-[opacity,transform,translate,scale,rotate] duration-300 group-hover:scale-105"
           />
         </span>
 
