@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { Icons } from "@/components/icons";
@@ -8,9 +8,19 @@ import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 
+/** Below this the modal is a sheet with a bar to pull; above it there is nothing to pull. */
+const SHEET_BELOW_PX = 640;
+
+/** How far down the sheet has to be thrown before letting go dismisses it. */
+const DISMISS_AFTER_PX = 140;
+
 /**
  * Portalled to `document.body`: the page wrapper's opacity animation makes it a
  * stacking context, so a `z-50` overlay inside it loses to the `z-40` header.
+ *
+ * <p>On a phone it is a sheet: a bar at the top says it can be pulled, and pulling it down far
+ * enough throws it away. That is the gesture a sheet already implies, so the corner dismiss is
+ * only drawn at the widths where there is no sheet to pull.
  */
 export function Modal({
   open,
@@ -43,6 +53,61 @@ export function Modal({
   const id = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  const [pulled, setPulled] = useState(0);
+  const [pulling, setPulling] = useState(false);
+  /** Latched, because re-adding `animate-pop-in` on release would replay the entrance. */
+  const [grabbed, setGrabbed] = useState(false);
+  const from = useRef(0);
+  const leaving = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (leaving.current !== null) window.clearTimeout(leaving.current);
+    },
+    [],
+  );
+
+  const grab = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (window.innerWidth >= SHEET_BELOW_PX) return;
+    from.current = event.clientY;
+    setPulling(true);
+    setGrabbed(true);
+  };
+
+  // Followed on the window rather than through `setPointerCapture`: capture
+  // throws if the pointer is already gone by the time this runs, and a sheet
+  // that missed its own release stays stuck halfway down the screen.
+  useEffect(() => {
+    if (!pulling) return;
+
+    const travelled = (event: PointerEvent) =>
+      Math.max(0, event.clientY - from.current);
+
+    const move = (event: PointerEvent) => setPulled(travelled(event));
+
+    const release = (event: PointerEvent) => {
+      setPulling(false);
+      const height = panelRef.current?.getBoundingClientRect().height ?? 0;
+      if (travelled(event) > Math.min(DISMISS_AFTER_PX, height * 0.25)) {
+        // Sent the rest of the way out before it unmounts, so it leaves the
+        // way it was thrown rather than blinking off under the finger.
+        setPulled(height);
+        leaving.current = window.setTimeout(onClose, 200);
+      } else {
+        setPulled(0);
+      }
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+  }, [pulling, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,45 +155,72 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
+        style={pulled ? { transform: `translateY(${pulled}px)` } : undefined}
         className={cn(
           // max-h-full, measured against the wrapper's own definite height,
           // rather than a viewport unit: the cap is what makes the body below
           // scroll, and a panel that outgrows it puts its content off-screen
           // with no way to reach it. The wrapper's padding sets the inset.
-          "relative flex max-h-full w-full animate-pop-in flex-col overflow-hidden rounded-t-3xl bg-white shadow-sm sm:rounded-3xl",
+          "relative flex max-h-full w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-sm sm:rounded-3xl",
+          // The entrance keyframes hold their end state, and a held animation
+          // outranks an inline transform — so it is dropped the moment the
+          // sheet is first grabbed, by which time it has long finished.
+          grabbed ? "animate-none" : "animate-pop-in",
+          pulling
+            ? "transition-none"
+            : "transition-transform duration-200 ease-[var(--ease-out-soft)]",
           sizes[size],
         )}
       >
-        <div
-          className={cn(
-            "flex shrink-0 items-start gap-3 px-5 pt-5 pb-3",
-            align === "center" ? "flex-col items-center" : "justify-between",
-          )}
-        >
-          <div className={cn("min-w-0", align === "center" && "text-center")}>
-            <h2
-              id={`${id}-title`}
-              className="font-display text-xl font-extrabold text-ink-900"
-            >
-              {title}
-            </h2>
-            {description ? (
-              <p id={`${id}-description`} className="mt-1 text-sm text-ink-600">
-                {description}
-              </p>
+        {/* The bar and the heading beside it are one handle: a sheet is pulled
+            by its top, not by a six-millimetre target. */}
+        <div onPointerDown={grab} className="shrink-0 touch-none sm:touch-auto">
+          <div
+            aria-hidden="true"
+            className="flex justify-center pt-2.5 pb-1 sm:hidden"
+          >
+            <span className="h-1 w-10 rounded-full bg-ink-200" />
+          </div>
+
+          <div
+            className={cn(
+              "flex items-start gap-3 px-5 pt-2 pb-3 sm:pt-5",
+              align === "center" ? "flex-col items-center" : "justify-between",
+            )}
+          >
+            <div className={cn("min-w-0", align === "center" && "text-center")}>
+              <h2
+                id={`${id}-title`}
+                className="font-display text-xl font-extrabold text-ink-900"
+              >
+                {title}
+              </h2>
+              {description ? (
+                <p
+                  id={`${id}-description`}
+                  className="mt-1 text-sm text-ink-600"
+                >
+                  {description}
+                </p>
+              ) : null}
+            </div>
+            {showClose ? (
+              <span className="hidden sm:block">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  onClick={onClose}
+                  aria-label={closeLabel}
+                >
+                  <Icons.close
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0"
+                  />
+                </Button>
+              </span>
             ) : null}
           </div>
-          {showClose ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              iconOnly
-              onClick={onClose}
-              aria-label={closeLabel}
-            >
-              <Icons.close aria-hidden="true" className="h-5 w-5 shrink-0" />
-            </Button>
-          ) : null}
         </div>
 
         {/* min-h-0 is what lets this scroll: without it the flex item refuses

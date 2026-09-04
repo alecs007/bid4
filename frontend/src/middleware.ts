@@ -22,6 +22,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "bid4.session";
 
+/**
+ * Mirrors `USE_MOCK` in `lib/config`, read here rather than imported so the edge bundle stays a
+ * single file.
+ */
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
+
 /** Areas that mean nothing without an account. */
 const PRIVATE_PREFIXES = ["/cont"];
 
@@ -32,12 +38,20 @@ const STAFF_PREFIXES = ["/operator", "/admin"];
 const GUEST_ONLY = ["/autentificare", "/inregistrare"];
 
 export function middleware(request: NextRequest) {
+  // The mock world signs people in inside the browser and there is no API to
+  // set the cookie this reads, so every check below would come out "signed
+  // out". Gating on it sent the demo deployment's whole account area to the
+  // sign-in page, from which it came straight back.
+  if (USE_MOCK) return NextResponse.next();
+
   const { pathname, search } = request.nextUrl;
   // Sign-out clears it by expiry, but a cookie present and empty is still no
   // session — the value is the role, and an empty role names nothing.
   const role = request.cookies.get(SESSION_COOKIE)?.value || null;
 
-  const isPrivate = PRIVATE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isPrivate = PRIVATE_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix),
+  );
   const isStaff = STAFF_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   if ((isPrivate || isStaff) && !role) {
