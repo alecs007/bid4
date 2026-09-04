@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
 import { CARD_MEDIA } from "@/components/auctions/cardChrome";
@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils/cn";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
+/** How far a finger travels before a press on a photograph becomes a drag rather than a tap. */
+const DRAG_AFTER_PX = 8;
+
 /**
  * One wide target until there is something to show, then the photographs themselves.
  *
@@ -21,8 +24,9 @@ const ACCEPT = "image/jpeg,image/png,image/webp";
  *
  * <p>Order is the whole interface once they arrive. The first is the cover, and it is made the
  * cover by being dragged to the front — a "fă copertă" button on every card was a second way to
- * say what the position already says. Dragging is by pointer rather than by the HTML drag events,
- * which never fire on touch, and the cards reorder under the finger as it passes them.
+ * say what the position already says. The drag is followed on the window rather than through
+ * `setPointerCapture`, which throws when the pointer has already gone and leaves a card stuck to
+ * the finger.
  */
 export function PhotoPicker({
   value,
@@ -35,6 +39,9 @@ export function PhotoPicker({
   const [tooLarge, setTooLarge] = useState<string | null>(null);
   const [fileOver, setFileOver] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
+  const from = useRef({ x: 0, y: 0 });
+  /** True once the press has travelled far enough to be a drag and not a tap. */
+  const loose = useRef(false);
 
   const add = (files: FileList | null) => {
     if (!files?.length) return;
@@ -57,12 +64,51 @@ export function PhotoPicker({
   const remove = (index: number) =>
     onChange(value.filter((_, position) => position !== index));
 
-  const move = (from: number, to: number) => {
-    const next = [...value];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved!);
-    onChange(next);
-  };
+  useEffect(() => {
+    if (dragged === null) return;
+
+    /** The card the pointer is over, by the index each one carries. */
+    const cardUnder = (x: number, y: number): number | null => {
+      const element = document.elementFromPoint(x, y)?.closest("[data-photo]");
+      if (!element) return null;
+      const index = Number((element as HTMLElement).dataset.photo);
+      return Number.isNaN(index) ? null : index;
+    };
+
+    const follow = (event: PointerEvent) => {
+      if (!loose.current) {
+        const travelled = Math.hypot(
+          event.clientX - from.current.x,
+          event.clientY - from.current.y,
+        );
+        if (travelled < DRAG_AFTER_PX) return;
+        loose.current = true;
+      }
+
+      const to = cardUnder(event.clientX, event.clientY);
+      if (to === null || to === dragged) return;
+
+      const next = [...value];
+      const [moved] = next.splice(dragged, 1);
+      next.splice(to, 0, moved!);
+      onChange(next);
+      setDragged(to);
+    };
+
+    const drop = () => {
+      loose.current = false;
+      setDragged(null);
+    };
+
+    window.addEventListener("pointermove", follow);
+    window.addEventListener("pointerup", drop);
+    window.addEventListener("pointercancel", drop);
+    return () => {
+      window.removeEventListener("pointermove", follow);
+      window.removeEventListener("pointerup", drop);
+      window.removeEventListener("pointercancel", drop);
+    };
+  }, [dragged, value, onChange]);
 
   const dropFiles = (event: React.DragEvent) => {
     event.preventDefault();
@@ -76,14 +122,6 @@ export function PhotoPicker({
   };
 
   const full = value.length >= AUCTION.MAX_IMAGES;
-
-  /** The card the pointer is over, by the index each one carries. */
-  const cardUnder = (x: number, y: number): number | null => {
-    const element = document.elementFromPoint(x, y)?.closest("[data-photo]");
-    if (!element) return null;
-    const index = Number((element as HTMLElement).dataset.photo);
-    return Number.isNaN(index) ? null : index;
-  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -121,11 +159,12 @@ export function PhotoPicker({
             <div
               key={photo.fileRef}
               data-photo={index}
-              // touch-none, or the first finger movement scrolls the page
-              // instead of picking the card up.
+              // touch-none so the first finger movement picks the card up rather
+              // than scrolling the page, and select-none with the callout off so
+              // a press does not start selecting the picture instead.
               className={cn(
                 CARD_MEDIA,
-                "group touch-none bg-ink-100 ring-1 transition-opacity",
+                "group touch-none bg-ink-100 ring-1 transition-opacity select-none [-webkit-touch-callout:none]",
                 index === 0 ? "ring-primary-500" : "ring-edge",
                 dragged === index
                   ? "cursor-grabbing opacity-60"
@@ -133,31 +172,13 @@ export function PhotoPicker({
               )}
               onPointerDown={(event) => {
                 if (event.pointerType === "mouse" && event.button !== 0) return;
-                event.currentTarget.setPointerCapture(event.pointerId);
+                event.preventDefault();
+                from.current = { x: event.clientX, y: event.clientY };
+                loose.current = false;
                 setDragged(index);
               }}
-              onPointerMove={(event) => {
-                if (dragged === null) return;
-                const to = cardUnder(event.clientX, event.clientY);
-                if (to !== null && to !== dragged) {
-                  move(dragged, to);
-                  setDragged(to);
-                }
-              }}
-              onPointerUp={() => setDragged(null)}
-              onPointerCancel={() => setDragged(null)}
             >
-              {photo.previewUrl ? (
-                <Image
-                  src={photo.previewUrl}
-                  alt=""
-                  fill
-                  unoptimized
-                  sizes="(max-width: 640px) 33vw, 25vw"
-                  className="object-cover"
-                  draggable={false}
-                />
-              ) : null}
+              <Photo src={photo.previewUrl} />
 
               <button
                 type="button"
@@ -215,5 +236,43 @@ export function PhotoPicker({
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A photograph that arrives rather than appears.
+ *
+ * <p>A picture chosen from the camera roll can take a moment to decode, and the slot went from
+ * empty to full in one frame. It fades up over a pulsing ground instead, so a row of them being
+ * added reads as a row filling in.
+ */
+function Photo({ src }: { src?: string }) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-0 bg-ink-100 transition-opacity duration-300 ease-[var(--ease-out-soft)]",
+          loaded ? "opacity-0" : "animate-pulse opacity-100",
+        )}
+      />
+      {src ? (
+        <Image
+          src={src}
+          alt=""
+          fill
+          unoptimized
+          sizes="(max-width: 640px) 33vw, 25vw"
+          onLoad={() => setLoaded(true)}
+          className={cn(
+            "object-cover transition-opacity duration-300 ease-[var(--ease-out-soft)]",
+            loaded ? "opacity-100" : "opacity-0",
+          )}
+          draggable={false}
+        />
+      ) : null}
+    </>
   );
 }

@@ -55,6 +55,8 @@ export function Modal({
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
   const [pulled, setPulled] = useState(0);
+  /** Measured when the sheet is grabbed, so the backdrop can fade in step with it. */
+  const [sheet, setSheet] = useState(0);
   const [pulling, setPulling] = useState(false);
   /** Latched, because re-adding `animate-pop-in` on release would replay the entrance. */
   const [grabbed, setGrabbed] = useState(false);
@@ -71,6 +73,7 @@ export function Modal({
   const grab = (event: React.PointerEvent<HTMLDivElement>) => {
     if (window.innerWidth >= SHEET_BELOW_PX) return;
     from.current = event.clientY;
+    setSheet(panelRef.current?.getBoundingClientRect().height ?? 0);
     setPulling(true);
     setGrabbed(true);
   };
@@ -119,7 +122,10 @@ export function Modal({
     const focusable = panelRef.current?.querySelector<HTMLElement>(
       "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
     );
-    focusable?.focus();
+    // preventScroll, or the browser brings the focused control into view by
+    // scrolling the page behind the modal — which is still there when it
+    // closes, so opening one quietly moved the reader somewhere else.
+    focusable?.focus({ preventScroll: true });
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -129,7 +135,7 @@ export function Modal({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = overflow;
-      previouslyFocused.current?.focus();
+      previouslyFocused.current?.focus({ preventScroll: true });
     };
   }, [open, onClose]);
 
@@ -147,7 +153,20 @@ export function Modal({
         type="button"
         aria-label={closeLabel}
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-ink-900/40 backdrop-blur-[2px]"
+        // Fading with the pull rather than at the end of it: the sheet and what
+        // is behind it are one movement, and a blur that survives until the
+        // last frame reads as the page catching up afterwards.
+        style={
+          pulled && sheet
+            ? { opacity: Math.max(0, 1 - pulled / sheet) }
+            : undefined
+        }
+        className={cn(
+          "absolute inset-0 cursor-default bg-ink-900/40 backdrop-blur-[2px]",
+          pulling
+            ? "transition-none"
+            : "transition-opacity duration-200 ease-[var(--ease-out-soft)]",
+        )}
       />
       <div
         ref={panelRef}

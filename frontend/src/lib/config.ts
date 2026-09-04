@@ -155,7 +155,7 @@ export const AUCTION = {
     {
       id: "large",
       label: "Colet mare",
-      examples: "Cât o cutie de mutare",
+      examples: "Cât un bagaj de mână",
       weightGrams: 15_000,
       illustration: null as string | null,
     },

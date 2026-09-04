@@ -315,11 +315,6 @@ export function ListingForm() {
 
   if (created) return <SubmittedScreen auction={created} />;
 
-  const donated =
-    startingPrice !== null && startingPrice > 0
-      ? Math.round((startingPrice * draft.donationPercent) / 100)
-      : null;
-
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
       <div className="flex flex-col rounded-3xl bg-white p-4 ring-1 ring-edge sm:p-6">
@@ -481,9 +476,6 @@ export function ListingForm() {
                       </span>
                       <span className="numeric block truncate text-xs text-ink-500">
                         {draft.donationPercent}% din prețul final
-                        {donated !== null
-                          ? `, adică ${formatMoney(donated)} la cel de pornire`
-                          : null}
                       </span>
                     </span>
                   </span>
