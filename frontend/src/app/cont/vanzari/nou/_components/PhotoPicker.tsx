@@ -100,7 +100,7 @@ export function PhotoPicker({
               className={cn(
                 CARD_MEDIA,
                 "group bg-ink-100 ring-1",
-                cover ? "ring-2 ring-primary-500" : "ring-edge",
+                cover ? "ring-1 ring-primary-500" : "ring-edge",
               )}
             >
               {photo.previewUrl ? (
@@ -153,7 +153,9 @@ export function PhotoPicker({
       />
 
       {tooLarge ? (
-        <p className="mt-1 text-sm font-semibold text-danger-700">{tooLarge}</p>
+        <p role="alert" className="mt-1 text-sm font-semibold text-danger-600">
+          {tooLarge}
+        </p>
       ) : null}
     </div>
   );

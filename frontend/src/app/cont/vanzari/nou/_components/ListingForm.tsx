@@ -34,6 +34,7 @@ import type {
   ItemCondition,
   UploadedFileRef,
 } from "@/lib/types";
+import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { CausePicker } from "./CausePicker";
 import { PhotoPicker } from "./PhotoPicker";
@@ -49,7 +50,7 @@ interface Draft {
   description: string;
   category: AuctionCategoryId | "";
   condition: ItemCondition | "";
-  parcel: (typeof AUCTION.PARCEL_TYPES)[number]["id"];
+  parcel: (typeof AUCTION.PARCEL_TYPES)[number]["id"] | "";
   startingPrice: string;
   buyNowPrice: string;
   donationPercent: number;
@@ -63,7 +64,7 @@ const EMPTY: Draft = {
   description: "",
   category: "",
   condition: "",
-  parcel: "small",
+  parcel: "",
   startingPrice: "",
   buyNowPrice: "",
   donationPercent: DONATION.DEFAULT_PERCENT,
@@ -73,6 +74,20 @@ const EMPTY: Draft = {
 };
 
 type Errors = Partial<Record<keyof Draft | "images", string>>;
+
+/** Room above the field the page lands on, so it sits under the header rather than beneath it. */
+const FIRST_ERROR_MARGIN_PX = 96;
+
+/**
+ * "8 caractere", but "20 de caractere".
+ *
+ * <p>Romanian puts `de` between a number and its noun from twenty up. Every bound this form
+ * quotes is either below twenty or a round number above it, which is exactly where the simple
+ * form of the rule holds.
+ */
+function plural(count: number): string {
+  return count < 20 ? `${count} caractere` : `${count} de caractere`;
+}
 
 /**
  * The photographs, then the object, then the price. One column, no furniture.
@@ -114,40 +129,41 @@ export function ListingForm() {
       found.images = "Adaugă cel puțin o fotografie.";
     }
     if (draft.title.trim().length < AUCTION.MIN_TITLE_LENGTH) {
-      found.title = `Titlul are cel puțin ${AUCTION.MIN_TITLE_LENGTH} caractere.`;
+      found.title = `Titlul trebuie să conțină cel puțin ${plural(AUCTION.MIN_TITLE_LENGTH)}.`;
     }
     if (draft.description.trim().length < AUCTION.MIN_DESCRIPTION_LENGTH) {
-      found.description = `Descrierea are cel puțin ${AUCTION.MIN_DESCRIPTION_LENGTH} caractere.`;
+      found.description = `Descrierea trebuie să conțină cel puțin ${plural(AUCTION.MIN_DESCRIPTION_LENGTH)}.`;
     }
-    if (!draft.category) found.category = "Alege o categorie.";
-    if (!draft.condition) found.condition = "Alege starea obiectului.";
-
-    if (!parcel) found.parcel = "Alege mărimea coletului.";
+    if (!draft.category) found.category = "Selectează o categorie.";
+    if (!draft.condition) found.condition = "Selectează starea obiectului.";
+    if (!parcel) found.parcel = "Selectează mărimea coletului.";
 
     if (startingPrice === null) {
-      found.startingPrice = "Adaugă un preț de pornire.";
+      found.startingPrice = "Introdu prețul de pornire.";
     } else if (startingPrice < AUCTION.MIN_STARTING_PRICE) {
-      found.startingPrice = `Minimul este ${formatMoney(AUCTION.MIN_STARTING_PRICE)}.`;
+      found.startingPrice = `Prețul de pornire trebuie să fie de cel puțin ${formatMoney(AUCTION.MIN_STARTING_PRICE)}.`;
     } else if (startingPrice > AUCTION.MAX_STARTING_PRICE) {
-      found.startingPrice = `Maximul este ${formatMoney(AUCTION.MAX_STARTING_PRICE)}.`;
+      found.startingPrice = `Prețul de pornire nu poate depăși ${formatMoney(AUCTION.MAX_STARTING_PRICE)}.`;
     }
 
     if (draft.buyNowPrice && buyNowPrice === null) {
-      found.buyNowPrice = "Scrie o sumă sau lasă câmpul gol.";
+      found.buyNowPrice = "Introdu o sumă validă sau lasă câmpul gol.";
     } else if (
       buyNowPrice !== null &&
       startingPrice !== null &&
       buyNowPrice <= startingPrice
     ) {
-      found.buyNowPrice = "Trebuie să fie peste prețul de pornire.";
+      found.buyNowPrice =
+        "Prețul de vânzare directă trebuie să fie mai mare decât prețul de pornire.";
     }
 
-    if (!draft.causeId) found.causeId = "Alege cauza pe care o susții.";
+    if (!draft.causeId) found.causeId = "Selectează cauza susținută.";
     if (!draft.ownershipConfirmed) {
-      found.ownershipConfirmed = "Confirmă că obiectul îți aparține.";
+      found.ownershipConfirmed =
+        "Confirmă că obiectul îți aparține și poate fi trimis.";
     }
     if (!draft.termsAccepted) {
-      found.termsAccepted = "Acceptă termenii pentru a publica.";
+      found.termsAccepted = "Acceptă termenii pentru vânzători.";
     }
 
     return found;
@@ -162,9 +178,17 @@ export function ListingForm() {
     if (Object.keys(found).length > 0) {
       // Straight to the first thing that needs attention rather than a list at
       // the top: on a phone the list and the field are never on screen together.
-      document
-        .querySelector<HTMLElement>("[data-invalid='true']")
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      //
+      // Through Lenis rather than scrollIntoView, which sets the position
+      // directly and leaves Lenis animating towards a target it no longer
+      // agrees with — the page then snaps back a frame later.
+      const first = document.querySelector<HTMLElement>(
+        "[data-invalid='true']",
+      );
+      if (first) {
+        scrollPageTo(first, { offset: -FIRST_ERROR_MARGIN_PX });
+        first.focus?.({ preventScroll: true });
+      }
       return;
     }
 
@@ -205,7 +229,9 @@ export function ListingForm() {
 
       <Panel>
         <Field label="Fotografii" error={errors.images} required>
-          <PhotoPicker value={photos} onChange={setPhotos} />
+          <div data-invalid={errors.images ? "true" : undefined}>
+            <PhotoPicker value={photos} onChange={setPhotos} />
+          </div>
         </Field>
 
         <Field label="Titlu" error={errors.title} required>
@@ -224,7 +250,7 @@ export function ListingForm() {
             onChange={(event) => set("description", event.target.value)}
             maxLength={AUCTION.MAX_DESCRIPTION_LENGTH}
             rows={5}
-            placeholder="În ce stare este, ce include și dacă are defecte."
+            placeholder="Ce include, cum a fost folosit și orice detaliu util cumpărătorului."
             data-invalid={errors.description ? "true" : undefined}
           />
         </Field>
@@ -248,7 +274,7 @@ export function ListingForm() {
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-center transition",
                     chosen
-                      ? "bg-primary-50 ring-2 ring-primary-500"
+                      ? "bg-primary-50 ring-1 ring-primary-500"
                       : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
                   )}
                 >
@@ -296,7 +322,7 @@ export function ListingForm() {
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-2xl bg-white p-3 text-center transition",
                     chosen
-                      ? "ring-2 ring-primary-500"
+                      ? "bg-primary-50 ring-1 ring-primary-500"
                       : "ring-1 ring-edge hover:ring-ink-300",
                   )}
                 >
@@ -376,12 +402,8 @@ export function ListingForm() {
             in the pressed preset, or in the slider's own header when the range
             is open — because two live copies of one number invite the reader to
             check whether they agree. */}
-        <div>
-          <span className="text-sm font-bold text-ink-700">
-            Cât donezi din preț
-          </span>
-
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        <Field label="Procentul donat" required>
+          <div className="flex flex-wrap gap-1.5">
             {DONATION.PRESET_PERCENTS.map((percent) => {
               const chosen = !custom && draft.donationPercent === percent;
               return (
@@ -420,37 +442,48 @@ export function ListingForm() {
             </button>
           </div>
 
-          {custom ? (
-            <div className="animate-fade-up mt-3">
-              <Slider
-                label="Procent donat"
-                value={draft.donationPercent}
-                min={DONATION.MIN_PERCENT}
-                max={DONATION.MAX_PERCENT}
-                step={5}
-                onChange={(value) => set("donationPercent", value)}
-                formatValue={(value) => `${value}%`}
-              />
+          {/* Always mounted, opened by a grid row going from 0fr to 1fr. A
+              height animates both ways this way; a component that unmounts can
+              only ever animate in, and vanishes on the way out. */}
+          <div
+            aria-hidden={!custom}
+            className={cn(
+              "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+              custom
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="pt-3">
+                <Slider
+                  label="Procent donat"
+                  value={draft.donationPercent}
+                  min={DONATION.MIN_PERCENT}
+                  max={DONATION.MAX_PERCENT}
+                  step={5}
+                  onChange={(value) => set("donationPercent", value)}
+                  formatValue={(value) => `${value}%`}
+                />
+              </div>
             </div>
-          ) : null}
+          </div>
 
-          <p className="mt-2 text-sm text-ink-500">
+          <p className="text-sm text-ink-500">
+            Procentul se aplică prețului final al licitației, iar suma ajunge la
+            cauză după confirmarea livrării.
             {donated !== null ? (
               <>
-                La prețul de pornire, cauza primește{" "}
+                {" "}
+                La prețul de pornire, cauza ar primi{" "}
                 <strong className="numeric text-primary-800">
                   {formatMoney(donated)}
                 </strong>
-                .{" "}
+                .
               </>
-            ) : (
-              "Se calculează din prețul final, nu din cel de pornire. "
-            )}
-            {draft.donationPercent >= DONATION.HERO_PERCENT
-              ? "Licitația primește insigna Erou."
-              : `De la ${DONATION.HERO_PERCENT}% primești insigna Erou.`}
+            ) : null}
           </p>
-        </div>
+        </Field>
 
         <Field label="Cauza susținută" error={errors.causeId} required>
           <div data-invalid={errors.causeId ? "true" : undefined}>
@@ -471,7 +504,7 @@ export function ListingForm() {
             data-invalid={errors.ownershipConfirmed ? "true" : undefined}
           />
           {errors.ownershipConfirmed ? (
-            <p className="text-sm font-semibold text-danger-700">
+            <p role="alert" className="text-sm font-semibold text-danger-600">
               {errors.ownershipConfirmed}
             </p>
           ) : null}
@@ -483,7 +516,7 @@ export function ListingForm() {
             data-invalid={errors.termsAccepted ? "true" : undefined}
           />
           {errors.termsAccepted ? (
-            <p className="text-sm font-semibold text-danger-700">
+            <p role="alert" className="text-sm font-semibold text-danger-600">
               {errors.termsAccepted}
             </p>
           ) : null}

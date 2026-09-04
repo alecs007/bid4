@@ -147,7 +147,7 @@ export function CausePicker({
 
       {!loading && matching.length === 0 ? (
         <p className="text-sm text-ink-500">
-          Nicio cauză pentru căutarea asta.
+          Nicio cauză nu corespunde căutării.
         </p>
       ) : null}
 
@@ -292,7 +292,7 @@ function CauseChoice({
           className={cn(
             "relative block h-[72px] w-[72px] overflow-hidden rounded-full bg-ink-100 transition",
             selected
-              ? "ring-2 ring-primary-500 ring-offset-2 ring-offset-white"
+              ? "ring-1 ring-primary-500 ring-offset-2 ring-offset-white"
               : "ring-1 ring-black/5 group-hover:ring-ink-300",
           )}
         >
