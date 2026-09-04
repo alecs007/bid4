@@ -1,6 +1,9 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
+import { preload } from "react-dom";
 
 import { Icons } from "@/components/icons";
 import {
@@ -14,7 +17,7 @@ import {
   Illustration,
   Input,
   Mascot,
-  Select,
+  Modal,
   Slider,
   Textarea,
 } from "@/components/ui";
@@ -31,6 +34,7 @@ import { ITEM_CONDITION } from "@/lib/labels";
 import { formatMoney, parseLeiInput } from "@/lib/money";
 import type {
   AuctionDetail,
+  CauseDetail,
   ItemCondition,
   UploadedFileRef,
 } from "@/lib/types";
@@ -38,11 +42,23 @@ import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { CausePicker } from "./CausePicker";
 import { PhotoPicker } from "./PhotoPicker";
+import { PickerRow } from "./PickerRow";
 
-const CONDITIONS = Object.entries(ITEM_CONDITION).map(([value, label]) => ({
-  value: value as ItemCondition,
-  label,
-}));
+/**
+ * The five states, best first, each with how many of the five bars it fills.
+ *
+ * <p>"Stare foarte bună" and "Stare bună" are one word apart and sit next to each other in a list;
+ * the bars are what separate them at a glance, and they rank the list without numbering it.
+ */
+const CONDITIONS: { value: ItemCondition; label: string; level: number }[] = [
+  { value: "NEW", label: ITEM_CONDITION.NEW, level: 5 },
+  { value: "LIKE_NEW", label: ITEM_CONDITION.LIKE_NEW, level: 4 },
+  { value: "VERY_GOOD", label: ITEM_CONDITION.VERY_GOOD, level: 3 },
+  { value: "GOOD", label: ITEM_CONDITION.GOOD, level: 2 },
+  { value: "USED", label: ITEM_CONDITION.USED, level: 1 },
+];
+
+const CONDITION_LEVELS = 5;
 
 /** What the form holds while it is being filled in: text, because that is what an input has. */
 interface Draft {
@@ -75,6 +91,45 @@ const EMPTY: Draft = {
 
 type Errors = Partial<Record<keyof Draft | "images", string>>;
 
+/**
+ * The controls the page can be sent to, in the order they are read.
+ *
+ * <p>Not one per message: the two prices are filled in together and so are the cause and the
+ * percentage, so each pair has a single row to land on.
+ */
+const ANCHOR_ORDER = [
+  "images",
+  "title",
+  "description",
+  "category",
+  "parcel",
+  "condition",
+  "price",
+  "donation",
+  "ownership",
+  "terms",
+] as const;
+
+type Anchor = (typeof ANCHOR_ORDER)[number];
+
+const ANCHOR_OF: Record<keyof Errors, Anchor> = {
+  images: "images",
+  title: "title",
+  description: "description",
+  category: "category",
+  parcel: "parcel",
+  condition: "condition",
+  startingPrice: "price",
+  buyNowPrice: "price",
+  causeId: "donation",
+  donationPercent: "donation",
+  ownershipConfirmed: "ownership",
+  termsAccepted: "terms",
+};
+
+/** Fixed rather than generated, so the submit can find a control without waiting for a render. */
+const anchorId = (name: Anchor) => `camp-${name}`;
+
 /** Room above the field the page lands on, so it sits under the header rather than beneath it. */
 const FIRST_ERROR_MARGIN_PX = 96;
 
@@ -90,20 +145,63 @@ function plural(count: number): string {
 }
 
 /**
- * The photographs, then the object, then the price. One column, no furniture.
+ * The two prices, checked together because the second one only means anything against the first.
  *
- * <p>No steps, no panels, no headings over groups of fields. Each of those was something to read
- * before reaching the thing to fill in, and the fields already say what they are — a heading
- * called "Produsul" above a field called "Titlu" is the same word twice.
+ * <p>Shared with the modal they are typed in, so the message arrives while the reader is still
+ * looking at the field rather than after the modal has closed over it.
+ */
+function validatePrices(startingText: string, buyNowText: string): Errors {
+  const found: Errors = {};
+  const startingPrice = parseLeiInput(startingText);
+  const buyNowPrice = buyNowText ? parseLeiInput(buyNowText) : null;
+
+  if (startingPrice === null) {
+    found.startingPrice = "Introdu prețul de pornire.";
+  } else if (startingPrice < AUCTION.MIN_STARTING_PRICE) {
+    found.startingPrice = `Prețul de pornire trebuie să fie de cel puțin ${formatMoney(AUCTION.MIN_STARTING_PRICE)}.`;
+  } else if (startingPrice > AUCTION.MAX_STARTING_PRICE) {
+    found.startingPrice = `Prețul de pornire nu poate depăși ${formatMoney(AUCTION.MAX_STARTING_PRICE)}.`;
+  }
+
+  if (buyNowText && buyNowPrice === null) {
+    found.buyNowPrice = "Introdu o sumă validă sau lasă câmpul gol.";
+  } else if (
+    buyNowPrice !== null &&
+    startingPrice !== null &&
+    buyNowPrice <= startingPrice
+  ) {
+    found.buyNowPrice =
+      "Prețul de vânzare directă trebuie să fie mai mare decât prețul de pornire.";
+  }
+
+  return found;
+}
+
+/**
+ * One box, read top to bottom: the photographs, the object, then what it is worth.
+ *
+ * <p>The four choices that need room to be made in — category, parcel, price, donation — are made
+ * in modals and answered here in a line each. Laid out in the form they were nine tiles, three
+ * tiles, two inputs and a rail of portraits, and the seller had to scroll past all of it to reach
+ * the next thing to fill in.
  */
 export function ListingForm() {
   const { user } = useAuth();
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [photos, setPhotos] = useState<UploadedFileRef[]>([]);
+  const [cause, setCause] = useState<CauseDetail | null>(null);
   const [errors, setErrors] = useState<Errors>({});
+  const [opened, setOpened] = useState<Anchor | null>(null);
   const [created, setCreated] = useState<AuctionDetail | null>(null);
-  /** The range is hidden until asked for: most sellers want one of the presets. */
-  const [custom, setCustom] = useState(false);
+
+  // The tiles only mount when a modal opens, and a drawing that starts loading
+  // then arrives after the grid it belongs to. Nine files of about five
+  // kilobytes each, fetched while the seller is still typing the title.
+  for (const entry of AUCTION_CATEGORIES) {
+    preload(`/images/illustrations/categories/${entry.id}.webp`, {
+      as: "image",
+    });
+  }
 
   const submit = useAction(createAuction);
 
@@ -114,16 +212,27 @@ export function ListingForm() {
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
+  const setPhotographs = (next: UploadedFileRef[]) => {
+    setPhotos(next);
+    setErrors((current) => ({ ...current, images: undefined }));
+  };
+
   const parcel = AUCTION.PARCEL_TYPES.find(
     (entry) => entry.id === draft.parcel,
   );
+  const category = AUCTION_CATEGORIES.find(
+    (entry) => entry.id === draft.category,
+  );
+  const condition = CONDITIONS.find((entry) => entry.value === draft.condition);
   const startingPrice = parseLeiInput(draft.startingPrice);
   const buyNowPrice = draft.buyNowPrice
     ? parseLeiInput(draft.buyNowPrice)
     : null;
 
   const validate = (): Errors => {
-    const found: Errors = {};
+    const found: Errors = {
+      ...validatePrices(draft.startingPrice, draft.buyNowPrice),
+    };
 
     if (photos.length < AUCTION.MIN_IMAGES) {
       found.images = "Adaugă cel puțin o fotografie.";
@@ -137,26 +246,6 @@ export function ListingForm() {
     if (!draft.category) found.category = "Selectează o categorie.";
     if (!draft.condition) found.condition = "Selectează starea obiectului.";
     if (!parcel) found.parcel = "Selectează mărimea coletului.";
-
-    if (startingPrice === null) {
-      found.startingPrice = "Introdu prețul de pornire.";
-    } else if (startingPrice < AUCTION.MIN_STARTING_PRICE) {
-      found.startingPrice = `Prețul de pornire trebuie să fie de cel puțin ${formatMoney(AUCTION.MIN_STARTING_PRICE)}.`;
-    } else if (startingPrice > AUCTION.MAX_STARTING_PRICE) {
-      found.startingPrice = `Prețul de pornire nu poate depăși ${formatMoney(AUCTION.MAX_STARTING_PRICE)}.`;
-    }
-
-    if (draft.buyNowPrice && buyNowPrice === null) {
-      found.buyNowPrice = "Introdu o sumă validă sau lasă câmpul gol.";
-    } else if (
-      buyNowPrice !== null &&
-      startingPrice !== null &&
-      buyNowPrice <= startingPrice
-    ) {
-      found.buyNowPrice =
-        "Prețul de vânzare directă trebuie să fie mai mare decât prețul de pornire.";
-    }
-
     if (!draft.causeId) found.causeId = "Selectează cauza susținută.";
     if (!draft.ownershipConfirmed) {
       found.ownershipConfirmed =
@@ -175,19 +264,29 @@ export function ListingForm() {
 
     const found = validate();
     setErrors(found);
-    if (Object.keys(found).length > 0) {
+
+    const failed = Object.keys(found) as (keyof Errors)[];
+    if (failed.length > 0) {
       // Straight to the first thing that needs attention rather than a list at
       // the top: on a phone the list and the field are never on screen together.
       //
-      // Through Lenis rather than scrollIntoView, which sets the position
-      // directly and leaves Lenis animating towards a target it no longer
-      // agrees with — the page then snaps back a frame later.
-      const first = document.querySelector<HTMLElement>(
-        "[data-invalid='true']",
+      // Found by id rather than by querying for the invalid control, because
+      // the attribute marking one comes from `errors`, which has not rendered
+      // at this point. That query saw the state before this submit: the first
+      // press scrolled nowhere, and every one after it went to whichever field
+      // had been wrong the time before.
+      const first = ANCHOR_ORDER.find((name) =>
+        failed.some((key) => ANCHOR_OF[key] === name),
       );
-      if (first) {
-        scrollPageTo(first, { offset: -FIRST_ERROR_MARGIN_PX });
-        first.focus?.({ preventScroll: true });
+      const target = first ? document.getElementById(anchorId(first)) : null;
+      if (target) {
+        // Through Lenis rather than scrollIntoView, which sets the position
+        // directly and leaves Lenis animating towards a target it no longer
+        // agrees with — the page then snaps back a frame later.
+        scrollPageTo(target, { offset: -FIRST_ERROR_MARGIN_PX });
+        target
+          .querySelector<HTMLElement>("input, textarea, button")
+          ?.focus({ preventScroll: true });
       }
       return;
     }
@@ -223,206 +322,704 @@ export function ListingForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
-      <h1 className="font-display text-xl font-extrabold text-ink-900">
-        Licitație nouă
-      </h1>
-
-      <Panel>
-        <Field label="Fotografii" error={errors.images} required>
-          <div data-invalid={errors.images ? "true" : undefined}>
-            <PhotoPicker value={photos} onChange={setPhotos} />
+      <div className="flex flex-col rounded-3xl bg-white p-4 ring-1 ring-edge sm:p-6">
+        <Section title="Fotografii" first>
+          {/* No label over it: the section is called Fotografii and the slots
+              are plainly photographs. */}
+          <div id={anchorId("images")}>
+            <PhotoPicker value={photos} onChange={setPhotographs} />
           </div>
-        </Field>
+          {errors.images ? <Message>{errors.images}</Message> : null}
+        </Section>
 
-        <Field label="Titlu" error={errors.title} required>
+        <Section title="Despre obiect">
+          <div id={anchorId("title")}>
+            <Field label="Titlu" error={errors.title} required>
+              <Input
+                value={draft.title}
+                onChange={(event) => set("title", event.target.value)}
+                maxLength={AUCTION.MAX_TITLE_LENGTH}
+                placeholder="Numele obiectului"
+              />
+            </Field>
+          </div>
+
+          <div id={anchorId("description")}>
+            <Field label="Detalii" error={errors.description} required>
+              <Textarea
+                value={draft.description}
+                onChange={(event) => set("description", event.target.value)}
+                maxLength={AUCTION.MAX_DESCRIPTION_LENGTH}
+                rows={5}
+                placeholder="Ce include, cum a fost folosit și orice detaliu util cumpărătorului."
+              />
+            </Field>
+          </div>
+
+          <div id={anchorId("category")}>
+            <Field label="Categorie" error={errors.category} required>
+              <PickerRow
+                placeholder="Selectează categoria"
+                filled={Boolean(category)}
+                invalid={Boolean(errors.category)}
+                onOpen={() => setOpened("category")}
+              >
+                {category ? (
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <CategoryIcon
+                      set="categories"
+                      id={category.id}
+                      className="h-7 w-7 shrink-0"
+                      sizes="28px"
+                    />
+                    <span className="truncate font-display text-sm font-extrabold text-ink-900">
+                      {category.label}
+                    </span>
+                  </span>
+                ) : null}
+              </PickerRow>
+            </Field>
+          </div>
+
+          <div id={anchorId("parcel")}>
+            <Field label="Mărimea coletului" error={errors.parcel} required>
+              <PickerRow
+                placeholder="Selectează mărimea coletului"
+                filled={Boolean(parcel)}
+                invalid={Boolean(errors.parcel)}
+                onOpen={() => setOpened("parcel")}
+              >
+                {parcel ? (
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <ParcelArt parcel={parcel} className="h-7 w-7" />
+                    <span className="min-w-0">
+                      <span className="block font-display text-sm font-extrabold text-ink-900">
+                        {parcel.label}
+                      </span>
+                      <span className="block truncate text-xs text-ink-500">
+                        {parcel.examples}
+                      </span>
+                    </span>
+                  </span>
+                ) : null}
+              </PickerRow>
+            </Field>
+          </div>
+
+          <div id={anchorId("condition")}>
+            <Field label="Stare" error={errors.condition} required>
+              <PickerRow
+                placeholder="Selectează starea"
+                filled={Boolean(condition)}
+                invalid={Boolean(errors.condition)}
+                onOpen={() => setOpened("condition")}
+              >
+                {condition ? (
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <ConditionBars level={condition.level} />
+                    <span className="truncate font-display text-sm font-extrabold text-ink-900">
+                      {condition.label}
+                    </span>
+                  </span>
+                ) : null}
+              </PickerRow>
+            </Field>
+          </div>
+        </Section>
+
+        <Section title="Preț & donație">
+          <div id={anchorId("price")}>
+            <Field
+              label="Preț"
+              error={errors.startingPrice ?? errors.buyNowPrice}
+              required
+            >
+              <PickerRow
+                placeholder="Stabilește prețul de pornire"
+                filled={startingPrice !== null}
+                invalid={Boolean(errors.startingPrice ?? errors.buyNowPrice)}
+                onOpen={() => setOpened("price")}
+              >
+                <span className="min-w-0">
+                  <span className="numeric block font-display text-sm font-extrabold text-ink-900">
+                    De la {formatMoney(startingPrice ?? 0)}
+                  </span>
+                  {buyNowPrice !== null ? (
+                    <span className="numeric block text-xs text-ink-500">
+                      Vânzare directă {formatMoney(buyNowPrice)}
+                    </span>
+                  ) : null}
+                </span>
+              </PickerRow>
+            </Field>
+          </div>
+
+          <div id={anchorId("donation")}>
+            <Field label="Donație" error={errors.causeId} required>
+              <PickerRow
+                placeholder="Selectează cauza"
+                filled={Boolean(cause)}
+                invalid={Boolean(errors.causeId)}
+                onOpen={() => setOpened("donation")}
+              >
+                {cause ? (
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-ink-100">
+                      <Image
+                        src={cause.imageUrl}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="36px"
+                        className="object-cover"
+                        draggable={false}
+                      />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-display text-sm font-extrabold text-ink-900">
+                        {cause.name}
+                      </span>
+                      <span className="numeric block truncate text-xs text-ink-500">
+                        {draft.donationPercent}% din prețul final
+                        {donated !== null
+                          ? `, adică ${formatMoney(donated)} la cel de pornire`
+                          : null}
+                      </span>
+                    </span>
+                  </span>
+                ) : null}
+              </PickerRow>
+            </Field>
+          </div>
+
+          <div id={anchorId("ownership")} className="pt-1">
+            <Checkbox
+              checked={draft.ownershipConfirmed}
+              onChange={(event) =>
+                set("ownershipConfirmed", event.target.checked)
+              }
+              label="Confirm că obiectul îmi aparține și că am dreptul să îl vând și să îl expediez."
+              description="Licitațiile pentru obiecte care nu aparțin vânzătorului sunt retrase din platformă."
+            />
+            {errors.ownershipConfirmed ? (
+              <Message>{errors.ownershipConfirmed}</Message>
+            ) : null}
+          </div>
+
+          <div id={anchorId("terms")}>
+            <Checkbox
+              checked={draft.termsAccepted}
+              onChange={(event) => set("termsAccepted", event.target.checked)}
+              label={
+                <>
+                  Accept <Legal href="/termeni">Termenii și Condițiile</Legal>{" "}
+                  și{" "}
+                  <Legal href="/confidentialitate">
+                    Politica de confidențialitate
+                  </Legal>
+                  .
+                </>
+              }
+              description="Suma încasată rămâne în escrow, iar procentul donat se virează cauzei după confirmarea livrării."
+            />
+            {errors.termsAccepted ? (
+              <Message>{errors.termsAccepted}</Message>
+            ) : null}
+          </div>
+        </Section>
+      </div>
+
+      {submit.error ? <Alert tone="danger">{submit.error}</Alert> : null}
+
+      <Button
+        type="submit"
+        size="lg"
+        fullWidth
+        loading={submit.pending}
+        className="sm:w-auto sm:self-end"
+      >
+        Finalizează
+      </Button>
+
+      {opened === "category" ? (
+        <CategoryModal
+          value={draft.category}
+          onClose={() => setOpened(null)}
+          onPick={(value) => {
+            set("category", value);
+            setOpened(null);
+          }}
+        />
+      ) : null}
+
+      {opened === "parcel" ? (
+        <ParcelModal
+          value={draft.parcel}
+          onClose={() => setOpened(null)}
+          onPick={(value) => {
+            set("parcel", value);
+            setOpened(null);
+          }}
+        />
+      ) : null}
+
+      {opened === "condition" ? (
+        <ConditionModal
+          value={draft.condition}
+          onClose={() => setOpened(null)}
+          onPick={(value) => {
+            set("condition", value);
+            setOpened(null);
+          }}
+        />
+      ) : null}
+
+      {opened === "price" ? (
+        <PriceModal
+          startingPrice={draft.startingPrice}
+          buyNowPrice={draft.buyNowPrice}
+          onClose={() => setOpened(null)}
+          onSave={(values) => {
+            set("startingPrice", values.startingPrice);
+            set("buyNowPrice", values.buyNowPrice);
+            setOpened(null);
+          }}
+        />
+      ) : null}
+
+      {opened === "donation" ? (
+        <DonationModal
+          cause={cause}
+          percent={draft.donationPercent}
+          onClose={() => setOpened(null)}
+          onSave={(values) => {
+            setCause(values.cause);
+            set("causeId", values.cause.id);
+            set("donationPercent", values.percent);
+            setOpened(null);
+          }}
+        />
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * A run of fields under a name.
+ *
+ * <p>One box for the whole form, divided by a rule rather than by a gap between panels: the seller
+ * is filling in one thing, and two surfaces read as two of them. The rule says the subject
+ * changed and the name says to what.
+ */
+function Section({
+  title,
+  first = false,
+  children,
+}: {
+  title: string;
+  first?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={cn(
+        "flex flex-col gap-4",
+        !first && "mt-6 border-t border-line pt-6",
+      )}
+    >
+      <h2 className="font-display text-base font-extrabold text-ink-900">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/** A document the reader is agreeing to. Stops the click so following it does not also tick the box. */
+function Legal({ href, children }: { href: string; children: string }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(event) => event.stopPropagation()}
+      className="font-bold text-primary-700 underline underline-offset-2 hover:text-primary-800"
+    >
+      {children}
+    </Link>
+  );
+}
+
+/** What `Field` prints under a control, for the three places that have no `Field` around them. */
+function Message({ children }: { children: string }) {
+  return (
+    <p
+      role="alert"
+      className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-danger-600"
+    >
+      <Icons.error className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {children}
+    </p>
+  );
+}
+
+/** How much of the object's life is left, as five bars rather than as a place in a list. */
+function ConditionBars({ level }: { level: number }) {
+  return (
+    <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
+      {Array.from({ length: CONDITION_LEVELS }, (_, index) => (
+        <span
+          key={index}
+          className={cn(
+            "h-5 w-2 rounded-full",
+            index < level ? "bg-primary-500" : "bg-ink-200",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** The five states as a column, because they are ranked and a row would not say so. */
+function ConditionModal({
+  value,
+  onClose,
+  onPick,
+}: {
+  value: ItemCondition | "";
+  onClose: () => void;
+  onPick: (value: ItemCondition) => void;
+}) {
+  return (
+    <Modal open onClose={onClose} title="Stare">
+      <div
+        role="radiogroup"
+        aria-label="Starea obiectului"
+        className="flex flex-col gap-1.5"
+      >
+        {CONDITIONS.map((entry) => {
+          const chosen = value === entry.value;
+          return (
+            <button
+              key={entry.value}
+              type="button"
+              role="radio"
+              aria-checked={chosen}
+              onClick={() => onPick(entry.value)}
+              className={cn(
+                "flex items-center gap-3.5 rounded-2xl px-3.5 py-4 text-left transition",
+                chosen
+                  ? "bg-primary-50 ring-1 ring-primary-500"
+                  : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
+              )}
+            >
+              <ConditionBars level={entry.level} />
+              <span className="font-display text-base font-extrabold text-ink-900">
+                {entry.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+/** The artwork once the files are in `public/images/illustrations`, the parcel icon until then. */
+function ParcelArt({
+  parcel,
+  className,
+}: {
+  parcel: (typeof AUCTION.PARCEL_TYPES)[number];
+  className: string;
+}) {
+  if (!parcel.illustration) {
+    return (
+      <Icons.parcel
+        aria-hidden="true"
+        className={cn(className, "shrink-0 text-ink-400")}
+      />
+    );
+  }
+  return (
+    <Illustration
+      src={parcel.illustration}
+      className={className}
+      sizes="48px"
+    />
+  );
+}
+
+/**
+ * A choice made by looking at pictures, given the width to be looked at in.
+ *
+ * <p>Closes on the tap that answers it. There is one thing to say here, and a footer asking the
+ * reader to confirm the tile they have just pressed says nothing.
+ *
+ * <p>Two across on a phone: at three a tile leaves 88px for its label and "Artă & Handmade" wants
+ * a hundred, so the longest names came out cut.
+ */
+function CategoryModal({
+  value,
+  onClose,
+  onPick,
+}: {
+  value: AuctionCategoryId | "";
+  onClose: () => void;
+  onPick: (value: AuctionCategoryId) => void;
+}) {
+  return (
+    <Modal open onClose={onClose} title="Categorie">
+      <div
+        role="radiogroup"
+        aria-label="Categorie"
+        className="grid grid-cols-3 gap-2"
+      >
+        {AUCTION_CATEGORIES.map((entry) => {
+          const chosen = value === entry.id;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              role="radio"
+              aria-checked={chosen}
+              onClick={() => onPick(entry.id)}
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-2xl px-1 py-4 text-center transition",
+                chosen
+                  ? "bg-primary-50 ring-1 ring-primary-500"
+                  : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
+              )}
+            >
+              <CategoryIcon
+                set="categories"
+                id={entry.id}
+                className="h-14 w-14"
+                sizes="56px"
+              />
+              <span
+                title={entry.label}
+                className={cn(
+                  "w-full truncate text-[11px] leading-none font-bold",
+                  chosen ? "text-primary-900" : "text-ink-700",
+                )}
+              >
+                {entry.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+/** The three easybox compartments, each named after something the whole parcel is the size of. */
+function ParcelModal({
+  value,
+  onClose,
+  onPick,
+}: {
+  value: Draft["parcel"];
+  onClose: () => void;
+  onPick: (value: Exclude<Draft["parcel"], "">) => void;
+}) {
+  return (
+    <Modal open onClose={onClose} title="Mărimea coletului">
+      <div
+        role="radiogroup"
+        aria-label="Mărimea coletului"
+        className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+      >
+        {AUCTION.PARCEL_TYPES.map((parcel) => {
+          const chosen = value === parcel.id;
+          return (
+            <button
+              key={parcel.id}
+              type="button"
+              role="radio"
+              aria-checked={chosen}
+              onClick={() => onPick(parcel.id)}
+              className={cn(
+                "flex items-center gap-3.5 rounded-2xl px-3.5 py-4 text-left transition",
+                "sm:flex-col sm:gap-2 sm:px-2 sm:py-4 sm:text-center",
+                chosen
+                  ? "bg-primary-50 ring-1 ring-primary-500"
+                  : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
+              )}
+            >
+              <ParcelArt parcel={parcel} className="h-14 w-14" />
+              <span className="min-w-0">
+                <span className="block font-display text-base font-extrabold text-ink-900">
+                  {parcel.label}
+                </span>
+                <span className="mt-0.5 block text-sm leading-tight text-ink-500">
+                  {parcel.examples}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Both prices, typed where they can be checked against each other.
+ *
+ * <p>Confirmed rather than committed on every keystroke, so a half-typed number never reaches the
+ * form, and the message comparing the two is read beside the fields that caused it.
+ */
+function PriceModal({
+  startingPrice,
+  buyNowPrice,
+  onClose,
+  onSave,
+}: {
+  startingPrice: string;
+  buyNowPrice: string;
+  onClose: () => void;
+  onSave: (values: { startingPrice: string; buyNowPrice: string }) => void;
+}) {
+  const [starting, setStarting] = useState(startingPrice);
+  const [buyNow, setBuyNow] = useState(buyNowPrice);
+  const [errors, setErrors] = useState<Errors>({});
+
+  const save = () => {
+    const found = validatePrices(starting, buyNow);
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
+    onSave({ startingPrice: starting, buyNowPrice: buyNow });
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Preț"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Anulează
+          </Button>
+          <Button onClick={save}>Confirmă</Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Field label="Preț de pornire" error={errors.startingPrice} required>
           <Input
-            value={draft.title}
-            onChange={(event) => set("title", event.target.value)}
-            maxLength={AUCTION.MAX_TITLE_LENGTH}
-            placeholder="Numele obiectului"
-            data-invalid={errors.title ? "true" : undefined}
+            value={starting}
+            onChange={(event) => {
+              setStarting(event.target.value);
+              setErrors((current) => ({
+                ...current,
+                startingPrice: undefined,
+              }));
+            }}
+            inputMode="decimal"
+            placeholder="0"
+            trailing={<span className="text-sm text-ink-500">lei</span>}
           />
-        </Field>
-
-        <Field label="Detalii" error={errors.description} required>
-          <Textarea
-            value={draft.description}
-            onChange={(event) => set("description", event.target.value)}
-            maxLength={AUCTION.MAX_DESCRIPTION_LENGTH}
-            rows={5}
-            placeholder="Ce include, cum a fost folosit și orice detaliu util cumpărătorului."
-            data-invalid={errors.description ? "true" : undefined}
-          />
-        </Field>
-
-        <Field label="Categorie" error={errors.category} required>
-          <div
-            role="radiogroup"
-            aria-label="Categorie"
-            className="grid grid-cols-3 gap-2 sm:grid-cols-5"
-            data-invalid={errors.category ? "true" : undefined}
-          >
-            {AUCTION_CATEGORIES.map((entry) => {
-              const chosen = draft.category === entry.id;
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={chosen}
-                  onClick={() => set("category", entry.id)}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-center transition",
-                    chosen
-                      ? "bg-primary-50 ring-1 ring-primary-500"
-                      : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
-                  )}
-                >
-                  <CategoryIcon
-                    set="categories"
-                    id={entry.id}
-                    className="h-7 w-7"
-                    sizes="28px"
-                  />
-                  {/* One line, always. `truncate` rather than a smaller size:
-                      the longest label fits at 10px, and if a future one does
-                      not it ends in an ellipsis instead of wrapping the tile
-                      taller than the eight beside it. */}
-                  <span
-                    title={entry.label}
-                    className={cn(
-                      "w-full truncate text-[10px] leading-none font-bold",
-                      chosen ? "text-primary-900" : "text-ink-700",
-                    )}
-                  >
-                    {entry.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-
-        <Field label="Mărimea coletului" error={errors.parcel} required>
-          <div
-            role="radiogroup"
-            aria-label="Mărimea coletului"
-            className="grid grid-cols-3 gap-2 sm:gap-3"
-            data-invalid={errors.parcel ? "true" : undefined}
-          >
-            {AUCTION.PARCEL_TYPES.map((parcel) => {
-              const chosen = draft.parcel === parcel.id;
-              return (
-                <button
-                  key={parcel.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={chosen}
-                  onClick={() => set("parcel", parcel.id)}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-2xl bg-white p-3 text-center transition",
-                    chosen
-                      ? "bg-primary-50 ring-1 ring-primary-500"
-                      : "ring-1 ring-edge hover:ring-ink-300",
-                  )}
-                >
-                  {parcel.illustration ? (
-                    <Illustration
-                      src={parcel.illustration}
-                      className="h-10 w-10"
-                      sizes="40px"
-                    />
-                  ) : (
-                    <Icons.parcel
-                      aria-hidden="true"
-                      className="h-8 w-8 text-ink-400"
-                    />
-                  )}
-                  <span className="font-display text-sm font-extrabold text-ink-900">
-                    {parcel.label}
-                  </span>
-                  <span className="text-[11px] leading-tight text-ink-500">
-                    {parcel.examples}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </Field>
 
         <Field
-          label="Stare"
-          error={errors.condition}
-          required
-          className="sm:max-w-xs"
+          label="Preț de vânzare directă"
+          error={errors.buyNowPrice}
+          optionalLabel
         >
-          <div data-invalid={errors.condition ? "true" : undefined}>
-            <Select
-              ariaLabel="Starea obiectului"
-              value={draft.condition}
-              options={CONDITIONS}
-              onChange={(value) => set("condition", value)}
-              placeholder="Alege starea"
-            />
-          </div>
+          <Input
+            value={buyNow}
+            onChange={(event) => {
+              setBuyNow(event.target.value);
+              setErrors((current) => ({ ...current, buyNowPrice: undefined }));
+            }}
+            inputMode="decimal"
+            placeholder="—"
+            trailing={<span className="text-sm text-ink-500">lei</span>}
+          />
         </Field>
-      </Panel>
+      </div>
+    </Modal>
+  );
+}
 
-      <Panel>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Preț de pornire" error={errors.startingPrice} required>
-            <Input
-              value={draft.startingPrice}
-              onChange={(event) => set("startingPrice", event.target.value)}
-              inputMode="decimal"
-              placeholder="0"
-              trailing={<span className="text-sm text-ink-500">lei</span>}
-              data-invalid={errors.startingPrice ? "true" : undefined}
-            />
-          </Field>
+/**
+ * Who the money goes to and how much of it, in one place because it is one decision.
+ *
+ * <p>The presets answer the amount for most sellers; the range is there for whoever wants 35, and
+ * only then. The percentage is written once — in the pressed preset, or in the range's own header
+ * while it is open — because two live copies of one number invite the reader to check whether they
+ * agree.
+ */
+function DonationModal({
+  cause,
+  percent,
+  onClose,
+  onSave,
+}: {
+  cause: CauseDetail | null;
+  percent: number;
+  onClose: () => void;
+  onSave: (values: { cause: CauseDetail; percent: number }) => void;
+}) {
+  const [chosen, setChosen] = useState<CauseDetail | null>(cause);
+  const [share, setShare] = useState(percent);
+  const [custom, setCustom] = useState(
+    !DONATION.PRESET_PERCENTS.some((preset) => preset === percent),
+  );
 
-          <Field
-            label="Preț de vânzare directă"
-            error={errors.buyNowPrice}
-            optionalLabel
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Donație"
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Anulează
+          </Button>
+          <Button
+            disabled={!chosen}
+            onClick={() => {
+              if (chosen) onSave({ cause: chosen, percent: share });
+            }}
           >
-            <Input
-              value={draft.buyNowPrice}
-              onChange={(event) => set("buyNowPrice", event.target.value)}
-              inputMode="decimal"
-              placeholder="—"
-              trailing={<span className="text-sm text-ink-500">lei</span>}
-              data-invalid={errors.buyNowPrice ? "true" : undefined}
-            />
-          </Field>
-        </div>
+            Confirmă
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <CausePicker value={chosen?.id ?? ""} onChange={setChosen} />
 
-        {/* The presets answer it for most sellers; the range is there for
-            whoever wants 35, and only then. The percentage is written once —
-            in the pressed preset, or in the slider's own header when the range
-            is open — because two live copies of one number invite the reader to
-            check whether they agree. */}
-        <Field label="Procentul donat" required>
+        <div className="flex flex-col gap-2 border-t border-line pt-4">
+          <span className="font-display text-sm font-bold text-ink-600">
+            Procentul donat
+          </span>
+
           <div className="flex flex-wrap gap-1.5">
-            {DONATION.PRESET_PERCENTS.map((percent) => {
-              const chosen = !custom && draft.donationPercent === percent;
+            {DONATION.PRESET_PERCENTS.map((preset) => {
+              const pressed = !custom && share === preset;
               return (
                 <button
-                  key={percent}
+                  key={preset}
                   type="button"
-                  aria-pressed={chosen}
+                  aria-pressed={pressed}
                   onClick={() => {
                     setCustom(false);
-                    set("donationPercent", percent);
+                    setShare(preset);
                   }}
                   className={cn(
                     "numeric rounded-full px-3.5 py-1.5 text-sm font-bold transition",
-                    chosen
+                    pressed
                       ? "bg-primary-600 text-white"
                       : "bg-ink-100 text-ink-700 hover:bg-ink-200",
                   )}
                 >
-                  {percent}%
+                  {preset}%
                 </button>
               );
             })}
@@ -444,112 +1041,51 @@ export function ListingForm() {
 
           {/* Always mounted, opened by a grid row going from 0fr to 1fr. A
               height animates both ways this way; a component that unmounts can
-              only ever animate in, and vanishes on the way out. */}
+              only ever animate in, and vanishes on the way out.
+
+              `inert` while closed, because a collapsed row still holds a
+              focusable range input: tabbing into one lands the caret somewhere
+              nobody can see. */}
           <div
             aria-hidden={!custom}
+            inert={!custom}
             className={cn(
-              "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+              "grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--ease-out-soft)]",
               custom
                 ? "grid-rows-[1fr] opacity-100"
                 : "grid-rows-[0fr] opacity-0",
             )}
           >
             <div className="overflow-hidden">
-              <div className="pt-3">
+              {/* Slack around the slider, because the clip is a scroll container
+                  and the browser scrolls the range input into it on focus. The
+                  thumb grows past its track on press, and that single pixel of
+                  overflow was enough to shunt the panel upward on first click. */}
+              <div
+                className={cn(
+                  "px-0.5 pt-3 pb-1.5 transition-transform duration-300 ease-[var(--ease-out-soft)]",
+                  custom ? "translate-y-0" : "-translate-y-1",
+                )}
+              >
                 <Slider
                   label="Procent donat"
-                  value={draft.donationPercent}
+                  value={share}
                   min={DONATION.MIN_PERCENT}
                   max={DONATION.MAX_PERCENT}
                   step={5}
-                  onChange={(value) => set("donationPercent", value)}
+                  onChange={setShare}
                   formatValue={(value) => `${value}%`}
                 />
               </div>
             </div>
           </div>
 
-          <p className="text-sm text-ink-500">
-            Procentul se aplică prețului final al licitației, iar suma ajunge la
-            cauză după confirmarea livrării.
-            {donated !== null ? (
-              <>
-                {" "}
-                La prețul de pornire, cauza ar primi{" "}
-                <strong className="numeric text-primary-800">
-                  {formatMoney(donated)}
-                </strong>
-                .
-              </>
-            ) : null}
+          <p className="text-xs text-ink-500">
+            Suma ajunge la cauză după confirmarea livrării.
           </p>
-        </Field>
-
-        <Field label="Cauza susținută" error={errors.causeId} required>
-          <div data-invalid={errors.causeId ? "true" : undefined}>
-            <CausePicker
-              value={draft.causeId}
-              onChange={(causeId) => set("causeId", causeId)}
-            />
-          </div>
-        </Field>
-
-        <div className="flex flex-col gap-3">
-          <Checkbox
-            checked={draft.ownershipConfirmed}
-            onChange={(event) =>
-              set("ownershipConfirmed", event.target.checked)
-            }
-            label="Obiectul îmi aparține și îl pot trimite"
-            data-invalid={errors.ownershipConfirmed ? "true" : undefined}
-          />
-          {errors.ownershipConfirmed ? (
-            <p role="alert" className="text-sm font-semibold text-danger-600">
-              {errors.ownershipConfirmed}
-            </p>
-          ) : null}
-
-          <Checkbox
-            checked={draft.termsAccepted}
-            onChange={(event) => set("termsAccepted", event.target.checked)}
-            label="Accept termenii bid4 pentru vânzători"
-            data-invalid={errors.termsAccepted ? "true" : undefined}
-          />
-          {errors.termsAccepted ? (
-            <p role="alert" className="text-sm font-semibold text-danger-600">
-              {errors.termsAccepted}
-            </p>
-          ) : null}
         </div>
-      </Panel>
-
-      {submit.error ? <Alert tone="danger">{submit.error}</Alert> : null}
-
-      <Button
-        type="submit"
-        size="lg"
-        fullWidth
-        loading={submit.pending}
-        className="sm:w-auto sm:self-start"
-      >
-        Finalizează licitația
-      </Button>
-    </form>
-  );
-}
-
-/**
- * One half of the form, on its own surface.
- *
- * <p>Two panels rather than one long column on the page's grey: the object and the money are
- * separate decisions, and the break between them is the only thing that has to be said — so it is
- * said with a gap and an edge rather than with a heading nobody needed to read.
- */
-function Panel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-5 rounded-3xl bg-white p-4 ring-1 ring-edge sm:p-6">
-      {children}
-    </div>
+      </div>
+    </Modal>
   );
 }
 

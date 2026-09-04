@@ -11,7 +11,7 @@ import { DEMO_PASSWORD } from "@/lib/mock/seed";
 import { ACCOUNT_TYPE, USER_ROLE } from "@/lib/labels";
 import type { User } from "@/lib/types";
 
-/** Dev-only: the four seed accounts, one tap each. Stripped in production. */
+/** The seeded accounts, one tap each. Only where the mock world is what is being browsed. */
 export function SeedAccounts({
   onSignedIn,
 }: {
@@ -44,7 +44,7 @@ export function SeedAccounts({
         Conturi demo
       </p>
       <p className="mt-0.5 text-xs text-ink-600">
-        Disponibile doar în development. Parola comună este{" "}
+        Disponibile pe versiunea demonstrativă. Parola comună este{" "}
         <span className="font-bold">{DEMO_PASSWORD}</span>.
       </p>
 

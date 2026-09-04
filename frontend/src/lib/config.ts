@@ -31,10 +31,16 @@ export const SITE_URL: string = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
 ).replace(/\/$/, "");
 
-/** Dev-only affordances (role switcher, seed-account quick login). */
+/**
+ * The role switcher and the seed-account quick login.
+ *
+ * <p>On whenever the app is running against the mock world, not only in development: a deployment
+ * with no backend behind it is a demo, and the accounts it invites people to sign in as are the
+ * seeded ones. The real deployment sets `NEXT_PUBLIC_USE_MOCK=false`, which turns both off again.
+ */
 export const SHOW_DEV_TOOLS: boolean =
   process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS !== "false" &&
-  process.env.NODE_ENV !== "production";
+  (USE_MOCK || process.env.NODE_ENV !== "production");
 
 export const FEES = {
   /**
@@ -119,9 +125,13 @@ export const AUCTION = {
    * The three parcels a seller picks between, instead of typing a weight.
    *
    * <p>Nobody knows what their jacket weighs in grams, and the number was only ever there to land
-   * in a courier band. So the seller picks the band directly, from examples of things they can
-   * recognise, and `weightGrams` is the top of it — the price quoted is then the one the courier
-   * charges rather than an optimistic guess.
+   * in a courier band. So the seller picks the band directly, and `weightGrams` is the top of it —
+   * the price quoted is then the one the courier charges rather than an optimistic guess.
+   *
+   * <p>Each `examples` line names one object the whole parcel is the size of, rather than listing
+   * what could go in it: the three bands are the easybox compartments, and a compartment is a
+   * volume. "Cât o cutie de pantofi" is a thing the seller can hold up against what is in front of
+   * them; "pantofi, o geacă, un aparat mic" asks them to guess which list theirs belongs to.
    *
    * <p>`illustration` names a file under `public/images/illustrations`. Left null the picker draws
    * the parcel icon instead, so the three are usable before the artwork exists and need no code
@@ -131,21 +141,21 @@ export const AUCTION = {
     {
       id: "small",
       label: "Colet mic",
-      examples: "O carte, un tricou, un accesoriu",
+      examples: "Cât un plic",
       weightGrams: 1_000,
       illustration: null as string | null,
     },
     {
       id: "medium",
       label: "Colet mediu",
-      examples: "Pantofi, o geacă, un aparat mic",
+      examples: "Cât o cutie de pantofi",
       weightGrams: 5_000,
       illustration: null as string | null,
     },
     {
       id: "large",
       label: "Colet mare",
-      examples: "Un obiect voluminos sau greu",
+      examples: "Cât o cutie de mutare",
       weightGrams: 15_000,
       illustration: null as string | null,
     },
@@ -269,12 +279,47 @@ export const AUCTION_CATEGORIES = [
 
 /** Every județ plus the capital, for beneficiary addresses. */
 export const ROMANIAN_COUNTIES = [
-  "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani",
-  "Brașov", "Brăila", "București", "Buzău", "Caraș-Severin", "Călărași",
-  "Cluj", "Constanța", "Covasna", "Dâmbovița", "Dolj", "Galați", "Giurgiu",
-  "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov", "Maramureș",
-  "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj",
-  "Sibiu", "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea",
+  "Alba",
+  "Arad",
+  "Argeș",
+  "Bacău",
+  "Bihor",
+  "Bistrița-Năsăud",
+  "Botoșani",
+  "Brașov",
+  "Brăila",
+  "București",
+  "Buzău",
+  "Caraș-Severin",
+  "Călărași",
+  "Cluj",
+  "Constanța",
+  "Covasna",
+  "Dâmbovița",
+  "Dolj",
+  "Galați",
+  "Giurgiu",
+  "Gorj",
+  "Harghita",
+  "Hunedoara",
+  "Ialomița",
+  "Iași",
+  "Ilfov",
+  "Maramureș",
+  "Mehedinți",
+  "Mureș",
+  "Neamț",
+  "Olt",
+  "Prahova",
+  "Satu Mare",
+  "Sălaj",
+  "Sibiu",
+  "Suceava",
+  "Teleorman",
+  "Timiș",
+  "Tulcea",
+  "Vaslui",
+  "Vâlcea",
   "Vrancea",
 ] as const;
 

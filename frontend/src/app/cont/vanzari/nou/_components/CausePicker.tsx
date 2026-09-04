@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
@@ -32,7 +31,7 @@ export function CausePicker({
   onChange,
 }: {
   value: string;
-  onChange: (causeId: string) => void;
+  onChange: (cause: CauseDetail) => void;
 }) {
   const [term, setTerm] = useState("");
   const [category, setCategory] = useState<CauseCategoryId | "">("");
@@ -71,6 +70,13 @@ export function CausePicker({
 
   const chosen = (data ?? []).find((cause) => cause.id === value);
 
+  // The panel outlives the selection by the length of its close, so it has
+  // something to show on the way out instead of collapsing empty. Adjusted
+  // during render rather than in an effect, which is what React asks for when
+  // state has to follow a prop.
+  const [shownCause, setShownCause] = useState<CauseDetail | null>(null);
+  if (chosen && chosen.id !== shownCause?.id) setShownCause(chosen);
+
   return (
     <div className="flex flex-col gap-3">
       <Input
@@ -86,7 +92,7 @@ export function CausePicker({
       {/* Text-only filters, sitting on the panel rather than in outlined pills.
           Nine bordered chips above a row of portraits was two competing frames
           around the one thing being chosen. */}
-      <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1">
+      <div className="no-scrollbar flex gap-1 overflow-x-auto py-1">
         <Filter
           active={category === ""}
           onClick={() => setCategory("")}
@@ -115,17 +121,17 @@ export function CausePicker({
         data-lenis-prevent
         role="radiogroup"
         aria-label="Cauza susținută"
-        // p-1 and the matching negative margin: the selected ring sits 4px
-        // outside its portrait, and an overflow container clips anything that
-        // leaves its padding box — which is why the ring came out cut.
-        className="no-scrollbar -m-1 flex snap-x snap-mandatory gap-4 overflow-x-auto p-1"
+        // p-1 with no negative margin to take it back: the selected ring sits
+        // 4px outside its portrait and an overflow container clips anything
+        // leaving its padding box, but pulling the row wider than its parent is
+        // what put a horizontal scrollbar inside the modal.
+        className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto p-1"
       >
         {loading && !data
           ? Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="w-[88px] shrink-0">
-                <Skeleton className="h-[72px] w-[72px] rounded-full" />
-                <Skeleton className="mt-2 h-3 w-full" />
-                <Skeleton className="mt-1 h-3 w-2/3" />
+              <div key={index} className="w-[72px] shrink-0">
+                <Skeleton className="h-14 w-14 rounded-full" />
+                <Skeleton className="mt-1.5 h-3 w-full" />
               </div>
             ))
           : (shown.items ?? []).map((cause) => (
@@ -133,7 +139,7 @@ export function CausePicker({
                 key={cause.id}
                 cause={cause}
                 selected={cause.id === value}
-                onSelect={() => onChange(cause.id)}
+                onSelect={() => onChange(cause)}
               />
             ))}
 
@@ -153,17 +159,46 @@ export function CausePicker({
 
       {/* The portraits carry a picture and a name, which is all a row of them can
           hold. Everything worth knowing about the one actually chosen appears
-          here instead, where there is room for it and only for one. */}
-      {chosen ? <ChosenCause key={chosen.id} cause={chosen} /> : null}
+          here instead, where there is room for it and only for one.
+
+          Opened by a grid row rather than mounted: the panel is a third of the
+          field's height, and dropping it in finished shoved everything below it
+          down a step while it was still fading. Growing into place moves the
+          page by the same amount over the same time the panel takes to arrive,
+          which reads as one thing happening instead of two. */}
+      <div
+        aria-hidden={!chosen}
+        inert={!chosen}
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--ease-out-soft)]",
+          chosen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div
+            className={cn(
+              "pt-1 transition-transform duration-300 ease-[var(--ease-out-soft)]",
+              chosen ? "translate-y-0" : "-translate-y-2",
+            )}
+          >
+            {shownCause ? <ChosenCause cause={shownCause} /> : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 /**
- * The cause that was picked, opened out under the row.
+ * The cause that was picked, on one line under the row.
  *
- * <p>Keyed on the id by the caller, so switching causes replays the entrance rather than swapping
- * the text in place — the movement is what says the choice registered.
+ * <p>It used to be a card with the description and a link out to the cause's page, and it was a
+ * third of the modal — enough that choosing a cause pushed the percentage below the fold. What is
+ * worth saying here is which one is chosen and how far along it is; the rest is a page away.
+ *
+ * <p>No entrance of its own: the wrapper animates, and switching from one cause to another swaps
+ * the text in place. Replaying a fade on every change made the answer flinch each time the reader
+ * moved along the row.
  */
 function ChosenCause({ cause }: { cause: CauseDetail }) {
   const percent = Math.round(
@@ -171,29 +206,26 @@ function ChosenCause({ cause }: { cause: CauseDetail }) {
   );
 
   return (
-    <div className="animate-fade-up flex gap-3 rounded-2xl bg-canvas p-3">
-      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-ink-100">
+    <div className="flex items-center gap-2.5 rounded-2xl bg-canvas p-2.5">
+      <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-ink-100">
         <Image
           src={cause.imageUrl}
           alt=""
           fill
           unoptimized
-          sizes="56px"
+          sizes="40px"
           className="object-cover"
           draggable={false}
         />
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="font-display text-sm font-extrabold text-ink-900">
+        <p className="truncate font-display text-sm font-extrabold text-ink-900">
           {cause.name}
-        </p>
-        <p className="mt-0.5 text-xs leading-snug text-ink-600">
-          <span className="line-clamp-2">{cause.shortDescription}</span>
         </p>
 
         <div
-          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-200"
+          className="mt-1 h-1 w-full overflow-hidden rounded-full bg-ink-200"
           role="progressbar"
           aria-valuenow={percent}
           aria-valuemin={0}
@@ -206,25 +238,12 @@ function ChosenCause({ cause }: { cause: CauseDetail }) {
           />
         </div>
 
-        <p className="numeric mt-1.5 text-xs text-ink-500">
+        <p className="numeric mt-1 text-[11px] text-ink-500">
           <strong className="text-ink-800">
             {formatMoney(cause.raisedAmount)}
           </strong>{" "}
           din {formatMoney(cause.goalAmount)} · {percent}%
         </p>
-
-        {/* A new tab, so a half-filled form is never lost to a click. `noreferrer`
-            with it: the opened page has no handle on this one and no referrer
-            carrying the seller's draft URL. */}
-        <Link
-          href={`/cauze/${cause.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-primary-700 transition hover:text-primary-800"
-        >
-          Vezi mai multe
-          <Icons.crumb aria-hidden="true" className="h-3.5 w-3.5" />
-        </Link>
       </div>
     </div>
   );
@@ -285,12 +304,12 @@ function CauseChoice({
       aria-checked={selected}
       onClick={onSelect}
       title={`${cause.name} — ${formatMoney(cause.raisedAmount)} din ${formatMoney(cause.goalAmount)}`}
-      className="group flex w-[88px] shrink-0 snap-start flex-col items-center gap-2 text-center"
+      className="group flex w-[72px] shrink-0 snap-start flex-col items-center gap-1.5 text-center"
     >
       <span className="relative inline-flex">
         <span
           className={cn(
-            "relative block h-[72px] w-[72px] overflow-hidden rounded-full bg-ink-100 transition",
+            "relative block h-14 w-14 overflow-hidden rounded-full bg-ink-100 transition",
             selected
               ? "ring-1 ring-primary-500 ring-offset-2 ring-offset-white"
               : "ring-1 ring-black/5 group-hover:ring-ink-300",
@@ -301,14 +320,14 @@ function CauseChoice({
             alt=""
             fill
             unoptimized
-            sizes="72px"
+            sizes="56px"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             draggable={false}
           />
         </span>
 
         {selected ? (
-          <span className="absolute -right-0.5 -bottom-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-white ring-2 ring-white">
+          <span className="absolute -right-0.5 -bottom-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-white ring-2 ring-white">
             <Icons.check aria-hidden="true" className="h-3.5 w-3.5" />
           </span>
         ) : null}
@@ -316,7 +335,7 @@ function CauseChoice({
 
       <span
         className={cn(
-          "text-xs leading-tight font-bold transition",
+          "text-[11px] leading-tight font-bold transition",
           selected ? "text-primary-800" : "text-ink-800",
         )}
       >

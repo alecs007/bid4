@@ -77,7 +77,7 @@ export function Modal({
   } as const;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 pt-[6dvh] sm:items-center sm:p-4 sm:pt-4">
       <button
         type="button"
         aria-label={closeLabel}
@@ -91,13 +91,17 @@ export function Modal({
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
         className={cn(
-          "relative flex max-h-[90dvh] w-full animate-pop-in flex-col rounded-t-3xl bg-white shadow-sm sm:max-h-[85dvh] sm:rounded-3xl",
+          // max-h-full, measured against the wrapper's own definite height,
+          // rather than a viewport unit: the cap is what makes the body below
+          // scroll, and a panel that outgrows it puts its content off-screen
+          // with no way to reach it. The wrapper's padding sets the inset.
+          "relative flex max-h-full w-full animate-pop-in flex-col overflow-hidden rounded-t-3xl bg-white shadow-sm sm:rounded-3xl",
           sizes[size],
         )}
       >
         <div
           className={cn(
-            "flex shrink-0 items-start gap-4 px-6 pt-6 pb-4",
+            "flex shrink-0 items-start gap-3 px-5 pt-5 pb-3",
             align === "center" ? "flex-col items-center" : "justify-between",
           )}
         >
@@ -133,16 +137,23 @@ export function Modal({
             The bottom padding is conditional because a footer already carries
             its own; without one, the content ran flush into the panel's edge. */}
         <div
+          // Lenis owns the wheel and will happily scroll the page underneath
+          // while the panel's own overflow sits untouched, which leaves
+          // anything below the fold of a tall modal unreachable.
+          data-lenis-prevent
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto px-6",
-            footer ? undefined : "pb-6",
+            // py-1 because the scroller clips at its padding box, and a chosen
+            // tile's ring sits outside its own edge: without it the ring came
+            // out shaved along the top and bottom of the list.
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-1",
+            footer ? undefined : "pb-5",
           )}
         >
           {children}
         </div>
 
         {footer ? (
-          <div className="flex shrink-0 flex-col-reverse gap-2 px-6 pt-4 pb-6 sm:flex-row sm:justify-end">
+          <div className="flex shrink-0 flex-col-reverse gap-2 px-5 pt-3 pb-5 sm:flex-row sm:justify-end">
             {footer}
           </div>
         ) : null}

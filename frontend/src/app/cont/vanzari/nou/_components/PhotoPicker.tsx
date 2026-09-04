@@ -13,14 +13,16 @@ import { cn } from "@/lib/utils/cn";
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
 /**
- * A row of slots, so the set reads as a set.
+ * One wide target until there is something to show, then the photographs themselves.
  *
- * <p>One button saying "adaugă" told the seller nothing about how many were wanted. Four outlines
- * do, and they grow to eight as the photographs arrive rather than standing there empty: the
- * affordance is worth the space, a wall of unused boxes is not.
+ * <p>A row of empty outlines asked the seller to fill four boxes before they had decided how many
+ * photographs to take. The empty state is one area instead: it takes a drop as readily as a click,
+ * and it says which files it accepts, which is the only thing a seller cannot guess.
  *
- * <p>They are the card's own 3/4 box, imported rather than copied, so what the seller frames here
- * is the shape a reader sees in a grid. The first carries the cover ring.
+ * <p>Order is the whole interface once they arrive. The first is the cover, and it is made the
+ * cover by being dragged to the front — a "fă copertă" button on every card was a second way to
+ * say what the position already says. Dragging is by pointer rather than by the HTML drag events,
+ * which never fire on touch, and the cards reorder under the finger as it passes them.
  */
 export function PhotoPicker({
   value,
@@ -31,11 +33,15 @@ export function PhotoPicker({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [tooLarge, setTooLarge] = useState<string | null>(null);
+  const [fileOver, setFileOver] = useState(false);
+  const [dragged, setDragged] = useState<number | null>(null);
 
   const add = (files: FileList | null) => {
     if (!files?.length) return;
     const room = AUCTION.MAX_IMAGES - value.length;
-    const picked = Array.from(files).slice(0, room);
+    const picked = Array.from(files)
+      .filter((file) => file.type.startsWith("image/"))
+      .slice(0, room);
     const small = picked.filter(
       (file) => file.size <= CAUSE.MAX_UPLOAD_MB * 1024 * 1024,
     );
@@ -51,57 +57,95 @@ export function PhotoPicker({
   const remove = (index: number) =>
     onChange(value.filter((_, position) => position !== index));
 
-  /** Promotion, not a swap: the order of the rest is the seller's too. */
-  const makeCover = (index: number) =>
-    onChange([
-      value[index]!,
-      ...value.filter((_, position) => position !== index),
-    ]);
+  const move = (from: number, to: number) => {
+    const next = [...value];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    onChange(next);
+  };
 
-  const next = value.length;
-  // Four while it is empty, then one spare ahead of whatever has been added.
-  const shown = Math.min(AUCTION.MAX_IMAGES, Math.max(4, next + 1));
-  const slots = Array.from({ length: shown }, (_, index) => index);
+  const dropFiles = (event: React.DragEvent) => {
+    event.preventDefault();
+    setFileOver(false);
+    add(event.dataTransfer.files);
+  };
+
+  const overFiles = (event: React.DragEvent) => {
+    event.preventDefault();
+    setFileOver(true);
+  };
+
+  const full = value.length >= AUCTION.MAX_IMAGES;
+
+  /** The card the pointer is over, by the index each one carries. */
+  const cardUnder = (x: number, y: number): number | null => {
+    const element = document.elementFromPoint(x, y)?.closest("[data-photo]");
+    if (!element) return null;
+    const index = Number((element as HTMLElement).dataset.photo);
+    return Number.isNaN(index) ? null : index;
+  };
 
   return (
-    <div>
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-        {slots.map((index) => {
-          const photo = value[index];
-          const cover = index === 0;
-
-          if (!photo) {
-            const isNext = index === next;
-            return (
-              <button
-                key={index}
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                aria-label={
-                  isNext ? "Adaugă fotografii" : `Slot ${index + 1}, gol`
-                }
-                tabIndex={isNext ? 0 : -1}
-                className={cn(
-                  CARD_MEDIA,
-                  "flex flex-col items-center justify-center gap-1 ring-1 ring-dashed transition",
-                  isNext
-                    ? "bg-white text-ink-600 ring-ink-300 hover:bg-primary-50 hover:text-primary-800 hover:ring-primary-400"
-                    : "bg-canvas text-ink-300 ring-edge",
-                )}
-              >
-                <Icons.add aria-hidden="true" className="h-5 w-5" />
-              </button>
-            );
-          }
-
-          return (
+    <div className="flex flex-col gap-2">
+      {value.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDragOver={overFiles}
+          onDragLeave={() => setFileOver(false)}
+          onDrop={dropFiles}
+          className={cn(
+            "flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition",
+            fileOver
+              ? "border-primary-500 bg-primary-50"
+              : "border-ink-200 bg-canvas hover:border-ink-300 hover:bg-white",
+          )}
+        >
+          <Icons.photo
+            aria-hidden="true"
+            className={cn(
+              "h-8 w-8 transition",
+              fileOver ? "text-primary-600" : "text-ink-400",
+            )}
+          />
+          <span className="font-display text-sm font-extrabold text-ink-900">
+            Adaugă fotografii
+          </span>
+          <span className="text-xs text-ink-500">
+            JPG, PNG sau WEBP, până la {CAUSE.MAX_UPLOAD_MB} MB fiecare
+          </span>
+        </button>
+      ) : (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {value.map((photo, index) => (
             <div
               key={photo.fileRef}
+              data-photo={index}
+              // touch-none, or the first finger movement scrolls the page
+              // instead of picking the card up.
               className={cn(
                 CARD_MEDIA,
-                "group bg-ink-100 ring-1",
-                cover ? "ring-1 ring-primary-500" : "ring-edge",
+                "group touch-none bg-ink-100 ring-1 transition-opacity",
+                index === 0 ? "ring-primary-500" : "ring-edge",
+                dragged === index
+                  ? "cursor-grabbing opacity-60"
+                  : "cursor-grab",
               )}
+              onPointerDown={(event) => {
+                if (event.pointerType === "mouse" && event.button !== 0) return;
+                event.currentTarget.setPointerCapture(event.pointerId);
+                setDragged(index);
+              }}
+              onPointerMove={(event) => {
+                if (dragged === null) return;
+                const to = cardUnder(event.clientX, event.clientY);
+                if (to !== null && to !== dragged) {
+                  move(dragged, to);
+                  setDragged(to);
+                }
+              }}
+              onPointerUp={() => setDragged(null)}
+              onPointerCancel={() => setDragged(null)}
             >
               {photo.previewUrl ? (
                 <Image
@@ -109,7 +153,7 @@ export function PhotoPicker({
                   alt=""
                   fill
                   unoptimized
-                  sizes="(max-width: 640px) 66vw, 50vw"
+                  sizes="(max-width: 640px) 33vw, 25vw"
                   className="object-cover"
                   draggable={false}
                 />
@@ -117,6 +161,7 @@ export function PhotoPicker({
 
               <button
                 type="button"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={() => remove(index)}
                 aria-label={`Șterge fotografia ${index + 1}`}
                 className="absolute top-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-white/95 text-ink-600 transition hover:text-danger-700"
@@ -124,24 +169,36 @@ export function PhotoPicker({
                 <Icons.close aria-hidden="true" className="h-3.5 w-3.5" />
               </button>
 
-              {cover ? (
+              {index === 0 ? (
                 <span className="absolute inset-x-1 bottom-1 rounded-md bg-white/95 py-0.5 text-center text-[10px] font-bold text-primary-800">
                   Copertă
                 </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => makeCover(index)}
-                  aria-label={`Fă fotografia ${index + 1} copertă`}
-                  className="absolute inset-x-1 bottom-1 rounded-md bg-white/95 py-0.5 text-center text-[10px] font-bold text-ink-700 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
-                >
-                  Copertă
-                </button>
-              )}
+              ) : null}
             </div>
-          );
-        })}
-      </div>
+          ))}
+
+          {full ? null : (
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              onDragOver={overFiles}
+              onDragLeave={() => setFileOver(false)}
+              onDrop={dropFiles}
+              aria-label="Adaugă fotografii"
+              className={cn(
+                CARD_MEDIA,
+                "flex flex-col items-center justify-center gap-1 border-2 border-dashed transition",
+                fileOver
+                  ? "border-ink-400 bg-white text-ink-700"
+                  : "border-ink-200 bg-canvas text-ink-500 hover:border-ink-300 hover:bg-white",
+              )}
+            >
+              <Icons.add aria-hidden="true" className="h-5 w-5" />
+              <span className="text-[11px] font-bold">Adaugă</span>
+            </button>
+          )}
+        </div>
+      )}
 
       <input
         ref={inputRef}
@@ -153,7 +210,7 @@ export function PhotoPicker({
       />
 
       {tooLarge ? (
-        <p role="alert" className="mt-1 text-sm font-semibold text-danger-600">
+        <p role="alert" className="text-sm font-semibold text-danger-600">
           {tooLarge}
         </p>
       ) : null}

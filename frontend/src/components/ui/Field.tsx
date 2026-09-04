@@ -44,7 +44,7 @@ export function Field({
       <div className={cn("flex flex-col gap-1.5", className)}>
         <label
           htmlFor={inputId}
-          className="font-display text-sm font-bold text-ink-800"
+          className="font-display text-sm font-semibold text-ink-600"
         >
           {label}
           {required ? (
@@ -83,7 +83,13 @@ export function Field({
   );
 }
 
-function useFieldProps() {
+/**
+ * The id and description wiring a control needs to belong to the `Field` around it.
+ *
+ * <p>Exported because not every control is an `<input>`: a row that opens a picker is a button,
+ * and it still has to be what the field's label points at.
+ */
+export function useFieldProps() {
   const context = useContext(FieldContext);
   if (!context) return {};
   return {
@@ -105,8 +111,8 @@ function useFieldProps() {
 const CONTROL_BASE =
   "w-full rounded-2xl bg-white text-ink-900 placeholder:text-ink-500 " +
   "ring-1 ring-ink-200 transition-[box-shadow] hover:ring-ink-300 " +
-  "focus:ring-2 focus:ring-primary-500 focus-visible:outline-none " +
-  "aria-[invalid]:ring-2 aria-[invalid]:ring-danger-500 " +
+  "focus:ring-primary-500 focus-visible:outline-none " +
+  "aria-[invalid]:ring-danger-500 " +
   "disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400";
 
 export interface InputProps extends ComponentPropsWithoutRef<"input"> {
@@ -123,7 +129,11 @@ export function Input({ className, leading, trailing, ...props }: InputProps) {
       <input
         {...fieldProps}
         {...props}
-        className={cn(CONTROL_BASE, "h-12 px-4 text-base sm:text-[15px]", className)}
+        className={cn(
+          CONTROL_BASE,
+          "h-12 px-4 text-base sm:text-[15px]",
+          className,
+        )}
       />
     );
   }
@@ -132,7 +142,7 @@ export function Input({ className, leading, trailing, ...props }: InputProps) {
     <div
       className={cn(
         "group flex h-12 items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-ink-200 transition",
-        "focus-within:ring-2 focus-within:ring-primary-500 hover:ring-ink-300",
+        "focus-within:ring-primary-500 hover:ring-ink-300",
         (props["aria-invalid"] ?? fieldProps["aria-invalid"])
           ? "ring-danger-500"
           : "",
@@ -167,7 +177,11 @@ export function Textarea({
       rows={rows}
       {...fieldProps}
       {...props}
-      className={cn(CONTROL_BASE, "resize-y px-4 py-3 text-base sm:text-[15px]", className)}
+      className={cn(
+        CONTROL_BASE,
+        "resize-y px-4 py-3 text-base sm:text-[15px]",
+        className,
+      )}
     />
   );
 }

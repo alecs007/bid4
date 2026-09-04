@@ -163,7 +163,7 @@ export function Select<T extends string>({
         className={cn(
           "flex w-full items-center gap-2 rounded-xl bg-white text-left font-semibold text-ink-900 transition",
           "ring-1 ring-ink-200 hover:ring-ink-300",
-          open && "ring-2 ring-primary-500",
+          open && "ring-primary-500",
           size === "sm" ? "h-10 px-3 text-sm" : "h-12 px-4 text-[15px]",
         )}
       >
