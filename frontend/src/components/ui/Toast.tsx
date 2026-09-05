@@ -103,6 +103,22 @@ const CHIP_SOLID: Record<Tone, string> = {
   neutral: "bg-ink-700 text-white",
 };
 
+/** How long a notice stands when nothing says otherwise, and how long it takes to leave. */
+const DEFAULT_DURATION_MS = 4500;
+const LEAVE_MS = 260;
+
+/** The countdown bar, in the tone's own ink rather than the pale chip behind it. */
+const BAR_SOFT: Record<Tone, string> = {
+  primary: "bg-primary-500",
+  accent: "bg-accent-500",
+  sky: "bg-sky-500",
+  sun: "bg-sun-400",
+  success: "bg-success-600",
+  warning: "bg-warning-600",
+  danger: "bg-danger-600",
+  neutral: "bg-ink-400",
+};
+
 const DEFAULT_ICONS: Record<Tone, ReactNode> = {
   primary: <Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />,
   accent: <Icons.impact aria-hidden="true" className="h-4 w-4 shrink-0" />,
@@ -125,7 +141,7 @@ function ToastViewport({
     <div
       aria-live="polite"
       aria-relevant="additions"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-60 flex flex-col items-center gap-2 p-4 sm:inset-x-auto sm:right-0 sm:items-end"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-60 flex flex-col items-center p-4 sm:inset-x-auto sm:right-0 sm:items-end"
     >
       {toasts.map((item) => (
         <ToastCard key={item.id} toast={item} onDismiss={onDismiss} />
@@ -141,18 +157,22 @@ function ToastCard({
   toast: ToastItem;
   onDismiss: (id: string) => void;
 }) {
-  const { id, title, description, tone = "neutral", duration, action, icon } = toast;
+  const {
+    id,
+    title,
+    description,
+    tone = "neutral",
+    duration,
+    action,
+    icon,
+  } = toast;
   const loud = tone === "danger" || tone === "warning" || tone === "sun";
   const [leaving, setLeaving] = useState(false);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setLeaving(true), duration ?? 4500);
-    return () => window.clearTimeout(timeout);
-  }, [duration]);
+  const [held, setHeld] = useState(false);
 
   useEffect(() => {
     if (!leaving) return;
-    const timeout = window.setTimeout(() => onDismiss(id), 200);
+    const timeout = window.setTimeout(() => onDismiss(id), LEAVE_MS);
     return () => window.clearTimeout(timeout);
   }, [leaving, id, onDismiss]);
 
@@ -161,54 +181,104 @@ function ToastCard({
   const stacked = Boolean(description || action);
 
   return (
+    // The height is the stack's business: opened by a grid row so a new notice
+    // pushes the ones above it rather than appearing under them, and closed the
+    // same way so the gap it leaves shuts behind it. The spacing lives inside
+    // the row, because a `gap` on the column would outlive the row that closed.
     <div
-      role={tone === "danger" ? "alert" : "status"}
       className={cn(
-        "pointer-events-auto flex w-full max-w-sm gap-3 rounded-2xl bg-white p-4 shadow-sm",
-        stacked ? "items-start" : "items-center",
-        leaving ? "animate-toast-out" : "animate-toast-in",
+        "grid w-full max-w-sm",
+        leaving
+          ? "animate-none grid-rows-[0fr] transition-[grid-template-rows] duration-[260ms] ease-[var(--ease-out-soft)]"
+          : // motion-reduce keeps the base 1fr: the height is what makes the
+            // notice visible at all, and it must not depend on an animation
+            // that somebody has asked not to run.
+            "animate-toast-open grid-rows-[1fr] motion-reduce:animate-none",
       )}
     >
-      <span
-        className={cn(
-          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-          stacked && "mt-0.5",
-          loud ? CHIP_SOLID[tone] : CHIP_SOFT[tone],
-        )}
-      >
-        {icon ?? DEFAULT_ICONS[tone]}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-display font-bold text-ink-900">{title}</p>
-        {description ? (
-          <p className="mt-0.5 text-sm leading-snug text-ink-600">
-            {description}
-          </p>
-        ) : null}
-        {action ? (
-          <button
-            type="button"
-            onClick={() => {
-              action.onClick();
-              setLeaving(true);
-            }}
-            className="mt-2 rounded-lg font-display text-sm font-bold text-primary-700 underline decoration-2 underline-offset-4 transition hover:text-primary-800"
+      {/* The clip is what closes the row, and it was cropping the shadow off
+          the card inside it. The padding is that shadow's room, and it belongs
+          in here rather than on the column so it closes along with the row. */}
+      <div className="overflow-hidden">
+        <div className="px-1.5 pt-2 pb-1.5">
+          <div
+            role={tone === "danger" ? "alert" : "status"}
+            onPointerEnter={() => setHeld(true)}
+            onPointerLeave={() => setHeld(false)}
+            onFocusCapture={() => setHeld(true)}
+            onBlurCapture={() => setHeld(false)}
+            className={cn(
+              "pointer-events-auto relative flex w-full gap-3 rounded-2xl bg-white p-4 pb-5 shadow-sm",
+              stacked ? "items-start" : "items-center",
+              leaving
+                ? "animate-toast-out"
+                : "animate-toast-in motion-reduce:animate-none",
+            )}
           >
-            {action.label}
-          </button>
-        ) : null}
+            <span
+              className={cn(
+                "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                stacked && "mt-0.5",
+                loud ? CHIP_SOLID[tone] : CHIP_SOFT[tone],
+              )}
+            >
+              {icon ?? DEFAULT_ICONS[tone]}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display font-bold text-ink-900">{title}</p>
+              {description ? (
+                <p className="mt-0.5 text-sm leading-snug text-ink-600">
+                  {description}
+                </p>
+              ) : null}
+              {action ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    action.onClick();
+                    setLeaving(true);
+                  }}
+                  className="font-display mt-2 rounded-lg text-sm font-bold text-primary-700 underline decoration-2 underline-offset-4 transition hover:text-primary-800"
+                >
+                  {action.label}
+                </button>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              aria-label="Închide notificarea"
+              onClick={() => setLeaving(true)}
+              className={cn(
+                "-mr-1 shrink-0 rounded-xl p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700",
+                stacked && "-mt-1",
+              )}
+            >
+              <Icons.close aria-hidden="true" className="h-4 w-4 shrink-0" />
+            </button>
+
+            {/* How long it has left, and the clock itself: the bar's own end is
+              what dismisses the notice, so the two can never disagree. Holding
+              a pointer over it pauses the animation, which pauses the notice —
+              nothing is counting down in JavaScript beside it. */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-4 bottom-2 h-1 overflow-hidden rounded-full bg-ink-100"
+            >
+              <span
+                onAnimationEnd={() => setLeaving(true)}
+                style={{
+                  animationDuration: `${duration ?? DEFAULT_DURATION_MS}ms`,
+                  animationPlayState: held || leaving ? "paused" : "running",
+                }}
+                className={cn(
+                  "animate-toast-progress block h-full origin-left rounded-full",
+                  loud ? CHIP_SOLID[tone] : BAR_SOFT[tone],
+                )}
+              />
+            </span>
+          </div>
+        </div>
       </div>
-      <button
-        type="button"
-        aria-label="Închide notificarea"
-        onClick={() => setLeaving(true)}
-        className={cn(
-          "-mr-1 shrink-0 rounded-xl p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700",
-          stacked && "-mt-1",
-        )}
-      >
-        <Icons.close aria-hidden="true" className="h-4 w-4 shrink-0" />
-      </button>
     </div>
   );
 }

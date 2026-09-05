@@ -238,7 +238,9 @@ export function MySales() {
           </p>
           <ul
             key={`${view.filter}:${view.page}`}
-            className="flex animate-fade-in flex-col gap-2.5"
+            // The same reveal the catalogue uses when rows take a skeleton's
+            // place, so both lists change over at the same speed.
+            className="animate-reveal flex flex-col gap-2.5"
           >
             {view.shown.map((auction) => (
               <AuctionRow

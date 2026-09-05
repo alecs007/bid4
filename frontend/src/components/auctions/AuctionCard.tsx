@@ -42,6 +42,17 @@ export function AuctionCard({
   const [override, setOverride] = useState<boolean | null>(null);
   const watched = override ?? Boolean(auction.isWatched);
 
+  /**
+   * How many people have this on their list, counting the reader's own tap before the server has
+   * agreed to it — the icon turns immediately and a number beside it that lagged would read as the
+   * save not having landed.
+   */
+  const following = Math.max(
+    0,
+    auction.watcherCount +
+      (watched === Boolean(auction.isWatched) ? 0 : watched ? 1 : -1),
+  );
+
   // Reserved reads as open here, because it is: the listing still takes offers,
   // and whose offer the seller took is between them and that buyer. A card that
   // announced it would discourage exactly the better offer the seller left the
@@ -108,18 +119,48 @@ export function AuctionCard({
           type="button"
           onClick={handleWatch}
           aria-pressed={watched}
-          aria-label={watched ? "Scoate din listă" : "Salvează în listă"}
+          aria-label={
+            (watched ? "Scoate din listă" : "Salvează în listă") +
+            (following > 0
+              ? `, ${countRo(following, "urmăritor", "urmăritori")}`
+              : "")
+          }
           className={cn(
-            "absolute top-2 right-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 backdrop-blur-sm sm:top-2.5 sm:right-2.5 sm:h-9 sm:w-9",
+            // Bottom right of the picture rather than the top: the corner a
+            // thumb reaches, and clear of the title and price below it.
+            "absolute right-2 bottom-2 z-10 inline-flex h-6 items-center justify-center rounded-lg bg-white/95 px-1.5 ring-1 ring-ink-900/10 backdrop-blur-sm sm:right-2.5 sm:bottom-2.5 sm:h-7 sm:px-2",
             "transition duration-200 active:scale-90",
             watched ? "text-primary-600" : "text-ink-500 hover:text-ink-900",
           )}
         >
+          {/* The reason to save it, said by the people who already did, and read
+              first. Always mounted and opened by a grid column, so the first
+              save widens the button rather than making it jump; the gap lives
+              inside the column, which is what lets it close to nothing. Spoken
+              as part of the button's own label, where a bare digit means
+              nothing on its own. */}
+          <span
+            aria-hidden="true"
+            className={cn(
+              "grid transition-[grid-template-columns,opacity] duration-200 ease-[var(--ease-out-soft)]",
+              // minmax(0,…): a bare 0fr track still floors at its content's
+              // min width, and the digit's own right padding is part of that —
+              // which left a sliver of empty space on the left of an icon that
+              // had no count to show.
+              following > 0
+                ? "grid-cols-[minmax(0,1fr)] opacity-100"
+                : "grid-cols-[minmax(0,0fr)] opacity-0",
+            )}
+          >
+            <span className="numeric overflow-hidden pr-1 text-[11px] leading-none font-bold">
+              {following}
+            </span>
+          </span>
           <Icons.watchlist
             aria-hidden="true"
             /* fill-transparent, not fill="none": a colour animates to a colour, `none` cannot. */
             className={cn(
-              "h-4 w-4 shrink-0 fill-transparent transition-[fill,transform] duration-200 sm:h-[18px] sm:w-[18px]",
+              "h-3.5 w-3.5 shrink-0 fill-transparent transition-[fill,transform] duration-200 sm:h-4 sm:w-4",
               watched && "scale-110 fill-current",
             )}
           />

@@ -282,9 +282,29 @@ export function AuctionBrowser() {
 
   /** Placeholders stand from the click until the new page is ready to be seen. */
   const [holding, setHolding] = useState(false);
+  const settling = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (settling.current !== null) window.clearTimeout(settling.current);
+    },
+    [],
+  );
 
   const busy = navigating || loading || holding;
 
+  /**
+   * Placeholders from the click, the page goes up, and only once it is there are the results
+   * revealed.
+   *
+   * <p>Every change comes through here, a filter as much as a page. A filter answered out of the
+   * cache used to swap under the cursor between one frame and the next, which reads as the list
+   * having always said that; the hold is what makes it read as an answer to something pressed.
+   *
+   * <p>Through Lenis, never `window.scrollTo`: it owns the scroll position while it runs, and a
+   * native smooth scroll animating the same property at the same time is what made these lists
+   * stutter.
+   */
   const update = (
     mutate: (next: URLSearchParams) => void,
     { keepPage = false } = {},
@@ -298,6 +318,8 @@ export function AuctionBrowser() {
       next.delete("page");
     }
     const query = next.toString();
+
+    setHolding(true);
     // The filter lives in the URL, and useSearchParams only catches up once the
     // router has navigated. Until then the key has not changed, nothing is
     // loading, and the previous filter's results sit there looking like an
@@ -306,6 +328,17 @@ export function AuctionBrowser() {
       router.replace(query ? `/licitatii?${query}` : "/licitatii", {
         scroll: false,
       });
+    });
+
+    scrollPageTo(0, {
+      onComplete: () => {
+        if (settling.current !== null) window.clearTimeout(settling.current);
+        settling.current = window.setTimeout(() => {
+          setHolding(false);
+          setPending(null);
+          setPlaceholders(null);
+        }, PAGINATION.REVEAL_HOLD_MS);
+      },
     });
   };
 
@@ -559,35 +592,40 @@ export function AuctionBrowser() {
               }
             />
           ) : (
-            <AuctionGrid
-              auctions={data?.items ?? []}
-              loading={busy}
-              columns={3}
-              // Placeholders for what is *coming*, not for what is leaving.
-              // Standing in for the outgoing page means twelve of them and then
-              // a collapse to the two rows that actually arrive — the shift
-              // lands after the scroll, once the reader has stopped expecting
-              // movement, which is what made the last page of a filter jump.
-              skeletonCount={
-                placeholders ??
-                data?.items.length ??
-                PAGINATION.DEFAULT_PAGE_SIZE
-              }
-              emptyState={
-                <EmptyState
-                  title="Nicio licitație găsită"
-                  action={
-                    activeCount > 0 ? (
-                      <Button onClick={clearAll}>Șterge filtrele</Button>
-                    ) : (
-                      <ButtonLink href="/cont/vanzari/nou">
-                        Vinde acum
-                      </ButtonLink>
-                    )
-                  }
-                />
-              }
-            />
+            // Fading in rather than replacing the placeholders outright. The
+            // grid keeps its box either way, so nothing moves; only what is in
+            // it changes, and it changes over a beat instead of in a frame.
+            <div className={cn(!busy && "animate-reveal")}>
+              <AuctionGrid
+                auctions={data?.items ?? []}
+                loading={busy}
+                columns={3}
+                // Placeholders for what is *coming*, not for what is leaving.
+                // Standing in for the outgoing page means twelve of them and then
+                // a collapse to the two rows that actually arrive — the shift
+                // lands after the scroll, once the reader has stopped expecting
+                // movement, which is what made the last page of a filter jump.
+                skeletonCount={
+                  placeholders ??
+                  data?.items.length ??
+                  PAGINATION.DEFAULT_PAGE_SIZE
+                }
+                emptyState={
+                  <EmptyState
+                    title="Nicio licitație găsită"
+                    action={
+                      activeCount > 0 ? (
+                        <Button onClick={clearAll}>Șterge filtrele</Button>
+                      ) : (
+                        <ButtonLink href="/cont/vanzari/nou">
+                          Vinde acum
+                        </ButtonLink>
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
           )}
 
           {data ? (
@@ -597,31 +635,14 @@ export function AuctionBrowser() {
               className="mt-8"
               onChange={(next) => {
                 if (next === data.page) return;
-
-                // The whole change in order: placeholders now, the page goes
-                // up, and only once it is there are the results revealed.
-                //
-                // The placeholders are the *outgoing* page's size to begin
-                // with, which is what keeps the glide smooth: swapping twelve
-                // cards for two placeholders collapses the document under the
-                // scroll, the browser clamps it, and the glide becomes a lurch.
+                // The placeholders stand in for the page that is leaving, which
+                // is what keeps the glide smooth: swapping twelve cards for two
+                // collapses the document under the scroll, the browser clamps
+                // it, and the glide becomes a lurch.
                 setPending(next);
                 setPlaceholders(data.items.length);
-                setHolding(true);
                 update((params) => params.set("page", String(next)), {
                   keepPage: true,
-                });
-
-                // Through Lenis: a native smooth scroll fights it for the same
-                // property and the page arrives, then lurches.
-                scrollPageTo(0, {
-                  onComplete: () => {
-                    window.setTimeout(() => {
-                      setHolding(false);
-                      setPending(null);
-                      setPlaceholders(null);
-                    }, PAGINATION.REVEAL_HOLD_MS);
-                  },
                 });
               }}
             />

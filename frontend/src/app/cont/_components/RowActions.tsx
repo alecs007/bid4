@@ -16,6 +16,7 @@ export interface RowActionItem {
    * never there look identical to a reader, and both leave them wondering
    * whether they missed it.
    */
+  /** Why this row cannot take the action. Set, and the action is not drawn at all. */
   unavailable?: string;
 }
 
@@ -79,30 +80,33 @@ export function RowActions({
         href={view}
         variant="ghost"
         size="sm"
-        leftIcon={<Icons.reveal aria-hidden="true" className="h-4 w-4 shrink-0" />}
+        leftIcon={
+          <Icons.reveal aria-hidden="true" className="h-4 w-4 shrink-0" />
+        }
       >
         Vezi detalii
       </ButtonLink>
 
-      {extra.map((item) => (
-        <Button
-          key={item.label}
-          type="button"
-          variant="ghost"
-          size="sm"
-          leftIcon={item.icon}
-          disabled={Boolean(item.unavailable)}
-          // The reason, on the control it explains. Without it a greyed button
-          // is a refusal with no argument.
-          title={item.unavailable}
-          onClick={item.onClick}
-          className={
-            item.danger && !item.unavailable ? "text-danger-700 hover:bg-danger-50" : undefined
-          }
-        >
-          {item.label}
-        </Button>
-      ))}
+      {/* An action nobody can take is not offered. A greyed button with its
+          reason in a tooltip explains itself only to a mouse, and on a row that
+          can never take it the control is a dead weight either way. */}
+      {extra
+        .filter((item) => !item.unavailable)
+        .map((item) => (
+          <Button
+            key={item.label}
+            type="button"
+            variant="ghost"
+            size="sm"
+            leftIcon={item.icon}
+            onClick={item.onClick}
+            className={
+              item.danger ? "text-danger-700 hover:bg-danger-50" : undefined
+            }
+          >
+            {item.label}
+          </Button>
+        ))}
     </div>
   );
 }

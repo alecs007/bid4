@@ -10,12 +10,18 @@ import { cn } from "@/lib/utils/cn";
 /**
  * What the slider shows.
  *
- * <p>Empty until the artwork exists: drop the files into `public/images/hero` and name them here,
- * one entry per panel, and the placeholders below stop being drawn. `alt` is what a reader who
- * cannot see the banner is told it says; `href` is optional, and a panel without one is not a
- * link.
+ * <p>One entry per panel; drop the files into `public/images/hero` and name them here. `alt` is
+ * what a reader who cannot see the banner is told it says, `href` is optional and a panel without
+ * one is not a link, and `mobile` is the same banner drawn for the taller crop a phone gets —
+ * without it the desktop file is used at both widths and loses its sides to `object-cover`.
  */
-const SLIDES: { src: string; alt: string; href?: string }[] = [];
+const SLIDES: { src: string; mobile?: string; alt: string; href?: string }[] = [
+  {
+    src: "/images/hero/banner-1.webp",
+    mobile: "/images/hero/banner-1-mobile.webp",
+    alt: "Cumperi sau vinzi, faci un bine. Cauze verificate și o donație la fiecare licitație.",
+  },
+];
 
 /** How many blank panels stand in until then, so the control is there to be looked at. */
 const PLACEHOLDERS = 3;
@@ -97,29 +103,51 @@ export function HeroSlider() {
             // Lenis owns the wheel, and without this a trackpad swipe over the
             // banner scrolls the page instead of the panels.
             data-lenis-prevent
-            // Taller than 4:1 on a phone, where a quarter of 375px is a strip too
-            // shallow to put anything in. The ratio it was asked for takes over
-            // from `sm`, where the width can carry it.
+            // 2:1 on a phone and 4:1 from `sm`: a quarter of 375px is a strip
+            // too shallow to read, and the height only pays for itself because
+            // the slide carries art composed for it. A slide without `mobile`
+            // would be letterboxed into the taller frame instead.
             className="no-scrollbar flex aspect-[2/1] w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl"
           >
             {Array.from({ length: count }, (_, index) => {
               const slide = SLIDES[index];
-              const panel = (
+              const eager = index === 0;
+              const panel = slide ? (
                 <>
-                  {slide ? (
+                  <Image
+                    src={slide.src}
+                    alt={slide.alt}
+                    fill
+                    // Already sized and encoded for this slot, so it is served
+                    // as made rather than re-compressed on top at q75.
+                    unoptimized
+                    sizes="(min-width: 1280px) 1216px, 100vw"
+                    loading={eager ? "eager" : "lazy"}
+                    priority={eager}
+                    className={cn(
+                      "object-cover",
+                      slide.mobile && "hidden sm:block",
+                    )}
+                    draggable={false}
+                  />
+                  {slide.mobile ? (
+                    // The same banner drawn for 2:1. Two elements rather than
+                    // one source set, because this is a different composition
+                    // and not the same picture at another size.
                     <Image
-                      src={slide.src}
+                      src={slide.mobile}
                       alt={slide.alt}
                       fill
-                      sizes="(min-width: 1280px) 1216px, 100vw"
-                      loading={index === 0 ? "eager" : "lazy"}
-                      priority={index === 0}
-                      className="object-cover"
+                      unoptimized
+                      sizes="100vw"
+                      loading={eager ? "eager" : "lazy"}
+                      priority={eager}
+                      className="object-cover sm:hidden"
                       draggable={false}
                     />
                   ) : null}
                 </>
-              );
+              ) : null;
 
               return (
                 <div
