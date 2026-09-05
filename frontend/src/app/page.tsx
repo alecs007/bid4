@@ -8,7 +8,7 @@ import {
   LatestRow,
   TrendingCauses,
 } from "./_components/HomeSections";
-import { HeroSlider } from "./_components/HeroSlider";
+import { HeroBanner } from "./_components/HeroBanner";
 import { PageTransition } from "@/components/layout/PageTransition";
 
 const STEPS = [
@@ -33,7 +33,7 @@ export default function HomePage() {
   return (
     <PageTransition>
       <main className="flex flex-col">
-        <HeroSlider />
+        <HeroBanner />
 
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-10 sm:px-6 lg:gap-14 lg:px-8 lg:py-14">
           <MostWatchedRow />

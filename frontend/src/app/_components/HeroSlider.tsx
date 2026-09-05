@@ -34,7 +34,12 @@ const PLACEHOLDERS = 3;
 const AUTOPLAY_MS = 6000;
 
 /**
- * The banner the homepage opens on: one panel at a time, swiped or stepped through.
+ * The homepage banner as a slider: one panel at a time, swiped or stepped through.
+ *
+ * <p>Not rendered at the moment — there is only one banner drawn, and a slider carrying a single
+ * panel is a set of controls that lead back to where they started, so the page opens on
+ * `HeroBanner` instead. Kept whole because the second banner is the only thing it is waiting for:
+ * name the files in `SLIDES` and swap which one the page imports.
  *
  * <p>Built on scroll snapping rather than on a transform, so a finger drags it natively at any
  * width and every control only ever asks the track to scroll — there is no second idea of which
