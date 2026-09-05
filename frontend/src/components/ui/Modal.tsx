@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { Icons } from "@/components/icons";
@@ -8,12 +8,7 @@ import { Icons } from "@/components/icons";
 import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
-
-/** Below this the modal is a sheet with a bar to pull; above it there is nothing to pull. */
-const SHEET_BELOW_PX = 640;
-
-/** How far down the sheet has to be thrown before letting go dismisses it. */
-const DISMISS_AFTER_PX = 140;
+import { SheetGrabber, useSheetDismiss } from "./sheetDismiss";
 
 /**
  * Portalled to `document.body`: the page wrapper's opacity animation makes it a
@@ -55,63 +50,9 @@ export function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  const [pulled, setPulled] = useState(0);
-  /** Measured when the sheet is grabbed, so the backdrop can fade in step with it. */
-  const [sheet, setSheet] = useState(0);
-  const [pulling, setPulling] = useState(false);
-  /** Latched, because re-adding `animate-pop-in` on release would replay the entrance. */
-  const [grabbed, setGrabbed] = useState(false);
-  const from = useRef(0);
-  const leaving = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (leaving.current !== null) window.clearTimeout(leaving.current);
-    },
-    [],
+  const { grab, grabbed, pulling, panelStyle, backdropStyle } = useSheetDismiss(
+    { open, onClose, panelRef },
   );
-
-  const grab = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (window.innerWidth >= SHEET_BELOW_PX) return;
-    from.current = event.clientY;
-    setSheet(panelRef.current?.getBoundingClientRect().height ?? 0);
-    setPulling(true);
-    setGrabbed(true);
-  };
-
-  // Followed on the window rather than through `setPointerCapture`: capture
-  // throws if the pointer is already gone by the time this runs, and a sheet
-  // that missed its own release stays stuck halfway down the screen.
-  useEffect(() => {
-    if (!pulling) return;
-
-    const travelled = (event: PointerEvent) =>
-      Math.max(0, event.clientY - from.current);
-
-    const move = (event: PointerEvent) => setPulled(travelled(event));
-
-    const release = (event: PointerEvent) => {
-      setPulling(false);
-      const height = panelRef.current?.getBoundingClientRect().height ?? 0;
-      if (travelled(event) > Math.min(DISMISS_AFTER_PX, height * 0.25)) {
-        // Sent the rest of the way out before it unmounts, so it leaves the
-        // way it was thrown rather than blinking off under the finger.
-        setPulled(height);
-        leaving.current = window.setTimeout(onClose, 200);
-      } else {
-        setPulled(0);
-      }
-    };
-
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", release);
-    window.addEventListener("pointercancel", release);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", release);
-      window.removeEventListener("pointercancel", release);
-    };
-  }, [pulling, onClose]);
 
   // Deliberately not keyed on `onClose`: callers pass an inline arrow, so this
   // would tear down and set up again on every render, and with it the scroll it
@@ -170,11 +111,7 @@ export function Modal({
         // Fading with the pull rather than at the end of it: the sheet and what
         // is behind it are one movement, and a blur that survives until the
         // last frame reads as the page catching up afterwards.
-        style={
-          pulled && sheet
-            ? { opacity: Math.max(0, 1 - pulled / sheet) }
-            : undefined
-        }
+        style={backdropStyle}
         className={cn(
           "absolute inset-0 cursor-default bg-ink-900/40 backdrop-blur-[2px]",
           pulling
@@ -188,7 +125,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
-        style={pulled ? { transform: `translateY(${pulled}px)` } : undefined}
+        style={panelStyle}
         className={cn(
           // max-h-full, measured against the wrapper's own definite height,
           // rather than a viewport unit: the cap is what makes the body below
@@ -208,12 +145,7 @@ export function Modal({
         {/* The bar and the heading beside it are one handle: a sheet is pulled
             by its top, not by a six-millimetre target. */}
         <div onPointerDown={grab} className="shrink-0 touch-none sm:touch-auto">
-          <div
-            aria-hidden="true"
-            className="flex justify-center pt-2.5 pb-1 sm:hidden"
-          >
-            <span className="h-1 w-10 rounded-full bg-ink-200" />
-          </div>
+          <SheetGrabber />
 
           <div
             className={cn(

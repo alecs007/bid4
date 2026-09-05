@@ -285,9 +285,10 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
                     icon: <Icons.remove aria-hidden="true" className="h-4 w-4 shrink-0" />,
                     danger: true,
                     onClick: onRetract,
-                    // Shown and explained rather than dropped. Only the leading
-                    // offer can go: pulling one out of the middle would rewrite
-                    // a history the other bidders already acted on.
+                    // Only the leading offer can go: pulling one out of the
+                    // middle would rewrite a history the other bidders have
+                    // already acted on. On every other row the action is absent
+                    // rather than greyed.
                     unavailable: retract.canRetract
                       ? undefined
                       : (retract.reason ?? "Poți retrage doar oferta aflată pe primul loc."),
