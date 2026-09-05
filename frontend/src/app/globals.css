@@ -346,6 +346,30 @@
   }
 }
 
+/* The banner's countdown, twice under two names. A CSS animation only starts
+   over when its name changes, and the slider alternates between these two so it
+   can restart the bar in place — replacing the element instead would replace the
+   bar being left behind at the same moment, which is what made the wrap read as
+   the wrong bar filling. Outside `@theme` because nothing references them
+   through an `--animate-*` utility, and unreferenced theme keyframes are never
+   emitted. */
+@keyframes slide-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes slide-progress-alt {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* ============================================================================
    Utilities
    ========================================================================== */
