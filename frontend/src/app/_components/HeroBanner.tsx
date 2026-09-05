@@ -33,7 +33,13 @@ export function HeroBanner() {
             the height a phone gives up for this only pays for itself because
             the banner composed for it stacks what the wide one sets side by
             side. */}
-        <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl">
+        {/* A green line around it. The banner's own ground is a hair off the
+            white it sits on, which on its own leaves it floating with no edge;
+            this gives it one, in the colour the rest of the site is picked out
+            in — faint enough that it reads as the edge of the banner rather
+            than as a border drawn round it, and well under the full-strength
+            green, which is what a selected or focused thing wears. */}
+        <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink-100 ring-1 ring-primary-500/15 sm:aspect-[4/1] sm:rounded-3xl">
           <Image
             src={BANNER.src}
             alt={BANNER.alt}

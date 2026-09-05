@@ -201,7 +201,7 @@ export function HeroSlider() {
             // strip too shallow to read, and the height only pays for itself
             // because the slide carries art composed for it. A slide without
             // `mobile` would be cropped to its middle in the square frame.
-            className="no-scrollbar flex aspect-square w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl"
+            className="no-scrollbar flex aspect-square w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-ink-100 ring-1 ring-primary-500/15 sm:aspect-[4/1] sm:rounded-3xl"
           >
             {panels.map((index, slot) => {
               const slide = SLIDES[index];
