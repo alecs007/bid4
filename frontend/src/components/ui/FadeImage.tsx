@@ -31,11 +31,14 @@ export function FadeImage({
 
   return (
     <>
+      {/* The same shimmer every skeleton on the site uses, so a picture on its
+          way in reads as loading rather than as a grey box that happens to be
+          there. */}
       <span
         aria-hidden="true"
         className={cn(
           "absolute inset-0 bg-ink-100 transition-opacity duration-300 ease-[var(--ease-out-soft)]",
-          loaded ? "opacity-0" : "animate-pulse opacity-100",
+          loaded ? "opacity-0" : "shimmer opacity-100",
         )}
       />
       <Image

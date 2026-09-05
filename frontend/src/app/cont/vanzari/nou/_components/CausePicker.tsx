@@ -257,11 +257,13 @@ function ChosenCause({ cause }: { cause: CauseDetail }) {
           />
         </div>
 
+        {/* The percentage is already the bar above it, drawn to scale. Saying
+            it again in figures is the same fact twice. */}
         <p className="numeric mt-1 text-[11px] text-ink-500">
           <strong className="text-ink-800">
             {formatMoney(cause.raisedAmount)}
           </strong>{" "}
-          din {formatMoney(cause.goalAmount)} · {percent}%
+          strânși din {formatMoney(cause.goalAmount)}
         </p>
       </div>
     </div>
