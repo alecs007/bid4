@@ -28,10 +28,12 @@ export function HeroBanner() {
   return (
     <section className="bg-white">
       <div className="mx-auto w-full max-w-7xl px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
-        {/* 2:1 on a phone and 4:1 from `sm`: a quarter of 375px is a strip too
-            shallow to read, and the height only pays for itself because the
-            banner is composed for it. */}
-        <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl">
+        {/* Square on a phone and 4:1 from `sm`. Each is the shape its own file
+            was drawn to: a quarter of 375px is a strip too shallow to read, and
+            the height a phone gives up for this only pays for itself because
+            the banner composed for it stacks what the wide one sets side by
+            side. */}
+        <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl">
           <Image
             src={BANNER.src}
             alt={BANNER.alt}

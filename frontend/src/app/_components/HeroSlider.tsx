@@ -197,11 +197,11 @@ export function HeroSlider() {
             // Lenis owns the wheel, and without this a trackpad swipe over the
             // banner scrolls the page instead of the panels.
             data-lenis-prevent
-            // 2:1 on a phone and 4:1 from `sm`: a quarter of 375px is a strip
-            // too shallow to read, and the height only pays for itself because
-            // the slide carries art composed for it. A slide without `mobile`
-            // would be letterboxed into the taller frame instead.
-            className="no-scrollbar flex aspect-[2/1] w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl"
+            // Square on a phone and 4:1 from `sm`: a quarter of 375px is a
+            // strip too shallow to read, and the height only pays for itself
+            // because the slide carries art composed for it. A slide without
+            // `mobile` would be cropped to its middle in the square frame.
+            className="no-scrollbar flex aspect-square w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-ink-100 sm:aspect-[4/1] sm:rounded-3xl"
           >
             {panels.map((index, slot) => {
               const slide = SLIDES[index];
