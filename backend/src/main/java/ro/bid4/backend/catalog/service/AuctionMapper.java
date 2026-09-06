@@ -19,6 +19,7 @@ import ro.bid4.backend.cause.api.dto.CauseSummaryResponse;
 import ro.bid4.backend.cause.service.CauseMapper;
 import ro.bid4.backend.identity.api.dto.PublicUserResponse;
 import ro.bid4.backend.identity.service.UserMapper;
+import ro.bid4.backend.storage.service.MediaUrls;
 
 /**
  * Auctions become responses here, and only here.
@@ -133,7 +134,7 @@ public class AuctionMapper {
         auction.getCauseId(),
         auction.getTitle(),
         auction.getDescription(),
-        List.copyOf(auction.getImages()),
+        MediaUrls.resolveAll(auction.getImages()),
         auction.getCategory(),
         auction.getCondition(),
         auction.getWeightGrams(),

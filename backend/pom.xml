@@ -32,6 +32,7 @@
 		     SCRAM-SHA-256-PLUS downgrade — CVE-2026-54291. -->
 		<postgresql.version>42.7.12</postgresql.version>
 		<minio.version>8.6.0</minio.version>
+		<okhttp.version>5.1.0</okhttp.version>
 		<owasp-sanitizer.version>20260101.1</owasp-sanitizer.version>
 		<bucket4j.version>8.16.0</bucket4j.version>
 		<archunit.version>1.4.0</archunit.version>
@@ -94,6 +95,17 @@
 			<groupId>io.minio</groupId>
 			<artifactId>minio</artifactId>
 			<version>${minio.version}</version>
+		</dependency>
+		<!-- MinIO's client is built on OkHttp, and from OkHttp 5 the artifact it
+		     depends on is an empty aggregator: the JVM classes moved to okhttp-jvm,
+		     and which one a build gets is decided by Gradle module metadata that
+		     Maven does not read. Without this, okhttp3.HttpUrl is on no classpath
+		     at all and anything touching the client fails to compile. Pinned beside
+		     minio's own version, which is what decides the OkHttp it expects. -->
+		<dependency>
+			<groupId>com.squareup.okhttp3</groupId>
+			<artifactId>okhttp-jvm</artifactId>
+			<version>${okhttp.version}</version>
 		</dependency>
 		<!-- Strips active markup from the one free-text field a cause carries. -->
 		<dependency>

@@ -11,7 +11,10 @@
 export function PageTitle({ children }: { children: string }) {
   return (
     <div className="sticky top-12 z-30 flex h-10 items-center justify-center border-b border-line bg-white sm:top-14">
-      <h1 className="font-display text-sm font-extrabold text-ink-900">
+      {/* A shade off black. It is a label for where you are, standing above
+          the page all the way down it; at full strength it read as the
+          loudest thing on screen rather than as the quietest. */}
+      <h1 className="font-display text-sm font-extrabold text-ink-700">
         {children}
       </h1>
     </div>

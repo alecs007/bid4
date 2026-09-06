@@ -91,6 +91,46 @@ export const CAUSE = {
   MAX_MINOR_AGE: 17,
 } as const;
 
+/**
+ * What the browser does to a photograph before it is uploaded, and the ceilings it is held to.
+ *
+ * <p>The twin of `ro.bid4.backend.storage.ImageRules`: the same formats, the same size, the same
+ * pixel ceiling. Both halves check, because the browser's copy is a courtesy — it keeps a seller
+ * from waiting on an upload that was always going to be refused — and only the server's is a
+ * control.
+ */
+export const IMAGE = {
+  /** Mirrors the `stored_files_content_type_allowed` constraint, minus the PDF. */
+  ACCEPTED_TYPES: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ] as readonly string[],
+  MAX_INPUT_MB: 12,
+  MAX_INPUT_BYTES: 12 * 1024 * 1024,
+  /**
+   * The long edge after processing. Wide enough to hold up opened full-screen on a dense display,
+   * and far below what a phone camera writes.
+   */
+  MAX_EDGE_PX: 1600,
+  QUALITY: 0.82,
+  /**
+   * How many pixels a file may decode to, whatever its size on disk. A few kilobytes can unpack
+   * into hundreds of megabytes of canvas, and that is the whole trick behind a decompression bomb.
+   */
+  MAX_PIXELS: 40_000_000,
+  /** What the server will take in one request, matching `spring.servlet.multipart`. */
+  MAX_UPLOAD_BYTES: 8 * 1024 * 1024,
+
+  /**
+   * The demo build has nowhere to put a photograph but the browser's own storage, so it keeps a
+   * smaller copy and stops before filling it. A real upload uses the sizes above.
+   */
+  DEMO_MAX_EDGE_PX: 1200,
+  DEMO_QUALITY: 0.72,
+  DEMO_BUDGET_BYTES: 1_500_000,
+} as const;
+
 export const AUCTION = {
   MIN_STARTING_PRICE: 1 * LEU,
   MAX_STARTING_PRICE: 100_000 * LEU,
@@ -135,7 +175,11 @@ export const AUCTION = {
    *
    * <p>`illustration` names a file under `public/images/illustrations`. Left null the picker draws
    * the parcel icon instead, so the three are usable before the artwork exists and need no code
-   * change when it arrives.
+   * change when it arrives. Every file is drawn on a square canvas, so all three fill the same slot
+   * and the row keeps its spacing whatever shape the parcel inside is. `illustrationScale` is the
+   * one nudge on top: a parcel drawn much wider than it is tall fills the slot side to side and
+   * still sits short in it, so it is allowed to spill a little past the slot — which changes how
+   * large it looks without changing where anything sits.
    */
   PARCEL_TYPES: [
     {
@@ -143,21 +187,24 @@ export const AUCTION = {
       label: "Colet mic",
       examples: "Cât un plic",
       weightGrams: 1_000,
-      illustration: null as string | null,
+      illustration: "parcels/small" as string | null,
+      illustrationScale: 1,
     },
     {
       id: "medium",
       label: "Colet mediu",
       examples: "Cât o cutie de pantofi",
       weightGrams: 5_000,
-      illustration: null as string | null,
+      illustration: "parcels/medium" as string | null,
+      illustrationScale: 1.06,
     },
     {
       id: "large",
       label: "Colet mare",
       examples: "Cât un bagaj de mână",
       weightGrams: 15_000,
-      illustration: null as string | null,
+      illustration: "parcels/large" as string | null,
+      illustrationScale: 1,
     },
   ],
 

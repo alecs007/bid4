@@ -1,7 +1,6 @@
 package ro.bid4.backend.catalog.service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +19,7 @@ import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.error.ErrorCode;
 import ro.bid4.backend.common.text.TextSanitizer;
 import ro.bid4.backend.common.web.Viewer;
+import ro.bid4.backend.storage.service.ListingImages;
 
 /**
  * A seller putting something up, and taking it back down.
@@ -39,18 +39,21 @@ public class ListingService {
   private final CauseRepository causes;
   private final AuctionMapper mapper;
   private final TextSanitizer sanitizer;
+  private final ListingImages images;
 
   public ListingService(
       AuctionRepository auctions,
       BidRepository bids,
       CauseRepository causes,
       AuctionMapper mapper,
-      TextSanitizer sanitizer) {
+      TextSanitizer sanitizer,
+      ListingImages images) {
     this.auctions = auctions;
     this.bids = bids;
     this.causes = causes;
     this.mapper = mapper;
     this.sanitizer = sanitizer;
+    this.images = images;
   }
 
   /**
@@ -87,7 +90,7 @@ public class ListingService {
     auction.setCauseId(cause.getId());
     auction.setTitle(title);
     auction.setDescription(description);
-    auction.setImages(List.copyOf(request.images()));
+    auction.setImages(images.claim(request.images(), viewer.id()));
     auction.setCategory(request.category());
     auction.setCondition(request.condition());
     auction.setWeightGrams(request.weightGrams());

@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { preload } from "react-dom";
 
 import { Icons } from "@/components/icons";
@@ -11,17 +12,16 @@ import {
   ButtonLink,
   Checkbox,
   CategoryIcon,
-  Confetti,
   FadeImage,
   Field,
   Illustration,
   Input,
-  Mascot,
   Modal,
   Slider,
   Textarea,
 } from "@/components/ui";
 import { createAuction } from "@/lib/api/auctions";
+import { imageRefsFor, uploadImages } from "@/lib/api/uploads";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   AUCTION,
@@ -30,14 +30,10 @@ import {
   type AuctionCategoryId,
 } from "@/lib/config";
 import { useAction } from "@/lib/hooks/useApi";
+import type { ProcessedImage } from "@/lib/images/process";
 import { ITEM_CONDITION } from "@/lib/labels";
 import { formatMoney, parseLeiInput } from "@/lib/money";
-import type {
-  AuctionDetail,
-  CauseDetail,
-  ItemCondition,
-  UploadedFileRef,
-} from "@/lib/types";
+import type { AuctionDetail, CauseDetail, ItemCondition } from "@/lib/types";
 import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { CausePicker } from "./CausePicker";
@@ -133,6 +129,9 @@ const anchorId = (name: Anchor) => `camp-${name}`;
 /** Room above the field the page lands on, so it sits under the header rather than beneath it. */
 const FIRST_ERROR_MARGIN_PX = 96;
 
+/** How long the form takes to clear the page, matching `--animate-form-out`. */
+const FORM_LEAVE_MS = 260;
+
 /**
  * "8 caractere", but "20 de caractere".
  *
@@ -188,11 +187,23 @@ function validatePrices(startingText: string, buyNowText: string): Errors {
 export function ListingForm() {
   const { user } = useAuth();
   const [draft, setDraft] = useState<Draft>(EMPTY);
-  const [photos, setPhotos] = useState<UploadedFileRef[]>([]);
+  const [photos, setPhotos] = useState<ProcessedImage[]>([]);
   const [cause, setCause] = useState<CauseDetail | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [opened, setOpened] = useState<Anchor | null>(null);
+  /** The listing, from the moment it exists. The form plays itself out on it. */
   const [created, setCreated] = useState<AuctionDetail | null>(null);
+  /** And the screen that replaces it, once the form has finished leaving. */
+  const [handedOver, setHandedOver] = useState(false);
+
+  // Two states rather than one because the form has to still be on the page to
+  // animate off it. Swapping the tree the moment the listing came back cut the
+  // form off mid-frame and the success screen arrived out of nowhere.
+  useEffect(() => {
+    if (!created) return;
+    const timer = window.setTimeout(() => setHandedOver(true), FORM_LEAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [created]);
 
   // The tiles only mount when a modal opens, and a drawing that starts loading
   // then arrives after the grid it belongs to. Nine files of about five
@@ -203,8 +214,6 @@ export function ListingForm() {
     });
   }
 
-  const submit = useAction(createAuction);
-
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
     // The message goes the moment the field it belongs to changes. Leaving it up
@@ -212,7 +221,7 @@ export function ListingForm() {
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
-  const setPhotographs = (next: UploadedFileRef[]) => {
+  const setPhotographs = (next: ProcessedImage[]) => {
     setPhotos(next);
     setErrors((current) => ({ ...current, images: undefined }));
   };
@@ -228,6 +237,36 @@ export function ListingForm() {
   const buyNowPrice = draft.buyNowPrice
     ? parseLeiInput(draft.buyNowPrice)
     : null;
+
+  /**
+   * Everything that has to happen for a listing to exist, in the order it has to happen in.
+   *
+   * <p>The photographs go up first and separately. Sending them with the listing would mean a
+   * request that can half-succeed — the row written, the pictures lost — and nothing to show the
+   * seller for it. This way the listing is only ever created from stored objects that already have
+   * an address, and a failed upload leaves the form exactly as it was, with everything still in it.
+   */
+  const publish = async (): Promise<AuctionDetail> => {
+    const stored = await uploadImages(photos);
+
+    return createAuction(
+      {
+        title: draft.title.trim(),
+        description: draft.description.trim(),
+        images: imageRefsFor(stored),
+        category: draft.category as AuctionCategoryId,
+        condition: draft.condition as ItemCondition,
+        weightGrams: parcel!.weightGrams,
+        causeId: draft.causeId,
+        donationPercent: draft.donationPercent,
+        startingPrice: startingPrice!,
+        ...(buyNowPrice !== null ? { buyNowPrice } : {}),
+      },
+      user!.id,
+    );
+  };
+
+  const submit = useAction(publish);
 
   const validate = (): Errors => {
     const found: Errors = {
@@ -291,32 +330,22 @@ export function ListingForm() {
       return;
     }
 
-    const auction = await submit.run(
-      {
-        title: draft.title.trim(),
-        description: draft.description.trim(),
-        // TODO(backend): there is no POST /uploads yet, so what travels is the
-        // object URL the browser made. It renders for the session that created
-        // it and nowhere else — the picker is real, the storage is not.
-        images: photos.map((photo) => photo.previewUrl ?? photo.fileRef),
-        category: draft.category as AuctionCategoryId,
-        condition: draft.condition as ItemCondition,
-        weightGrams: parcel!.weightGrams,
-        causeId: draft.causeId,
-        donationPercent: draft.donationPercent,
-        startingPrice: startingPrice!,
-        ...(buyNowPrice !== null ? { buyNowPrice } : {}),
-      },
-      user.id,
-    );
-
+    const auction = await submit.run();
     if (auction) setCreated(auction);
   };
 
-  if (created) return <SubmittedScreen auction={created} />;
+  if (handedOver && created) return <SubmittedScreen auction={created} />;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+    <form
+      onSubmit={onSubmit}
+      noValidate
+      className={cn(
+        "flex flex-col gap-5",
+        // On its way out, and no longer anybody's to press.
+        created && "animate-form-out pointer-events-none",
+      )}
+    >
       <div className="flex flex-col rounded-3xl bg-white p-4 ring-1 ring-edge sm:p-6">
         <Section title="Fotografii" first>
           {/* No label over it: the section is called Fotografii and the slots
@@ -709,7 +738,14 @@ function ConditionModal({
   );
 }
 
-/** The artwork once the files are in `public/images/illustrations`, the parcel icon until then. */
+/**
+ * The artwork once the files are in `public/images/illustrations`, the parcel icon until then.
+ *
+ * <p>The same square slot for all three, so the row is spaced and aligned identically whatever is
+ * in it. How large each parcel is drawn is settled in the file rather than here: the medium one is
+ * a wide box, and it is drawn on a canvas its own width so it fills the slot side to side instead
+ * of being letterboxed into it and coming out visibly smaller than the other two.
+ */
 function ParcelArt({
   parcel,
   className,
@@ -726,11 +762,25 @@ function ParcelArt({
     );
   }
   return (
-    <Illustration
-      src={parcel.illustration}
-      className={className}
-      sizes="48px"
-    />
+    // Not through `Illustration`, which keeps its drawing inside its box: the
+    // point of the scale below is to let this one out of it by a hair, and
+    // clipped instead it would lose its edges.
+    <span
+      aria-hidden="true"
+      className={cn("relative block shrink-0", className)}
+    >
+      <Image
+        src={`/images/illustrations/${parcel.illustration}.webp`}
+        alt=""
+        fill
+        unoptimized
+        loading="eager"
+        sizes="64px"
+        style={{ scale: parcel.illustrationScale }}
+        className="object-contain"
+        draggable={false}
+      />
+    </span>
   );
 }
 
@@ -832,12 +882,15 @@ function ParcelModal({
                   : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
               )}
             >
-              <ParcelArt parcel={parcel} className="h-14 w-14" />
+              <ParcelArt
+                parcel={parcel}
+                className="h-11 w-11 sm:h-14 sm:w-14"
+              />
               <span className="min-w-0">
                 <span className="block font-display text-base font-extrabold text-ink-900">
                   {parcel.label}
                 </span>
-                <span className="mt-0.5 block text-sm leading-tight text-ink-500">
+                <span className="mt-0.5 block text-xs leading-tight whitespace-nowrap text-ink-500">
                   {parcel.examples}
                 </span>
               </span>
@@ -1079,26 +1132,52 @@ function DonationModal({
  * <p>The listing is in review, and the one thing a seller wants to know is when it stops being in
  * review and where to look. Both are here, and the link goes to the page that will show it.
  */
+/**
+ * What is left on the page once the form has gone.
+ *
+ * <p>It arrives in the order it would be read in — the mark, then what happened, then what happens
+ * next, then what to do about it — rather than all at once. Each part is a beat behind the one
+ * above it, which is short enough that nobody waits for it and long enough that the screen assembles
+ * itself instead of appearing.
+ *
+ * <p>The first button goes to the listing itself in the seller's own panel. It is not public yet, so
+ * there is nowhere else it could go, and "Vânzările mele" alone left them to find it.
+ */
 function SubmittedScreen({ auction }: { auction: AuctionDetail }) {
   return (
-    <div className="animate-fade-up flex flex-col items-center gap-5 py-8 text-center">
-      <Confetti />
-      <Mascot mood="cheer" size={104} floating />
+    <div className="flex flex-col items-center gap-5 py-10 text-center">
+      {/* Drop a replacement at this path and it is swapped, with nothing else
+          to change: the box is fixed and the drawing is drawn to fit it. */}
+      <Illustration
+        src="listing-submitted"
+        sizes="128px"
+        className="animate-pop-in h-28 w-28 sm:h-32 sm:w-32"
+      />
 
       <div>
-        <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
-          Licitația a plecat spre verificare
+        <h1
+          className="animate-fade-up font-display text-2xl font-extrabold text-ink-900 sm:text-3xl"
+          style={{ animationDelay: "80ms" }}
+        >
+          Anunțul a plecat spre verificare
         </h1>
-        <p className="mx-auto mt-2 max-w-md text-ink-600">
+        <p
+          className="animate-fade-up mx-auto mt-2 max-w-md text-ink-600"
+          style={{ animationDelay: "160ms" }}
+        >
           <strong className="text-ink-900">{auction.title}</strong> este acum în
           verificare. Ne uităm peste el în scurt timp și îți scriem imediat ce
-          devine public. Îl poți urmări și retrage oricând din Vânzările mele.
+          devine public. Până atunci îl găsești, cu tot cu fotografii, în
+          Vânzările mele — de unde îl poți și retrage.
         </p>
       </div>
 
-      <div className="flex w-full max-w-md flex-col gap-2.5 sm:flex-row sm:justify-center">
-        <ButtonLink href="/cont/vanzari" size="lg">
-          Vezi vânzările mele
+      <div
+        className="animate-fade-up flex w-full max-w-md flex-col gap-2.5 sm:flex-row sm:justify-center"
+        style={{ animationDelay: "240ms" }}
+      >
+        <ButtonLink href={`/cont/vanzari?nou=${auction.id}`} size="lg">
+          Vezi anunțul
         </ButtonLink>
         <ButtonLink href="/cont/vanzari/nou" variant="secondary" size="lg">
           Adaugă altă licitație

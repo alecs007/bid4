@@ -36,6 +36,9 @@ import ro.bid4.backend.identity.domain.AccountType;
 import ro.bid4.backend.identity.domain.UserAccount;
 import ro.bid4.backend.identity.domain.UserRole;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
+import ro.bid4.backend.storage.domain.StoredFile;
+import ro.bid4.backend.storage.domain.Visibility;
+import ro.bid4.backend.storage.repo.StoredFileRepository;
 
 /**
  * Putting a listing up, and taking it back down.
@@ -56,6 +59,7 @@ class ListingWriteTest {
   @Autowired private BidRepository bids;
   @Autowired private CauseRepository causes;
   @Autowired private UserAccountRepository users;
+  @Autowired private StoredFileRepository storedFiles;
 
   private UserAccount seller;
   private Cause approved;
@@ -89,7 +93,8 @@ class ListingWriteTest {
   @DisplayName("the seller is the token, not the body")
   void sellerComesFromTheViewer() {
     UserAccount other = user("Alt Vanzator", UserRole.USER);
-    AuctionResponse created = listings.create(request().build(), viewer(other));
+    AuctionResponse created =
+        listings.create(request().images(photos(other.getId())).build(), viewer(other));
 
     assertThat(auctions.findById(created.id()).orElseThrow().getSellerId())
         .isEqualTo(other.getId());
@@ -245,21 +250,74 @@ class ListingWriteTest {
         .isEqualTo(AuctionStatus.CANCELLED);
   }
 
+  @Test
+  @DisplayName("a listing cannot be built from somebody else's photographs")
+  void imagesMustBelongToTheSeller() {
+    UserAccount other = user("Alt Vanzator Foto", UserRole.USER);
+
+    assertThatThrownBy(
+            () -> listings.create(request().images(photos(other.getId())).build(), viewer(seller)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("Fotografiile");
+  }
+
+  @Test
+  @DisplayName("and not from an address the seller made up")
+  void imagesMustBeRefs() {
+    assertThatThrownBy(
+            () ->
+                listings.create(
+                    request().images(List.of("https://example.invalid/a.png")).build(),
+                    viewer(seller)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("Fotografiile");
+  }
+
   /* --- fixtures ----------------------------------------------------------- */
 
   /** A valid listing, so each test only has to say what it is bending. */
   private Request request() {
-    return new Request(approved.getId());
+    return new Request(approved.getId(), photos(seller.getId()));
+  }
+
+  /**
+   * Two photographs already uploaded by this account.
+   *
+   * <p>A listing is created from refs to stored objects, and the refs have to be the seller's own —
+   * so the fixture has to put them there, exactly as an upload would.
+   */
+  private List<String> photos(UUID ownerId) {
+    return List.of(photo(ownerId), photo(ownerId)).stream().map(UUID::toString).toList();
+  }
+
+  private UUID photo(UUID ownerId) {
+    StoredFile file = new StoredFile();
+    file.setBucket("bid4-public");
+    file.setObjectKey("listings/" + UUID.randomUUID() + ".webp");
+    file.setVisibility(Visibility.PUBLIC);
+    file.setOriginalName("photo.webp");
+    file.setContentType("image/webp");
+    file.setSizeBytes(1024);
+    file.setChecksumSha256("a".repeat(64));
+    file.setOwnerId(ownerId);
+    return storedFiles.save(file).getId();
   }
 
   private static final class Request {
     private UUID causeId;
+    private List<String> images;
     private String category = "electronice";
     private Long reservePrice;
     private Long buyNowPrice;
 
-    Request(UUID causeId) {
+    Request(UUID causeId, List<String> images) {
       this.causeId = causeId;
+      this.images = images;
+    }
+
+    Request images(List<String> value) {
+      this.images = value;
+      return this;
     }
 
     Request causeId(UUID value) {
@@ -286,7 +344,7 @@ class ListingWriteTest {
       return new CreateAuctionRequest(
           "Aparat foto de colecție",
           "Funcțional, păstrat în cutia originală, cu toate accesoriile incluse.",
-          List.of("https://example.invalid/a.png", "https://example.invalid/b.png"),
+          images,
           category,
           ItemCondition.VERY_GOOD,
           800,

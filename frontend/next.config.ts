@@ -8,7 +8,8 @@ const isDev = process.env.NODE_ENV !== "production";
  * silently have its own calls refused by its own policy.
  */
 const apiOrigin = (() => {
-  const configured = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+  const configured =
+    process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
   try {
     return new URL(configured).origin;
   } catch {
@@ -28,16 +29,19 @@ const apiOrigin = (() => {
  * turning every relative link, a form quietly posting somewhere new, a plugin
  * embedded in the document.
  *
- * <p>`img-src` allows any https origin because a listing's pictures are whatever
- * a seller uploaded, served from object storage that varies per environment.
- * Narrow it to the bucket's host once that host is fixed.
+ * <p>`img-src` carries the API's own origin, which is where a listing's
+ * photographs are served from: they are stored in a bucket with no anonymous
+ * policy and handed out by the API at a stable `/media/{id}`, so the host that
+ * serves them is the same one the app talks to. Over plain http in development
+ * that origin is not covered by `https:`, and without it every uploaded
+ * photograph is blocked by the page's own policy.
  */
 const csp = [
   "default-src 'self'",
   // 'unsafe-eval' is React Refresh; it is not sent in a production build.
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
+  `img-src 'self' data: blob: https: ${apiOrigin}`,
   "font-src 'self' data:",
   `connect-src 'self' ${apiOrigin}${isDev ? " ws: wss:" : ""}`,
   "frame-ancestors 'none'",

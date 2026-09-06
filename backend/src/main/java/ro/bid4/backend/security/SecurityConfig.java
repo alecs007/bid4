@@ -121,6 +121,15 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/stats/public")
                     .permitAll()
+                    // A listing's photographs, by the id the listing carries.
+                    // Open for the same reason the listing is: a picture of
+                    // something for sale is shown to whoever opens the page.
+                    // Only objects marked PUBLIC are served there, so nothing
+                    // that identifies a person is reachable however its id is
+                    // come by — and uploading still falls through to the last
+                    // rule, so writing one requires an account.
+                    .requestMatchers(HttpMethod.GET, "/media/**")
+                    .permitAll()
                     // One segment only, so this opens the public profile at
                     // /users/{username} and never /users/me/anything, which
                     // falls through to the last rule and stays authenticated.

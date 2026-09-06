@@ -5,15 +5,20 @@ import { useEffect, useRef, useState } from "react";
 import { Icons } from "@/components/icons";
 import { FadeImage } from "@/components/ui";
 import { CARD_MEDIA } from "@/components/auctions/cardChrome";
-import { AUCTION, CAUSE } from "@/lib/config";
-import { toFileRef } from "@/lib/mock/uploads";
-import type { UploadedFileRef } from "@/lib/types";
+import { AUCTION, IMAGE, USE_MOCK } from "@/lib/config";
+import { ImageRejected, processImage } from "@/lib/images/process";
+import type { ProcessedImage } from "@/lib/images/process";
 import { cn } from "@/lib/utils/cn";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
 /** How far a finger travels before a press on a photograph becomes a drag rather than a tap. */
 const DRAG_AFTER_PX = 8;
+
+/** Smaller copies where the only place to put them is the browser's own storage. */
+const SETTINGS = USE_MOCK
+  ? { maxEdge: IMAGE.DEMO_MAX_EDGE_PX, quality: IMAGE.DEMO_QUALITY }
+  : { maxEdge: IMAGE.MAX_EDGE_PX, quality: IMAGE.QUALITY };
 
 /**
  * One wide target until there is something to show, then the photographs themselves.
@@ -27,42 +32,76 @@ const DRAG_AFTER_PX = 8;
  * say what the position already says. The drag is followed on the window rather than through
  * `setPointerCapture`, which throws when the pointer has already gone and leaves a card stuck to
  * the finger.
+ *
+ * <p>What each card shows is not the file that was chosen. Every photograph is decoded, turned the
+ * way it was taken, scaled down and encoded again the moment it lands here, and the preview is
+ * those bytes — so what a seller approves is what is uploaded, and a picture that will not survive
+ * the trip is refused while they are still looking at the form rather than after they submit it.
  */
 export function PhotoPicker({
   value,
   onChange,
 }: {
-  value: UploadedFileRef[];
-  onChange: (next: UploadedFileRef[]) => void;
+  value: ProcessedImage[];
+  onChange: (next: ProcessedImage[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tooLarge, setTooLarge] = useState<string | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
+  /** How many are still being decoded, drawn as cards so the row keeps its shape. */
+  const [working, setWorking] = useState(0);
   const [fileOver, setFileOver] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
   const from = useRef({ x: 0, y: 0 });
   /** True once the press has travelled far enough to be a drag and not a tap. */
   const loose = useRef(false);
 
-  const add = (files: FileList | null) => {
+  // What is currently held, kept where the loop below can see it across its
+  // awaits — `value` there is whatever it was when the drop happened.
+  const held = useRef<ProcessedImage[]>([]);
+  useEffect(() => {
+    held.current = value;
+  });
+
+  // And given back when the form goes. Each one is bytes the tab holds on to
+  // until the object URL behind it is revoked.
+  useEffect(() => () => held.current.forEach((photo) => photo.release()), []);
+
+  const add = async (files: FileList | null) => {
     if (!files?.length) return;
-    const room = AUCTION.MAX_IMAGES - value.length;
-    const picked = Array.from(files)
-      .filter((file) => file.type.startsWith("image/"))
-      .slice(0, room);
-    const small = picked.filter(
-      (file) => file.size <= CAUSE.MAX_UPLOAD_MB * 1024 * 1024,
-    );
-    setTooLarge(
-      small.length === picked.length
-        ? null
-        : `Unele fotografii depășesc ${CAUSE.MAX_UPLOAD_MB} MB.`,
-    );
-    if (small.length) onChange([...value, ...small.map(toFileRef)]);
+    const room = AUCTION.MAX_IMAGES - value.length - working;
+    const picked = Array.from(files).slice(0, Math.max(0, room));
+    if (!picked.length) return;
+
+    setRefused(null);
+    setWorking((count) => count + picked.length);
+
+    // One at a time. A phone photograph decodes into tens of megabytes of
+    // canvas, and eight of them at once is how a browser tab runs out of memory
+    // on the device most likely to be doing this.
+    for (const file of picked) {
+      try {
+        const photo = await processImage(file, SETTINGS);
+        // Read through the ref rather than the closure: this loop spans several
+        // awaits, and `value` is whatever it was when the drop happened.
+        onChange([...held.current, photo]);
+      } catch (error) {
+        setRefused(
+          error instanceof ImageRejected
+            ? error.message
+            : "O fotografie nu a putut fi adăugată.",
+        );
+      } finally {
+        setWorking((count) => Math.max(0, count - 1));
+      }
+    }
+
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const remove = (index: number) =>
+  const remove = (index: number) => {
+    value[index]?.release();
     onChange(value.filter((_, position) => position !== index));
+  };
 
   useEffect(() => {
     if (dragged === null) return;
@@ -113,7 +152,7 @@ export function PhotoPicker({
   const dropFiles = (event: React.DragEvent) => {
     event.preventDefault();
     setFileOver(false);
-    add(event.dataTransfer.files);
+    void add(event.dataTransfer.files);
   };
 
   const overFiles = (event: React.DragEvent) => {
@@ -121,11 +160,11 @@ export function PhotoPicker({
     setFileOver(true);
   };
 
-  const full = value.length >= AUCTION.MAX_IMAGES;
+  const full = value.length + working >= AUCTION.MAX_IMAGES;
 
   return (
     <div className="flex flex-col gap-2">
-      {value.length === 0 ? (
+      {value.length === 0 && working === 0 ? (
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -150,14 +189,14 @@ export function PhotoPicker({
             Adaugă fotografii
           </span>
           <span className="text-xs text-ink-500">
-            JPG, PNG sau WEBP, până la {CAUSE.MAX_UPLOAD_MB} MB fiecare
+            JPG, PNG sau WEBP, până la {IMAGE.MAX_INPUT_MB} MB fiecare
           </span>
         </button>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {value.map((photo, index) => (
             <div
-              key={photo.fileRef}
+              key={photo.previewUrl}
               data-photo={index}
               // touch-none so the first finger movement picks the card up rather
               // than scrolling the page, and select-none with the callout off so
@@ -178,12 +217,10 @@ export function PhotoPicker({
                 setDragged(index);
               }}
             >
-              {photo.previewUrl ? (
-                <FadeImage
-                  src={photo.previewUrl}
-                  sizes="(max-width: 640px) 33vw, 25vw"
-                />
-              ) : null}
+              <FadeImage
+                src={photo.previewUrl}
+                sizes="(max-width: 640px) 33vw, 25vw"
+              />
 
               <button
                 type="button"
@@ -201,6 +238,15 @@ export function PhotoPicker({
                 </span>
               ) : null}
             </div>
+          ))}
+
+          {/* A card each for the ones still being prepared, so the row grows as
+              they are chosen instead of after the last one is ready. */}
+          {Array.from({ length: working }, (_, index) => (
+            <div
+              key={`working-${index}`}
+              className={cn(CARD_MEDIA, "shimmer bg-ink-100 ring-1 ring-edge")}
+            />
           ))}
 
           {full ? null : (
@@ -231,13 +277,13 @@ export function PhotoPicker({
         type="file"
         accept={ACCEPT}
         multiple
-        onChange={(event) => add(event.target.files)}
+        onChange={(event) => void add(event.target.files)}
         className="sr-only"
       />
 
-      {tooLarge ? (
+      {refused ? (
         <p role="alert" className="text-sm font-semibold text-danger-600">
-          {tooLarge}
+          {refused}
         </p>
       ) : null}
     </div>
