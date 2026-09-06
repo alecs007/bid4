@@ -18,6 +18,7 @@ import { getFeaturedAuctions } from "@/lib/api/auctions";
 import { listTrendingCauses } from "@/lib/api/causes";
 import { getPlatformStats } from "@/lib/api/stats";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { FEATURED } from "@/lib/config";
 import { useApi } from "@/lib/hooks/useApi";
 import { formatMoney, lei } from "@/lib/money";
 
@@ -161,7 +162,9 @@ export function MostWatchedRow() {
         <AuctionGrid
           auctions={data?.mostWatched ?? []}
           loading={loading}
-          skeletonCount={4}
+          columns={5}
+          visible={FEATURED.MOST_WATCHED_SHOWN}
+          skeletonCount={FEATURED.MOST_WATCHED_COUNT}
           emptyState={
             <EmptyState
               title="Nicio licitație urmărită deocamdată"
@@ -192,7 +195,9 @@ export function LatestRow() {
         <AuctionGrid
           auctions={data?.latest ?? []}
           loading={loading}
-          skeletonCount={8}
+          columns={5}
+          visible={FEATURED.LATEST_SHOWN}
+          skeletonCount={FEATURED.LATEST_COUNT}
           emptyState={
             <EmptyState
               title="Nicio licitație în desfășurare"

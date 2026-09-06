@@ -99,7 +99,9 @@ public final class CatalogRules {
     return BID_STEP_ABOVE_LADDER;
   }
 
-  public static final int DEFAULT_PAGE_SIZE = 12;
+  /** Sixteen: four rows of four on a desktop, eight of two on a phone, ragged at neither. */
+  public static final int DEFAULT_PAGE_SIZE = 16;
+
   public static final int MAX_PAGE_SIZE = 60;
 
   /**
@@ -120,10 +122,17 @@ public final class CatalogRules {
    */
   public static final long DISPATCH_DAYS = 7;
 
-  /** The homepage's first row: the listings the most people are following. */
-  public static final int MOST_WATCHED_COUNT = 4;
+  /**
+   * The homepage's first row: the listings the most people are following.
+   *
+   * <p>Six, which is the most any width shows: the row is two cards across a phone, three across a
+   * tablet and five across a desktop, and the page hides what a narrower row would leave hanging.
+   * Sending four would leave the phone a row short of what it has room for.
+   */
+  public static final int MOST_WATCHED_COUNT = 6;
 
-  public static final int LATEST_COUNT = 8;
+  /** And the second: two full desktop rows, trimmed to nine on a tablet and eight on a phone. */
+  public static final int LATEST_COUNT = 10;
 
   /** "More like this": the cause outweighs the object, because it usually is the reason. */
   public static final double RELATED_WEIGHT_SAME_CAUSE = 10;

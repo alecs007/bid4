@@ -179,19 +179,23 @@ export function SearchResults() {
             error={auctions.error}
             reload={auctions.reload}
             emptyTitle="Nicio licitație găsită"
-            skeleton={<SkeletonGrid count={STEP} columns={4} />}
+            skeleton={<SkeletonGrid count={STEP} columns={5} />}
           >
             {(items) => (
               <>
                 <p className="sr-only" aria-live="polite">
-                  {countRo(auctions.total ?? items.length, "rezultat", "rezultate")}
+                  {countRo(
+                    auctions.total ?? items.length,
+                    "rezultat",
+                    "rezultate",
+                  )}
                 </p>
-                <AuctionGrid auctions={items} columns={4} />
+                <AuctionGrid auctions={items} columns={5} />
                 <LoadMore
                   hasMore={auctions.hasMore}
                   loading={auctions.loadingMore}
                   onReach={auctions.loadMore}
-                  waiting={<SkeletonGrid count={4} columns={4} />}
+                  waiting={<SkeletonGrid count={5} columns={5} />}
                 />
               </>
             )}

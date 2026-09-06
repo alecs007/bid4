@@ -235,22 +235,69 @@ export function AuctionCard({
   );
 }
 
+/** How many cards a row shows at each of the three widths it is laid out for. */
+export interface VisibleCounts {
+  base: number;
+  md: number;
+  lg: number;
+}
+
+/**
+ * Every way a card can be shown at some widths and not others, written out.
+ *
+ * <p>Spelled as whole class strings because Tailwind reads the source for the classes it emits: one
+ * built from a variable at runtime is a class that was never compiled. Keyed by which of the three
+ * widths the card appears at.
+ */
+const VISIBILITY: Record<string, string> = {
+  "111": "",
+  "110": "lg:hidden",
+  "100": "md:hidden",
+  "101": "md:hidden lg:block",
+  "011": "hidden md:block",
+  "010": "hidden md:block lg:hidden",
+  "001": "hidden lg:block",
+  "000": "hidden",
+};
+
+/**
+ * Which widths this card survives at, so no row is ever left part-empty.
+ *
+ * <p>A homepage row is two cards across a phone, three across a tablet and five across a desktop,
+ * and a count that divides by none of those leaves a last row with a gap in it. So each width is
+ * given the number that fills it, the row is handed the largest of them, and the rest are hidden.
+ * Hidden rather than sliced because the width is not known until the browser has it.
+ */
+function visibilityFor(index: number, counts: VisibleCounts): string {
+  const key = [counts.base, counts.md, counts.lg]
+    .map((count) => (index < count ? "1" : "0"))
+    .join("");
+  return VISIBILITY[key] ?? "";
+}
+
 export function AuctionGrid({
   auctions,
   loading,
   skeletonCount = 8,
   columns = 4,
+  visible,
   emptyState,
 }: {
   auctions: AuctionDetail[];
   loading?: boolean;
   skeletonCount?: number;
-  columns?: 3 | 4;
+  columns?: 3 | 4 | 5;
+  /** Keeps every row full by hiding what would spill past it. See {@link visibilityFor}. */
+  visible?: VisibleCounts;
   emptyState?: React.ReactNode;
 }) {
   const gridClass = cn(
     "grid grid-cols-2 gap-3 sm:gap-4",
-    columns === 4 ? "lg:grid-cols-4" : "md:grid-cols-3",
+    columns === 5
+      ? "md:grid-cols-3 lg:grid-cols-5"
+      : columns === 4
+        ? "lg:grid-cols-4"
+        : "md:grid-cols-3",
   );
 
   if (loading) {
@@ -261,7 +308,10 @@ export function AuctionGrid({
         className={gridClass}
       >
         {Array.from({ length: skeletonCount }).map((_, index) => (
-          <SkeletonAuctionCard key={index} />
+          <SkeletonAuctionCard
+            key={index}
+            className={visible ? visibilityFor(index, visible) : undefined}
+          />
         ))}
       </div>
     );
@@ -275,7 +325,10 @@ export function AuctionGrid({
         <AuctionCard
           key={auction.id}
           auction={auction}
-          className="animate-reveal"
+          className={cn(
+            "animate-reveal",
+            visible && visibilityFor(index, visible),
+          )}
           style={revealDelay(index)}
         />
       ))}

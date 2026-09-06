@@ -350,15 +350,14 @@ export function CauseDetailView({ slug }: { slug: string }) {
               size="sm"
               value={sort}
               options={SORTS}
-              onChange={(next) =>
-                setSort((next || "NEWEST") as AuctionSort)
-              }
+              onChange={(next) => setSort((next || "NEWEST") as AuctionSort)}
             />
           </div>
         </div>
         <AuctionGrid
           auctions={auctions.items}
           loading={auctions.loading}
+          columns={5}
           skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
           emptyState={
             <EmptyState
@@ -378,7 +377,7 @@ export function CauseDetailView({ slug }: { slug: string }) {
           hasMore={auctions.hasMore}
           loading={auctions.loadingMore}
           onReach={auctions.loadMore}
-          waiting={<SkeletonGrid count={4} />}
+          waiting={<SkeletonGrid count={5} columns={5} />}
         />
       </section>
       <Sheet

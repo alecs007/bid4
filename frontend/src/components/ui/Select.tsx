@@ -350,8 +350,11 @@ function placeMenu(trigger: DOMRect): Placement {
   return {
     style: {
       left,
-      minWidth: trigger.width,
-      maxWidth: Math.min(window.innerWidth - MENU_GAP_PX * 2, 420),
+      // The width of the control it belongs to, not the width of its longest
+      // option: free to grow, a menu in a narrow filter column reached out over
+      // the results beside it. Long names are cut with an ellipsis instead,
+      // which is what the rows were already written to do.
+      width: Math.min(trigger.width, window.innerWidth - MENU_GAP_PX * 2),
       maxHeight,
       ...(flip
         ? { bottom: window.innerHeight - trigger.top + MENU_GAP_PX }

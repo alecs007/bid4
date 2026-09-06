@@ -1,3 +1,4 @@
+import { PAGINATION } from "@/lib/config";
 import { cn } from "@/lib/utils/cn";
 import {
   CARD_BODY,
@@ -64,9 +65,9 @@ export function SkeletonParagraph({
 }
 
 /** Mirrors `<AuctionCard>`. */
-export function SkeletonAuctionCard() {
+export function SkeletonAuctionCard({ className }: { className?: string }) {
   return (
-    <div className={CARD_SHELL}>
+    <div className={cn(CARD_SHELL, className)}>
       <Skeleton className={CARD_MEDIA} />
       <div className={CARD_BODY}>
         {/* Sized in `em` inside the title's own type scale, so the two bars fill
@@ -102,7 +103,7 @@ export function SkeletonGrid({
   columns = 4,
 }: {
   count?: number;
-  columns?: 3 | 4;
+  columns?: 3 | 4 | 5;
 }) {
   return (
     <div
@@ -110,7 +111,11 @@ export function SkeletonGrid({
       aria-label="Se încarcă"
       className={cn(
         "grid grid-cols-2 gap-3 sm:gap-4",
-        columns === 4 ? "lg:grid-cols-4" : "md:grid-cols-3",
+        columns === 5
+          ? "md:grid-cols-3 lg:grid-cols-5"
+          : columns === 4
+            ? "lg:grid-cols-4"
+            : "md:grid-cols-3",
       )}
     >
       {Array.from({ length: count }).map((_, index) => (
@@ -214,7 +219,10 @@ export function SkeletonDetail() {
             <div className="hidden w-16 shrink-0 flex-col gap-2 lg:flex">
               <Skeleton className="h-8 w-8 self-center rounded-xl" />
               {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="aspect-square w-full rounded-2xl" />
+                <Skeleton
+                  key={index}
+                  className="aspect-square w-full rounded-2xl"
+                />
               ))}
             </div>
             <Skeleton className="aspect-4/3 min-w-0 flex-1 rounded-2xl" />
@@ -230,7 +238,10 @@ export function SkeletonDetail() {
             <div className="hidden px-5 py-4 lg:block">
               <div className="flex justify-between gap-2">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="flex flex-1 flex-col items-center gap-1.5">
+                  <div
+                    key={index}
+                    className="flex flex-1 flex-col items-center gap-1.5"
+                  >
                     <Skeleton className="h-6 w-9" />
                     <Skeleton className="h-3 w-7" />
                   </div>
@@ -294,7 +305,10 @@ export function SkeletonDetail() {
             <Skeleton className="mb-3 h-6 w-20" />
             <div className="grid gap-x-8 sm:grid-cols-2">
               {Array.from({ length: 2 }).map((_, index) => (
-                <div key={index} className="flex flex-col gap-2 border-b border-line py-2.5">
+                <div
+                  key={index}
+                  className="flex flex-col gap-2 border-b border-line py-2.5"
+                >
                   <Skeleton className="h-3 w-16" />
                   <Skeleton className="h-5 w-24" />
                 </div>
@@ -383,7 +397,7 @@ export function SkeletonCauseDetail() {
         <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
           <Skeleton className="h-11 w-full rounded-2xl sm:w-72" />
         </div>
-        <SkeletonGrid count={4} />
+        <SkeletonGrid count={5} columns={5} />
       </section>
     </div>
   );
@@ -432,7 +446,7 @@ export function SkeletonProfile() {
 
       {/* No tab row: it is drawn only for a profile that has both kinds, and
           which that is cannot be known while this is on screen. */}
-      <SkeletonGrid count={12} />
+      <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={5} />
     </div>
   );
 }

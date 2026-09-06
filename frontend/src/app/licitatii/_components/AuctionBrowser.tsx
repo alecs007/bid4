@@ -219,6 +219,10 @@ export function AuctionBrowser() {
           minPrice: minPrice > PRICE_MIN ? minPrice : undefined,
           maxPrice: maxPrice < PRICE_MAX ? maxPrice : undefined,
           page: Number.isFinite(page) && page > 0 ? page : 1,
+          // Asked for rather than left to the server's own default: how many
+          // cards fill this page is a question about this page's grid, and the
+          // two agreeing by coincidence is how one of them quietly changes.
+          pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
         },
         user?.id,
       ),
@@ -624,7 +628,7 @@ export function AuctionBrowser() {
               <AuctionGrid
                 auctions={data?.items ?? []}
                 loading={busy}
-                columns={3}
+                columns={4}
                 // Placeholders for what is *coming*, not for what is leaving.
                 // Standing in for the outgoing page means twelve of them and then
                 // a collapse to the two rows that actually arrive — the shift

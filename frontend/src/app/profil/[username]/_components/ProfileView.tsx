@@ -214,13 +214,14 @@ export function ProfileView({ username }: { username: string }) {
               <AuctionGrid
                 auctions={auctions.items}
                 loading={listingsLoading}
+                columns={5}
                 skeletonCount={PAGINATION.DEFAULT_PAGE_SIZE}
               />
               <LoadMore
                 hasMore={auctions.hasMore}
                 loading={auctions.loadingMore}
                 onReach={auctions.loadMore}
-                waiting={<SkeletonGrid count={4} />}
+                waiting={<SkeletonGrid count={5} columns={5} />}
               />
             </>
           ) : (

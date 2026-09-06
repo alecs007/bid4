@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Skeleton, SkeletonGrid } from "@/components/ui";
+import { PAGINATION } from "@/lib/config";
 import { SearchResults } from "./_components/SearchResults";
 
 /**
@@ -39,7 +40,7 @@ function SearchSkeleton() {
         <Skeleton className="h-[38.5px] w-[112px] rounded-full" />
       </div>
 
-      <SkeletonGrid count={12} columns={4} />
+      <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={5} />
     </div>
   );
 }

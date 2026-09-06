@@ -383,9 +383,21 @@ export const FEATURED = {
   WEIGHT_BIDS: 3,
   WEIGHT_WATCHERS: 1,
   WEIGHT_DONATION: 2,
-  /** How many cards each homepage row shows. */
-  MOST_WATCHED_COUNT: 4,
-  LATEST_COUNT: 8,
+  /**
+   * How many cards each homepage row is given, and how many it shows at each width.
+   *
+   * <p>A row is two cards across a phone, three across a tablet and five across a desktop. Each
+   * width therefore wants a different number if no row is to end part-empty, so the row is given
+   * the largest of the three and the page hides the rest — the count is the fetch, the shown counts
+   * are the layout.
+   *
+   * <p>The first row is one full desktop row; the second is two. Both divide cleanly at every width:
+   * 6 is 3×2 and 2×3, 8 is 4×2, 9 is 3×3, 10 is 2×5.
+   */
+  MOST_WATCHED_COUNT: 6,
+  MOST_WATCHED_SHOWN: { base: 6, md: 6, lg: 5 },
+  LATEST_COUNT: 10,
+  LATEST_SHOWN: { base: 8, md: 9, lg: 10 },
   TRENDING_CAUSES_COUNT: 3,
 } as const;
 
@@ -402,7 +414,14 @@ export const RELATED = {
 } as const;
 
 export const PAGINATION = {
-  DEFAULT_PAGE_SIZE: 12,
+  /**
+   * A page of results: sixteen.
+   *
+   * <p>Four rows of four on a desktop, eight rows of two on a phone, and no ragged last row at
+   * either. Twelve divided by four but not by the five a narrower grid uses, and it left the
+   * browsing page a row shorter than the screen had room for.
+   */
+  DEFAULT_PAGE_SIZE: 16,
   MAX_PAGE_SIZE: 60,
   /**
    * How long the placeholders stand once the page has reached the top, before the new results

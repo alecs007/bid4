@@ -95,7 +95,7 @@ export function AuctionBrowserSkeleton() {
           <div className="mb-3 h-5">
             <Skeleton className="h-5 w-32" />
           </div>
-          <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={3} />
+          <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={4} />
           {/* Space the pagination will occupy once the results arrive. */}
           <div className="mt-8 h-10" />
         </div>

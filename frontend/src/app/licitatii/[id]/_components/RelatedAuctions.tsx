@@ -15,7 +15,7 @@ import { revealDelay } from "@/lib/utils/reveal";
  * cards visibly smaller than the home page's from `sm` up.
  */
 const CARD =
-  "w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]";
+  "w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-4rem)/5)]";
 
 /** Left out entirely when nothing matches, rather than padded with whatever is live. */
 export function RelatedAuctions({
