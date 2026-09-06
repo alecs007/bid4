@@ -92,9 +92,18 @@ export function Sheet({
         type="button"
         aria-label="Închide"
         onClick={onClose}
+        // Fading with the pull rather than at the end of it: the sheet and what
+        // is behind it are one movement, and a backdrop that stays solid until
+        // the last frame reads as the page catching up afterwards.
         style={backdropStyle}
         className={cn(
-          "animate-fade-in absolute inset-0 cursor-default bg-ink-900/40",
+          "absolute inset-0 cursor-default bg-ink-900/40",
+          // Dropped on the first grab, for the same reason the panel drops its
+          // own: the entrance keyframes hold their end state, and a held
+          // animation outranks an inline style — so with this still on, the
+          // opacity set by the pull was never the one being painted and the
+          // backdrop sat at full strength all the way down.
+          grabbed ? "animate-none" : "animate-fade-in",
           pulling
             ? "transition-none"
             : "transition-opacity duration-200 ease-[var(--ease-out-soft)]",

@@ -35,6 +35,7 @@ import {
 } from "@/lib/config";
 import { AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
+import { isCommitted, type AuctionDetail } from "@/lib/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { formatRelativeRo } from "@/lib/utils/date";
@@ -69,10 +70,17 @@ function Section({
   );
 }
 
-const MARK_TONE = {
-  primary: "bg-primary-500/10",
-  neutral: "bg-ink-500/10",
-} as const;
+/**
+ * The one tint every mark sits on.
+ *
+ * <p>Slate, not green. These are costs listed side by side, and giving the shield a colour the
+ * courier beside it did not have made the two read as different kinds of thing — the drawing is
+ * what says which is which, and it says it perfectly well on a neutral ground.
+ *
+ * <p>And the lightest of them: the drawings on it are dark, and every step the ground takes towards
+ * them is a step out of their way.
+ */
+const MARK_TINT = "bg-ink-50";
 
 /**
  * Size and padding travel together rather than being passed in separately: a
@@ -90,12 +98,10 @@ const MARK_SIZE = {
 /** A mark on its own tint: the shield, and the courier icon beside it. */
 function CostMark({
   size,
-  tone = "primary",
   className,
   children,
 }: {
   size: keyof typeof MARK_SIZE;
-  tone?: keyof typeof MARK_TONE;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -104,7 +110,7 @@ function CostMark({
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full",
         MARK_SIZE[size],
-        MARK_TONE[tone],
+        MARK_TINT,
         className,
       )}
     >
@@ -165,6 +171,19 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   });
   const deliveryEta = `în ${SHIPPING.DELIVERY_DAYS_MIN}-${SHIPPING.DELIVERY_DAYS_MAX} zile lucrătoare`;
   const watched = watchOverride ?? Boolean(auction.isWatched);
+  /**
+   * How many people have this on their list, the reader's own tap included before the server has
+   * agreed to it.
+   *
+   * <p>The same sum the cards do. Without it the icon turned at once and the number beside it sat
+   * still until the refetch landed and then jumped — which reads as the save having taken a moment
+   * to register rather than as one movement.
+   */
+  const following = Math.max(
+    0,
+    auction.watcherCount +
+      (watched === Boolean(auction.isWatched) ? 0 : watched ? 1 : -1),
+  );
   const causePercent = progressPercent(
     auction.cause.raisedAmount,
     auction.cause.goalAmount,
@@ -184,7 +203,10 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     try {
       const result = await toggleWatch(auction.id, user.id);
       setWatchOverride(result.watched);
-      refresh();
+      // Deliberately no refresh. A follow changes no price, no offer and no
+      // status — the only number it moves is the one counted above — and
+      // refetching the listing and its bids for it put the whole right-hand
+      // column through a loading state on every tap.
     } catch {
       setWatchOverride(!next);
       toast.error("Licitația nu a putut fi urmărită.");
@@ -221,8 +243,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       >
         <Icons.watchlist
           aria-hidden="true"
+          /* fill-transparent, not fill="none": a colour animates to a colour, `none` cannot. */
           className={cn(
-            "h-5 w-5 fill-transparent transition-[fill,transform] duration-200",
+            "h-5 w-5 fill-transparent transition-[fill,transform] duration-200 ease-[var(--ease-out-soft)]",
             watched && "scale-110 fill-current",
           )}
         />
@@ -382,8 +405,15 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                     aria-hidden="true"
                     className="h-4 w-4 text-ink-400"
                   />
-                  <span className="numeric font-bold text-ink-900">
-                    {auction.watcherCount}
+                  {/* Keyed on the number, so a change replays the fade rather
+                      than swapping the digit in place. A fade and not the tick
+                      the prices use: this digit sits inside a sentence, and one
+                      that also moves pulls the line around it. */}
+                  <span
+                    key={following}
+                    className="numeric animate-fade-in inline-block font-bold text-ink-900"
+                  >
+                    {following}
                   </span>{" "}
                   urmăritori
                 </span>
@@ -397,7 +427,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             </div>
 
             <div className="border-t border-line px-5 py-4.5 text-sm">
-              <p className="mb-2 font-display text-sm font-extrabold text-ink-900">
+              <p className="mb-2 font-display text-sm font-bold text-ink-700">
                 Alte costuri
               </p>
               <div className="flex items-center gap-1.5 py-1.5">
@@ -430,7 +460,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 </InfoHint>
               </div>
               <div className="flex items-start gap-2.5 py-1.5">
-                <CostMark size="sm" tone="neutral">
+                <CostMark size="sm">
                   <Icons.delivery
                     aria-hidden="true"
                     className="h-full w-full text-ink-500"
@@ -464,19 +494,23 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             </div>
 
             <div className="border-t border-line px-5 py-4.5">
-              <p className="mb-2 font-display text-sm font-extrabold text-ink-900">
+              <p className="mb-2 font-display text-sm font-bold text-ink-700">
                 Opțiuni de plată
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {["Visa", "Mastercard", "Amex"].map((brand) => (
-                  <span
-                    key={brand}
-                    className="rounded-lg bg-ink-100 px-2 py-1 text-xs font-bold text-ink-700"
-                  >
-                    {brand}
-                  </span>
-                ))}
-              </div>
+              {/* The marks themselves rather than their names: a row of card
+                  logos is read at a glance and in any language, which a row of
+                  grey word chips is not. */}
+              <Image
+                src="/images/payment/methods.webp"
+                alt="Visa, Mastercard, Maestro, Apple Pay, Google Pay, Klarna"
+                width={2279}
+                height={256}
+                unoptimized
+                loading="lazy"
+                sizes="280px"
+                className="h-auto w-full max-w-[280px]"
+                draggable={false}
+              />
             </div>
           </div>
 
@@ -591,38 +625,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       <Sheet
         open={feesOpen}
         onClose={() => setFeesOpen(false)}
-        title="Cum se împart banii"
+        title="Cum se împart banii?"
       >
-        <dl className="flex flex-col gap-3 pb-2 text-[15px]">
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-ink-600">Preț curent</dt>
-            <dd className="numeric font-bold text-ink-900 whitespace-nowrap">
-              {formatMoney(auction.currentPrice)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-ink-600">
-              Donație către {auction.cause.name} ({auction.donationPercent}%)
-            </dt>
-            <dd className="numeric font-bold text-primary-700 whitespace-nowrap">
-              {formatMoney(fees.donationAmount)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-ink-600">Suma rămasă vânzătorului</dt>
-            <dd className="numeric font-bold text-ink-900 whitespace-nowrap">
-              {formatMoney(fees.sellerNet)}
-            </dd>
-          </div>
-          <p className="mt-2 border-t border-line pt-3 text-sm text-ink-500">
-            La final se adaugă livrarea și taxa de protecție a cumpărătorului,
-            de {FEES.BUYER_TAX_PERCENT}% din prețul final +{" "}
-            <span className="whitespace-nowrap">
-              {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
-            </span>
-            . Toate costurile sunt afișate înainte de confirmarea comenzii.
-          </p>
-        </dl>
+        <MoneySplit auction={auction} fees={fees} />
       </Sheet>
 
       <Modal
@@ -704,6 +709,124 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </ProtectionPoint>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+/**
+ * Where the price goes, as the two parts a buyer is paying for.
+ *
+ * <p>The price divides in two: the share that reaches the cause and the share that reaches the
+ * seller. That is the whole of what a bid buys, so that is the whole of what is listed — the
+ * platform's own cut is added on top and named underneath, and putting it in the split made the
+ * price look like it was being eaten into three ways before anyone was paid.
+ *
+ * <p>Three rows and no more. The sheet is titled with the question this answers, so nothing here
+ * repeats it, and a bar drawing the same division the percentages already state was a second way of
+ * saying one thing.
+ */
+function MoneySplit({
+  auction,
+  fees,
+}: {
+  auction: AuctionDetail;
+  fees: ReturnType<typeof computeFees>;
+}) {
+  /**
+   * What the amount at the top of the split actually is at this moment.
+   *
+   * <p>Sold, it is the price it went for. Still open, it is either where the bidding stands or,
+   * with nothing offered yet, the seller's ask — calling that last one a sale price would tell a
+   * reader the item had sold for it.
+   */
+  const priceLabel = isCommitted(auction.status)
+    ? "Preț de vânzare"
+    : auction.bidCount > 0
+      ? "Preț actual"
+      : "Preț de pornire";
+
+  return (
+    <dl className="flex flex-col pb-2">
+      <SplitLine
+        label={priceLabel}
+        value={formatMoney(auction.currentPrice)}
+        strong
+      />
+      <SplitLine
+        label={`Donație către ${auction.cause.name}`}
+        note={`${auction.donationPercent}% din preț`}
+        value={formatMoney(fees.donationAmount)}
+        tone="donation"
+      />
+      <SplitLine
+        label="Partea vânzătorului"
+        note={`${100 - auction.donationPercent}% din preț`}
+        value={formatMoney(fees.sellerShare)}
+      />
+
+      {/* Added to the price rather than taken out of it, so it is stated apart
+          from the split: as a row among the two above it read as a third slice
+          of the same money. */}
+      <p className="mt-2 border-t border-line pt-3 text-xs leading-relaxed text-ink-500">
+        La preț se adaugă taxa de protecție a cumpărătorului{" "}
+        <span className="whitespace-nowrap">
+          ({FEES.BUYER_TAX_PERCENT}% +{" "}
+          {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })})
+        </span>{" "}
+        și costul livrării, ambele calculate și afișate integral înainte de
+        confirmarea comenzii.
+      </p>
+    </dl>
+  );
+}
+
+/** One line of the sum: what it is, what it comes to, and what that is as a share. */
+function SplitLine({
+  label,
+  note,
+  value,
+  tone,
+  strong = false,
+}: {
+  label: string;
+  note?: string;
+  value: string;
+  tone?: "donation";
+  strong?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-baseline justify-between gap-4 py-2",
+        // The price is the sum the two rows under it divide up, so it is set
+        // above them rather than among them.
+        strong && "border-b border-line pb-2.5",
+      )}
+    >
+      <dt className="min-w-0">
+        <span className="min-w-0">
+          <span
+            className={cn(
+              "block text-[15px]",
+              strong ? "font-bold text-ink-900" : "text-ink-700",
+            )}
+          >
+            {label}
+          </span>
+          {note ? (
+            <span className="block text-xs text-ink-500">{note}</span>
+          ) : null}
+        </span>
+      </dt>
+      <dd
+        className={cn(
+          "numeric shrink-0 font-bold whitespace-nowrap",
+          strong && "font-display text-base",
+          tone === "donation" ? "text-primary-700" : "text-ink-900",
+        )}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

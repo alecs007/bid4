@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { Icons } from "@/components/icons";
 import { matchesSearch } from "@/lib/utils/search";
@@ -46,7 +47,9 @@ export function Select<T extends string>({
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  /** Where the menu is drawn, in the viewport's own coordinates. */
+  const [box, setBox] = useState<Placement | null>(null);
 
   const selected = options.find((option) => option.value === value);
 
@@ -74,10 +77,44 @@ export function Select<T extends string>({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) close();
+      const target = event.target as Node;
+      // The menu is not inside the root any more — it is drawn on the body —
+      // so it has to be asked for separately. Without this, pressing an option
+      // counted as a press outside, the menu closed on the way down, and the
+      // click that followed landed on nothing: the list could be opened and
+      // read but never chosen from.
+      if (rootRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      close();
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  /**
+   * Follows the trigger, for as long as the menu is open.
+   *
+   * <p>Measured against the viewport rather than laid out beside the trigger, because the menu no
+   * longer shares a parent with it. Scroll is listened for in the capture phase: the event does not
+   * bubble, and the thing that moves under it is usually an inner panel — a filter sheet, a sticky
+   * column — rather than the page.
+   */
+  useEffect(() => {
+    if (!open) return;
+
+    const place = () => {
+      const trigger = rootRef.current;
+      if (!trigger) return;
+      setBox(placeMenu(trigger.getBoundingClientRect()));
+    };
+
+    place();
+    window.addEventListener("scroll", place, { capture: true, passive: true });
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, { capture: true });
+      window.removeEventListener("resize", place);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -86,13 +123,6 @@ export function Select<T extends string>({
       ?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }, [open, activeIndex]);
-
-  useEffect(() => {
-    // preventScroll for the same reason the header's search box needs it: this
-    // menu opens inside a sticky filter panel, and revealing the box it just
-    // focused would drag the page away from the results being filtered.
-    if (open && searchable) searchRef.current?.focus({ preventScroll: true });
-  }, [open, searchable]);
 
   const openList = () => {
     setQuery("");
@@ -190,87 +220,142 @@ export function Select<T extends string>({
         />
       </button>
 
-      {open ? (
-        <div
-          className={cn(
-            "absolute z-30 mt-1.5 w-full min-w-max rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line animate-pop-in",
-          )}
-        >
-          {/* Quiet on purpose: it sits inside an already-open menu, so a filled
-              box would shout over the options it exists to narrow. */}
-          {searchable ? (
-            <div className="mb-1.5 flex h-10 items-center gap-2 rounded-xl px-3 ring-1 ring-line transition focus-within:ring-ink-300">
-              <Icons.search
-                aria-hidden="true"
-                className="h-4 w-4 shrink-0 text-ink-500"
-              />
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setActiveIndex(0);
-                }}
-                onKeyDown={onKeyDown}
-                placeholder={searchPlaceholder}
-                aria-label={searchPlaceholder}
-                aria-controls={`${id}-list`}
-                className="min-w-0 flex-1 bg-transparent text-base text-ink-900 placeholder:text-ink-400 focus:outline-none sm:text-[15px]"
-              />
-            </div>
-          ) : null}
+      {open && box
+        ? createPortal(
+            <div
+              ref={menuRef}
+              style={box.style}
+              // Above the sheet a filter panel opens in (z-50) and above the
+              // header (z-40). Drawn on the body rather than beside the
+              // trigger, which is the only way to be sure of that: the page's
+              // own transition wrapper is a stacking context, and inside one no
+              // z-index can lift a menu over what the page draws next.
+              className="animate-pop-in fixed z-[60] rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line"
+            >
+              {/* Quiet on purpose: it sits inside an already-open menu, so a filled
+              box would shout over the options it exists to narrow.
 
-          <ul
-            ref={listRef}
-            id={`${id}-list`}
-            role="listbox"
-            aria-label={ariaLabel}
-            tabIndex={-1}
-            data-lenis-prevent
-            className="max-h-64 overflow-y-auto"
-          >
-            {entries.map((option, index) => {
-              const isSelected = option.value === value;
-              return (
-                <li key={option.value || "__clear"} data-index={index}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => commit(index)}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] font-semibold transition",
-                      index === activeIndex ? "bg-ink-100" : "bg-transparent",
-                      isSelected ? "text-primary-800" : "text-ink-800",
-                      !option.value && "text-ink-600",
-                    )}
-                  >
-                    {option.prefix ? (
-                      <span aria-hidden="true">{option.prefix}</span>
-                    ) : null}
-                    <span className="min-w-0 flex-1 truncate">
-                      {option.label}
-                    </span>
-                    {isSelected ? (
-                      <Icons.check
-                        aria-hidden="true"
-                        className="h-4 w-4 shrink-0 text-primary-600"
-                      />
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
+              And it is not focused when the menu opens. On a phone that raised
+              the keyboard over the very list it had just opened, so the options
+              could not be seen, let alone tapped — the box is there for a list
+              too long to scan, and reaching for it is the reader's decision. */}
+              {searchable ? (
+                <div className="mb-1.5 flex h-10 items-center gap-2 rounded-xl px-3 ring-1 ring-line transition focus-within:ring-ink-300">
+                  <Icons.search
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 text-ink-500"
+                  />
+                  <input
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setActiveIndex(0);
+                    }}
+                    onKeyDown={onKeyDown}
+                    placeholder={searchPlaceholder}
+                    aria-label={searchPlaceholder}
+                    aria-controls={`${id}-list`}
+                    className="min-w-0 flex-1 bg-transparent text-base text-ink-900 placeholder:text-ink-400 focus:outline-none sm:text-[15px]"
+                  />
+                </div>
+              ) : null}
 
-            {entries.length === 0 ? (
-              <li className="px-3 py-2 text-[15px] text-ink-500">
-                Niciun rezultat
-              </li>
-            ) : null}
-          </ul>
-        </div>
-      ) : null}
+              <ul
+                ref={listRef}
+                id={`${id}-list`}
+                role="listbox"
+                aria-label={ariaLabel}
+                tabIndex={-1}
+                data-lenis-prevent
+                className="max-h-[inherit] overflow-y-auto"
+              >
+                {entries.map((option, index) => {
+                  const isSelected = option.value === value;
+                  return (
+                    <li key={option.value || "__clear"} data-index={index}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => commit(index)}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] font-semibold transition",
+                          index === activeIndex
+                            ? "bg-ink-100"
+                            : "bg-transparent",
+                          isSelected ? "text-primary-800" : "text-ink-800",
+                          !option.value && "text-ink-600",
+                        )}
+                      >
+                        {option.prefix ? (
+                          <span aria-hidden="true">{option.prefix}</span>
+                        ) : null}
+                        <span className="min-w-0 flex-1 truncate">
+                          {option.label}
+                        </span>
+                        {isSelected ? (
+                          <Icons.check
+                            aria-hidden="true"
+                            className="h-4 w-4 shrink-0 text-primary-600"
+                          />
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+
+                {entries.length === 0 ? (
+                  <li className="px-3 py-2 text-[15px] text-ink-500">
+                    Niciun rezultat
+                  </li>
+                ) : null}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
+}
+
+/** How tall the menu is allowed to be before its list starts scrolling. */
+const MENU_MAX_PX = 320;
+
+/** The gap between the trigger and the menu, and the margin it keeps off the edges. */
+const MENU_GAP_PX = 6;
+
+interface Placement {
+  style: React.CSSProperties;
+}
+
+/**
+ * Under the trigger, unless there is more room over it.
+ *
+ * <p>A menu that opens downwards off the bottom of the screen is a menu whose last options cannot
+ * be reached — on a phone that is most of them. Whichever side is chosen, the height is capped at
+ * what is actually free there, so the list scrolls inside the menu instead of past the edge.
+ */
+function placeMenu(trigger: DOMRect): Placement {
+  const below = window.innerHeight - trigger.bottom - MENU_GAP_PX;
+  const above = trigger.top - MENU_GAP_PX;
+  const flip = below < Math.min(MENU_MAX_PX, above);
+
+  const maxHeight = Math.min(MENU_MAX_PX, Math.max(140, flip ? above : below));
+  const left = Math.max(
+    MENU_GAP_PX,
+    Math.min(trigger.left, window.innerWidth - trigger.width - MENU_GAP_PX),
+  );
+
+  return {
+    style: {
+      left,
+      minWidth: trigger.width,
+      maxWidth: Math.min(window.innerWidth - MENU_GAP_PX * 2, 420),
+      maxHeight,
+      ...(flip
+        ? { bottom: window.innerHeight - trigger.top + MENU_GAP_PX }
+        : { top: trigger.bottom + MENU_GAP_PX }),
+    },
+  };
 }

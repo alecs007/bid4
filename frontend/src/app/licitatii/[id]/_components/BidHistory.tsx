@@ -30,7 +30,9 @@ function BidRow({
         <p className="truncate text-sm font-bold text-ink-900">
           {bid.bidderDisplayName}
         </p>
-        <p className="text-xs text-ink-500">{formatRelativeRo(bid.createdAt)}</p>
+        <p className="text-xs text-ink-500">
+          {formatRelativeRo(bid.createdAt)}
+        </p>
       </div>
       <span
         className={cn(
@@ -55,7 +57,11 @@ export function BidHistory({
 }) {
   const [open, setOpen] = useState(false);
 
-  if (loading) return <SkeletonBidRows />;
+  // Only before there is anything to show. Falling back to the skeleton on
+  // every revalidation swapped a list of offers for a block of a different
+  // height and back again, which shoved everything below it down the page for
+  // as long as the refetch took.
+  if (loading && !bids) return <SkeletonBidRows />;
 
   if (!bids || bids.length === 0) {
     return (
