@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import ro.bid4.backend.TestcontainersConfiguration;
+import ro.bid4.backend.identity.domain.AccountType;
+import ro.bid4.backend.identity.domain.UserAccount;
+import ro.bid4.backend.identity.domain.UserRole;
+import ro.bid4.backend.identity.repo.UserAccountRepository;
+import ro.bid4.backend.security.jwt.JwtService;
 
 /**
  * What may be reused, and what may never be.
@@ -30,6 +37,8 @@ import ro.bid4.backend.TestcontainersConfiguration;
 class CacheHeaderTest {
 
   @Autowired private MockMvc mvc;
+  @Autowired private JwtService tokens;
+  @Autowired private UserAccountRepository users;
 
   @Test
   @DisplayName("The impact counters are the same for everyone, so any cache may hold them")
@@ -40,19 +49,30 @@ class CacheHeaderTest {
   }
 
   @Test
-  @DisplayName("A browsing row is reusable by the one browser that asked, and no further")
-  void viewerShapedReadsArePrivate() throws Exception {
+  @DisplayName("A browsing row carries nothing of the reader when nobody is signed in")
+  void browsingReadsAreSharedWhileSignedOut() throws Exception {
+    // Signed out there is no viewer in the body, so every visitor may be handed
+    // the same copy — which is most of what a homepage serves. The Vary is what
+    // keeps that copy from later being handed to somebody who is signed in.
     mvc.perform(get("/auctions/featured"))
         .andExpect(status().isOk())
-        // private, never public: the body carries whether the viewer follows a
-        // listing and where they stand in its bidding.
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "max-age=60, public"))
+        // Asserted across all the values rather than the first: CORS contributes
+        // its own Vary entries, and reading only the first one tests nothing.
+        .andExpect(header().stringValues(HttpHeaders.VARY, hasItem("Authorization")));
+  }
+
+  @Test
+  @DisplayName("and is the one reader's alone the moment it does")
+  void viewerShapedReadsArePrivate() throws Exception {
+    // private, never public: the body now carries whether this viewer follows a
+    // listing and where they stand in its bidding.
+    mvc.perform(get("/auctions/featured").header(HttpHeaders.AUTHORIZATION, bearer()))
+        .andExpect(status().isOk())
         .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "max-age=15, private"))
-        // Without this a cache may answer a signed-in request with the anonymous
-        // copy it stored earlier, or the reverse. Asserted across all the values
-        // rather than the first: CORS contributes its own Vary entries, and
-        // reading only the first one tests nothing.
         .andExpect(header().stringValues(HttpHeaders.VARY, hasItem("Authorization")));
 
+    // This one is per-viewer whoever asks, signed in or not.
     mvc.perform(get("/causes/trending"))
         .andExpect(status().isOk())
         .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "max-age=15, private"));
@@ -85,5 +105,19 @@ class CacheHeaderTest {
             header()
                 .string(
                     HttpHeaders.CACHE_CONTROL, "no-cache, no-store, max-age=0, must-revalidate"));
+  }
+
+  /** A real signed token rather than a stubbed principal, so the decoder is exercised too. */
+  private String bearer() {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    UserAccount account = new UserAccount();
+    account.setEmail("cache-" + suffix + "@bid4.ro");
+    account.setDisplayName("Cititor");
+    account.setUsername("cache-" + suffix);
+    account.setRole(UserRole.USER);
+    account.setAccountType(AccountType.INDIVIDUAL);
+    account.setEmailVerifiedAt(Instant.now());
+    account.setAvatarUrl("");
+    return "Bearer " + tokens.issueAccessToken(users.save(account)).value();
   }
 }

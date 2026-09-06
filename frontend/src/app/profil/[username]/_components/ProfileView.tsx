@@ -11,6 +11,7 @@ import {
   ButtonLink,
   ErrorState,
   LoadMore,
+  SectionLabel,
   SegmentedControl,
   SkeletonGrid,
   SkeletonProfile,
@@ -196,7 +197,17 @@ export function ProfileView({ username }: { username: string }) {
                 },
               ]}
             />
-          ) : null}
+          ) : (
+            // With nothing to switch to, the tab row is gone and the panel under
+            // it was left unnamed — a grid of cards with no word saying whether
+            // they are this member's listings or the causes they run. The label
+            // says the same thing the tab would have, count and all.
+            <SectionLabel className="mb-4">
+              {showing === "listings"
+                ? `Anunțuri (${auctions.total ?? auctions.items.length})`
+                : `Cauze (${causes?.length ?? 0})`}
+            </SectionLabel>
+          )}
 
           {showing === "listings" ? (
             <>

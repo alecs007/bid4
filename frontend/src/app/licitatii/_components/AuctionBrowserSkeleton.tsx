@@ -39,21 +39,11 @@ function FilterGroup({
 export function AuctionBrowserSkeleton() {
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
-          Licitații
-        </h1>
-        <Skeleton className="order-last h-10 w-full rounded-xl sm:order-none sm:w-64 lg:ml-auto" />
-        {/* The filters button is a small Button: 36px, not 40. */}
-        <Skeleton className="h-9 w-28 rounded-2xl lg:hidden" />
-        <Skeleton className="ml-auto h-10 w-44 rounded-xl sm:w-56 lg:ml-0" />
-      </div>
-
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
-          <div className="sticky top-24">
+          <div className="sticky top-18">
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
-              <div className="mb-5 flex items-center justify-between gap-2 border-b border-line pb-4">
+              <div className="mb-5 flex items-center justify-between gap-2 border-b border-line pb-2">
                 <Skeleton className="h-7 w-16" />
                 <Skeleton className="h-5 w-20" />
               </div>
@@ -92,7 +82,17 @@ export function AuctionBrowserSkeleton() {
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-3 hidden h-5 sm:block">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
+              Licitații
+            </h1>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-10 w-10 rounded-xl lg:hidden" />
+              <Skeleton className="h-10 w-40 rounded-xl sm:w-56" />
+            </div>
+          </div>
+
+          <div className="mb-3 h-5">
             <Skeleton className="h-5 w-32" />
           </div>
           <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={3} />

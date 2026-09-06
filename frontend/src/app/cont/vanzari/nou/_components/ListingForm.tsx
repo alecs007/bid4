@@ -12,6 +12,7 @@ import {
   ButtonLink,
   Checkbox,
   CategoryIcon,
+  ConditionBars,
   FadeImage,
   Field,
   Illustration,
@@ -46,15 +47,13 @@ import { PickerRow } from "./PickerRow";
  * <p>"Stare foarte bună" and "Stare bună" are one word apart and sit next to each other in a list;
  * the bars are what separate them at a glance, and they rank the list without numbering it.
  */
-const CONDITIONS: { value: ItemCondition; label: string; level: number }[] = [
-  { value: "NEW", label: ITEM_CONDITION.NEW, level: 5 },
-  { value: "LIKE_NEW", label: ITEM_CONDITION.LIKE_NEW, level: 4 },
-  { value: "VERY_GOOD", label: ITEM_CONDITION.VERY_GOOD, level: 3 },
-  { value: "GOOD", label: ITEM_CONDITION.GOOD, level: 2 },
-  { value: "USED", label: ITEM_CONDITION.USED, level: 1 },
+const CONDITIONS: { value: ItemCondition; label: string }[] = [
+  { value: "NEW", label: ITEM_CONDITION.NEW },
+  { value: "LIKE_NEW", label: ITEM_CONDITION.LIKE_NEW },
+  { value: "VERY_GOOD", label: ITEM_CONDITION.VERY_GOOD },
+  { value: "GOOD", label: ITEM_CONDITION.GOOD },
+  { value: "USED", label: ITEM_CONDITION.USED },
 ];
-
-const CONDITION_LEVELS = 5;
 
 /** What the form holds while it is being filled in: text, because that is what an input has. */
 interface Draft {
@@ -440,7 +439,7 @@ export function ListingForm() {
               >
                 {condition ? (
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <ConditionBars level={condition.level} />
+                    <ConditionBars condition={condition.value} />
                     <span className="truncate font-display text-sm font-extrabold text-ink-900">
                       {condition.label}
                     </span>
@@ -676,23 +675,6 @@ function Message({ children }: { children: string }) {
   );
 }
 
-/** How much of the object's life is left, as five bars rather than as a place in a list. */
-function ConditionBars({ level }: { level: number }) {
-  return (
-    <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
-      {Array.from({ length: CONDITION_LEVELS }, (_, index) => (
-        <span
-          key={index}
-          className={cn(
-            "h-5 w-2 rounded-full",
-            index < level ? "bg-primary-500" : "bg-ink-200",
-          )}
-        />
-      ))}
-    </span>
-  );
-}
-
 /** The five states as a column, because they are ranked and a row would not say so. */
 function ConditionModal({
   value,
@@ -726,7 +708,7 @@ function ConditionModal({
                   : "bg-canvas hover:bg-white hover:ring-1 hover:ring-edge",
               )}
             >
-              <ConditionBars level={entry.level} />
+              <ConditionBars condition={entry.value} />
               <span className="font-display text-base font-extrabold text-ink-900">
                 {entry.label}
               </span>

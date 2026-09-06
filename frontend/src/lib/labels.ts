@@ -183,6 +183,22 @@ export const ITEM_CONDITION: Record<ItemCondition, string> = {
   USED: "Folosit",
 };
 
+/**
+ * Where each state sits in the ranking, best first.
+ *
+ * <p>Beside the labels rather than inside the form that sets them: the listing page draws the same
+ * five bars under a title, and two copies of this order are two chances for them to disagree.
+ */
+export const ITEM_CONDITION_LEVEL: Record<ItemCondition, number> = {
+  NEW: 5,
+  LIKE_NEW: 4,
+  VERY_GOOD: 3,
+  GOOD: 2,
+  USED: 1,
+};
+
+export const CONDITION_LEVELS = 5;
+
 export const BENEFICIARY_TYPE: Record<BeneficiaryType, string> = {
   INDIVIDUAL: "Persoană fizică",
   MINOR: "Minor",

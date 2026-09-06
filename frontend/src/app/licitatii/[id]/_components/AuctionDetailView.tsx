@@ -9,6 +9,7 @@ import {
   Avatar,
   Breadcrumbs,
   ButtonLink,
+  ConditionBars,
   CategoryIcon,
   ErrorState,
   Button,
@@ -306,7 +307,10 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <span aria-hidden="true" className="text-ink-300">
                 &middot;
               </span>
-              <span>{ITEM_CONDITION[auction.condition]}</span>
+              <span className="inline-flex items-center gap-1.5">
+                <ConditionBars condition={auction.condition} size="sm" />
+                {ITEM_CONDITION[auction.condition]}
+              </span>
               <span aria-hidden="true" className="text-ink-300">
                 &middot;
               </span>
@@ -740,10 +744,10 @@ function MoneySplit({
    * reader the item had sold for it.
    */
   const priceLabel = isCommitted(auction.status)
-    ? "Preț de vânzare"
+    ? "Prețul de vânzare"
     : auction.bidCount > 0
-      ? "Preț actual"
-      : "Preț de pornire";
+      ? "Prețul actual"
+      : "Prețul de pornire";
 
   return (
     <dl className="flex flex-col pb-2">
@@ -767,7 +771,7 @@ function MoneySplit({
       {/* Added to the price rather than taken out of it, so it is stated apart
           from the split: as a row among the two above it read as a third slice
           of the same money. */}
-      <p className="mt-2 border-t border-line pt-3 text-xs leading-relaxed text-ink-500">
+      <p className="mt-2 border-t border-line pt-3 text-sm leading-relaxed text-ink-500">
         La preț se adaugă taxa de protecție a cumpărătorului{" "}
         <span className="whitespace-nowrap">
           ({FEES.BUYER_TAX_PERCENT}% +{" "}

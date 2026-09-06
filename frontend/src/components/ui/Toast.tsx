@@ -105,7 +105,7 @@ const CHIP_SOLID: Record<Tone, string> = {
 
 /** How long a notice stands when nothing says otherwise, and how long it takes to leave. */
 const DEFAULT_DURATION_MS = 4500;
-const LEAVE_MS = 260;
+const LEAVE_MS = 320;
 
 /** The countdown bar, in the tone's own ink rather than the pale chip behind it. */
 const BAR_SOFT: Record<Tone, string> = {
@@ -189,7 +189,7 @@ function ToastCard({
       className={cn(
         "grid w-full max-w-sm",
         leaving
-          ? "animate-none grid-rows-[0fr] transition-[grid-template-rows] duration-[260ms] ease-[var(--ease-out-soft)]"
+          ? "animate-toast-close"
           : // motion-reduce keeps the base 1fr: the height is what makes the
             // notice visible at all, and it must not depend on an animation
             // that somebody has asked not to run.

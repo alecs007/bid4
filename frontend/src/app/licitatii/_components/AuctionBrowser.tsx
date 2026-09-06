@@ -12,7 +12,6 @@ import {
   ErrorState,
   Pagination,
   RangeSlider,
-  SearchField,
   Select,
   Sheet,
   Skeleton,
@@ -352,20 +351,27 @@ export function AuctionBrowser() {
       remaining.forEach((item) => next.append(key, item));
     });
 
-  const commitPrice = () =>
-    update((next) => {
-      const [low, high] = priceDraft;
-      if (low > PRICE_MIN) next.set("minPrice", String(low));
-      else next.delete("minPrice");
-      if (high < PRICE_MAX) next.set("maxPrice", String(high));
-      else next.delete("maxPrice");
-    });
+  /**
+   * What the sliders are showing, written into the URL.
+   *
+   * <p>Carried by every change and not only by the sliders' own, because a slider commits when it
+   * is let go: a value dragged and then left while something else on the row was pressed would
+   * otherwise be overwritten by the URL it had not reached yet, and the filter would appear to
+   * reset itself.
+   */
+  const applyDrafts = (next: URLSearchParams) => {
+    const [low, high] = priceDraft;
+    if (low > PRICE_MIN) next.set("minPrice", String(low));
+    else next.delete("minPrice");
+    if (high < PRICE_MAX) next.set("maxPrice", String(high));
+    else next.delete("maxPrice");
+    if (donationDraft > 0) next.set("minDonation", String(donationDraft));
+    else next.delete("minDonation");
+  };
 
-  const commitDonation = () =>
-    update((next) => {
-      if (donationDraft > 0) next.set("minDonation", String(donationDraft));
-      else next.delete("minDonation");
-    });
+  const commitPrice = () => update(applyDrafts);
+
+  const commitDonation = () => update(applyDrafts);
 
   const activeCount =
     categories.length +
@@ -470,22 +476,42 @@ export function AuctionBrowser() {
     </div>
   );
 
-  const filterButton = (
-    <Button
-      variant="secondary"
-      size="sm"
+  // Not a Button: the two controls on this row do the same kind of job and
+  // should read as a pair, and `secondary` wears a two-pixel ring and a raised
+  // edge that made this one shout beside the sort's hairline.
+  //
+  /**
+   * The trigger for the filter sheet, with or without its word.
+   *
+   * <p>Without, in the toolbar: that row has to hold a heading and two controls across a phone, and
+   * "Filtre" was the only thing on it that could go without anything being lost. With, in the bar
+   * that follows the reader down — there is no heading in it, so the room is there, and a lone
+   * funnel under the header has nothing beside it to say what it belongs to.
+   *
+   * <p>The count rides on the corner of the icon either way, where a number on a control is read as
+   * what that control has done. The label the screen reader is given says it in words regardless.
+   */
+  const filterButton = (labelled = false) => (
+    <button
+      type="button"
       onClick={() => setSheetOpen(true)}
-      leftIcon={
-        <Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />
-      }
+      aria-label={activeCount > 0 ? `Filtre (${activeCount} active)` : "Filtre"}
+      className={cn(
+        "relative inline-flex h-10 shrink-0 items-center rounded-xl bg-white text-sm font-semibold text-ink-900 ring-1 ring-ink-200 transition hover:ring-ink-300",
+        labelled ? "gap-2 px-3" : "w-10 justify-center",
+      )}
     >
-      Filtre
+      <Icons.filter aria-hidden="true" className="h-4 w-4 shrink-0" />
+      {labelled ? <span aria-hidden="true">Filtre</span> : null}
       {activeCount > 0 ? (
-        <span className="numeric ml-1 rounded-md bg-primary-600 px-1.5 text-xs text-white">
+        <span
+          aria-hidden="true"
+          className="numeric absolute -top-1.5 -right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white ring-2 ring-white"
+        >
           {activeCount}
         </span>
       ) : null}
-    </Button>
+    </button>
   );
 
   // Always rendered: a control that disappears when it has nothing to do leaves
@@ -513,36 +539,16 @@ export function AuctionBrowser() {
       value={sort}
       options={SORTS}
       onChange={(next) =>
-        update((params) => params.set("sort", next || "NEWEST"))
+        update((params) => {
+          params.set("sort", next || "NEWEST");
+          applyDrafts(params);
+        })
       }
     />
   );
 
   return (
     <>
-      <div ref={toolbarRef} className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
-          Licitații
-        </h1>
-
-        <SearchField
-          key={q}
-          term={q}
-          label="Caută în licitații"
-          placeholder="Caută o licitație"
-          className="order-last w-full sm:order-none sm:w-64 lg:ml-auto"
-          inputClassName="h-10 rounded-xl"
-          onSearch={(value) =>
-            update((next) => {
-              if (value) next.set("q", value);
-              else next.delete("q");
-            })
-          }
-        />
-        <div className="lg:hidden">{filterButton}</div>
-        <div className="ml-auto w-44 sm:w-56 lg:ml-0">{sortSelect}</div>
-      </div>
-
       <div
         aria-hidden={!stuck}
         className={cn(
@@ -553,8 +559,8 @@ export function AuctionBrowser() {
         )}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
-          {filterButton}
-          <div className="ml-auto w-44">{sortSelect}</div>
+          {filterButton(true)}
+          <div className="ml-auto w-40">{sortSelect}</div>
         </div>
       </div>
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
@@ -572,7 +578,26 @@ export function AuctionBrowser() {
           </div>
         </aside>
         <div className="min-w-0">
-          <div className="mb-3 hidden h-5 sm:block">
+          {/* Over the results rather than over the whole page: the filters
+              are their own column with their own heading, and a title spanning
+              both put this page's name above somebody else's panel. On a narrow
+              screen there is one column anyway, so it reads as the page's
+              heading again, with the controls dropping beneath it. */}
+          <div
+            ref={toolbarRef}
+            className="mb-4 flex flex-wrap items-center justify-between gap-2"
+          >
+            <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
+              Licitații
+            </h1>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="lg:hidden">{filterButton()}</div>
+              <div className="w-40 sm:w-56">{sortSelect}</div>
+            </div>
+          </div>
+
+          <div className="mb-3 h-5">
             {busy ? (
               <Skeleton className="h-5 w-32" />
             ) : (

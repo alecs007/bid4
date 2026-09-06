@@ -16,6 +16,7 @@ export {
   VerifiedTag,
 } from "./Badge";
 export { Alert } from "./Alert";
+export { ConditionBars } from "./ConditionBars";
 export { InfoHint } from "./InfoHint";
 export { Gallery } from "./Gallery";
 export { Lightbox } from "./Lightbox";

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
+import { Icons } from "@/components/icons";
 import { CauseGrid } from "@/components/causes/CauseCard";
 import {
   Button,
@@ -10,7 +11,6 @@ import {
   CategoryIcon,
   EmptyState,
   ErrorState,
-  SearchField,
   Skeleton,
 } from "@/components/ui";
 import { listCauses } from "@/lib/api/causes";
@@ -71,23 +71,24 @@ export function CauseBrowser() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
-          Cauze
+      {/* No search of its own any more: the one in the header searches the
+          whole site, and two boxes on the same page asking for the same thing
+          is a choice nobody wanted to make. */}
+      <div className="mb-4 flex items-center gap-2">
+        <h1 className="font-display flex items-center gap-2 text-2xl font-extrabold text-ink-900 sm:text-3xl">
+          {/* The same mark an organiser wears when they are verified: the same
+              check, at the same weight, on the same green. A page titled for
+              verified causes should carry the badge those causes' organisers
+              carry, not a second design of it. */}
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-600 text-white sm:h-6 sm:w-6">
+            <Icons.check
+              aria-hidden="true"
+              strokeWidth={4}
+              className="h-3 w-3 sm:h-4 sm:w-4"
+            />
+          </span>
+          Cauze verificate
         </h1>
-        <SearchField
-          key={q}
-          term={q}
-          label="Caută în cauze"
-          placeholder="Caută o cauză"
-          className="ml-auto w-full sm:w-72"
-          onSearch={(value) =>
-            update((next) => {
-              if (value) next.set("q", value);
-              else next.delete("q");
-            })
-          }
-        />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -113,12 +114,17 @@ export function CauseBrowser() {
         })}
       </div>
 
-      <div className="mb-3 hidden h-5 sm:block">
+      <div className="mb-3 h-5">
         {busy ? (
           <Skeleton className="h-5 w-40" />
         ) : (
           <p className="text-sm text-ink-500">
-            {countRo(data?.length ?? 0, "cauză verificată", "cauze verificate")}
+            {/* Not "verificate" twice: the heading has just said that. */}
+            {countRo(
+              data?.length ?? 0,
+              "cauză înregistrată",
+              "cauze înregistrate",
+            )}
           </p>
         )}
       </div>

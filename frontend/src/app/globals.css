@@ -138,7 +138,9 @@
   --animate-page-in: page-in 0.45s var(--ease-out-soft) both;
   --animate-panel-in: panel-in 0.24s var(--ease-out-soft) both;
   --animate-toast-in: toast-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
-  --animate-toast-out: toast-out 0.26s var(--ease-out-soft) both;
+  --animate-toast-out: toast-out 0.32s var(--ease-out-soft) both;
+  /* The row shutting behind a notice that has gone. */
+  --animate-toast-close: toast-close 0.32s var(--ease-out-soft) both;
   --animate-toast-open: toast-open 0.34s var(--ease-out-soft) both;
   /* The duration is set per notice; this is what emits the keyframes. */
   --animate-toast-progress: toast-progress 4.5s linear forwards;
@@ -226,6 +228,20 @@
     100% {
       opacity: 0;
       transform: translateY(8px) scale(0.98);
+    }
+  }
+  /* And shutting again after one leaves. An animation rather than a transition
+     back to 0fr: the class that held the row open is an animation too, and
+     dropping it while setting the closed height in the same breath leaves the
+     transition with no value to start from — so the row snapped shut under a
+     card that was still fading, which is what made a notice look like it
+     vanished rather than left. */
+  @keyframes toast-close {
+    from {
+      grid-template-rows: 1fr;
+    }
+    to {
+      grid-template-rows: 0fr;
     }
   }
   /* The stack opening to let a new notice in, so the ones above it are pushed

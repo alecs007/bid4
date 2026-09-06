@@ -11,11 +11,15 @@ const THUMB =
   "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 " +
   "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white " +
   "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary-600 " +
-  "[&::-moz-range-thumb]:cursor-grab";
+  "[&::-moz-range-thumb]:cursor-grab " +
+  // Both browsers give a range thumb a shadow of their own, and a phone paints
+  // a grey wash over whatever was tapped on top of that — which together read
+  // as a smudge around the dot that appears only when it is being used.
+  "[&::-webkit-slider-thumb]:shadow-none [&::-moz-range-thumb]:shadow-none";
 
 const BASE_INPUT =
   "absolute inset-x-0 top-1/2 h-5 w-full -translate-y-1/2 cursor-pointer appearance-none bg-transparent " +
-  "focus-visible:outline-none";
+  "focus-visible:outline-none [-webkit-tap-highlight-color:transparent]";
 
 function percent(value: number, min: number, max: number): number {
   if (max <= min) return 0;

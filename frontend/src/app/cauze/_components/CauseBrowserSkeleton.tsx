@@ -1,5 +1,6 @@
 import { SkeletonCauseCard } from "@/components/causes/CauseCard";
 import { Skeleton } from "@/components/ui";
+import { Icons } from "@/components/icons";
 import { CAUSE_CATEGORIES } from "@/lib/config";
 
 /** Keeps the placeholder count, and so the page height, level with the real thing. */
@@ -13,11 +14,21 @@ const PUBLIC_CAUSE_COUNT = 10;
 export function CauseBrowserSkeleton() {
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="w-full font-display text-2xl font-extrabold text-ink-900 sm:text-3xl lg:w-auto">
-          Cauze
+      <div className="mb-4 flex items-center gap-2">
+        <h1 className="font-display flex items-center gap-2 text-2xl font-extrabold text-ink-900 sm:text-3xl">
+          {/* The same mark an organiser wears when they are verified: the same
+              check, at the same weight, on the same green. A page titled for
+              verified causes should carry the badge those causes' organisers
+              carry, not a second design of it. */}
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-600 text-white sm:h-6 sm:w-6">
+            <Icons.check
+              aria-hidden="true"
+              strokeWidth={4}
+              className="h-3 w-3 sm:h-4 sm:w-4"
+            />
+          </span>
+          Cauze verificate
         </h1>
-        <Skeleton className="ml-auto h-12 w-full rounded-2xl sm:w-72" />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -33,7 +44,7 @@ export function CauseBrowserSkeleton() {
         ))}
       </div>
 
-      <div className="mb-3 hidden h-5 sm:block">
+      <div className="mb-3 h-5">
         <Skeleton className="h-5 w-40" />
       </div>
 
