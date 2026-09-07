@@ -53,8 +53,6 @@ export const FEES = {
    */
   BUYER_TAX_PERCENT: 5,
   BUYER_TAX_FIXED: 2.5 * LEU,
-  /** 2% of the seller's share, so donating 100% costs the seller nothing. */
-  SELLER_FEE_PERCENT: 2,
 } as const;
 
 /** Flat, mocked shipping prices per delivery type. */

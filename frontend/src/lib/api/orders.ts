@@ -31,7 +31,7 @@ import { http } from "./http";
  * TODO(backend): the Stripe Connect choreography is a SetupIntent when a card is
  * saved; an off-session PaymentIntent for buyerTotal on close, captured to the
  * platform account (the escrow hold); on release two Transfers, donationAmount to
- * the cause and sellerNet to the seller, bid4 keeping buyerTax + sellerFee; and a
+ * the cause and sellerShare to the seller, bid4 keeping the buyer's tax; and a
  * full or partial Refund instead of those Transfers when a dispute goes the
  * buyer's way. None of it belongs in the frontend — these calls stay as they are.
  */
@@ -139,8 +139,7 @@ export async function confirmOrder(
   order.platformTax = fees.buyerTax;
   order.totalPaid = fees.buyerTotal;
   order.donationAmount = fees.donationAmount;
-  order.sellerFee = fees.sellerFee;
-  order.sellerNet = fees.sellerNet;
+  order.sellerShare = fees.sellerShare;
 
   pushEvent(
     order,

@@ -213,7 +213,7 @@ function releaseFunds(current: World, order: Order): void {
       orderReference: order.reference,
       type: "SELLER_PAYOUT",
       number: `PLT-2026-${Math.floor(Math.random() * 900_000 + 100_000)}`,
-      amount: order.sellerNet,
+      amount: order.sellerShare,
       issuedToUserId: order.sellerId,
       issuedToName: sellerName,
       pdfUrl: `/mock/invoices/${order.id}-plata.pdf`,
@@ -262,8 +262,7 @@ export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {
     totalPaid: fees.buyerTotal,
     donationAmount: fees.donationAmount,
     donationPercent: fees.donationPercent,
-    sellerFee: fees.sellerFee,
-    sellerNet: fees.sellerNet,
+    sellerShare: fees.sellerShare,
     status: "AWAITING_CONFIRMATION",
     trackingEvents: [
       {

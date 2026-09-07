@@ -72,8 +72,8 @@ export interface Order {
   totalPaid: Bani;
   donationAmount: Bani;
   donationPercent: number;
-  sellerFee: Bani;
-  sellerNet: Bani;
+  /** What the seller receives on release. bid4's cut is the buyer's tax, not a deduction here. */
+  sellerShare: Bani;
 
   deliveryMethod?: DeliverySnapshot;
   status: OrderStatus;

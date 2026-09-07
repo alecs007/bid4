@@ -122,18 +122,17 @@ describe("computeFees", () => {
     expect(fees.buyerTotal).toBe(finalPrice + fees.buyerTax + shipping);
   });
 
-  it("adds up: the donation and the seller's side account for the price", () => {
+  it("adds up: the donation and the seller's side account for the whole price", () => {
     const fees = computeFees({ finalPrice, donationPercent: 75 });
+    // Nothing is taken out between them. bid4's cut rides on the buyer's side,
+    // so the price divides in two rather than in three.
     expect(fees.donationAmount + fees.sellerShare).toBe(finalPrice);
-    expect(fees.sellerNet + fees.sellerFee).toBe(fees.sellerShare);
   });
 
   it("costs the seller nothing to give everything away", () => {
     const fees = computeFees({ finalPrice, donationPercent: 100 });
     expect(fees.donationAmount).toBe(finalPrice);
     expect(fees.sellerShare).toBe(0);
-    expect(fees.sellerFee).toBe(0);
-    expect(fees.sellerNet).toBe(0);
   });
 
   it("holds a donation percentage inside 0–100 however it is called", () => {
@@ -141,9 +140,9 @@ describe("computeFees", () => {
     expect(computeFees({ finalPrice, donationPercent: -10 }).donationPercent).toBe(0);
   });
 
-  it("counts the platform's own take as the two fees it charged", () => {
+  it("takes its cut from the buyer and nowhere else", () => {
     const fees = computeFees({ finalPrice, donationPercent: 40 });
-    expect(fees.platformRevenue).toBe(fees.buyerTax + fees.sellerFee);
+    expect(fees.platformRevenue).toBe(fees.buyerTax);
   });
 });
 

@@ -135,14 +135,16 @@ export interface FeeBreakdown {
   donationPercent: number;
   /** Goes to the cause on release. */
   donationAmount: Bani;
-  /** finalPrice − donationAmount. */
+  /**
+   * finalPrice − donationAmount, and what the seller receives on release.
+   *
+   * There is no second number here. bid4's cut is the buyer's tax, charged on top of the price;
+   * the seller's share of the price is theirs. A fee deducted here would have meant the amount
+   * shown on the listing was not the amount that arrived.
+   */
   sellerShare: Bani;
-  /** 2% of the seller's share — exactly 0 when donating 100%. */
-  sellerFee: Bani;
-  /** What the seller receives on release. */
-  sellerNet: Bani;
 
-  /** buyerTax + sellerFee. */
+  /** The buyer's tax, which is the whole of it. */
   platformRevenue: Bani;
 }
 
@@ -165,9 +167,6 @@ export function computeFees({
     percentOf(finalPrice, FEES.BUYER_TAX_PERCENT) + FEES.BUYER_TAX_FIXED;
 
   const donationAmount = percentOf(finalPrice, safePercent);
-  const sellerShare = finalPrice - donationAmount;
-  const sellerFee = percentOf(sellerShare, FEES.SELLER_FEE_PERCENT);
-  const sellerNet = sellerShare - sellerFee;
 
   return {
     finalPrice,
@@ -176,9 +175,7 @@ export function computeFees({
     buyerTotal: finalPrice + buyerTax + shipping,
     donationPercent: safePercent,
     donationAmount,
-    sellerShare,
-    sellerFee,
-    sellerNet,
-    platformRevenue: buyerTax + sellerFee,
+    sellerShare: finalPrice - donationAmount,
+    platformRevenue: buyerTax,
   };
 }

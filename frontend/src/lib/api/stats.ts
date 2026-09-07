@@ -130,9 +130,8 @@ export async function getUserStats(userId: ID): Promise<UserDashboardStats> {
 }
 
 export interface AdminStats {
+  /** The buyer's tax, which is all of it — the seller's share is not taxed. */
   platformRevenue: Bani;
-  buyerTaxCollected: Bani;
-  sellerFeesCollected: Bani;
   totalDonated: Bani;
   grossVolume: Bani;
   orderCountByStatus: Record<OrderStatus, number>;
@@ -178,24 +177,13 @@ export async function getAdminStats(role: UserRole): Promise<AdminStats> {
     return {
       month: monthFormatter.format(date),
       donated: inMonth.reduce((total, order) => total + order.donationAmount, 0),
-      revenue: inMonth.reduce(
-        (total, order) => total + order.platformTax + order.sellerFee,
-        0,
-      ),
+      revenue: inMonth.reduce((total, order) => total + order.platformTax, 0),
     };
   });
 
   return {
     platformRevenue: settled.reduce(
-      (total, order) => total + order.platformTax + order.sellerFee,
-      0,
-    ),
-    buyerTaxCollected: paid.reduce(
       (total, order) => total + order.platformTax,
-      0,
-    ),
-    sellerFeesCollected: settled.reduce(
-      (total, order) => total + order.sellerFee,
       0,
     ),
     totalDonated: settled.reduce(

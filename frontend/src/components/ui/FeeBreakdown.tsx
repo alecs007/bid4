@@ -89,8 +89,7 @@ export function FeeBreakdown({
     buyerTotal,
     donationPercent,
     donationAmount,
-    sellerFee,
-    sellerNet,
+    sellerShare,
     platformRevenue,
   } = breakdown;
 
@@ -152,20 +151,11 @@ export function FeeBreakdown({
               icon={<Icons.donation aria-hidden="true" className="h-4 w-4 shrink-0" />}
               tone="negative"
             />
-            <Row
-              label={`Comision bid4 (${FEES.SELLER_FEE_PERCENT}% din partea ta)`}
-              hint={
-                donationPercent === 100
-                  ? "Zero. Donezi integral, deci nu percepem nimic."
-                  : undefined
-              }
-              value={sellerFee === 0 ? "0,00 lei" : `− ${formatMoney(sellerFee)}`}
-              tone="negative"
-            />
             <Divider />
             <Row
               label="Primești"
-              value={formatMoney(sellerNet)}
+              hint="Comisionul bid4 îl plătește cumpărătorul, peste preț."
+              value={formatMoney(sellerShare)}
               tone="total"
             />
           </>

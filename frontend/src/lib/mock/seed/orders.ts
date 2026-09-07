@@ -195,8 +195,7 @@ export function buildOrders({
       totalPaid: fees.buyerTotal,
       donationAmount: fees.donationAmount,
       donationPercent: fees.donationPercent,
-      sellerFee: fees.sellerFee,
-      sellerNet: fees.sellerNet,
+      sellerShare: fees.sellerShare,
       deliveryMethod:
         status === "AWAITING_CONFIRMATION" ? undefined : snapshotDelivery(delivery),
       status,
@@ -270,7 +269,7 @@ export function buildOrders({
         orderReference: reference,
         type: "SELLER_PAYOUT",
         number: `PLT-2026-000${invoiceNumber}`,
-        amount: order.sellerNet,
+        amount: order.sellerShare,
         issuedToUserId: order.sellerId,
         issuedToName: displayNameOf(order.sellerId),
         pdfUrl: `/mock/invoices/${order.id}-plata.pdf`,
