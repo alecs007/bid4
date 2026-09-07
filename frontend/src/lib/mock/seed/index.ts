@@ -8,9 +8,15 @@ import type {
   Invoice,
   Order,
   PaymentMethodCard,
+  ThreadItem,
   User,
   Auction,
 } from "@/lib/types";
+
+import type {
+  MockConversation,
+  MockNotification,
+} from "@/lib/api/inbox";
 
 import { buildCatalog } from "./catalog";
 import { buildCauses } from "./causes";
@@ -39,6 +45,11 @@ export interface World {
   watchlist: { userId: ID; auctionId: ID }[];
   /** Half-finished cause applications, one per organiser. */
   causeDrafts: CauseDraftRecord[];
+  /** One per (listing, buyer). Empty until somebody writes. */
+  conversations: MockConversation[];
+  /** Flat, and carrying the thread they belong to — the wire shape does not need it. */
+  threadItems: (ThreadItem & { conversationId: ID })[];
+  notifications: MockNotification[];
 }
 
 export function createWorld(): World {
@@ -81,5 +92,10 @@ export function createWorld(): World {
     disputes,
     watchlist,
     causeDrafts: [],
+    // Nobody has written to anybody yet. The demo world seeds objects and
+    // offers; a conversation is something a visitor starts.
+    conversations: [],
+    threadItems: [],
+    notifications: [],
   };
 }

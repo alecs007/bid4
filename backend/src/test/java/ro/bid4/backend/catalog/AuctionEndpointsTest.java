@@ -33,6 +33,7 @@ import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.domain.ItemCondition;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
 import ro.bid4.backend.catalog.repo.BidRepository;
+import ro.bid4.backend.catalog.service.CatalogRules;
 import ro.bid4.backend.cause.domain.Cause;
 import ro.bid4.backend.cause.domain.CauseStatus;
 import ro.bid4.backend.cause.repo.CauseRepository;
@@ -188,7 +189,9 @@ class AuctionEndpointsTest {
     mvc.perform(get("/auctions").param("causeId", medical.getId().toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.page").value(1))
-        .andExpect(jsonPath("$.pageSize").value(12))
+        // The rule itself, not a copy of it: this drifted once already, when
+        // the listing grid went to four across and the page size followed.
+        .andExpect(jsonPath("$.pageSize").value(CatalogRules.DEFAULT_PAGE_SIZE))
         .andExpect(jsonPath("$.total").value(2))
         .andExpect(jsonPath("$.totalPages").value(1))
         // Default sort is NEWEST, and the bicycle went up a day after the Canon.

@@ -7,3 +7,4 @@ export * from "./order";
 export * from "./invoice";
 export * from "./dispute";
 export * from "./shipping";
+export * from "./inbox";

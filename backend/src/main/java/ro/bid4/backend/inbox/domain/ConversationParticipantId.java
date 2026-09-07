@@ -1,0 +1,39 @@
+package ro.bid4.backend.inbox.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import java.io.Serializable;
+import java.util.Objects;
+import java.util.UUID;
+import lombok.Getter;
+
+/** Which thread, and whose side of it. */
+@Getter
+@Embeddable
+public class ConversationParticipantId implements Serializable {
+
+  @Column(name = "conversation_id", nullable = false, updatable = false)
+  private UUID conversationId;
+
+  @Column(name = "user_id", nullable = false, updatable = false)
+  private UUID userId;
+
+  protected ConversationParticipantId() {}
+
+  public ConversationParticipantId(UUID conversationId, UUID userId) {
+    this.conversationId = conversationId;
+    this.userId = userId;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    return other instanceof ConversationParticipantId that
+        && Objects.equals(conversationId, that.conversationId)
+        && Objects.equals(userId, that.userId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(conversationId, userId);
+  }
+}

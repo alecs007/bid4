@@ -34,6 +34,12 @@ const SESSION_DAYS = 7;
  */
 const MOCK_USER_KEY = "bid4.mock.userId";
 
+/** Who the mock world is being read as. Mock mode only; there is no such thing in the real one. */
+export function currentMockUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(MOCK_USER_KEY);
+}
+
 function rememberMockUser(userId: string | null): void {
   if (typeof window === "undefined") return;
   if (userId) window.localStorage.setItem(MOCK_USER_KEY, userId);
