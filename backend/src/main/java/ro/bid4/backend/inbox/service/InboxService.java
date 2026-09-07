@@ -27,9 +27,7 @@ import ro.bid4.backend.inbox.api.dto.ThreadItemResponse;
 import ro.bid4.backend.inbox.api.dto.ThreadResponse;
 import ro.bid4.backend.inbox.api.dto.UnreadCounts;
 import ro.bid4.backend.inbox.domain.Conversation;
-import ro.bid4.backend.inbox.domain.ConversationKind;
 import ro.bid4.backend.inbox.domain.ConversationParticipant;
-import ro.bid4.backend.inbox.domain.ParticipantRole;
 import ro.bid4.backend.inbox.domain.ThreadItem;
 import ro.bid4.backend.inbox.repo.ConversationParticipantRepository;
 import ro.bid4.backend.inbox.repo.ConversationRepository;
@@ -73,6 +71,7 @@ public class InboxService {
   private final StoredFileRepository files;
   private final InboxMapper mapper;
   private final InboxEvents events;
+  private final ThreadEvents threads;
 
   public InboxService(
       ConversationRepository conversations,
@@ -82,7 +81,8 @@ public class InboxService {
       AuctionRepository auctions,
       StoredFileRepository files,
       InboxMapper mapper,
-      InboxEvents events) {
+      InboxEvents events,
+      ThreadEvents threads) {
     this.conversations = conversations;
     this.participants = participants;
     this.items = items;
@@ -91,6 +91,7 @@ public class InboxService {
     this.files = files;
     this.mapper = mapper;
     this.events = events;
+    this.threads = threads;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -190,7 +191,9 @@ public class InboxService {
     }
 
     Conversation conversation =
-        conversations.findListingThread(listing.getId(), me).orElseGet(() -> create(listing, me));
+        conversations
+            .findListingThread(listing.getId(), me)
+            .orElseGet(() -> threads.ensureThread(listing.getId(), me, listing.getSellerId()));
 
     if (request.message() != null && !request.message().isBlank()) {
       write(conversation, me, request.message(), List.of());
@@ -254,20 +257,6 @@ public class InboxService {
     return participants
         .findMembership(conversationId, userId)
         .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Conversația nu a fost găsită."));
-  }
-
-  private Conversation create(Auction listing, UUID buyerId) {
-    Conversation conversation = new Conversation();
-    conversation.setKind(ConversationKind.LISTING);
-    conversation.setListingId(listing.getId());
-    conversation.setBuyerId(buyerId);
-    conversation.setSellerId(listing.getSellerId());
-    Conversation saved = conversations.save(conversation);
-
-    participants.save(new ConversationParticipant(saved.getId(), buyerId, ParticipantRole.BUYER));
-    participants.save(
-        new ConversationParticipant(saved.getId(), listing.getSellerId(), ParticipantRole.SELLER));
-    return saved;
   }
 
   /**

@@ -72,6 +72,10 @@ public class ThreadItem {
   @BatchSize(size = 64)
   private List<UUID> attachments = new ArrayList<>();
 
+  /** The sale this step belongs to. Null on anything anybody said. */
+  @Column(name = "order_id", updatable = false)
+  private UUID orderId;
+
   @Column(name = "event_type", updatable = false)
   private String eventType;
 
@@ -112,6 +116,24 @@ public class ThreadItem {
     item.kind = ThreadItemKind.IMAGE;
     item.senderId = senderId;
     item.attachments = new ArrayList<>(fileIds);
+    return item;
+  }
+
+  /**
+   * A step of a sale.
+   *
+   * <p>{@code orderStatus} is the status at the time of writing, and is what lets the client tell
+   * the one live card from the history above it — the event matching the order's current status is
+   * the step being waited on, and only that one is drawn with a button.
+   */
+  public static ThreadItem event(
+      UUID conversationId, UUID orderId, String eventType, String orderStatus) {
+    ThreadItem item = new ThreadItem();
+    item.conversationId = conversationId;
+    item.kind = ThreadItemKind.EVENT;
+    item.orderId = orderId;
+    item.eventType = eventType;
+    item.orderStatus = orderStatus;
     return item;
   }
 

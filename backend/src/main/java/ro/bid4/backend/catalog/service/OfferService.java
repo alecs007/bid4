@@ -17,6 +17,7 @@ import ro.bid4.backend.catalog.repo.BidRepository;
 import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.error.ErrorCode;
 import ro.bid4.backend.common.web.Viewer;
+import ro.bid4.backend.orders.service.OrderService;
 
 /**
  * What happens to a listing after somebody makes an offer on it.
@@ -41,11 +42,14 @@ public class OfferService {
   private final AuctionRepository auctions;
   private final BidRepository bids;
   private final AuctionMapper mapper;
+  private final OrderService orders;
 
-  public OfferService(AuctionRepository auctions, BidRepository bids, AuctionMapper mapper) {
+  public OfferService(
+      AuctionRepository auctions, BidRepository bids, AuctionMapper mapper, OrderService orders) {
     this.auctions = auctions;
     this.bids = bids;
     this.mapper = mapper;
+    this.orders = orders;
   }
 
   /**
@@ -90,6 +94,11 @@ public class OfferService {
     // The other offers are left exactly as they are. The seller can still release
     // this one, and demoting the rest now would mean resurrecting them if they do.
     bids.markStatus(offer.getId(), BidStatus.ACCEPTED);
+
+    // The sale opens in the same transaction as the acceptance. An acceptance
+    // without an order is a listing neither party can act on, and an order
+    // without one is a sale nobody agreed to.
+    orders.open(auction, offer.getBidderId(), offer.getAmount());
 
     log.info(
         "Auction {} reserved for {} at {} bani", auctionId, offer.getBidderId(), offer.getAmount());
