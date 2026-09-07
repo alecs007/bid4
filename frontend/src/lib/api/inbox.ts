@@ -264,6 +264,20 @@ export async function markNotificationsRead(id?: ID): Promise<void> {
   commit();
 }
 
+/**
+ * POST /inbox/stream/ticket
+ *
+ * Single-use, thirty seconds. EventSource cannot send an Authorization header, so the stream is
+ * opened with this instead of with the access token — which has no business in a URL.
+ */
+export async function streamTicket(): Promise<string | null> {
+  if (USE_MOCK) return null;
+  const { ticket } = await http<{ ticket: string }>("/inbox/stream/ticket", {
+    method: "POST",
+  });
+  return ticket;
+}
+
 /** GET /inbox/unread */
 export async function getUnreadCounts(): Promise<UnreadCounts> {
   if (!USE_MOCK) return http<UnreadCounts>("/inbox/unread");

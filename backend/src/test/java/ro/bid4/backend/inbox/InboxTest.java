@@ -35,6 +35,7 @@ import ro.bid4.backend.inbox.api.dto.ThreadItemResponse;
 import ro.bid4.backend.inbox.api.dto.ThreadResponse;
 import ro.bid4.backend.inbox.domain.ThreadItemKind;
 import ro.bid4.backend.inbox.service.InboxService;
+import ro.bid4.backend.inbox.service.StreamTickets;
 import ro.bid4.backend.storage.domain.StoredFile;
 import ro.bid4.backend.storage.domain.Visibility;
 import ro.bid4.backend.storage.repo.StoredFileRepository;
@@ -54,6 +55,7 @@ class InboxTest {
   private static final long LEU = 100;
 
   @Autowired private InboxService inbox;
+  @Autowired private StreamTickets tickets;
   @Autowired private AuctionRepository auctions;
   @Autowired private CauseRepository causes;
   @Autowired private UserAccountRepository users;
@@ -287,6 +289,32 @@ class InboxTest {
 
     assertThat(sent.kind()).isEqualTo(ThreadItemKind.IMAGE);
     assertThat(sent.imageUrls()).hasSize(1);
+  }
+
+  /* --- the stream's way in ------------------------------------------------ */
+
+  @Test
+  @DisplayName("a stream ticket names its owner once, and is gone after")
+  void ticketsAreSingleUse() {
+    String ticket = tickets.issue(buyer.getId());
+
+    assertThat(tickets.spend(ticket)).isEqualTo(buyer.getId());
+    // Spent as it is read, so a ticket lifted out of a URL or a log is worth
+    // nothing by the time anybody could try it.
+    assertThatThrownBy(() -> tickets.spend(ticket))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("expirat");
+  }
+
+  @Test
+  @DisplayName("and one nobody issued opens nothing")
+  void inventedTicketsAreRefused() {
+    assertThatThrownBy(() -> tickets.spend("nu-este-un-bilet"))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("expirat");
+    assertThatThrownBy(() -> tickets.spend(""))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("Autentifică-te");
   }
 
   /* --- fixtures ----------------------------------------------------------- */

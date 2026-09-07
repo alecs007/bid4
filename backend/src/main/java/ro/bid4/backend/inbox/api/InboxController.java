@@ -28,6 +28,7 @@ import ro.bid4.backend.inbox.api.dto.UnreadCounts;
 import ro.bid4.backend.inbox.service.InboxEvents;
 import ro.bid4.backend.inbox.service.InboxService;
 import ro.bid4.backend.inbox.service.NotificationService;
+import ro.bid4.backend.inbox.service.StreamTickets;
 import ro.bid4.backend.security.web.Viewers;
 
 /**
@@ -44,12 +45,17 @@ public class InboxController {
   private final InboxService inbox;
   private final NotificationService notifications;
   private final InboxEvents events;
+  private final StreamTickets tickets;
 
   public InboxController(
-      InboxService inbox, NotificationService notifications, InboxEvents events) {
+      InboxService inbox,
+      NotificationService notifications,
+      InboxEvents events,
+      StreamTickets tickets) {
     this.inbox = inbox;
     this.notifications = notifications;
     this.events = events;
+    this.tickets = tickets;
   }
 
   // -- Mesaje ------------------------------------------------------------------------------------
@@ -156,15 +162,30 @@ public class InboxController {
   }
 
   /**
+   * Trades the bearer token for something a stream can carry.
+   *
+   * <p>Authenticated the ordinary way. What comes back is single-use and lasts thirty seconds — see
+   * {@code StreamTickets} for why the access token itself does not go in a query string.
+   */
+  @PostMapping("/stream/ticket")
+  StreamTicketResponse streamTicket(@AuthenticationPrincipal Jwt jwt) {
+    Viewer viewer = Viewers.from(jwt);
+    return new StreamTicketResponse(tickets.issue(viewer.id()));
+  }
+
+  /**
    * One long-lived response per tab, carrying nothing but "go and look".
    *
-   * <p>The token is read here and nowhere after: the connection belongs to whoever opened it for as
-   * long as it lasts, and every event it carries is a pointer to a fetch that will authorise itself
-   * properly. Nothing readable travels down this pipe.
+   * <p>Open to the filter chain and closed by the ticket, because {@code EventSource} sends no
+   * Authorization header. The ticket is spent here and nowhere after: the connection belongs to
+   * whoever opened it for as long as it lasts, and every event it carries is a pointer to a fetch
+   * that will authorise itself properly. Nothing readable travels down this pipe.
    */
   @GetMapping("/stream")
-  SseEmitter stream(@AuthenticationPrincipal Jwt jwt) {
-    Viewer viewer = Viewers.from(jwt);
-    return events.subscribe(viewer.id());
+  SseEmitter stream(@RequestParam String ticket) {
+    return events.subscribe(tickets.spend(ticket));
   }
+
+  /** Deliberately its own type: a bare string body is a shape nothing can be added to. */
+  public record StreamTicketResponse(String ticket) {}
 }

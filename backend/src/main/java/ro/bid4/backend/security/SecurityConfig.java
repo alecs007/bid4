@@ -130,6 +130,12 @@ public class SecurityConfig {
                     // rule, so writing one requires an account.
                     .requestMatchers(HttpMethod.GET, "/media/**")
                     .permitAll()
+                    // The one authenticated thing that cannot present a bearer
+                    // token: EventSource sends no headers. It is closed by a
+                    // single-use ticket issued to an authenticated caller a
+                    // moment earlier — see StreamTickets.
+                    .requestMatchers(HttpMethod.GET, "/inbox/stream")
+                    .permitAll()
                     // One segment only, so this opens the public profile at
                     // /users/{username} and never /users/me/anything, which
                     // falls through to the last rule and stays authenticated.

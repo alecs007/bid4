@@ -16,8 +16,10 @@ import {
 } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import { listMyAuctions } from "@/lib/api/auctions";
+import { getUnreadCounts } from "@/lib/api/inbox";
 import { listMyCauses } from "@/lib/api/causes";
 import { useApi } from "@/lib/hooks/useApi";
+import { useInboxStream } from "@/lib/hooks/useInboxStream";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
@@ -405,6 +407,22 @@ export function SiteHeader() {
     ).length,
   };
 
+  /**
+   * The badge. Read whenever somebody is signed in rather than only when the
+   * menu is open, because it is the point of the mark: a thread waiting has to
+   * be visible from any page, not discovered by opening the thing it counts.
+   */
+  // Opened here because the header is the one component on every page, and the
+  // badge it draws is the first thing the stream exists to keep honest.
+  useInboxStream();
+
+  const { data: unreadCounts } = useApi(
+    () => getUnreadCounts(),
+    `inbox:unread:${user?.id}`,
+    { enabled: Boolean(user) },
+  );
+  const unread = unreadCounts?.messages ?? 0;
+
   const [query, setQuery] = useState("");
   const accountRef = useRef<HTMLDivElement>(null);
 
@@ -564,6 +582,43 @@ export function SiteHeader() {
                 aria-hidden="true"
                 className="h-5 w-5 shrink-0"
               />
+            </Link>
+          </AuthSwap>
+
+          {/* Signed in only, and on both breakpoints — a message waiting is the
+              one thing in this bar somebody needs to see from a phone. Its own
+              AuthSwap rather than a branch on `user`, so it opens and closes
+              with the session like everything else in the row. */}
+          <AuthSwap
+            when="in"
+            openWidth="2.5rem"
+            // Closed, it still sits between two of the row's gaps and leaves
+            // 4px of nothing behind. The negative margin eats its own.
+            className="signed-out:-ml-1"
+          >
+            <Link
+              href="/cont/inbox"
+              aria-label={
+                unread > 0
+                  ? `Inbox, ${unread} conversații necitite`
+                  : "Inbox"
+              }
+              className={cn(
+                iconButton(isActive("/cont/inbox"), "h-9 w-9"),
+                "relative",
+              )}
+            >
+              <Icons.inbox aria-hidden="true" className="h-5 w-5 shrink-0" />
+              {unread > 0 ? (
+                // A dot, not a number, under 10 — the count matters less than
+                // the fact, and two digits over a 20px mark is unreadable.
+                <span
+                  aria-hidden="true"
+                  className="numeric absolute top-1 right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              ) : null}
             </Link>
           </AuthSwap>
 
