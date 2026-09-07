@@ -254,6 +254,51 @@ export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
+/**
+ * A control that opens and closes with the session, rather than appearing out of nothing.
+ *
+ * <p>Signing in trades a sign-in icon for a "Vinde acum" button, and the two are different widths.
+ * Mounted and unmounted, that swap was two jumps: one control vanished and another appeared in the
+ * same frame, and everything beside them moved twice. Held in a column that animates from no width
+ * to its content's width, each one grows into the room the other gives up, and the row settles once.
+ *
+ * <p>Opened by a max-width rather than by a collapsing grid track. The track idiom reads better and
+ * needs no measurement, but a browser will not interpolate `grid-template-columns` for a track sized
+ * in `fr` inside a box whose own width is not definite — it snaps, which is the jump this exists to
+ * remove. A max-width interpolates anywhere, so each caller states a cap a little wider than the
+ * control it holds; the control keeps its own width, and the cap only ever clips it on the way in
+ * and out.
+ *
+ * <p>Closed, it is also taken out of the page for anything that reads or tabs through it — it is
+ * still in the document, and a link nobody can see is one a keyboard should not land on.
+ */
+function AuthSwap({
+  show,
+  openWidth,
+  className,
+  children,
+}: {
+  show: boolean;
+  /** A max-width class comfortably past the control's own width. */
+  openWidth: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      aria-hidden={!show}
+      inert={!show}
+      className={cn(
+        "overflow-hidden transition-[max-width,opacity] duration-200 ease-[var(--ease-out-soft)]",
+        show ? cn(openWidth, "opacity-100") : "max-w-0 opacity-0",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 function iconButton(active: boolean, size = "h-10 w-10") {
   return cn(
     "inline-flex shrink-0 items-center justify-center rounded-xl transition",
@@ -470,16 +515,34 @@ export function SiteHeader() {
             )}
           </button>
 
-          {/* Saved listings, beside the account rather than inside it: it is a
-              place people come back to, and a menu is where things go to be
-              looked for. */}
-          <Link
-            href="/cont/salvate"
-            aria-label="Anunțuri salvate"
-            className={iconButton(isActive("/cont/salvate"))}
+          {/* The way in, for a phone with nobody signed in. The account trigger
+              beside it is a wide pill that only appears from lg, so without
+              this a signed-out visitor had nothing in the bar to press but the
+              menu — and signing in is the one thing they are most likely to
+              want. Withheld until the session has answered, so it never
+              appears and then swaps for somebody who was signed in all along. */}
+          <AuthSwap
+            show={status !== "loading" && !user}
+            openWidth="max-w-10"
+            className="lg:hidden"
           >
-            <Icons.watchlist aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </Link>
+            <Link
+              href="/autentificare"
+              aria-label="Intră în cont"
+              className={cn(
+                iconButton(isActive("/autentificare"), "h-9 w-9"),
+                // Round, where the bar's other icons are rounded squares: this
+                // one stands for a person, and it is the same shape the avatar
+                // that replaces it takes once they are signed in.
+                "rounded-full",
+              )}
+            >
+              <Icons.accountRound
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0"
+              />
+            </Link>
+          </AuthSwap>
 
           {status === "loading" ? (
             /* The signed-out trigger's own 149px footprint, which is what most
@@ -489,18 +552,18 @@ export function SiteHeader() {
             <Skeleton className="hidden h-9 w-[149px] rounded-2xl lg:block" />
           ) : (
             <>
-              {user ? (
-                /* Flat: --btn-depth off. The 3D edge is for buttons on a
-                   page, and among the bar's other controls a raised one
-                   reads as a stray card. */
+              <AuthSwap show={Boolean(user)} openWidth="max-w-40">
+                {/* Flat: --btn-depth off. The 3D edge is for buttons on a
+                    page, and among the bar's other controls a raised one
+                    reads as a stray card. */}
                 <ButtonLink
                   href="/cont/vanzari/nou"
                   size="sm"
-                  className="animate-pop-in [--btn-depth:0px]"
+                  className="[--btn-depth:0px]"
                 >
                   Vinde acum
                 </ButtonLink>
-              ) : null}
+              </AuthSwap>
               {/* flex, or the inline-level button rides 2px above the other controls. */}
               <div className="relative hidden lg:flex" ref={accountRef}>
                 <button
