@@ -13,6 +13,7 @@ import {
 import { useSWRConfig } from "swr";
 
 import * as authApi from "@/lib/api/auth";
+import { rememberSession } from "./session-hint";
 import type {
   AuthSession,
   LoginPayload,
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setUser(restored);
       setStatus(restored ? "authenticated" : "anonymous");
+      rememberSession(Boolean(restored));
     };
 
     void restore();
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const adopt = useCallback((session: AuthSession) => {
     setUser(session.user);
     setStatus("authenticated");
+    rememberSession(true);
     return session.user;
   }, []);
 
@@ -101,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authApi.logout();
     setUser(null);
     setStatus("anonymous");
+    rememberSession(false);
     // Every answer in the cache was fetched as somebody. Cache keys carry the
     // viewer's id, so the next account cannot read the last one's entries — but
     // the data is still sitting in memory on a machine its owner has just

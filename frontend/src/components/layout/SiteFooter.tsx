@@ -24,10 +24,10 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Ajutor",
     links: [
-      { href: "/cum-functioneaza", label: "Întrebări frecvente" },
-      { href: "/cum-functioneaza#livrare", label: "Livrare și Easybox" },
-      { href: "/cum-functioneaza#escrow", label: "Cum sunt protejate plățile" },
-      { href: "/cum-functioneaza#comisioane", label: "Comisioane" },
+      { href: "/ajutor", label: "Centru de ajutor" },
+      { href: "/ajutor#livrare", label: "Livrare" },
+      { href: "/ajutor#escrow", label: "Cum sunt protejate plățile" },
+      { href: "/ajutor#vanzare", label: "Cum vinzi" },
     ],
   },
 ];

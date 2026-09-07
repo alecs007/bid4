@@ -8,3 +8,6 @@ backend/target/
 
 # Local secrets
 .env
+
+# Local notes, never committed
+HANDOFF.md

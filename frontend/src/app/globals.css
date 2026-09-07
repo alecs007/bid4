@@ -398,6 +398,13 @@
    Utilities
    ========================================================================== */
 
+/* Who the page is drawn for, before anybody has been asked. The document
+   element carries a guess from the last visit — see lib/auth/session-hint — so
+   the header can open the right control in its first painted frame instead of
+   holding a placeholder through the round trip that answers. */
+@custom-variant signed-in (&:where([data-session="in"] *));
+@custom-variant signed-out (&:where([data-session="out"] *));
+
 /* Chunky Duolingo-style 3D button: a solid bottom edge that compresses when
    pressed. Each variant sets --btn-edge (colour) and optionally --btn-depth. */
 @utility btn-3d {

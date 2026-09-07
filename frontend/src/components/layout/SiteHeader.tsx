@@ -16,7 +16,6 @@ import {
 } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import { listMyAuctions } from "@/lib/api/auctions";
-import { listMyBids } from "@/lib/api/bids";
 import { listMyCauses } from "@/lib/api/causes";
 import { useApi } from "@/lib/hooks/useApi";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -40,23 +39,18 @@ const ACCOUNT_LINKS: {
   icon: keyof typeof Icons;
   group?: boolean;
 }[] = [
-  { href: "/cont", label: "Contul meu", icon: "account" },
+  { href: "/cont", label: "Profil", icon: "account" },
 
   {
-    href: "/cont/licitatiile-mele",
-    label: "Licitațiile mele",
+    href: "/cont/vanzari",
+    label: "Vânzările mele",
     icon: "auction",
     group: true,
   },
   { href: "/cont/comenzi", label: "Comenzile mele", icon: "parcel" },
 
-  {
-    href: "/cont/vanzari",
-    label: "Vânzările mele",
-    icon: "wallet",
-    group: true,
-  },
-  { href: "/cont/cauze", label: "Cauzele mele", icon: "cause" },
+  { href: "/cont/portofel", label: "Portofel", icon: "wallet", group: true },
+  { href: "/cont/cauze", label: "Cauze", icon: "cause" },
 
   { href: "/cont/setari", label: "Setări", icon: "settings", group: true },
 ];
@@ -93,11 +87,14 @@ function MenuToggle({ open }: { open: boolean }) {
 function Panel({
   open,
   tone = "plain",
+  fill = false,
   children,
 }: {
   open: boolean;
   /** "muted" tints the sheet so white boxes inside it read as raised. */
   tone?: "plain" | "muted";
+  /** Runs to the bottom of the screen and scrolls inside itself. */
+  fill?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -108,14 +105,29 @@ function Panel({
         // the bar's own height, the panel opens over the rail, which can then
         // stay mounted instead of vanishing and shifting the page. These two
         // numbers are the bar's height and have to move with it.
-        "absolute inset-x-0 top-12 origin-top px-4 pt-3 pb-4 shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-14 sm:px-6 lg:hidden",
+        "absolute inset-x-0 top-12 origin-top shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-14 lg:hidden",
         tone === "muted" ? "bg-ink-50" : "bg-white",
+        // A height rather than bottom-0: this is absolute inside the header,
+        // which is its containing block, so the bottom of the screen is not a
+        // edge it can reach for. The header is pinned to the top of the
+        // viewport whenever this can open, so its own height is all there is
+        // to take off.
+        fill && "h-[calc(100dvh-3rem)] sm:h-[calc(100dvh-3.5rem)]",
         open
           ? "visible translate-y-0 opacity-100"
           : "invisible -translate-y-2 opacity-0",
       )}
     >
-      {children}
+      <div
+        // Lenis owns the page's scroll and would otherwise swallow this one.
+        data-lenis-prevent
+        className={cn(
+          "px-4 pt-3 pb-4 sm:px-6",
+          fill && "h-full overflow-x-hidden overflow-y-auto overscroll-contain",
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -126,6 +138,10 @@ function Panel({
  * <p>A label and a mark, and no explanatory line: "Vezi licitațiile" does not need one, and a
  * second line under every row turns a short menu into a wall. The one entry that is a pitch
  * rather than a place is built separately, so it can look like a pitch.
+ *
+ * <p>No outline. Three ringed boxes under a card and a tinted band read as a fourth and fifth
+ * panel rather than as the menu's own list — the mark carries the row now, and the row is only
+ * drawn when it is pointed at.
  */
 function PanelRow({
   href,
@@ -142,9 +158,12 @@ function PanelRow({
     <Link
       href={href}
       onClick={onNavigate}
-      className="group flex items-center gap-2.5 rounded-2xl px-3 py-3 font-display text-[15px] font-bold text-ink-800 ring-1 ring-edge transition hover:bg-ink-50 hover:text-ink-900"
+      className="group flex items-center gap-3 rounded-2xl py-2.5 pr-2.5 pl-2 font-display text-base font-bold text-ink-800 transition hover:bg-ink-50 hover:text-ink-900"
     >
-      <span aria-hidden="true" className="text-ink-500">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 transition group-hover:bg-primary-100"
+      >
         {icon}
       </span>
       {label}
@@ -262,6 +281,12 @@ export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
  * same frame, and everything beside them moved twice. Held in a column that animates from no width
  * to its content's width, each one grows into the room the other gives up, and the row settles once.
  *
+ * <p>Which side is open is decided in CSS from `data-session` on the document element, not from
+ * React state, because at boot React has nothing true to say: the session is a round trip away and
+ * the header used to hold a placeholder until it answered. The attribute is a guess written before
+ * the first paint and corrected when the answer arrives — a right guess costs nothing, a wrong one
+ * costs the same animated swap that signing in already costs. See `lib/auth/session-hint`.
+ *
  * <p>Opened by a max-width rather than by a collapsing grid track. The track idiom reads better and
  * needs no measurement, but a browser will not interpolate `grid-template-columns` for a track sized
  * in `fr` inside a box whose own width is not definite — it snaps, which is the jump this exists to
@@ -269,33 +294,45 @@ export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
  * control it holds; the control keeps its own width, and the cap only ever clips it on the way in
  * and out.
  *
- * <p>Closed, it is also taken out of the page for anything that reads or tabs through it — it is
- * still in the document, and a link nobody can see is one a keyboard should not land on.
+ * <p>Closed, it is `visibility: hidden`, which takes it out of the page for anything that reads or
+ * tabs through it and still lets the width animate — a link nobody can see is one a keyboard should
+ * not land on. `inert` would say the same thing, but only React could set it, and this no longer
+ * waits for React.
  */
 function AuthSwap({
-  show,
+  when,
   openWidth,
   className,
   children,
 }: {
-  show: boolean;
-  /** A max-width class comfortably past the control's own width. */
+  /** The session this control belongs to. */
+  when: "in" | "out";
+  /** A max-width comfortably past the control's own width. */
   openWidth: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div
-      aria-hidden={!show}
-      inert={!show}
+    <span
+      style={{ "--auth-swap": openWidth } as React.CSSProperties}
       className={cn(
-        "overflow-hidden transition-[max-width,opacity] duration-200 ease-[var(--ease-out-soft)]",
-        show ? cn(openWidth, "opacity-100") : "max-w-0 opacity-0",
+        // A span, because one of these holds the account trigger's label and a
+        // div inside a button is not content a button may have.
+        //
+        // flex, not block: the avatar is inline-level, so a block would sit it
+        // on a text baseline and keep the descender space under it — a box 7.5px
+        // taller than the picture, which centres 3.75px above everything beside
+        // it. Flex items have no baseline to sit on. *:shrink-0 so a closing
+        // swap clips its content rather than squeezing it.
+        "invisible flex max-w-0 items-center overflow-hidden opacity-0 transition-[max-width,opacity,visibility] duration-200 ease-[var(--ease-out-soft)] *:shrink-0",
+        when === "in"
+          ? "signed-in:visible signed-in:max-w-(--auth-swap) signed-in:opacity-100"
+          : "signed-out:visible signed-out:max-w-(--auth-swap) signed-out:opacity-100",
         className,
       )}
     >
       {children}
-    </div>
+    </span>
   );
 }
 
@@ -344,11 +381,6 @@ export function SiteHeader() {
    */
   const menuOpen = openPanel === "account";
   const mine = { enabled: menuOpen && Boolean(user) };
-  const { data: myBids } = useApi(
-    () => listMyBids(user!.id),
-    `my-bids:${user?.id}`,
-    mine,
-  );
   const { data: mySales } = useApi(
     () => listMyAuctions(user!.id),
     `my-sales:${user?.id}`,
@@ -363,10 +395,6 @@ export function SiteHeader() {
   // Only what is still running: a list of everything the account ever did is a
   // number that never goes down and so never means anything.
   const counts: Record<string, number | undefined> = {
-    "/cont/licitatiile-mele": myBids?.filter(
-      (item) =>
-        item.myTopBid.status !== "WON" && item.myTopBid.status !== "LOST",
-    ).length,
     // Reserved counts: the seller has chosen and now owes the buyer a delivery,
     // which is exactly the kind of thing a badge should keep in front of them.
     "/cont/vanzari": mySales?.filter(
@@ -519,13 +547,8 @@ export function SiteHeader() {
               beside it is a wide pill that only appears from lg, so without
               this a signed-out visitor had nothing in the bar to press but the
               menu — and signing in is the one thing they are most likely to
-              want. Withheld until the session has answered, so it never
-              appears and then swaps for somebody who was signed in all along. */}
-          <AuthSwap
-            show={status !== "loading" && !user}
-            openWidth="max-w-10"
-            className="lg:hidden"
-          >
+              want. */}
+          <AuthSwap when="out" openWidth="2.5rem" className="lg:hidden">
             <Link
               href="/autentificare"
               aria-label="Intră în cont"
@@ -544,96 +567,133 @@ export function SiteHeader() {
             </Link>
           </AuthSwap>
 
-          {status === "loading" ? (
-            /* The signed-out trigger's own 149px footprint, which is what most
-               visits resolve to, so that swap moves nothing. Reserving the
-               wider signed-in row instead would hold every visitor's header
-               open around a button most of them never get. */
-            <Skeleton className="hidden h-9 w-[149px] rounded-2xl lg:block" />
-          ) : (
-            <>
-              <AuthSwap show={Boolean(user)} openWidth="max-w-40">
-                {/* Flat: --btn-depth off. The 3D edge is for buttons on a
-                    page, and among the bar's other controls a raised one
-                    reads as a stray card. */}
-                <ButtonLink
-                  href="/cont/vanzari/nou"
-                  size="sm"
-                  className="[--btn-depth:0px]"
-                >
-                  Vinde acum
-                </ButtonLink>
-              </AuthSwap>
-              {/* flex, or the inline-level button rides 2px above the other controls. */}
-              <div className="relative hidden lg:flex" ref={accountRef}>
-                <button
-                  type="button"
-                  onClick={() => toggle("account")}
-                  aria-expanded={openPanel === "account"}
-                  aria-haspopup="menu"
-                  aria-label="Contul meu"
-                  className={cn(
-                    // h-9 whoever is looking, so signing in swaps what is
-                    // inside the trigger without resizing the trigger. The
-                    // avatar is xs for the same reason: sm is 36px and would
-                    // fill the pill edge to edge.
-                    "inline-flex h-9 animate-pop-in items-center gap-2 rounded-2xl px-2.5 font-display text-[15px] font-bold whitespace-nowrap transition",
-                    openPanel === "account"
-                      ? "bg-ink-100 text-ink-900"
-                      : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
-                  )}
-                >
-                  {user ? (
-                    <Avatar
-                      name={user.displayName}
-                      src={user.avatarUrl}
-                      accountType={user.accountType}
-                      size="xs"
-                    />
-                  ) : (
-                    <>
-                      <Icons.accountRound
-                        aria-hidden="true"
-                        className="h-5 w-5 shrink-0"
-                      />
-                      Contul meu
-                    </>
-                  )}
-                  <Icons.expand
-                    aria-hidden="true"
-                    className={cn(
-                      "h-4 w-4 shrink-0 text-ink-500 transition-transform duration-200",
-                      openPanel === "account" && "rotate-180",
-                    )}
-                  />
-                </button>
+          {/* Desktop only, and only a mark: on a phone the same destination is
+              a named row in the menu, where there is room to name it. */}
+          <Link
+            href="/ajutor"
+            aria-label="Centru de ajutor"
+            title="Centru de ajutor"
+            className={cn(
+              iconButton(isActive("/ajutor"), "h-9 w-9"),
+              // One step lighter than the bar's other marks — the same tertiary
+              // weight as the search field's — because this is an offer of help
+              // rather than a place anybody set out for. Not ink-400: that is
+              // the decorative grey, and this is something to be pressed.
+              !isActive("/ajutor") && "text-ink-500 hover:text-ink-900",
+              // Round, like the account mark it sits beside: both stand for a
+              // person asking something rather than for a place on the site.
+              // After iconButton, whose own inline-flex would otherwise win the
+              // merge and show this on a phone as well.
+              "hidden rounded-full lg:inline-flex",
+            )}
+          >
+            <Icons.help aria-hidden="true" className="h-5 w-5 shrink-0" />
+          </Link>
 
-                {openPanel === "account" ? (
-                  <div
-                    role="menu"
-                    className={cn(
-                      // z-50: the category rail and the page below both paint
-                      // after this in document order, and the menu has to
-                      // clear them both.
-                      "absolute top-full right-0 z-50 mt-2 animate-pop-in rounded-2xl bg-white shadow-sm ring-1 ring-line",
-                      user ? "w-72 p-1.5" : "w-80 p-4",
-                    )}
-                  >
-                    <AccountMenu
-                      user={user}
-                      isStaff={isStaff}
-                      isAdmin={isAdmin}
-                      links={ACCOUNT_LINKS}
-                      counts={counts}
-                      onNavigate={close}
-                      onSignOut={signOut}
-                      itemRole="menuitem"
-                    />
-                  </div>
-                ) : null}
+          <AuthSwap when="in" openWidth="10rem">
+            {/* Flat: --btn-depth off. The 3D edge is for buttons on a
+                page, and among the bar's other controls a raised one
+                reads as a stray card. */}
+            <ButtonLink
+              href="/cont/vanzari/nou"
+              size="sm"
+              className="[--btn-depth:0px]"
+            >
+              Vinde acum
+            </ButtonLink>
+          </AuthSwap>
+          {/* flex, or the inline-level button rides 2px above the other controls. */}
+          {/* -ml-1 eats the row's gap when the trigger is just an avatar:
+              with it, the space between the sell button and the picture is the
+              gap plus the pill's padding, and the picture sits nearer the
+              chevron than the button it stands beside. */}
+          <div
+            className="relative hidden signed-in:-ml-1 lg:flex"
+            ref={accountRef}
+          >
+            <button
+              type="button"
+              onClick={() => toggle("account")}
+              aria-expanded={openPanel === "account"}
+              aria-haspopup="menu"
+              aria-label="Contul meu"
+              className={cn(
+                // h-9 whoever is looking, so signing in changes the trigger's
+                // width and never its height. No gap: the two halves below
+                // carry their own, because a gap either side of a collapsed
+                // one is 8px of nothing.
+                // signed-in:pl-2 pays back the 2px the avatar's ring clearance
+                // adds, so the picture sits the same distance from both edges.
+                "inline-flex h-9 items-center rounded-2xl px-2.5 font-display text-[15px] font-bold whitespace-nowrap transition signed-in:pl-2",
+                openPanel === "account"
+                  ? "bg-ink-100 text-ink-900"
+                  : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
+              )}
+            >
+              {/* The avatar is xs because sm is 36px and would fill the pill
+                  edge to edge. Its 28px is held from the first frame, so the
+                  picture arrives into a slot rather than pushing one open. */}
+              <AuthSwap when="in" openWidth="2.75rem">
+                {user ? (
+                  <Avatar
+                    name={user.displayName}
+                    src={user.avatarUrl}
+                    accountType={user.accountType}
+                    size="xs"
+                    // ml-0.5 clears the avatar's own white ring, which is drawn
+                    // outside its box and would be shaved by the clip.
+                    className="mr-2.5 ml-0.5"
+                  />
+                ) : status === "loading" ? (
+                  <Skeleton className="mr-2.5 ml-0.5 h-7 w-7 rounded-full" />
+                ) : (
+                  // Nobody is coming. The slot is closed by now; an empty box
+                  // spares a shimmer that would run behind it for the visit.
+                  <span className="mr-2.5 ml-0.5 block h-7 w-7" />
+                )}
+              </AuthSwap>
+              <AuthSwap when="out" openWidth="8rem">
+                <span className="mr-2 flex items-center gap-2">
+                  <Icons.accountRound
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0"
+                  />
+                  Contul meu
+                </span>
+              </AuthSwap>
+              <Icons.expand
+                aria-hidden="true"
+                className={cn(
+                  "h-4 w-4 shrink-0 text-ink-500 transition-transform duration-200",
+                  openPanel === "account" && "rotate-180",
+                )}
+              />
+            </button>
+
+            {openPanel === "account" ? (
+              <div
+                role="menu"
+                className={cn(
+                  // z-50: the category rail and the page below both paint
+                  // after this in document order, and the menu has to
+                  // clear them both.
+                  "absolute top-full right-0 z-50 mt-2 animate-pop-in rounded-2xl bg-white shadow-sm ring-1 ring-line",
+                  user ? "w-72 p-1.5" : "w-80 p-4",
+                )}
+              >
+                <AccountMenu
+                  user={user}
+                  isStaff={isStaff}
+                  isAdmin={isAdmin}
+                  links={ACCOUNT_LINKS}
+                  counts={counts}
+                  onNavigate={close}
+                  onSignOut={signOut}
+                  itemRole="menuitem"
+                />
               </div>
-            </>
-          )}
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -664,7 +724,7 @@ export function SiteHeader() {
         </form>
       </Panel>
 
-      <Panel open={openPanel === "nav"}>
+      <Panel open={openPanel === "nav"} fill>
         <nav aria-label="Navigare" className="flex flex-col gap-2">
           {/* The account comes first: on a phone there is no corner to hang a
               dropdown off, so it lives inline.
@@ -727,6 +787,15 @@ export function SiteHeader() {
             href="/licitatii"
             icon={<Icons.auction className="h-5 w-5 shrink-0" />}
             label="Vezi licitațiile"
+            onNavigate={close}
+          />
+          {/* Below the two destinations and above nothing else, so it is the
+              last thing read on the way out of the menu — where somebody who
+              has not found what they came for is looking. Signed in or not. */}
+          <PanelRow
+            href="/ajutor"
+            icon={<Icons.help className="h-5 w-5 shrink-0" />}
+            label="Centru de ajutor"
             onNavigate={close}
           />
         </nav>

@@ -3,6 +3,7 @@ import { Nunito, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { SESSION_HINT_SCRIPT } from "@/lib/auth/session-hint";
 import { SwrProvider } from "@/lib/hooks/SwrProvider";
 import { SITE_URL } from "@/lib/config";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -101,11 +102,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // suppressHydrationWarning: the script below writes data-session onto this
+    // element before React reaches it, so the markup React hydrates always
+    // carries one attribute the server never sent.
     <html
       lang="ro"
+      suppressHydrationWarning
       className={`${nunito.variable} ${baloo.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-canvas text-ink-900">
+        {/* Before the header is parsed, so it draws the controls of whoever was
+            here last instead of a placeholder that changes size. */}
+        <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
         {/* Who runs the site and how to search it. Everything else that
             describes a page refers back to these by id rather than repeating
             them. */}
