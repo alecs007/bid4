@@ -3,7 +3,6 @@ package ro.bid4.backend.inbox.service;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +25,8 @@ import ro.bid4.backend.inbox.repo.ThreadItemRepository;
  *
  * <p>Posting a step is idempotent. A unique index holds one event of each kind per order, so a
  * transition that is retried after a failed transaction cannot leave the thread with two copies of
- * "banii sunt în siguranță". The insert is allowed to collide and the collision is the answer.
+ * "banii sunt în siguranță" — and the question is asked before the insert rather than answered by
+ * the collision, because a violation caught inside somebody else's transaction poisons it.
  */
 @Service
 public class ThreadEvents {
@@ -84,20 +84,22 @@ public class ThreadEvents {
       String body,
       Map<String, String> payload) {
 
+    // Asked, not caught. The unique index is still the thing that makes this
+    // true under a race, but reaching it inside somebody else's transaction
+    // would mark that transaction rollback-only — and the caller only wanted
+    // the card to exist, which by then it does.
+    if (items.existsByOrderIdAndEventType(orderId, eventType)) {
+      return;
+    }
+
     ThreadItem item = ThreadItem.event(conversationId, orderId, eventType, orderStatus);
     item.setBody(body);
     item.setPayload(payload);
 
-    try {
-      ThreadItem saved = items.saveAndFlush(item);
-      conversations.touch(conversationId, saved.getCreatedAt());
-      participants.markUnreadForAll(conversationId);
-      notifyParticipants(conversationId, saved.getId());
-    } catch (DataIntegrityViolationException alreadyPosted) {
-      // The step is already in the thread. That is the index doing its job, and
-      // the caller asked for the card to exist rather than for it to be new.
-      return;
-    }
+    ThreadItem saved = items.save(item);
+    conversations.touch(conversationId, saved.getCreatedAt());
+    participants.markUnreadForAll(conversationId);
+    notifyParticipants(conversationId, saved.getId());
   }
 
   /** A plain line from the platform, for anything that is not a step of a sale. */

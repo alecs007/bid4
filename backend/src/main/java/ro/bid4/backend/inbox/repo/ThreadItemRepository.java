@@ -67,4 +67,13 @@ public interface ThreadItemRepository extends JpaRepository<ThreadItem, UUID> {
 
   long countByConversationIdAndSenderIdAndCreatedAtAfter(
       UUID conversationId, UUID senderId, Instant after);
+
+  /**
+   * Whether this step of this sale has already been written.
+   *
+   * <p>Asked before the insert rather than learned from the unique index. Catching the violation
+   * would be tidier to read and would poison the transaction it was caught in — Spring marks it
+   * rollback-only, and the caller, who only wanted the card to exist, fails at commit.
+   */
+  boolean existsByOrderIdAndEventType(UUID orderId, String eventType);
 }

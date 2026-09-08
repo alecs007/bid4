@@ -39,6 +39,8 @@ import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.inbox.api.dto.ThreadItemResponse;
 import ro.bid4.backend.inbox.domain.ThreadItemKind;
 import ro.bid4.backend.inbox.service.InboxService;
+import ro.bid4.backend.ledger.domain.AccountKind;
+import ro.bid4.backend.ledger.service.LedgerService;
 import ro.bid4.backend.orders.domain.Order;
 import ro.bid4.backend.orders.domain.OrderStatus;
 import ro.bid4.backend.orders.repo.OrderRepository;
@@ -65,6 +67,7 @@ class OrderFlowTest {
   @Autowired private OfferService offers;
   @Autowired private OrderService orders;
   @Autowired private InboxService inbox;
+  @Autowired private LedgerService ledger;
   @Autowired private OrderRepository orderRows;
   @Autowired private AuctionRepository auctions;
   @Autowired private BidRepository bids;
@@ -287,6 +290,89 @@ class OrderFlowTest {
 
     assertThat(orders.releaseWhatIsDue()).isPositive();
     assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.COMPLETED);
+  }
+
+  /* --- the money ---------------------------------------------------------- */
+
+  @Test
+  @DisplayName("paying puts the whole amount in escrow and nothing in anybody's balance")
+  void payingHoldsTheMoney() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 400 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+
+    long escrowBefore = ledger.platform(AccountKind.PLATFORM_ESCROW).getBalance();
+    // Deltas, not absolutes: the seller and the cause are shared by every test
+    // in this class, so what matters is that paying moved nothing into either.
+    long sellerBefore = ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId());
+    long causeBefore = ledger.balanceOf(AccountKind.CAUSE_AVAILABLE, approved.getId());
+
+    orders.markPaid(order.getId(), viewer(buyer));
+    Order paid = reload(order);
+
+    assertThat(ledger.platform(AccountKind.PLATFORM_ESCROW).getBalance())
+        .isEqualTo(escrowBefore + paid.getTotalPaid());
+    // Not a leu of it is the seller's yet. That is what escrow means, and it is
+    // the promise the listing page makes.
+    assertThat(ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId()))
+        .isEqualTo(sellerBefore);
+    assertThat(ledger.balanceOf(AccountKind.CAUSE_AVAILABLE, approved.getId()))
+        .isEqualTo(causeBefore);
+  }
+
+  @Test
+  @DisplayName("releasing empties escrow into four places that add up to what was paid")
+  void releasingDividesTheMoney() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 400 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-money");
+
+    Order paid = reload(order);
+    long escrowBefore = ledger.platform(AccountKind.PLATFORM_ESCROW).getBalance();
+    long sellerBefore = ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId());
+    long causeBefore = ledger.balanceOf(AccountKind.CAUSE_AVAILABLE, approved.getId());
+    long revenueBefore = ledger.platform(AccountKind.PLATFORM_REVENUE).getBalance();
+    long shippingBefore = ledger.platform(AccountKind.PLATFORM_SHIPPING).getBalance();
+
+    orders.confirmReceipt(order.getId(), viewer(buyer));
+
+    assertThat(ledger.platform(AccountKind.PLATFORM_ESCROW).getBalance())
+        .isEqualTo(escrowBefore - paid.getTotalPaid());
+    assertThat(ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId()))
+        .isEqualTo(sellerBefore + paid.getSellerShare());
+    assertThat(ledger.balanceOf(AccountKind.CAUSE_AVAILABLE, approved.getId()))
+        .isEqualTo(causeBefore + paid.getDonationAmount());
+    assertThat(ledger.platform(AccountKind.PLATFORM_REVENUE).getBalance())
+        .isEqualTo(revenueBefore + paid.getPlatformTax());
+    assertThat(ledger.platform(AccountKind.PLATFORM_SHIPPING).getBalance())
+        .isEqualTo(shippingBefore + paid.getShipping());
+
+    assertThat(ledger.isConsistent(ledger.platform(AccountKind.PLATFORM_ESCROW).getId())).isTrue();
+  }
+
+  @Test
+  @DisplayName("a release asked for twice divides the money once")
+  void releasingIsIdempotent() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 200 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-twice");
+    orders.confirmReceipt(order.getId(), viewer(buyer));
+
+    long sellerAfterFirst = ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId());
+
+    // The scheduled release runs over an order a buyer has already confirmed.
+    Order done = reload(order);
+    done.setStatus(OrderStatus.DELIVERED);
+    done.setAutoReleaseAt(Instant.now().minus(Duration.ofMinutes(1)));
+    orderRows.save(done);
+    orders.releaseWhatIsDue();
+
+    assertThat(ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId()))
+        .isEqualTo(sellerAfterFirst);
   }
 
   /* --- fixtures ----------------------------------------------------------- */

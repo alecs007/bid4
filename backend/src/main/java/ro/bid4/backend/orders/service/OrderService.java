@@ -17,6 +17,7 @@ import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.domain.DeliveryMethod;
 import ro.bid4.backend.identity.repo.DeliveryMethodRepository;
 import ro.bid4.backend.inbox.service.ThreadEvents;
+import ro.bid4.backend.ledger.service.OrderLedger;
 import ro.bid4.backend.orders.domain.DeliverySnapshot;
 import ro.bid4.backend.orders.domain.Order;
 import ro.bid4.backend.orders.domain.OrderEvent;
@@ -55,16 +56,19 @@ public class OrderService {
   private final OrderTrackingRepository tracking;
   private final DeliveryMethodRepository deliveryMethods;
   private final ThreadEvents threads;
+  private final OrderLedger books;
 
   public OrderService(
       OrderRepository orders,
       OrderTrackingRepository tracking,
       DeliveryMethodRepository deliveryMethods,
-      ThreadEvents threads) {
+      ThreadEvents threads,
+      OrderLedger books) {
     this.orders = orders;
     this.tracking = tracking;
     this.deliveryMethods = deliveryMethods;
     this.threads = threads;
+    this.books = books;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -180,6 +184,10 @@ public class OrderService {
     order.setStatus(OrderStatus.PAID_HELD);
     order.setPaidAt(Instant.now());
     order.setPaymentFailureReason(null);
+
+    // Into escrow, whole. Not a leu of it belongs to anybody yet — which is what
+    // the promise on the listing page actually means.
+    books.recordPayment(order.getId(), order.getTotalPaid());
 
     post(
         conversationOf(order),
@@ -342,8 +350,18 @@ public class OrderService {
     order.setReleasedAt(Instant.now());
     order.setAutoReleaseAt(null);
 
-    // Phase three moves the money here. What is written now is the record of
-    // what is owed to whom, which is the part the thread has to be able to show.
+    // Escrow empties into four places at once, and the four add up to what was
+    // paid. Idempotent on the order, so a retried release moves nothing twice.
+    books.recordRelease(
+        order.getId(),
+        order.getSellerId(),
+        order.getCauseId(),
+        order.getTotalPaid(),
+        order.getDonationAmount(),
+        order.getSellerShare(),
+        order.getPlatformTax(),
+        order.getShipping());
+
     post(
         conversationOf(order),
         order,
