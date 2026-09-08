@@ -2,10 +2,10 @@
 
 import { usePathname } from "next/navigation";
 
-import { NavTabs } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 
 import { ConversationList } from "./ConversationList";
+import { InboxTabs } from "./InboxTabs";
 
 /**
  * Two panes on a desktop, one at a time on a phone.
@@ -28,14 +28,9 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-      <NavTabs
-        ariaLabel="Inbox"
-        className="mb-4"
-        items={[
-          { href: "/cont/inbox", label: "Mesaje" },
-          { href: "/cont/inbox/notificari", label: "Notificări" },
-        ]}
-      />
+      {/* Inside a conversation on a phone there is nothing to switch between —
+          the thread fills the screen and the way back is its own header. */}
+      <InboxTabs className={threadOpen ? "hidden lg:flex" : undefined} />
 
       {onNotifications ? (
         children

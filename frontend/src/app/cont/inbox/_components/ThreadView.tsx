@@ -12,11 +12,24 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { getThread, markThreadRead, sendMessage } from "@/lib/api/inbox";
+import {
+  chooseDelivery,
+  confirmReceipt,
+  dispatchOrder,
+  generateLabel,
+  getOrder,
+  payOrder,
+} from "@/lib/api/orders";
+import { listDeliveryMethods } from "@/lib/api/users";
 import { useApi } from "@/lib/hooks/useApi";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { formatMoney } from "@/lib/money";
 import type { ThreadItem } from "@/lib/types";
 import { formatTimeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
+
+import { DeliverySheet } from "./DeliverySheet";
+import { EventCard, type OrderAction } from "./EventCard";
 
 /**
  * One conversation, and — from phase two — one sale.
@@ -35,7 +48,19 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
+  const [pickingDelivery, setPickingDelivery] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+
+  // The sale behind the thread, if there is one. This is what decides which
+  // card is live and who may press it — the items never decide that themselves.
+  const orderId = data?.conversation.orderId;
+  const { data: order, reload: reloadOrder } = useApi(
+    () => getOrder(orderId!, user!.id),
+    `inbox:order:${orderId}`,
+    { enabled: Boolean(orderId && user) },
+  );
 
   const unreadCount = data?.conversation.unreadCount ?? 0;
   useEffect(() => {
@@ -62,6 +87,58 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
 
   const { conversation } = data;
   const items = [...data.items].reverse();
+  const viewerIsBuyer = order ? order.buyerId === user?.id : false;
+  // data.items is newest first, so the first EVENT in it is the last one written.
+  const newestEventId = data.items.find((item) => item.kind === "EVENT")?.id;
+
+  /**
+   * A press on a card.
+   *
+   * <p>Every one of these is re-checked on the server against the order's own status and the
+   * caller's id, so what happens here is asking — not deciding. Both the thread and the order are
+   * re-read afterwards, because a step writes a card as well as moving the row.
+   */
+  const act = async (action: OrderAction) => {
+    if (!order || acting) return;
+    if (action === "CHOOSE_DELIVERY") {
+      setPickingDelivery(true);
+      return;
+    }
+
+    setActing(true);
+    setSendError(null);
+    try {
+      if (action === "PAY") await payOrder(order.id, user!.id);
+      if (action === "LABEL") await generateLabel(order.id);
+      if (action === "DISPATCH") await dispatchOrder(order.id, user!.id);
+      if (action === "CONFIRM_RECEIPT") await confirmReceipt(order.id, user!.id);
+      reload();
+      reloadOrder();
+    } catch (failure) {
+      setSendError(
+        failure instanceof Error ? failure.message : "Pasul nu a putut fi făcut.",
+      );
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const pickDelivery = async (deliveryMethodId: string) => {
+    if (!order) return;
+    setActing(true);
+    try {
+      await chooseDelivery(order.id, deliveryMethodId, user!.id);
+      setPickingDelivery(false);
+      reload();
+      reloadOrder();
+    } catch (failure) {
+      setSendError(
+        failure instanceof Error ? failure.message : "Livrarea nu a fost salvată.",
+      );
+    } finally {
+      setActing(false);
+    }
+  };
 
   const send = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -143,11 +220,31 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
         data-lenis-prevent
         className="flex flex-1 flex-col gap-2 overflow-y-auto p-3"
       >
-        {items.map((item) => (
-          <Item key={item.id} item={item} />
-        ))}
+        {items.map((item) =>
+          item.kind === "EVENT" ? (
+            <EventCard
+              key={item.id}
+              item={item}
+              order={order ?? null}
+              newest={item.id === newestEventId}
+              viewerIsBuyer={viewerIsBuyer}
+              busy={acting}
+              onAct={act}
+            />
+          ) : (
+            <Item key={item.id} item={item} />
+          ),
+        )}
         <div ref={bottom} />
       </div>
+
+      <DeliverySheet
+        open={pickingDelivery}
+        busy={acting}
+        onClose={() => setPickingDelivery(false)}
+        onChoose={pickDelivery}
+        load={() => listDeliveryMethods(user!.id)}
+      />
 
       <form onSubmit={send} className="border-t border-line p-3">
         {sendError ? (
@@ -182,7 +279,7 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
 }
 
 function Item({ item }: { item: ThreadItem }) {
-  if (item.kind === "SYSTEM" || item.kind === "EVENT") {
+  if (item.kind === "SYSTEM") {
     return (
       <p className="mx-auto max-w-md rounded-2xl bg-ink-50 px-4 py-2 text-center text-[13px] text-ink-700">
         {item.body}

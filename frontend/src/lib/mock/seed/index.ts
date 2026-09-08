@@ -19,6 +19,7 @@ import type {
 } from "@/lib/api/inbox";
 
 import { buildCatalog } from "./catalog";
+import { buildInbox } from "./inbox";
 import { buildCauses } from "./causes";
 import { buildOrders } from "./orders";
 import {
@@ -72,6 +73,11 @@ export function createWorld(): World {
     displayNameOf,
   });
 
+  const { conversations, threadItems, notifications } = buildInbox({
+    orders,
+    auctions,
+  });
+
   // A starter watchlist for the demo buyer, so the dashboard is never empty.
   const watchlist = [
     { userId: "usr_maria", auctionId: "auc_ilustratie" },
@@ -92,10 +98,10 @@ export function createWorld(): World {
     disputes,
     watchlist,
     causeDrafts: [],
-    // Nobody has written to anybody yet. The demo world seeds objects and
-    // offers; a conversation is something a visitor starts.
-    conversations: [],
-    threadItems: [],
-    notifications: [],
+    // Every seeded sale gets the conversation it would have had. A demo where
+    // the threads are empty shows none of what the inbox is for.
+    conversations,
+    threadItems,
+    notifications,
   };
 }

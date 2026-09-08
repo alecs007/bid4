@@ -11,6 +11,8 @@ import type { Conversation } from "@/lib/types";
 import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
+import { stepTitle } from "./EventCard";
+
 /**
  * Every thread this account is in, newest activity first.
  *
@@ -148,9 +150,14 @@ function Row({
 function preview(conversation: Conversation): string {
   const item = conversation.lastItem;
   if (!item) return "Conversație deschisă";
+  // The step before the words, or a sale reads as "something happened" all the
+  // way from acceptance to release.
+  if (item.kind === "EVENT") {
+    return stepTitle(item.eventType) ?? item.body ?? "Pas nou în comandă";
+  }
   if (item.body) return item.body;
   if (item.kind === "IMAGE") return "A trimis o fotografie";
-  return "Actualizare despre comandă";
+  return "Actualizare";
 }
 
 function ListSkeleton() {

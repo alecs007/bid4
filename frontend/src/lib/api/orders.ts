@@ -352,4 +352,79 @@ export function confirmationHoursLeft(order: Order): number | null {
   return Math.max(0, ms / 3_600_000);
 }
 
+/* --- the steps, as the thread drives them ---------------------------------- */
+
+/**
+ * The five things either party can do to a sale, one function each.
+ *
+ * <p>Named after what the person pressing is doing rather than after the status it produces, and
+ * each one answers with the whole order — the card that drew the button re-renders from the status
+ * that comes back, so the thread never has to guess where the sale got to.
+ *
+ * <p>Every one of them is re-checked on the server against the order's own status and the caller's
+ * id. Nothing here is trusted, which is what makes it safe for the thread to offer the buttons at
+ * all.
+ */
+
+/** PUT /orders/{id}/delivery — buyer. This is what makes the total knowable. */
+export async function chooseDelivery(
+  orderId: ID,
+  deliveryMethodId: ID,
+  userId: ID,
+): Promise<Order> {
+  if (!USE_MOCK) {
+    return http<Order>(`/orders/${orderId}/delivery`, {
+      method: "PUT",
+      body: { deliveryMethodId },
+    });
+  }
+  return (await confirmOrder({ orderId, deliveryMethodId }, userId)) as Order;
+}
+
+/**
+ * POST /orders/{id}/payment — buyer.
+ *
+ * TODO(backend): a Stripe Checkout session, and this becomes a redirect out and back. The server
+ * side is a stub that says the money arrived, deliberately shaped like what replaces it.
+ */
+export async function payOrder(orderId: ID, userId: ID): Promise<Order> {
+  if (!USE_MOCK) {
+    return http<Order>(`/orders/${orderId}/payment`, { method: "POST" });
+  }
+  return (await retryPayment(orderId, userId)) as Order;
+}
+
+/** POST /orders/{id}/label — seller. */
+export async function generateLabel(orderId: ID): Promise<Order> {
+  if (!USE_MOCK) {
+    return http<Order>(`/orders/${orderId}/label`, { method: "POST" });
+  }
+
+  await delay();
+  const world = getWorld();
+  const order = world.orders.find((item) => item.id === orderId);
+  if (!order) notFound("Comanda");
+  order.awb = makeAwb();
+  order.courier = "Sameday";
+  order.status = "LABEL_GENERATED";
+  commit();
+  return order;
+}
+
+/** POST /orders/{id}/dispatch — seller. The last thing either party says about the journey. */
+export async function dispatchOrder(orderId: ID, userId: ID): Promise<Order> {
+  if (!USE_MOCK) {
+    return http<Order>(`/orders/${orderId}/dispatch`, { method: "POST" });
+  }
+  return (await markDroppedOff(orderId, userId)) as Order;
+}
+
+/** POST /orders/{id}/receipt — buyer. This is what releases the money. */
+export async function confirmReceipt(orderId: ID, userId: ID): Promise<Order> {
+  if (!USE_MOCK) {
+    return http<Order>(`/orders/${orderId}/receipt`, { method: "POST" });
+  }
+  return (await confirmPickup(orderId, userId)) as Order;
+}
+
 export { ORDER as ORDER_TIMINGS };

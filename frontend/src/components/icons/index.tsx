@@ -3,7 +3,6 @@ import {
   LuArrowRight,
   LuBell,
   LuBookmark,
-  LuInbox,
   LuBuilding2,
   LuCalendar,
   LuCheck,
@@ -136,7 +135,8 @@ export const Icons = {
   info: LuInfo,
   help: LuCircleHelp,
   notification: LuBell,
-  inbox: LuInbox,
+  /** A letter, not a tray: what arrives here is a message from a person. */
+  inbox: LuMail,
 
   add: LuPlus,
   edit: LuPencil,
