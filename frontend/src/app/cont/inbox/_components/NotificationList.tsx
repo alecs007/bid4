@@ -55,7 +55,7 @@ export function NotificationList() {
   // this. See Welcome on the server.
   return (
     <>
-      <ul className="flex flex-col gap-1">
+      <ul className="flex animate-fade-in flex-col gap-1">
         {rows.map((row) => (
           <li key={row.id}>
             <Row notification={row} />
@@ -132,10 +132,15 @@ function NotificationSkeleton({ rows = 5 }: { rows?: number }) {
     <ul className="flex flex-col gap-1">
       {Array.from({ length: rows }).map((_, index) => (
         <li key={index} className="flex items-start gap-3 p-3">
-          <Skeleton className="h-9 w-9 rounded-xl" />
+          <Skeleton className="h-9 w-9 shrink-0 rounded-xl" />
+          {/* The sentence and its timestamp, at the height they actually are:
+              one line of sentence on a desktop and two on a phone, where these
+              wrap. A skeleton that is one line everywhere is right on one
+              breakpoint and twenty pixels short on the other. */}
           <span className="flex-1">
-            <Skeleton className="h-3.5 w-3/4" />
-            <Skeleton className="mt-2 h-3 w-24" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="mt-1 h-4 w-1/2 sm:hidden" />
+            <Skeleton className="mt-1.5 h-4 w-24" />
           </span>
         </li>
       ))}

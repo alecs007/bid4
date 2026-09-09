@@ -39,6 +39,15 @@ import { EventCard, type OrderAction } from "./EventCard";
  * between the messages, in the order they happened, because that is what makes the thread readable
  * as the history of a sale rather than as chat with a status bar bolted on.
  */
+/**
+ * The panel's box, shared with its own skeleton.
+ *
+ * <p>Its height comes from the shell rather than from what is in it, so a short thread and a long
+ * one are the same shape and the page does not resize when one replaces the other.
+ */
+const THREAD_SHELL =
+  "flex h-full min-h-[60vh] flex-col rounded-3xl bg-white ring-1 ring-edge lg:min-h-0";
+
 export function ThreadView({ conversationId }: { conversationId: string }) {
   const { data, error, loading, reload } = useApi(
     () => getThread(conversationId),
@@ -161,7 +170,9 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   };
 
   return (
-    <section className="flex min-h-[60vh] flex-col rounded-3xl bg-white ring-1 ring-edge lg:h-[calc(100dvh-9rem)]">
+    // animate-fade-in, not a slide: the skeleton it replaces is the same box in
+    // the same place, so the only thing that should change is what is in it.
+    <section className={cn(THREAD_SHELL, "animate-fade-in")}>
       {/* What the conversation is about, kept in view — three screens down a
           thread, "it" stops being obvious. */}
       <header className="flex items-center gap-3 border-b border-line p-3">
@@ -376,18 +387,29 @@ const FLAG_COPY: Record<string, string> = {
 
 function ThreadSkeleton() {
   return (
-    <section className="flex min-h-[60vh] flex-col rounded-3xl bg-white ring-1 ring-edge">
+    <section className={THREAD_SHELL}>
+      {/* The same three boxes the loaded thread has, at the same heights: a
+          header of 40px marks, a run of bubbles, and the composer. A skeleton
+          that is not the shape of what replaces it is a jump with extra steps. */}
       <div className="flex items-center gap-3 border-b border-line p-3">
-        <Skeleton className="h-10 w-10 rounded-xl" />
+        <Skeleton className="h-9 w-9 shrink-0 rounded-xl lg:hidden" />
+        <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
         <span className="flex-1">
-          <Skeleton className="h-3.5 w-1/3" />
-          <Skeleton className="mt-2 h-3 w-20" />
+          <Skeleton className="h-3.5 w-40" />
+          <Skeleton className="mt-1.5 h-3 w-16" />
         </span>
+        <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-3">
-        <Skeleton className="h-12 w-2/3 rounded-2xl" />
-        <Skeleton className="ml-auto h-12 w-1/2 rounded-2xl" />
-        <Skeleton className="h-12 w-3/5 rounded-2xl" />
+
+      <div className="flex flex-1 flex-col gap-2 overflow-hidden p-3">
+        <Skeleton className="ml-auto h-10 w-1/2 rounded-2xl" />
+        <Skeleton className="h-14 w-2/3 rounded-2xl" />
+        <Skeleton className="mx-auto h-4 w-3/5 rounded-full" />
+        <Skeleton className="mx-auto h-4 w-1/2 rounded-full" />
+      </div>
+
+      <div className="border-t border-line p-3">
+        <Skeleton className="h-11 w-full rounded-2xl" />
       </div>
     </section>
   );

@@ -49,7 +49,7 @@ export function ConversationList() {
 
   return (
     <>
-      <ul className="flex flex-col gap-1">
+      <ul className="flex animate-fade-in flex-col gap-1">
         {rows.map((conversation) => (
           <li key={conversation.id}>
             <Row

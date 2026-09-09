@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ro.bid4.backend.inbox.domain.Conversation;
+import ro.bid4.backend.inbox.domain.ConversationKind;
 
 public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
 
@@ -22,6 +23,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
       """)
   Optional<Conversation> findListingThread(
       @Param("listingId") UUID listingId, @Param("buyerId") UUID buyerId);
+
+  /** How many real exchanges there are, ignoring the greeting every account gets. */
+  long countByKind(ConversationKind kind);
 
   /** The thread bid4 itself has with a member. One each, and it is always there. */
   @Query(

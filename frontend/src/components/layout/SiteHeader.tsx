@@ -369,12 +369,13 @@ function InboxMark({
     >
       <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
       {count > 0 ? (
-        // On the corner rather than over the mark: a badge inside the button
-        // sits on top of the glyph it is about, and an envelope with a number
-        // through the middle of it stops reading as an envelope.
+        // In the button's corner, not over its middle and not outside its edge.
+        // The swap around this mark clips what leaves it — that is what makes
+        // the width animate — so a badge hung off the corner comes back cut in
+        // half.
         <span
           aria-hidden="true"
-          className="numeric absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] leading-none font-extrabold text-white ring-2 ring-white"
+          className="numeric absolute top-0.5 right-0.5 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-danger-600 px-1 text-[9px] leading-none font-extrabold text-white ring-2 ring-white"
         >
           {count > 9 ? "9+" : count}
         </span>
@@ -612,7 +613,14 @@ export function SiteHeader() {
               this a signed-out visitor had nothing in the bar to press but the
               menu — and signing in is the one thing they are most likely to
               want. */}
-          <AuthSwap when="out" openWidth="2.5rem" className="lg:hidden">
+          <AuthSwap
+            when="out"
+            openWidth="2.5rem"
+            // Closed, it still sits between two of the row's gaps. Every swap in
+            // this row eats its own, or the icons either side of a shut one end
+            // up further apart than the rest.
+            className="signed-in:-ml-1 lg:hidden"
+          >
             <Link
               href="/autentificare"
               aria-label="Intră în cont"

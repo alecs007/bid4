@@ -18,7 +18,16 @@ import { InboxTabs } from "./InboxTabs";
  *
  * <p>Notifications are one column. They are a list of pointers to other places, so there is no
  * second pane for them to open into.
+ *
+ * <p>One height, whatever is in it. The panes are sized from the viewport rather than from their
+ * contents, so an inbox with two conversations is the same shape as one with forty and opening a
+ * short thread after a long one does not resize the page under the reader. On a phone it is a floor
+ * rather than a fixed height — there the page scrolls as a page, and only the emptiest states
+ * needed rescuing from being a strip.
  */
+
+/** Header, tabs and the page's own padding, taken off the viewport. */
+const DESKTOP_FRAME = "lg:h-[calc(100dvh-10.5rem)] lg:min-h-[32rem]";
 export function InboxShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
@@ -33,22 +42,29 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
       <InboxTabs className={threadOpen ? "hidden" : undefined} />
 
       {onNotifications ? (
-        children
+        <div className={cn("min-h-[60vh]", DESKTOP_FRAME, "lg:overflow-y-auto")}>
+          {children}
+        </div>
       ) : (
-        <div className="lg:grid lg:grid-cols-[20rem_1fr] lg:gap-4">
+        <div className={cn("lg:grid lg:grid-cols-[20rem_1fr] lg:gap-4", DESKTOP_FRAME)}>
           <div
             className={cn(
-              // Its own scroll on a desktop, pinned under the header, so
-              // reading a long thread does not carry the list away with it.
-              "lg:sticky lg:top-16 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto",
-              threadOpen ? "hidden lg:block" : "block",
+              // Its own scroll on a desktop, so reading a long thread does not
+              // carry the list away with it.
+              "lg:h-full lg:overflow-y-auto",
+              threadOpen ? "hidden lg:block" : "block min-h-[60vh] lg:min-h-0",
             )}
             data-lenis-prevent
           >
             <ConversationList />
           </div>
 
-          <div className={cn(threadOpen ? "block" : "hidden lg:block")}>
+          <div
+            className={cn(
+              "min-h-[60vh] lg:h-full lg:min-h-0",
+              threadOpen ? "block" : "hidden lg:block",
+            )}
+          >
             {children}
           </div>
         </div>
