@@ -56,78 +56,71 @@ export function EventCard({
 
   const detailLine = detail(item);
 
-  // A step nobody is waiting on is history. One quiet line, so a long sale does
-  // not become a column of identical boxes with the live one lost inside it.
+  // A step nobody is waiting on is history: one centred line, no box around it.
+  // Seven boxes stacked down a conversation stop being a history and start being
+  // furniture, and the one still being waited on is lost among them.
   if (!live) {
     return (
-      <div className="my-1 flex justify-center">
-        <p className="flex max-w-full items-center gap-2 rounded-full bg-canvas px-3 py-1.5 text-[13px] text-ink-600 ring-1 ring-edge">
-          <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-500" />
-          <span className="shrink-0 font-display font-bold whitespace-nowrap text-ink-700">
-            {step?.title ?? item.body}
-          </span>
-          {detailLine ? (
-            <span className="truncate text-ink-500">· {detailLine}</span>
-          ) : null}
-        </p>
-      </div>
+      <p className="my-2 flex items-center justify-center gap-2 text-center text-[13px] text-ink-500">
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+        <span className="font-display font-bold text-ink-700">
+          {step?.title ?? item.body}
+        </span>
+        {detailLine ? <span>· {detailLine}</span> : null}
+      </p>
     );
   }
 
+  // The live step spans the thread rather than sitting in it: rules above and
+  // below, no rounding and no side padding, so it reads as the conversation
+  // stopping to say something rather than as another bubble in it.
   return (
-    <div className="my-2 flex justify-center">
-      <div
+    <div
+      className={cn(
+        "my-3 -mx-3 border-y px-3 py-4 text-center",
+        turn ? "border-primary-200 bg-primary-50" : "border-line bg-canvas",
+      )}
+    >
+      <p
         className={cn(
-          "w-full max-w-sm rounded-2xl px-4 py-4 text-center",
-          turn
-            ? "bg-primary-50 ring-1 ring-primary-200"
-            : "bg-canvas ring-1 ring-edge",
+          "flex items-center justify-center gap-2 font-display text-base leading-snug font-extrabold",
+          turn ? "text-primary-900" : "text-ink-800",
         )}
       >
-        <span
+        <Icon
           aria-hidden="true"
           className={cn(
-            "mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-2xl",
-            turn ? "bg-primary-600 text-white" : "bg-ink-100 text-ink-600",
+            "h-5 w-5 shrink-0",
+            turn ? "text-primary-700" : "text-ink-500",
           )}
-        >
-          <Icon className="h-5 w-5" />
-        </span>
+        />
+        {step?.title ?? item.body}
+      </p>
 
-        <p
-          className={cn(
-            "font-display text-base leading-snug font-extrabold",
-            turn ? "text-primary-900" : "text-ink-800",
-          )}
-        >
-          {step?.title ?? item.body}
+      {detailLine ? (
+        <p className="mt-1 text-[13px] leading-snug text-ink-600">
+          {detailLine}
         </p>
+      ) : null}
 
-        {detailLine ? (
-          <p className="mt-1 text-[13px] leading-snug text-ink-600">
-            {detailLine}
-          </p>
-        ) : null}
+      {/* Only for the person whose turn it is. The other side sees what they
+          are waiting for rather than a button that would refuse them. */}
+      {turn && step?.action ? (
+        <Button
+          size="sm"
+          className="mt-3 w-full max-w-xs"
+          disabled={busy}
+          onClick={() => onAct(step.action!)}
+        >
+          {step.cta}
+        </Button>
+      ) : null}
 
-        {/* Only for the person whose turn it is. The other side sees what they
-            are waiting for rather than a button that would refuse them. */}
-        {turn && step?.action ? (
-          <Button
-            size="sm"
-            className="mt-3 w-full"
-            disabled={busy}
-            onClick={() => onAct(step.action!)}
-          >
-            {step.cta}
-          </Button>
-        ) : null}
-
-        {!turn && step?.waiting ? (
-          <p className="mt-2 text-[13px] font-semibold text-ink-500">
-            {step.waiting}
-          </p>
-        ) : null}
-      </div>
+      {!turn && step?.waiting ? (
+        <p className="mt-1.5 text-[13px] font-semibold text-ink-500">
+          {step.waiting}
+        </p>
+      ) : null}
     </div>
   );
 }

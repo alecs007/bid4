@@ -505,7 +505,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   logos is read at a glance and in any language, which a row of
                   grey word chips is not. */}
               <Image
-                src="/images/payment/methods.webp"
+                src="/images/payment/payment-methods.webp"
                 alt="Visa, Mastercard, Maestro, Apple Pay, Google Pay, Klarna"
                 width={2279}
                 height={256}

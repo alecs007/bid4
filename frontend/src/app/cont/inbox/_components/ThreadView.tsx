@@ -215,12 +215,25 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
           </span>
         )}
 
+        {/* Who you are talking to, named rather than left as a face to
+            recognise — and a way to their profile, because "who is this" is the
+            first question anybody has about a stranger they are about to send
+            money to. */}
         {conversation.otherParty && conversation.kind !== "SUPPORT" ? (
           <Link
             href={`/profil/${conversation.otherParty.username}`}
-            className="shrink-0"
-            aria-label={conversation.otherParty.displayName}
+            className="flex max-w-[38%] shrink-0 items-center gap-2 rounded-2xl py-1 pr-1 pl-2 transition hover:bg-ink-50"
           >
+            <span className="min-w-0 text-right">
+              <span className="block truncate font-display text-[13px] font-bold text-ink-800">
+                {conversation.otherParty.displayName}
+              </span>
+              {/* The handle earns its place on a desktop and takes room the
+                  listing's own name needs on a phone. */}
+              <span className="hidden truncate text-[11px] text-ink-500 sm:block">
+                @{conversation.otherParty.username}
+              </span>
+            </span>
             <Avatar
               name={conversation.otherParty.displayName}
               src={conversation.otherParty.avatarUrl}

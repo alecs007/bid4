@@ -369,9 +369,12 @@ function InboxMark({
     >
       <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
       {count > 0 ? (
+        // On the corner rather than over the mark: a badge inside the button
+        // sits on top of the glyph it is about, and an envelope with a number
+        // through the middle of it stops reading as an envelope.
         <span
           aria-hidden="true"
-          className="numeric absolute top-1 right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+          className="numeric absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] leading-none font-extrabold text-white ring-2 ring-white"
         >
           {count > 9 ? "9+" : count}
         </span>
