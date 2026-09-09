@@ -197,10 +197,25 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
             </span>
           </Link>
         ) : (
-          <span className="flex-1 font-display font-extrabold">Suport bid4</span>
+          <span className="flex min-w-0 flex-1 items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700"
+            >
+              <Icons.donation className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-display text-[15px] font-extrabold text-ink-900">
+                Echipa bid4
+              </span>
+              <span className="block text-[13px] text-ink-600">
+                Suport și anunțuri
+              </span>
+            </span>
+          </span>
         )}
 
-        {conversation.otherParty ? (
+        {conversation.otherParty && conversation.kind !== "SUPPORT" ? (
           <Link
             href={`/profil/${conversation.otherParty.username}`}
             className="shrink-0"

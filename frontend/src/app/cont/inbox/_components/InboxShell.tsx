@@ -30,7 +30,7 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
     <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
       {/* Inside a conversation on a phone there is nothing to switch between —
           the thread fills the screen and the way back is its own header. */}
-      <InboxTabs className={threadOpen ? "hidden lg:flex" : undefined} />
+      <InboxTabs className={threadOpen ? "hidden" : undefined} />
 
       {onNotifications ? (
         children

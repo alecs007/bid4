@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import { Icons } from "@/components/icons";
 import { Avatar, EmptyState, FadeImage, Skeleton } from "@/components/ui";
 import { listConversations } from "@/lib/api/inbox";
-import { useApi } from "@/lib/hooks/useApi";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useCursorList } from "@/lib/hooks/useCursorList";
 import type { Conversation } from "@/lib/types";
 import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
@@ -21,11 +22,13 @@ import { stepTitle } from "./EventCard";
  * answers that better than a name would.
  */
 export function ConversationList() {
-  const { data, error, loading } = useApi(
-    () => listConversations(),
-    "inbox:conversations",
-  );
+  const { user } = useAuth();
   const params = useParams<{ id?: string }>();
+
+  const { items, error, loading, loadingMore, sentinel } = useCursorList({
+    load: (cursor) => listConversations(cursor),
+    key: `inbox:conversations:${user?.id}`,
+  });
 
   if (loading) return <ListSkeleton />;
 
@@ -40,25 +43,25 @@ export function ConversationList() {
     );
   }
 
-  const rows = data?.items ?? [];
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        compact
-        title="Niciun mesaj încă"
-        description="Când întrebi ceva despre un anunț, conversația apare aici — și tot aici se face vânzarea."
-      />
-    );
-  }
+  // No empty state: bid4 writes to every account the first time it opens this,
+  // so there is always at least the greeting to show. See Welcome on the server.
+  const rows = items ?? [];
 
   return (
-    <ul className="flex flex-col gap-1">
-      {rows.map((conversation) => (
-        <li key={conversation.id}>
-          <Row conversation={conversation} active={params.id === conversation.id} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-1">
+        {rows.map((conversation) => (
+          <li key={conversation.id}>
+            <Row
+              conversation={conversation}
+              active={params.id === conversation.id}
+            />
+          </li>
+        ))}
+      </ul>
+      <div ref={sentinel} aria-hidden="true" className="h-px" />
+      {loadingMore ? <ListSkeleton rows={2} /> : null}
+    </>
   );
 }
 
@@ -81,7 +84,13 @@ function Row({
       )}
     >
       <span className="relative shrink-0">
-        {conversation.listingImageUrl ? (
+        {conversation.kind === "SUPPORT" ? (
+          // bid4 itself. A mark rather than a face: the other side is the
+          // platform, and giving it a person's avatar would be a small lie.
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+            <Icons.donation aria-hidden="true" className="h-5 w-5" />
+          </span>
+        ) : conversation.listingImageUrl ? (
           // The object, not the person: an inbox of faces says nothing about
           // which sale is which, and the picture is what the thread is about.
           <span className="relative block h-12 w-12 overflow-hidden rounded-xl">
@@ -96,7 +105,7 @@ function Row({
             <Icons.auction aria-hidden="true" className="h-5 w-5" />
           </span>
         )}
-        {conversation.otherParty ? (
+        {conversation.otherParty && conversation.kind !== "SUPPORT" ? (
           <span className="absolute -right-1 -bottom-1">
             <Avatar
               name={conversation.otherParty.displayName}
@@ -116,7 +125,9 @@ function Row({
               unread ? "font-extrabold text-ink-900" : "font-bold text-ink-800",
             )}
           >
-            {conversation.listingTitle ?? "Conversație"}
+            {conversation.kind === "SUPPORT"
+              ? "Echipa bid4"
+              : (conversation.listingTitle ?? "Conversație")}
           </span>
           <span className="shrink-0 text-xs text-ink-500">
             {formatRelativeRo(conversation.lastItemAt)}
@@ -160,10 +171,10 @@ function preview(conversation: Conversation): string {
   return "Actualizare";
 }
 
-function ListSkeleton() {
+function ListSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <ul className="flex flex-col gap-1">
-      {Array.from({ length: 6 }).map((_, index) => (
+      {Array.from({ length: rows }).map((_, index) => (
         <li key={index} className="flex items-center gap-3 p-2.5">
           <Skeleton className="h-12 w-12 rounded-xl" />
           <span className="flex-1">

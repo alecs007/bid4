@@ -23,6 +23,15 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
   Optional<Conversation> findListingThread(
       @Param("listingId") UUID listingId, @Param("buyerId") UUID buyerId);
 
+  /** The thread bid4 itself has with a member. One each, and it is always there. */
+  @Query(
+      """
+      select c from Conversation c
+      where c.kind = ro.bid4.backend.inbox.domain.ConversationKind.SUPPORT
+        and c.buyerId = :userId
+      """)
+  Optional<Conversation> findSupportThread(@Param("userId") UUID userId);
+
   /**
    * One page of somebody's inbox, newest activity first.
    *

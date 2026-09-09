@@ -338,6 +338,48 @@ function AuthSwap({
   );
 }
 
+/**
+ * One of the bar's counted marks.
+ *
+ * <p>The number is threads with something waiting, not items waiting — three is a number somebody
+ * can act on. Over nine it says so rather than saying how many: two digits over a 20px mark is
+ * unreadable, and by then the exact figure has stopped mattering.
+ */
+function InboxMark({
+  href,
+  icon,
+  label,
+  count,
+  active,
+}: {
+  href: string;
+  icon: "inbox" | "notification";
+  label: string;
+  count: number;
+  active: boolean;
+}) {
+  const Icon = Icons[icon];
+
+  return (
+    <Link
+      href={href}
+      aria-label={count > 0 ? `${label}, ${count} necitite` : label}
+      title={label}
+      className={cn(iconButton(active, "h-9 w-9"), "relative")}
+    >
+      <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
+      {count > 0 ? (
+        <span
+          aria-hidden="true"
+          className="numeric absolute top-1 right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
+        >
+          {count > 9 ? "9+" : count}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 function iconButton(active: boolean, size = "h-10 w-10") {
   return cn(
     "inline-flex shrink-0 items-center justify-center rounded-xl transition",
@@ -421,7 +463,8 @@ export function SiteHeader() {
     `inbox:unread:${user?.id}`,
     { enabled: Boolean(user) },
   );
-  const unread = unreadCounts?.messages ?? 0;
+  const unreadMessages = unreadCounts?.messages ?? 0;
+  const unreadNotifications = unreadCounts?.notifications ?? 0;
 
   const [query, setQuery] = useState("");
   const accountRef = useRef<HTMLDivElement>(null);
@@ -585,41 +628,52 @@ export function SiteHeader() {
             </Link>
           </AuthSwap>
 
-          {/* Signed in only, and on both breakpoints — a message waiting is the
-              one thing in this bar somebody needs to see from a phone. Its own
-              AuthSwap rather than a branch on `user`, so it opens and closes
-              with the session like everything else in the row. */}
+          {/* Two marks on a desktop and one on a phone. There is room up here
+              for the two halves to be separate destinations, each carrying its
+              own number — and no room at all for that on a phone, where the
+              single letter opens onto a switch that carries both. */}
           <AuthSwap
             when="in"
             openWidth="2.5rem"
             // Closed, it still sits between two of the row's gaps and leaves
             // 4px of nothing behind. The negative margin eats its own.
-            className="signed-out:-ml-1"
+            className="signed-out:-ml-1 lg:hidden"
           >
-            <Link
+            <InboxMark
               href="/cont/inbox"
-              aria-label={
-                unread > 0
-                  ? `Inbox, ${unread} conversații necitite`
-                  : "Inbox"
-              }
-              className={cn(
-                iconButton(isActive("/cont/inbox"), "h-9 w-9"),
-                "relative",
-              )}
-            >
-              <Icons.inbox aria-hidden="true" className="h-5 w-5 shrink-0" />
-              {unread > 0 ? (
-                // A dot, not a number, under 10 — the count matters less than
-                // the fact, and two digits over a 20px mark is unreadable.
-                <span
-                  aria-hidden="true"
-                  className="numeric absolute top-1 right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] font-extrabold text-white ring-2 ring-white"
-                >
-                  {unread > 9 ? "9+" : unread}
-                </span>
-              ) : null}
-            </Link>
+              icon="inbox"
+              label="Mesaje și notificări"
+              count={unreadMessages + unreadNotifications}
+              active={isActive("/cont/inbox")}
+            />
+          </AuthSwap>
+
+          <AuthSwap
+            when="in"
+            openWidth="2.5rem"
+            className="signed-out:-ml-1 hidden lg:block"
+          >
+            <InboxMark
+              href="/cont/inbox"
+              icon="inbox"
+              label="Mesaje"
+              count={unreadMessages}
+              active={pathname === "/cont/inbox" || isActive("/cont/inbox/conv")}
+            />
+          </AuthSwap>
+
+          <AuthSwap
+            when="in"
+            openWidth="2.5rem"
+            className="signed-out:-ml-1 hidden lg:block"
+          >
+            <InboxMark
+              href="/cont/inbox/notificari"
+              icon="notification"
+              label="Notificări"
+              count={unreadNotifications}
+              active={isActive("/cont/inbox/notificari")}
+            />
           </AuthSwap>
 
           {/* Desktop only, and only a mark: on a phone the same destination is
@@ -630,11 +684,6 @@ export function SiteHeader() {
             title="Centru de ajutor"
             className={cn(
               iconButton(isActive("/ajutor"), "h-9 w-9"),
-              // One step lighter than the bar's other marks — the same tertiary
-              // weight as the search field's — because this is an offer of help
-              // rather than a place anybody set out for. Not ink-400: that is
-              // the decorative grey, and this is something to be pressed.
-              !isActive("/ajutor") && "text-ink-500 hover:text-ink-900",
               // Round, like the account mark it sits beside: both stand for a
               // person asking something rather than for a place on the site.
               // After iconButton, whose own inline-flex would otherwise win the

@@ -33,8 +33,10 @@ import ro.bid4.backend.inbox.api.dto.OpenThreadRequest;
 import ro.bid4.backend.inbox.api.dto.SendMessageRequest;
 import ro.bid4.backend.inbox.api.dto.ThreadItemResponse;
 import ro.bid4.backend.inbox.api.dto.ThreadResponse;
+import ro.bid4.backend.inbox.domain.ConversationKind;
 import ro.bid4.backend.inbox.domain.ThreadItemKind;
 import ro.bid4.backend.inbox.service.InboxService;
+import ro.bid4.backend.inbox.service.NotificationService;
 import ro.bid4.backend.inbox.service.StreamTickets;
 import ro.bid4.backend.storage.domain.StoredFile;
 import ro.bid4.backend.storage.domain.Visibility;
@@ -56,6 +58,7 @@ class InboxTest {
 
   @Autowired private InboxService inbox;
   @Autowired private StreamTickets tickets;
+  @Autowired private NotificationService notificationService;
   @Autowired private AuctionRepository auctions;
   @Autowired private CauseRepository causes;
   @Autowired private UserAccountRepository users;
@@ -203,7 +206,12 @@ class InboxTest {
             .id();
     inbox.send(conversationId, new SendMessageRequest("Ultima", null), viewer(seller));
 
-    var row = inbox.list(null, false, viewer(lister)).items().getFirst();
+    // By id, not by position: every inbox now opens with the thread bid4 starts.
+    var row =
+        inbox.list(null, false, viewer(lister)).items().stream()
+            .filter(item -> conversationId.equals(item.id()))
+            .findFirst()
+            .orElseThrow();
 
     assertThat(row.id()).isEqualTo(conversationId);
     assertThat(row.lastItem().body()).isEqualTo("Ultima");
@@ -289,6 +297,41 @@ class InboxTest {
 
     assertThat(sent.kind()).isEqualTo(ThreadItemKind.IMAGE);
     assertThat(sent.imageUrls()).hasSize(1);
+  }
+
+  /* --- never empty -------------------------------------------------------- */
+
+  @Test
+  @DisplayName("an account that has done nothing still opens onto a thread from bid4")
+  void theInboxIsNeverEmpty() {
+    UserAccount newcomer = user("Nou Venit");
+
+    var first = inbox.list(null, false, viewer(newcomer));
+
+    assertThat(first.items()).hasSize(1);
+    var greeting = first.items().getFirst();
+    assertThat(greeting.kind()).isEqualTo(ConversationKind.SUPPORT);
+    // Unread on purpose: it is worth reading once, and a badge is what makes
+    // somebody read it.
+    assertThat(greeting.unreadCount()).isPositive();
+    assertThat(inbox.thread(greeting.id(), viewer(newcomer)).items())
+        .allMatch(item -> item.kind() == ThreadItemKind.SYSTEM)
+        .hasSizeGreaterThanOrEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("and on a notification, and neither is said twice")
+  void theWelcomeHappensOnce() {
+    UserAccount newcomer = user("Nou Venit Doi");
+
+    inbox.list(null, false, viewer(newcomer));
+    int afterFirst = inbox.list(null, false, viewer(newcomer)).items().size();
+    var notifications = notificationService.list(null, viewer(newcomer));
+    notificationService.list(null, viewer(newcomer));
+
+    assertThat(afterFirst).isEqualTo(1);
+    assertThat(notifications.items()).hasSize(1);
+    assertThat(notificationService.list(null, viewer(newcomer)).items()).hasSize(1);
   }
 
   /* --- the stream's way in ------------------------------------------------ */

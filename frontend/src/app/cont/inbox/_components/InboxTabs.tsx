@@ -16,10 +16,10 @@ const TABS = [
 /**
  * Which half of the inbox is being read.
  *
- * <p>On a phone it is a strip stuck under the header, not a row inside the page: it is the one
- * control that switches everything below it, and a switch that scrolls away is one people stop
- * finding. Same two numbers as the mark in the bar, so a badge up there always has somewhere
- * obvious to go.
+ * <p>A phone only. It is stuck to the underside of the header, flush against it, because it is the
+ * one control that switches everything below it and a switch that scrolls away is one people stop
+ * finding. On a desktop there is no strip at all: the two halves are separate marks in the bar, each
+ * with its own number, and a row here would be the same choice offered twice.
  *
  * <p>Two segments and a rule under the live one, rather than pills on a rail. Half a screen's width
  * each is far too wide for a pill to read as a pill, and the rail would draw a grey band across the
@@ -37,7 +37,9 @@ export function InboxTabs({ className }: { className?: string }) {
     <nav
       aria-label="Inbox"
       className={cn(
-        "sticky top-12 z-30 -mx-4 mb-4 flex border-b border-line bg-white sm:-mx-6 sm:top-14 lg:static lg:mx-0 lg:mb-4 lg:border-0 lg:bg-transparent",
+        // -mt matches the page's own top padding, so the strip meets the header
+        // rather than floating a few pixels under it.
+        "sticky top-12 z-30 -mx-4 -mt-5 mb-4 flex border-b border-line bg-white sm:-mx-6 sm:-mt-8 sm:top-14 lg:hidden",
         className,
       )}
     >
@@ -55,12 +57,7 @@ export function InboxTabs({ className }: { className?: string }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-2 py-3 font-display text-[15px] font-bold transition",
-              // From lg it is an ordinary row of two, sitting above the panes
-              // rather than spanning the width of the page.
-              "lg:flex-none lg:justify-start lg:rounded-xl lg:px-3 lg:py-2",
-              active
-                ? "text-primary-700 lg:bg-primary-50"
-                : "text-ink-600 hover:text-ink-900 lg:hover:bg-ink-50",
+              active ? "text-primary-700" : "text-ink-600 hover:text-ink-900",
             )}
           >
             {tab.label}
@@ -82,7 +79,7 @@ export function InboxTabs({ className }: { className?: string }) {
             {active ? (
               <span
                 aria-hidden="true"
-                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary-600 lg:hidden"
+                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary-600"
               />
             ) : null}
           </Link>

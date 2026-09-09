@@ -72,6 +72,7 @@ public class InboxService {
   private final InboxMapper mapper;
   private final InboxEvents events;
   private final ThreadEvents threads;
+  private final Welcome welcome;
 
   public InboxService(
       ConversationRepository conversations,
@@ -82,7 +83,8 @@ public class InboxService {
       StoredFileRepository files,
       InboxMapper mapper,
       InboxEvents events,
-      ThreadEvents threads) {
+      ThreadEvents threads,
+      Welcome welcome) {
     this.conversations = conversations;
     this.participants = participants;
     this.items = items;
@@ -92,15 +94,21 @@ public class InboxService {
     this.mapper = mapper;
     this.events = events;
     this.threads = threads;
+    this.welcome = welcome;
   }
 
   // ---------------------------------------------------------------------------------------------
   // Reading
   // ---------------------------------------------------------------------------------------------
 
-  @Transactional(readOnly = true)
+  @Transactional
   public CursorPage<ConversationSummary> list(String cursor, boolean archived, Viewer viewer) {
     UUID me = required(viewer);
+    // Nobody's inbox is ever empty. Written on first read rather than at
+    // registration, so accounts that already exist get it too.
+    if (cursor == null && !archived) {
+      welcome.ensureFor(me);
+    }
 
     Instant before = Cursors.instantOf(cursor);
     List<Conversation> page =

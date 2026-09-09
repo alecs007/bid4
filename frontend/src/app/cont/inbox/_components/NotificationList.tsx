@@ -6,7 +6,8 @@ import { useEffect } from "react";
 import { Icons } from "@/components/icons";
 import { EmptyState, Skeleton } from "@/components/ui";
 import { listNotifications, markNotificationsRead } from "@/lib/api/inbox";
-import { useApi } from "@/lib/hooks/useApi";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useCursorList } from "@/lib/hooks/useCursorList";
 import type { Notification } from "@/lib/types";
 import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
@@ -19,20 +20,23 @@ import { cn } from "@/lib/utils/cn";
  * actually happened — usually a thread.
  */
 export function NotificationList() {
-  const { data, error, loading, reload } = useApi(
-    () => listNotifications(),
-    "inbox:notifications",
-  );
+  const { user } = useAuth();
+  const { items, error, loading, loadingMore, sentinel } = useCursorList({
+    load: (cursor) => listNotifications(cursor),
+    key: `inbox:notifications:${user?.id}`,
+  });
 
-  const rows = data?.items ?? [];
+  const rows = items ?? [];
   const unread = rows.some((row) => !row.read);
 
   // Opening the tab is reading them. A per-row "mark as read" would be a second
-  // thing to do on a list whose whole purpose is to be glanced at.
+  // thing to do on a list whose whole purpose is to be glanced at. Not reloaded
+  // afterwards: the rows are already on screen, and re-fetching to grey them out
+  // would move the list under somebody mid-scroll.
   useEffect(() => {
     if (!unread) return;
-    void markNotificationsRead().then(reload);
-  }, [unread, reload]);
+    void markNotificationsRead();
+  }, [unread]);
 
   if (loading) return <NotificationSkeleton />;
 
@@ -47,23 +51,20 @@ export function NotificationList() {
     );
   }
 
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        title="Nicio notificare"
-        description="Aici ajung ofertele acceptate, pașii comenzilor și anunțurile de la bid4."
-      />
-    );
-  }
-
+  // No empty state: bid4 writes one to every account the first time it opens
+  // this. See Welcome on the server.
   return (
-    <ul className="flex flex-col gap-1">
-      {rows.map((row) => (
-        <li key={row.id}>
-          <Row notification={row} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-1">
+        {rows.map((row) => (
+          <li key={row.id}>
+            <Row notification={row} />
+          </li>
+        ))}
+      </ul>
+      <div ref={sentinel} aria-hidden="true" className="h-px" />
+      {loadingMore ? <NotificationSkeleton rows={2} /> : null}
+    </>
   );
 }
 
@@ -119,15 +120,17 @@ function sentence(notification: Notification): string {
       return `Oferta ta pentru „${value("listing")}” a fost acceptată.`;
     case "CAUSE_APPROVED":
       return `Cauza „${value("cause")}” a fost aprobată.`;
+    case "WELCOME":
+      return "Bun venit pe bid4! Ți-am lăsat un mesaj cu tot ce trebuie să știi.";
     default:
       return notification.type;
   }
 }
 
-function NotificationSkeleton() {
+function NotificationSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <ul className="flex flex-col gap-1">
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: rows }).map((_, index) => (
         <li key={index} className="flex items-start gap-3 p-3">
           <Skeleton className="h-9 w-9 rounded-xl" />
           <span className="flex-1">

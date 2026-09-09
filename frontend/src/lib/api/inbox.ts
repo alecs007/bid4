@@ -54,8 +54,9 @@ export async function listConversations(
 
   await delay();
   maybeFailRead("conversațiile");
-  const world = getWorld();
   const me = currentMockUser();
+  if (!cursor && !archived) ensureWelcome(me);
+  const world = getWorld();
 
   const rows = world.conversations
     .filter((item) => item.buyerId === me || item.sellerId === me)
@@ -236,8 +237,9 @@ export async function listNotifications(
 
   await delay();
   maybeFailRead("notificările");
-  const world = getWorld();
   const me = currentMockUser();
+  if (!cursor) ensureWelcome(me);
+  const world = getWorld();
   const rows = world.notifications
     .filter((item) => item.userId === me)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -301,6 +303,67 @@ export async function getUnreadCounts(): Promise<UnreadCounts> {
 
 /* --- the mock's own half ---------------------------------------------------- */
 
+const WELCOME = {
+  greeting:
+    "Bun venit pe bid4! Aici ajung mesajele despre anunțurile tale și pașii fiecărei vânzări — " +
+    "întrebările și afacerea stau în același fir, ca să vezi dintr-o privire unde ai rămas.",
+  howItWorks:
+    "Când o ofertă e acceptată, tot ce urmează apare aici: alegi livrarea, plătești în siguranță, " +
+    "iar banii ajung la vânzător și la cauză abia după ce confirmi că ai primit coletul. " +
+    "Dacă ai nevoie de noi, scrie-ne chiar în această conversație.",
+};
+
+/**
+ * Neither half of the inbox is ever empty, exactly as on the server.
+ *
+ * <p>Written on first read rather than when the world is seeded, because a world seeded before this
+ * existed still has to get it — and because it is the same shape the server uses, which is what
+ * keeps the demo honest about what the real thing does.
+ */
+function ensureWelcome(me: ID): void {
+  const world = getWorld();
+
+  if (!world.conversations.some((item) => item.kind === "SUPPORT" && item.buyerId === me)) {
+    const id = nextId("conv");
+    const opened = Date.now();
+    world.conversations.push({
+      id,
+      kind: "SUPPORT",
+      buyerId: me,
+      archived: false,
+      muted: false,
+      unread: { [me]: 2 },
+      lastItemAt: new Date(opened + 1).toISOString(),
+    });
+    // A millisecond apart, or the thread's own ordering puts the explanation
+    // above the greeting it explains.
+    [WELCOME.greeting, WELCOME.howItWorks].forEach((body, index) => {
+      world.threadItems.push({
+        conversationId: id,
+        id: nextId("item"),
+        kind: "SYSTEM",
+        mine: false,
+        body,
+        imageUrls: [],
+        createdAt: new Date(opened + index).toISOString(),
+      });
+    });
+  }
+
+  if (!world.notifications.some((item) => item.userId === me && item.type === "WELCOME")) {
+    world.notifications.push({
+      id: nextId("notif"),
+      userId: me,
+      type: "WELCOME",
+      payload: {},
+      deepLink: "/cont/inbox",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
+  commit();
+}
+
 /**
  * The same check the server makes, and for the same reason: a conversation id names something that
  * may or may not be any of the reader's business, so it is never enough on its own.
@@ -346,11 +409,13 @@ function append(
 
   world.threadItems.push(item);
   conversation.lastItemAt = at;
+  // Nobody to count it against on a support thread, where the other side is
+  // bid4 rather than a member.
   const other =
     conversation.buyerId === senderId
       ? conversation.sellerId
       : conversation.buyerId;
-  conversation.unread[other] = (conversation.unread[other] ?? 0) + 1;
+  if (other) conversation.unread[other] = (conversation.unread[other] ?? 0) + 1;
   conversation.archived = false;
   return item;
 }
@@ -428,7 +493,8 @@ export interface MockConversation {
   kind: "LISTING" | "SUPPORT";
   listingId?: ID;
   buyerId: ID;
-  sellerId: ID;
+  /** Absent on a support thread: the other side is bid4, which is not a member. */
+  sellerId?: ID;
   orderId?: ID;
   archived: boolean;
   muted: boolean;

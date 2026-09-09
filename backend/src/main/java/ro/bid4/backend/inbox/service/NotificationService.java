@@ -31,17 +31,26 @@ public class NotificationService {
   private final NotificationRepository notifications;
   private final InboxMapper mapper;
   private final InboxEvents events;
+  private final Welcome welcome;
 
   public NotificationService(
-      NotificationRepository notifications, InboxMapper mapper, InboxEvents events) {
+      NotificationRepository notifications,
+      InboxMapper mapper,
+      InboxEvents events,
+      Welcome welcome) {
     this.notifications = notifications;
     this.mapper = mapper;
     this.events = events;
+    this.welcome = welcome;
   }
 
-  @Transactional(readOnly = true)
+  @Transactional
   public CursorPage<NotificationResponse> list(String cursor, Viewer viewer) {
     UUID me = required(viewer);
+    // Neither half is ever empty. See Welcome.
+    if (cursor == null) {
+      welcome.ensureFor(me);
+    }
 
     Instant before = Cursors.instantOf(cursor);
     List<Notification> page =

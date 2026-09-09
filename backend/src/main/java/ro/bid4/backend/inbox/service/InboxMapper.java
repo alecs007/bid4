@@ -86,7 +86,9 @@ public class InboxMapper {
                     membership.get(conversation.getId()),
                     newestItems.get(conversation.getId()),
                     listings.get(conversation.getListingId()),
-                    parties.get(otherPartyId(conversation, viewerId)),
+                    // A support thread has nobody on the other side, and an
+                    // immutable map throws rather than answering for a null key.
+                    partyOrNull(parties, otherPartyId(conversation, viewerId)),
                     viewerId))
         .toList();
   }
@@ -138,6 +140,10 @@ public class InboxMapper {
    * <p>The list shows one name, not two: the reader is always one of the parties, and a row that
    * made them work out which of the two names is theirs is a row nobody scans.
    */
+  private static PublicUserResponse partyOrNull(Map<UUID, PublicUserResponse> parties, UUID id) {
+    return id == null ? null : parties.get(id);
+  }
+
   private UUID otherPartyId(Conversation conversation, UUID viewerId) {
     if (conversation.getSellerId() == null) {
       return null;

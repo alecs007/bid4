@@ -32,6 +32,8 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
   long countByUserIdAndReadAtIsNull(UUID userId);
 
+  boolean existsByUserIdAndType(UUID userId, String type);
+
   /** Addressed by user as well as by id, so one account cannot mark another's as read. */
   @Modifying(flushAutomatically = true)
   @Query(
