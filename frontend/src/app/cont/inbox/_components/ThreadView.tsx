@@ -108,6 +108,16 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     };
   }, [phone]);
 
+  /**
+   * Over the page on a phone, in it on a desktop.
+   *
+   * <p>Portalled to the body rather than left where it sits, because the page wrapper animates its
+   * own opacity and that makes it a stacking context for good — a z-50 inside it loses to the z-40
+   * site header, and the conversation would open underneath the bar it is supposed to cover.
+   */
+  const place = (node: React.ReactElement) =>
+    phone ? createPortal(node, document.body) : node;
+
   /** Plays the panel out, then goes. The wait is the animation's own duration. */
   const close = () => {
     setLeaving(true);
@@ -167,20 +177,37 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     settled.current = true;
   }, [newestId, data?.items.length]);
 
-  if (loading) return <ThreadSkeleton />;
+  /**
+   * Loading and failure are the same box in the same place as the thread itself.
+   *
+   * <p>They used to return early, before the portal — so on a phone the skeleton drew inside the
+   * page, under the site bar, and the conversation then jumped out over it. Placing every state
+   * the same way is the difference between a panel filling in and a panel arriving.
+   */
+  if (loading) return place(<ThreadSkeleton />);
   if (error || !data) {
-    return (
-      <EmptyState
-        mood="sad"
-        title="Nu am putut încărca conversația"
-        description={error ?? "Încearcă din nou."}
-      />
+    return place(
+      <section className={cn(THREAD_SHELL, "items-center justify-center p-6")}>
+        <EmptyState
+          className="border-0 ring-0"
+          mood="sad"
+          title="Nu am putut încărca conversația"
+          description={error ?? "Încearcă din nou."}
+        />
+      </section>,
     );
   }
 
   const { conversation } = data;
   const items = [...data.items].reverse();
   const viewerIsBuyer = order ? order.buyerId === user?.id : false;
+
+  // Real names on both sides rather than "tu" for one of them: a thread is the
+  // record of a sale, and a record does not change wording depending on who is
+  // reading it.
+  const otherName = conversation.otherParty?.displayName;
+  const buyerName = viewerIsBuyer ? user?.displayName : otherName;
+  const sellerName = viewerIsBuyer ? otherName : user?.displayName;
   // data.items is newest first, so the first EVENT in it is the last one written.
   const newestEventId = data.items.find((item) => item.kind === "EVENT")?.id;
 
@@ -408,6 +435,8 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
               order={order ?? null}
               newest={item.id === newestEventId}
               viewerIsBuyer={viewerIsBuyer}
+              buyerName={buyerName}
+              sellerName={sellerName}
               busy={acting}
               onAct={act}
             />
@@ -466,14 +495,7 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     </section>
   );
 
-  /**
-   * Over the page on a phone, in it on a desktop.
-   *
-   * <p>Portalled to the body rather than left where it sits, because the page wrapper animates its
-   * own opacity and that makes it a stacking context for good — a z-50 inside it loses to the
-   * z-40 site header, and the conversation would open underneath the bar it is supposed to cover.
-   */
-  return phone ? createPortal(panel, document.body) : panel;
+  return place(panel);
 }
 
 function Item({ item }: { item: ThreadItem }) {

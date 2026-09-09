@@ -25,6 +25,8 @@ export function EventCard({
   order,
   newest,
   viewerIsBuyer,
+  buyerName,
+  sellerName,
   busy,
   onAct,
 }: {
@@ -34,6 +36,9 @@ export function EventCard({
   /** Whether this is the last step written. */
   newest: boolean;
   viewerIsBuyer: boolean;
+  /** Who the two sides are, so a step can say whose it was. */
+  buyerName?: string;
+  sellerName?: string;
   busy: boolean;
   onAct: (action: OrderAction) => void;
 }) {
@@ -55,6 +60,11 @@ export function EventCard({
     step?.needs === order!.status;
 
   const detailLine = detail(item);
+
+  // Who did it, not who is next. A step with no author is one the courier or
+  // the platform performed, and naming somebody for it would be a small lie.
+  const doneBy =
+    step?.by === "BUYER" ? buyerName : step?.by === "SELLER" ? sellerName : null;
 
   /**
    * Past and live are the same three things stacked the same way — a mark, a name, a detail — so a
@@ -90,6 +100,17 @@ export function EventCard({
       >
         {step?.title ?? item.body}
       </p>
+
+      {doneBy ? (
+        <p
+          className={cn(
+            "leading-snug",
+            live ? "text-[13px] text-ink-600" : "text-[12px] text-ink-500",
+          )}
+        >
+          de {doneBy}
+        </p>
+      ) : null}
 
       {detailLine ? (
         <p
@@ -132,6 +153,11 @@ export type OrderAction =
 interface Step {
   title: string;
   icon: keyof typeof Icons;
+  /**
+   * Who performed the step. Not the same as {@link actor}, which is whose turn comes next — a
+   * seller accepts an offer and the buyer is the one asked to move.
+   */
+  by?: "BUYER" | "SELLER";
   /** Whose turn it is while this step is the live one. */
   actor?: "BUYER" | "SELLER";
   action?: OrderAction;
@@ -153,65 +179,71 @@ const FINISHED = new Set<OrderStatus>(["COMPLETED", "REFUNDED", "CANCELLED"]);
 
 const STEPS: Record<string, Step> = {
   OFFER_ACCEPTED: {
-    title: "Oferta a fost acceptată",
+    title: "Ofertă acceptată",
     icon: "success",
+    by: "SELLER",
     actor: "BUYER",
     action: "CHOOSE_DELIVERY",
     needs: "AWAITING_CONFIRMATION",
     cta: "Alege livrarea",
-    waiting: "Aștepți cumpărătorul să aleagă livrarea.",
+    waiting: "Se așteaptă alegerea modalității de livrare.",
   },
   DELIVERY_CHOSEN: {
-    title: "Livrarea a fost aleasă",
+    title: "Livrare confirmată",
     icon: "delivery",
+    by: "BUYER",
     actor: "BUYER",
     action: "PAY",
     needs: "AWAITING_PAYMENT",
     cta: "Plătește",
-    waiting: "Aștepți plata.",
+    waiting: "Se așteaptă plata.",
   },
   PAYMENT_HELD: {
-    title: "Banii sunt în siguranță la bid4",
+    title: "Plată confirmată",
     icon: "escrow",
+    by: "BUYER",
     actor: "SELLER",
     action: "LABEL",
     needs: "PAID_HELD",
-    cta: "Generează AWB",
-    waiting: "Vânzătorul pregătește coletul.",
+    cta: "Emite AWB",
+    waiting: "Se așteaptă expedierea coletului.",
   },
   LABEL_READY: {
-    title: "Eticheta este gata",
+    title: "AWB emis",
     icon: "invoice",
+    by: "SELLER",
     actor: "SELLER",
     action: "DISPATCH",
     needs: "LABEL_GENERATED",
     cta: "Am predat coletul",
-    waiting: "Vânzătorul duce coletul la curier.",
+    waiting: "Se așteaptă predarea coletului către curier.",
   },
   SHIPPED: {
-    title: "Coletul a plecat",
+    title: "Colet predat curierului",
     icon: "parcel",
-    waiting: "Îl urmărim și îți spunem când ajunge.",
+    by: "SELLER",
+    waiting: "Coletul este în curs de livrare.",
   },
   DELIVERED: {
-    title: "Coletul a ajuns",
+    title: "Colet livrat",
     icon: "locker",
     actor: "BUYER",
     action: "CONFIRM_RECEIPT",
     needs: "DELIVERED",
-    cta: "Am primit coletul",
-    waiting: "Aștepți cumpărătorul să confirme.",
+    cta: "Confirm primirea",
+    waiting: "Se așteaptă confirmarea primirii.",
   },
   RELEASED: {
-    title: "Comanda s-a încheiat",
+    title: "Comandă finalizată",
     icon: "donation",
+    by: "BUYER",
   },
   DISPUTE_OPENED: {
-    title: "S-a deschis o sesizare",
+    title: "Sesizare deschisă",
     icon: "dispute",
-    waiting: "Echipa bid4 se uită peste ea.",
+    waiting: "Sesizarea este în analiză la echipa bid4.",
   },
-  CANCELLED: { title: "Comanda a fost anulată", icon: "close" },
+  CANCELLED: { title: "Comandă anulată", icon: "close" },
 };
 
 /**
@@ -226,34 +258,34 @@ function detail(item: ThreadItem): string | null {
     const raw = value(key);
     return raw === undefined ? null : formatMoney(Number(raw) as Bani);
   };
+  const line = (...parts: (string | null | undefined)[]) =>
+    parts.filter(Boolean).join(" · ") || null;
 
   switch (item.eventType) {
-    case "OFFER_ACCEPTED": {
-      const price = money("price");
-      const donation = money("donation");
-      return price && donation
-        ? `${price} · ${donation} către cauză (${value("donationPercent")}%)`
-        : price;
-    }
-    case "DELIVERY_CHOSEN": {
-      const total = money("total");
-      return [value("delivery"), total && `total ${total}`]
-        .filter(Boolean)
-        .join(" · ");
-    }
+    case "OFFER_ACCEPTED":
+      return line(
+        money("price") && `Preț: ${money("price")}`,
+        money("donation") &&
+          `Donație: ${money("donation")} (${value("donationPercent")}%)`,
+      );
+    case "DELIVERY_CHOSEN":
+      return line(
+        value("delivery"),
+        money("total") && `Total de plată: ${money("total")}`,
+      );
     case "PAYMENT_HELD":
-      return money("total");
+      return line(
+        money("total") && `${money("total")} în contul de garanție`,
+      );
     case "LABEL_READY":
-      return [value("courier"), value("awb")].filter(Boolean).join(" · ");
+      return line(value("courier"), value("awb") && `AWB ${value("awb")}`);
     case "SHIPPED":
-      return value("awb") || null;
-    case "RELEASED": {
-      const donation = money("donation");
-      const seller = money("sellerShare");
-      return donation && seller
-        ? `${donation} către cauză · ${seller} către vânzător`
-        : null;
-    }
+      return line(value("awb") && `AWB ${value("awb")}`);
+    case "RELEASED":
+      return line(
+        money("donation") && `Donație către cauză: ${money("donation")}`,
+        money("sellerShare") && `Încasat de vânzător: ${money("sellerShare")}`,
+      );
     default:
       return null;
   }
