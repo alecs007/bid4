@@ -139,6 +139,7 @@
   --animate-panel-in: panel-in 0.24s var(--ease-out-soft) both;
   /* A conversation pushed in from the side, the way a phone opens one. */
   --animate-thread-in: thread-in 0.26s var(--ease-out-soft) both;
+  --animate-thread-out: thread-out 0.2s var(--ease-out-soft) both;
   --animate-toast-in: toast-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
   --animate-toast-out: toast-out 0.32s var(--ease-out-soft) both;
   /* The row shutting behind a notice that has gone. */
@@ -202,6 +203,17 @@
       opacity: 1;
     }
   }
+  @keyframes thread-out {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(14px);
+    }
+  }
+
   @keyframes thread-in {
     0% {
       opacity: 0;

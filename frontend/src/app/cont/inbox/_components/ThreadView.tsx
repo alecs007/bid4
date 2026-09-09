@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSWRConfig } from "swr";
@@ -53,8 +54,8 @@ const THREAD_SHELL =
   // A phone opens a conversation the way a phone does: over everything, edge to
   // edge, pushed in from the side. A desktop keeps it as the right-hand panel,
   // because there the list beside it is the point.
-  "fixed inset-0 z-50 flex animate-thread-in flex-col bg-white " +
-  "lg:static lg:z-auto lg:h-full lg:min-h-0 lg:animate-fade-in lg:rounded-3xl lg:ring-1 lg:ring-edge";
+  "fixed inset-0 z-50 flex flex-col bg-white " +
+  "lg:static lg:z-auto lg:h-full lg:min-h-0 lg:rounded-3xl lg:ring-1 lg:ring-edge";
 
 export function ThreadView({ conversationId }: { conversationId: string }) {
   const { data, error, loading, reload } = useApi(
@@ -67,12 +68,14 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   const [sendError, setSendError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [pickingDelivery, setPickingDelivery] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   const stream = useRef<HTMLDivElement>(null);
   const wasAtBottom = useRef(true);
   const settled = useRef(false);
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
+  const router = useRouter();
 
   // Only a phone gets the overlay, and only a phone gets the portal with it: on
   // a desktop this is `position: static` and portalling it would drop it out of
@@ -104,6 +107,12 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       setPageScrollLocked(false);
     };
   }, [phone]);
+
+  /** Plays the panel out, then goes. The wait is the animation's own duration. */
+  const close = () => {
+    setLeaving(true);
+    window.setTimeout(() => router.push("/cont/inbox"), 200);
+  };
 
   const unreadCount = data?.conversation.unreadCount ?? 0;
   const newestId = data?.items[0]?.id;
@@ -248,7 +257,14 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   };
 
   const panel = (
-    <section className={THREAD_SHELL}>
+    <section
+      className={cn(
+        THREAD_SHELL,
+        leaving
+          ? "animate-thread-out lg:animate-fade-in"
+          : "animate-thread-in lg:animate-fade-in",
+      )}
+    >
       {/* What the conversation is about, kept in view — three screens down a
           thread, "it" stops being obvious. */}
       {/* Two rows on a phone, one on a desktop. Squeezing the object and the
@@ -257,13 +273,19 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
           is about sits under them as its own strip. */}
       <header className="shrink-0 border-b border-line">
         <div className="flex items-center gap-2 p-3">
-          <Link
-            href="/cont/inbox"
+          {/* A button rather than a link, because leaving has to be played
+              before it happens: a route change unmounts this instantly, and a
+              panel that vanishes is not the same thing as one that closes.
+              Browser back is still instant — nothing can animate a history
+              entry that has already gone. */}
+          <button
+            type="button"
             aria-label="Înapoi la mesaje"
+            onClick={close}
             className="-ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-700 transition hover:bg-ink-100 lg:hidden"
           >
             <Icons.crumb aria-hidden="true" className="h-5 w-5 rotate-180" />
-          </Link>
+          </button>
 
           {/* On a desktop the object leads and the person sits at the far end. */}
           {conversation.kind === "SUPPORT" ? (
@@ -427,12 +449,14 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
             aria-label="Scrie un mesaj"
             className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl bg-canvas px-3.5 py-2.5 text-base text-ink-900 ring-1 ring-ink-200 transition placeholder:text-ink-500 focus:ring-primary-500 focus:outline-none sm:text-[15px]"
           />
-          {/* md, so it is the field's own height. A short button beside a tall
-              input reads as two controls that happen to be next to each other. */}
+          {/* md, so it is the field's own height — a short button beside a tall
+              input reads as two controls that happen to be next to each other.
+              Flat with it: the 3D edge belongs to buttons on a page, and beside
+              an input it reads as the control sitting on something. */}
           <Button
             type="submit"
             size="md"
-            className="shrink-0"
+            className="shrink-0 [--btn-depth:0px]"
             disabled={!draft.trim() || sending}
           >
             Trimite
@@ -462,7 +486,14 @@ function Item({ item }: { item: ThreadItem }) {
   }
 
   return (
-    <div className={cn("flex", item.mine ? "justify-end" : "justify-start")}>
+    // Keyed by id upstream, so React reuses the node and this plays once per
+    // message rather than on every re-render of the thread around it.
+    <div
+      className={cn(
+        "flex animate-fade-in",
+        item.mine ? "justify-end" : "justify-start",
+      )}
+    >
       <div className="max-w-[80%]">
         <div
           className={cn(

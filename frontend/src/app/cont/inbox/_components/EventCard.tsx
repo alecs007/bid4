@@ -67,7 +67,7 @@ export function EventCard({
   return (
     <div
       className={cn(
-        "my-2 flex flex-col items-center gap-1 px-3 text-center",
+        "my-2 flex animate-fade-in flex-col items-center gap-1 px-3 text-center",
         live && "my-3 -mx-3 border-y px-3 py-4",
         live && (turn ? "border-primary-200 bg-primary-50" : "border-line bg-canvas"),
       )}
