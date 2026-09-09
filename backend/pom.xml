@@ -31,6 +31,22 @@
 		<!-- Overrides the version Boot manages (42.7.11), which is vulnerable to a
 		     SCRAM-SHA-256-PLUS downgrade — CVE-2026-54291. -->
 		<postgresql.version>42.7.12</postgresql.version>
+		<!-- The three below are the same thing: a fix published after the Boot
+		     release that pins them, so the version is overridden here until a
+		     Boot patch catches up. Each is CRITICAL with a fix available, which
+		     is what the security workflow refuses to let through.
+
+		     netty 4.2.15 — CVE-2026-75595.
+		     tomcat 11.0.22 — CVE-2026-65182, CVE-2026-65905, CVE-2026-68525:
+		     a security-constraint bypass, a DIGEST replay, and a FORM auth
+		     bypass. This one is a servlet container serving the whole API.
+		     bouncycastle 1.81 — CVE-2025-14813. That one is not Boot's to
+		     manage: it rides in under MinIO, so it is pinned in
+		     dependencyManagement below rather than by a property nothing
+		     reads. -->
+		<netty.version>4.2.17.Final</netty.version>
+		<tomcat.version>11.0.25</tomcat.version>
+		<bouncycastle.version>1.81.1</bouncycastle.version>
 		<minio.version>8.6.0</minio.version>
 		<okhttp.version>5.1.0</okhttp.version>
 		<owasp-sanitizer.version>20260101.1</owasp-sanitizer.version>
@@ -38,6 +54,18 @@
 		<archunit.version>1.4.0</archunit.version>
 		<spotless.version>2.44.0</spotless.version>
 	</properties>
+	<!-- Constrains a version without taking on the dependency: bcprov is
+	     MinIO's, and this only says which one of it. -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcprov-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
