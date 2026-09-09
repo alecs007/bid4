@@ -56,49 +56,48 @@ export function EventCard({
 
   const detailLine = detail(item);
 
-  // A step nobody is waiting on is history: one centred line, no box around it.
-  // Seven boxes stacked down a conversation stop being a history and start being
-  // furniture, and the one still being waited on is lost among them.
-  if (!live) {
-    return (
-      <p className="my-2 flex items-center justify-center gap-2 text-center text-[13px] text-ink-500">
-        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-        <span className="font-display font-bold text-ink-700">
-          {step?.title ?? item.body}
-        </span>
-        {detailLine ? <span>· {detailLine}</span> : null}
-      </p>
-    );
-  }
-
-  // The live step spans the thread rather than sitting in it: rules above and
-  // below, no rounding and no side padding, so it reads as the conversation
-  // stopping to say something rather than as another bubble in it.
+  /**
+   * Past and live are the same three things stacked the same way — a mark, a name, a detail — so a
+   * step is recognisable as a step wherever it appears in the thread. Only the weight changes.
+   *
+   * <p>Stacked rather than strung along one line, because at 375px "Livrarea a fost aleasă · Easybox
+   * Auchan Titan · total 1.067,49 lei" is three fragments wrapping into each other, and none of
+   * them reads.
+   */
   return (
     <div
       className={cn(
-        "my-3 -mx-3 border-y px-3 py-4 text-center",
-        turn ? "border-primary-200 bg-primary-50" : "border-line bg-canvas",
+        "my-2 flex flex-col items-center gap-1 px-3 text-center",
+        live && "my-3 -mx-3 border-y px-3 py-4",
+        live && (turn ? "border-primary-200 bg-primary-50" : "border-line bg-canvas"),
       )}
     >
+      <Icon
+        aria-hidden="true"
+        className={cn(
+          "shrink-0",
+          live ? "h-5 w-5" : "h-4 w-4",
+          turn ? "text-primary-700" : live ? "text-ink-600" : "text-ink-400",
+        )}
+      />
+
       <p
         className={cn(
-          "flex items-center justify-center gap-2 font-display text-base leading-snug font-extrabold",
-          turn ? "text-primary-900" : "text-ink-800",
+          "font-display leading-snug font-extrabold text-balance",
+          live ? "text-base" : "text-[13px]",
+          turn ? "text-primary-900" : live ? "text-ink-800" : "text-ink-600",
         )}
       >
-        <Icon
-          aria-hidden="true"
-          className={cn(
-            "h-5 w-5 shrink-0",
-            turn ? "text-primary-700" : "text-ink-500",
-          )}
-        />
         {step?.title ?? item.body}
       </p>
 
       {detailLine ? (
-        <p className="mt-1 text-[13px] leading-snug text-ink-600">
+        <p
+          className={cn(
+            "leading-snug text-balance",
+            live ? "text-[13px] text-ink-600" : "text-[12px] text-ink-500",
+          )}
+        >
           {detailLine}
         </p>
       ) : null}
@@ -108,7 +107,7 @@ export function EventCard({
       {turn && step?.action ? (
         <Button
           size="sm"
-          className="mt-3 w-full max-w-xs"
+          className="mt-2 w-full max-w-xs"
           disabled={busy}
           onClick={() => onAct(step.action!)}
         >
@@ -116,10 +115,8 @@ export function EventCard({
         </Button>
       ) : null}
 
-      {!turn && step?.waiting ? (
-        <p className="mt-1.5 text-[13px] font-semibold text-ink-500">
-          {step.waiting}
-        </p>
+      {live && !turn && step?.waiting ? (
+        <p className="text-[13px] font-semibold text-ink-500">{step.waiting}</p>
       ) : null}
     </div>
   );

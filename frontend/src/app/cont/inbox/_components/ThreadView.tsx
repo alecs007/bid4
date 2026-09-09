@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useSWRConfig } from "swr";
 
 import { Icons } from "@/components/icons";
 import {
@@ -21,7 +23,9 @@ import {
   payOrder,
 } from "@/lib/api/orders";
 import { listDeliveryMethods } from "@/lib/api/users";
+import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { useApi } from "@/lib/hooks/useApi";
+import { useIsPhone } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { formatMoney } from "@/lib/money";
 import type { ThreadItem } from "@/lib/types";
@@ -46,7 +50,11 @@ import { EventCard, type OrderAction } from "./EventCard";
  * one are the same shape and the page does not resize when one replaces the other.
  */
 const THREAD_SHELL =
-  "flex h-full min-h-[60vh] flex-col rounded-3xl bg-white ring-1 ring-edge lg:min-h-0";
+  // A phone opens a conversation the way a phone does: over everything, edge to
+  // edge, pushed in from the side. A desktop keeps it as the right-hand panel,
+  // because there the list beside it is the point.
+  "fixed inset-0 z-50 flex animate-thread-in flex-col bg-white " +
+  "lg:static lg:z-auto lg:h-full lg:min-h-0 lg:animate-fade-in lg:rounded-3xl lg:ring-1 lg:ring-edge";
 
 export function ThreadView({ conversationId }: { conversationId: string }) {
   const { data, error, loading, reload } = useApi(
@@ -60,7 +68,16 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   const [acting, setActing] = useState(false);
   const [pickingDelivery, setPickingDelivery] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const stream = useRef<HTMLDivElement>(null);
+  const wasAtBottom = useRef(true);
+  const settled = useRef(false);
   const { user } = useAuth();
+  const { mutate } = useSWRConfig();
+
+  // Only a phone gets the overlay, and only a phone gets the portal with it: on
+  // a desktop this is `position: static` and portalling it would drop it out of
+  // the two-pane grid and onto the end of the document.
+  const phone = useIsPhone();
 
   // The sale behind the thread, if there is one. This is what decides which
   // card is live and who may press it — the items never decide that themselves.
@@ -71,17 +88,75 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     { enabled: Boolean(orderId && user) },
   );
 
-  const unreadCount = data?.conversation.unreadCount ?? 0;
+  /**
+   * While the conversation covers the screen, the page behind it holds still.
+   *
+   * <p>Only on a phone — from lg this is a panel inside the page, and locking the page would freeze
+   * the list beside it. Turning a phone sideways past the breakpoint unlocks it, because the
+   * overlay it belonged to is gone by then.
+   */
   useEffect(() => {
-    if (unreadCount > 0) void markThreadRead(conversationId);
-  }, [conversationId, unreadCount]);
+    if (!phone) return;
+    document.documentElement.style.overflow = "hidden";
+    setPageScrollLocked(true);
+    return () => {
+      document.documentElement.style.overflow = "";
+      setPageScrollLocked(false);
+    };
+  }, [phone]);
 
-  // The newest line is the one somebody came to read. Instant rather than
-  // smooth: this is where the thread starts, not somewhere it travelled to.
+  const unreadCount = data?.conversation.unreadCount ?? 0;
   const newestId = data?.items[0]?.id;
+
+  /**
+   * Read when it has actually been seen.
+   *
+   * <p>Keyed on the newest item rather than run once on mount, so a message that arrives while the
+   * thread is open is marked too — otherwise the badge in the bar keeps counting a conversation the
+   * reader is looking at. A hidden tab is not somebody reading, so it waits for the tab to come
+   * back.
+   *
+   * <p>The counts everywhere else are told immediately rather than waiting for the next fetch: the
+   * mark in the bar is the one thing on screen that would otherwise stay wrong.
+   */
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
-  }, [newestId]);
+    if (unreadCount < 1) return;
+
+    const markSeen = () => {
+      if (document.visibilityState !== "visible") return;
+      void markThreadRead(conversationId).then(() => {
+        void mutate(
+          (key) => typeof key === "string" && key.startsWith("inbox:"),
+        );
+      });
+    };
+
+    markSeen();
+    document.addEventListener("visibilitychange", markSeen);
+    return () => document.removeEventListener("visibilitychange", markSeen);
+  }, [conversationId, unreadCount, newestId, mutate]);
+
+  /**
+   * Follows the conversation down, unless the reader has gone looking back through it.
+   *
+   * <p>Scrolling somebody to the bottom because a new line arrived is the shift they complain
+   * about: they were reading something further up and the page moved. So the position is measured
+   * before the change and only restored if they were already at the end of it.
+   */
+  useEffect(() => {
+    const scroller = stream.current;
+    if (!scroller) return;
+    if (!wasAtBottom.current) return;
+
+    // The container rather than a sentinel inside it: scrollIntoView measures
+    // against a box that is still settling while images load, and lands short.
+    scroller.scrollTo({
+      top: scroller.scrollHeight,
+      // The first paint lands where it belongs; everything after it travels.
+      behavior: settled.current ? "smooth" : "auto",
+    });
+    settled.current = true;
+  }, [newestId, data?.items.length]);
 
   if (loading) return <ThreadSkeleton />;
   if (error || !data) {
@@ -159,6 +234,9 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     try {
       await sendMessage(conversationId, { body });
       setDraft("");
+      // Sending is asking to see it. Somebody reading further up the thread
+      // keeps their place when a message arrives; they do not when it is theirs.
+      wasAtBottom.current = true;
       reload();
     } catch (failure) {
       setSendError(
@@ -169,95 +247,136 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     }
   };
 
-  return (
-    // animate-fade-in, not a slide: the skeleton it replaces is the same box in
-    // the same place, so the only thing that should change is what is in it.
-    <section className={cn(THREAD_SHELL, "animate-fade-in")}>
+  const panel = (
+    <section className={THREAD_SHELL}>
       {/* What the conversation is about, kept in view — three screens down a
           thread, "it" stops being obvious. */}
-      <header className="flex items-center gap-3 border-b border-line p-3">
-        <Link
-          href="/cont/inbox"
-          aria-label="Înapoi la mesaje"
-          className="-ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-700 transition hover:bg-ink-100 lg:hidden"
-        >
-          <Icons.crumb aria-hidden="true" className="h-5 w-5 rotate-180" />
-        </Link>
+      {/* Two rows on a phone, one on a desktop. Squeezing the object and the
+          person onto a single line left neither of them readable at 375px, and
+          the person is who a conversation is with — so they lead, and what it
+          is about sits under them as its own strip. */}
+      <header className="shrink-0 border-b border-line">
+        <div className="flex items-center gap-2 p-3">
+          <Link
+            href="/cont/inbox"
+            aria-label="Înapoi la mesaje"
+            className="-ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-700 transition hover:bg-ink-100 lg:hidden"
+          >
+            <Icons.crumb aria-hidden="true" className="h-5 w-5 rotate-180" />
+          </Link>
 
+          {/* On a desktop the object leads and the person sits at the far end. */}
+          {conversation.kind === "SUPPORT" ? (
+            <span className="flex min-w-0 flex-1 items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700"
+              >
+                <Icons.donation className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-display text-[15px] font-extrabold text-ink-900">
+                  Echipa bid4
+                </span>
+                <span className="block text-[13px] text-ink-600">
+                  Suport și anunțuri
+                </span>
+              </span>
+            </span>
+          ) : (
+            <>
+              {conversation.listingId ? (
+                <Link
+                  href={`/licitatii/${conversation.listingId}`}
+                  className="hidden min-w-0 flex-1 items-center gap-3 lg:flex"
+                >
+                  {conversation.listingImageUrl ? (
+                    <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-xl">
+                      <FadeImage
+                        src={conversation.listingImageUrl}
+                        sizes="40px"
+                        className="object-cover"
+                      />
+                    </span>
+                  ) : null}
+                  <span className="min-w-0">
+                    <span className="block truncate font-display text-[15px] font-extrabold text-ink-900">
+                      {conversation.listingTitle}
+                    </span>
+                    <span className="block text-[13px] text-ink-600">
+                      {formatMoney(conversation.listingPrice)}
+                    </span>
+                  </span>
+                </Link>
+              ) : null}
+
+              {/* Who you are talking to, and a way to their profile — "who is
+                  this" is the first question anybody has about a stranger they
+                  are about to send money to. */}
+              {conversation.otherParty ? (
+                <Link
+                  href={`/profil/${conversation.otherParty.username}`}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl p-1 transition hover:bg-ink-50 lg:max-w-[40%] lg:flex-none lg:pr-1 lg:pl-2"
+                >
+                  <Avatar
+                    name={conversation.otherParty.displayName}
+                    src={conversation.otherParty.avatarUrl}
+                    accountType={conversation.otherParty.accountType}
+                    size="sm"
+                  />
+                  <span className="min-w-0 flex-1 lg:order-first lg:text-right">
+                    <span className="block truncate font-display text-[15px] font-bold text-ink-900 lg:text-[13px] lg:text-ink-800">
+                      {conversation.otherParty.displayName}
+                    </span>
+                    <span className="block truncate text-[12px] text-ink-500 lg:text-[11px]">
+                      @{conversation.otherParty.username}
+                    </span>
+                  </span>
+                </Link>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        {/* What it is about, on its own line where there is no room to share one. */}
         {conversation.listingId ? (
           <Link
             href={`/licitatii/${conversation.listingId}`}
-            className="flex min-w-0 flex-1 items-center gap-3"
+            className="flex items-center gap-2.5 border-t border-line px-3 py-2 transition hover:bg-ink-50 lg:hidden"
           >
             {conversation.listingImageUrl ? (
-              <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-xl">
+              <span className="relative block h-8 w-8 shrink-0 overflow-hidden rounded-lg">
                 <FadeImage
                   src={conversation.listingImageUrl}
-                  sizes="40px"
+                  sizes="32px"
                   className="object-cover"
                 />
               </span>
             ) : null}
-            <span className="min-w-0">
-              <span className="block truncate font-display text-[15px] font-extrabold text-ink-900">
-                {conversation.listingTitle}
-              </span>
-              <span className="block text-[13px] text-ink-600">
-                {formatMoney(conversation.listingPrice)}
-              </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink-700">
+              {conversation.listingTitle}
             </span>
-          </Link>
-        ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700"
-            >
-              <Icons.donation className="h-5 w-5" />
+            <span className="shrink-0 font-display text-[13px] font-extrabold text-ink-900">
+              {formatMoney(conversation.listingPrice)}
             </span>
-            <span className="min-w-0">
-              <span className="block truncate font-display text-[15px] font-extrabold text-ink-900">
-                Echipa bid4
-              </span>
-              <span className="block text-[13px] text-ink-600">
-                Suport și anunțuri
-              </span>
-            </span>
-          </span>
-        )}
-
-        {/* Who you are talking to, named rather than left as a face to
-            recognise — and a way to their profile, because "who is this" is the
-            first question anybody has about a stranger they are about to send
-            money to. */}
-        {conversation.otherParty && conversation.kind !== "SUPPORT" ? (
-          <Link
-            href={`/profil/${conversation.otherParty.username}`}
-            className="flex max-w-[38%] shrink-0 items-center gap-2 rounded-2xl py-1 pr-1 pl-2 transition hover:bg-ink-50"
-          >
-            <span className="min-w-0 text-right">
-              <span className="block truncate font-display text-[13px] font-bold text-ink-800">
-                {conversation.otherParty.displayName}
-              </span>
-              {/* The handle earns its place on a desktop and takes room the
-                  listing's own name needs on a phone. */}
-              <span className="hidden truncate text-[11px] text-ink-500 sm:block">
-                @{conversation.otherParty.username}
-              </span>
-            </span>
-            <Avatar
-              name={conversation.otherParty.displayName}
-              src={conversation.otherParty.avatarUrl}
-              accountType={conversation.otherParty.accountType}
-              size="sm"
-            />
           </Link>
         ) : null}
       </header>
 
       <div
+        ref={stream}
         data-lenis-prevent
-        className="flex flex-1 flex-col gap-2 overflow-y-auto p-3"
+        onScroll={(event) => {
+          // "Near enough" rather than exactly: a couple of pixels of inertia
+          // should not count as having gone looking back through the thread.
+          const box = event.currentTarget;
+          // Generous on purpose: the stream has its own padding and the last
+          // bubble rarely ends flush against the bottom, so a tight threshold
+          // reads an ordinary resting position as "gone looking back".
+          wasAtBottom.current =
+            box.scrollHeight - box.scrollTop - box.clientHeight < 160;
+        }}
+        className="flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
       >
         {items.map((item) =>
           item.kind === "EVENT" ? (
@@ -291,7 +410,7 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
             {sendError}
           </p>
         ) : null}
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
@@ -308,13 +427,29 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
             aria-label="Scrie un mesaj"
             className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl bg-canvas px-3.5 py-2.5 text-base text-ink-900 ring-1 ring-ink-200 transition placeholder:text-ink-500 focus:ring-primary-500 focus:outline-none sm:text-[15px]"
           />
-          <Button type="submit" disabled={!draft.trim() || sending} size="sm">
+          {/* md, so it is the field's own height. A short button beside a tall
+              input reads as two controls that happen to be next to each other. */}
+          <Button
+            type="submit"
+            size="md"
+            className="shrink-0"
+            disabled={!draft.trim() || sending}
+          >
             Trimite
           </Button>
         </div>
       </form>
     </section>
   );
+
+  /**
+   * Over the page on a phone, in it on a desktop.
+   *
+   * <p>Portalled to the body rather than left where it sits, because the page wrapper animates its
+   * own opacity and that makes it a stacking context for good — a z-50 inside it loses to the
+   * z-40 site header, and the conversation would open underneath the bar it is supposed to cover.
+   */
+  return phone ? createPortal(panel, document.body) : panel;
 }
 
 function Item({ item }: { item: ThreadItem }) {

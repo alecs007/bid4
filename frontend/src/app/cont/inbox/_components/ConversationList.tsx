@@ -72,7 +72,12 @@ function Row({
   conversation: Conversation;
   active: boolean;
 }) {
-  const unread = conversation.unreadCount > 0;
+  // The open one is being read right now, whatever the page it was fetched with
+  // said. This list keeps its own rows rather than going through SWR, so it
+  // hears nothing when the thread beside it marks itself seen — and a mark that
+  // stays lit on the conversation somebody is looking at is the one place the
+  // count is obviously wrong.
+  const unread = !active && conversation.unreadCount > 0;
 
   return (
     <Link
