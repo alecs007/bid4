@@ -314,9 +314,35 @@ class InboxTest {
     // Unread on purpose: it is worth reading once, and a badge is what makes
     // somebody read it.
     assertThat(greeting.unreadCount()).isPositive();
+    // One message, not two: it is a single greeting rather than a pair of
+    // announcements arriving a moment apart.
     assertThat(inbox.thread(greeting.id(), viewer(newcomer)).items())
         .allMatch(item -> item.kind() == ThreadItemKind.SYSTEM)
-        .hasSizeGreaterThanOrEqualTo(2);
+        .hasSize(1);
+  }
+
+  @Test
+  @DisplayName("bid4's own thread stays first, however recently anything else was written")
+  void theSupportThreadIsPinned() {
+    Auction listing = liveListing();
+    UserAccount reader = user("Cititor Fixat");
+
+    // Opens the inbox once, so the greeting exists and is the oldest thing in
+    // it, then writes somewhere else — which by time alone would sink it.
+    inbox.list(null, false, viewer(reader));
+    UUID conversationId =
+        inbox
+            .open(new OpenThreadRequest(listing.getId(), "Bună"), viewer(reader))
+            .conversation()
+            .id();
+    inbox.send(conversationId, new SendMessageRequest("Mai nou", null), viewer(seller));
+
+    var rows = inbox.list(null, false, viewer(reader)).items();
+
+    assertThat(rows.getFirst().kind()).isEqualTo(ConversationKind.SUPPORT);
+    assertThat(rows.get(1).id()).isEqualTo(conversationId);
+    // And exactly once: pinned on top of a page it is also excluded from.
+    assertThat(rows.stream().filter(row -> row.kind() == ConversationKind.SUPPORT)).hasSize(1);
   }
 
   @Test

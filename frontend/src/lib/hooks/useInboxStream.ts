@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 
 import { streamTicket } from "@/lib/api/inbox";
+import { bumpInbox } from "@/lib/api/inbox-sync";
 import { API_BASE, USE_MOCK } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -78,9 +79,15 @@ export function useInboxStream(): void {
       opened.addEventListener("ready", () => {
         attempt = 0;
       });
-      opened.addEventListener("item", () => void stale("inbox:"));
-      opened.addEventListener("unread", () => void stale("inbox:unread"));
-      opened.addEventListener("notification", () => void stale("inbox:"));
+      // Both, and deliberately: `stale` reaches everything held in SWR, and the
+      // bump reaches the cursor-paged lists, which SWR knows nothing about.
+      const changed = (prefix: string) => {
+        void stale(prefix);
+        bumpInbox();
+      };
+      opened.addEventListener("item", () => changed("inbox:"));
+      opened.addEventListener("unread", () => changed("inbox:unread"));
+      opened.addEventListener("notification", () => changed("inbox:"));
 
       opened.onerror = () => {
         opened.close();

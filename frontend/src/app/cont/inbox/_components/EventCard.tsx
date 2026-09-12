@@ -59,67 +59,64 @@ export function EventCard({
     step?.actor === (viewerIsBuyer ? "BUYER" : "SELLER") &&
     step?.needs === order!.status;
 
-  const detailLine = detail(item);
-
-  // Who did it, not who is next. A step with no author is one the courier or
-  // the platform performed, and naming somebody for it would be a small lie.
-  const doneBy =
-    step?.by === "BUYER" ? buyerName : step?.by === "SELLER" ? sellerName : null;
+  const sentence = step?.line?.({
+    viewerIsBuyer,
+    buyerName,
+    sellerName,
+    value: (key) => item.payload?.[key],
+    money: (key) => {
+      const raw = item.payload?.[key];
+      return raw === undefined ? null : formatMoney(Number(raw) as Bani);
+    },
+  });
 
   /**
-   * Past and live are the same three things stacked the same way — a mark, a name, a detail — so a
+   * Past and live are the same three things stacked the same way — a mark, a name, a sentence — so a
    * step is recognisable as a step wherever it appears in the thread. Only the weight changes.
    *
-   * <p>Stacked rather than strung along one line, because at 375px "Livrarea a fost aleasă · Easybox
-   * Auchan Titan · total 1.067,49 lei" is three fragments wrapping into each other, and none of
-   * them reads.
+   * <p>The live one is a full-width band on the page's own canvas, and whose turn it is shows in the
+   * mark and the button rather than in the ground: a green wash behind a green button was two things
+   * saying the same thing, and it turned the one step that matters into a coloured panel rather than
+   * a moment in a conversation.
    */
   return (
     <div
       className={cn(
-        "my-2 flex animate-fade-in flex-col items-center gap-1 px-3 text-center",
-        live && "my-3 -mx-3 border-y px-3 py-4",
-        live && (turn ? "border-primary-200 bg-primary-50" : "border-line bg-canvas"),
+        "my-2 flex flex-col items-center gap-1 px-3 text-center",
+        live && "my-3 -mx-3 border-y border-line bg-canvas px-3 py-4",
       )}
     >
-      <Icon
-        aria-hidden="true"
-        className={cn(
-          "shrink-0",
-          live ? "h-5 w-5" : "h-4 w-4",
-          turn ? "text-primary-700" : live ? "text-ink-600" : "text-ink-400",
-        )}
-      />
+      {live ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mb-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 ring-edge",
+            turn ? "bg-primary-100 text-primary-800" : "bg-white text-ink-600",
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+      ) : (
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-400" />
+      )}
 
       <p
         className={cn(
           "font-display leading-snug font-extrabold text-balance",
-          live ? "text-base" : "text-[13px]",
-          turn ? "text-primary-900" : live ? "text-ink-800" : "text-ink-600",
+          live ? "text-[15px] text-ink-900" : "text-[13px] text-ink-600",
         )}
       >
         {step?.title ?? item.body}
       </p>
 
-      {doneBy ? (
-        <p
-          className={cn(
-            "leading-snug",
-            live ? "text-[13px] text-ink-600" : "text-[12px] text-ink-500",
-          )}
-        >
-          de {doneBy}
-        </p>
-      ) : null}
-
-      {detailLine ? (
+      {sentence ? (
         <p
           className={cn(
             "leading-snug text-balance",
-            live ? "text-[13px] text-ink-600" : "text-[12px] text-ink-500",
+            live ? "max-w-sm text-[13px] text-ink-600" : "text-[12px] text-ink-500",
           )}
         >
-          {detailLine}
+          {sentence}
         </p>
       ) : null}
 
@@ -137,7 +134,9 @@ export function EventCard({
       ) : null}
 
       {live && !turn && step?.waiting ? (
-        <p className="text-[13px] font-semibold text-ink-500">{step.waiting}</p>
+        <p className="mt-1 text-[13px] font-semibold text-ink-500">
+          {step.waiting}
+        </p>
       ) : null}
     </div>
   );
@@ -150,14 +149,35 @@ export type OrderAction =
   | "DISPATCH"
   | "CONFIRM_RECEIPT";
 
+/**
+ * What a step's sentence is built from.
+ *
+ * <p>The figures come from the payload the server froze rather than from the order, so a card
+ * written three steps ago still says what was true then: the amount at the time, the locker that
+ * was chosen, the AWB that was issued.
+ */
+interface StepContext {
+  viewerIsBuyer: boolean;
+  buyerName?: string;
+  sellerName?: string;
+  value: (key: string) => string | undefined;
+  money: (key: string) => string | null;
+}
+
 interface Step {
   title: string;
   icon: keyof typeof Icons;
   /**
-   * Who performed the step. Not the same as {@link actor}, which is whose turn comes next — a
-   * seller accepts an offer and the buyer is the one asked to move.
+   * The line under the title, written from the reader's side.
+   *
+   * <p>A sentence rather than a name on one line and figures on another. "de Vlad Georgescu" above
+   * "Preț: 290,00 lei" is two fragments the reader has to assemble; "Vlad Georgescu a acceptat
+   * oferta ta de 290,00 lei" is the same facts already assembled.
+   *
+   * <p>And written twice, because the same step is different news to each side: the one who acted
+   * is told what they did, the other is told who did it to them.
    */
-  by?: "BUYER" | "SELLER";
+  line?: (context: StepContext) => string | null;
   /** Whose turn it is while this step is the live one. */
   actor?: "BUYER" | "SELLER";
   action?: OrderAction;
@@ -167,6 +187,14 @@ interface Step {
   /** Shown to the other side, so waiting is a state rather than a blank. */
   waiting?: string;
 }
+
+/** The other party, when the thread has not said who they are. */
+const seller = (c: StepContext) => c.sellerName ?? "Vânzătorul";
+const buyer = (c: StepContext) => c.buyerName ?? "Cumpărătorul";
+
+/** Drops the clauses whose figures the payload does not carry. */
+const sentence = (...parts: (string | null | undefined | false)[]) =>
+  parts.filter(Boolean).join(" ") || null;
 
 /**
  * The Romanian, and whose turn each step is.
@@ -181,7 +209,14 @@ const STEPS: Record<string, Step> = {
   OFFER_ACCEPTED: {
     title: "Ofertă acceptată",
     icon: "success",
-    by: "SELLER",
+    line: (c) =>
+      sentence(
+        c.viewerIsBuyer
+          ? `${seller(c)} a acceptat oferta ta de ${c.money("price")}.`
+          : `Ai acceptat oferta de ${c.money("price")} a lui ${buyer(c)}.`,
+        c.money("donation") &&
+          `Din această sumă, ${c.money("donation")} (${c.value("donationPercent")}%) merg către cauză.`,
+      ),
     actor: "BUYER",
     action: "CHOOSE_DELIVERY",
     needs: "AWAITING_CONFIRMATION",
@@ -189,9 +224,17 @@ const STEPS: Record<string, Step> = {
     waiting: "Se așteaptă alegerea modalității de livrare.",
   },
   DELIVERY_CHOSEN: {
-    title: "Livrare confirmată",
+    title: "Adresă de livrare aleasă",
     icon: "delivery",
-    by: "BUYER",
+    line: (c) =>
+      sentence(
+        c.viewerIsBuyer
+          ? `Ai ales livrarea prin ${c.value("delivery")}.`
+          : `${buyer(c)} a ales livrarea prin ${c.value("delivery")}.`,
+        c.viewerIsBuyer &&
+          c.money("total") &&
+          `Total de plată: ${c.money("total")}.`,
+      ),
     actor: "BUYER",
     action: "PAY",
     needs: "AWAITING_PAYMENT",
@@ -201,7 +244,10 @@ const STEPS: Record<string, Step> = {
   PAYMENT_HELD: {
     title: "Plată confirmată",
     icon: "escrow",
-    by: "BUYER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? `Ai plătit ${c.money("total")}. Suma rămâne în contul de garanție până confirmi primirea coletului.`
+        : `${buyer(c)} a plătit ${c.money("total")}. Suma este păstrată în contul de garanție până la confirmarea primirii.`,
     actor: "SELLER",
     action: "LABEL",
     needs: "PAID_HELD",
@@ -211,7 +257,10 @@ const STEPS: Record<string, Step> = {
   LABEL_READY: {
     title: "AWB emis",
     icon: "invoice",
-    by: "SELLER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? `${seller(c)} a emis AWB-ul ${c.value("awb")} prin ${c.value("courier")}.`
+        : `Ai emis AWB-ul ${c.value("awb")} prin ${c.value("courier")}.`,
     actor: "SELLER",
     action: "DISPATCH",
     needs: "LABEL_GENERATED",
@@ -221,12 +270,22 @@ const STEPS: Record<string, Step> = {
   SHIPPED: {
     title: "Colet predat curierului",
     icon: "parcel",
-    by: "SELLER",
+    line: (c) =>
+      sentence(
+        c.viewerIsBuyer
+          ? `${seller(c)} a predat coletul curierului.`
+          : "Ai predat coletul curierului.",
+        c.value("awb") && `AWB ${c.value("awb")}.`,
+      ),
     waiting: "Coletul este în curs de livrare.",
   },
   DELIVERED: {
     title: "Colet livrat",
     icon: "locker",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? "Coletul a ajuns la destinație. Confirmă primirea pentru a elibera plata."
+        : `Coletul a ajuns la ${buyer(c)}.`,
     actor: "BUYER",
     action: "CONFIRM_RECEIPT",
     needs: "DELIVERED",
@@ -236,60 +295,31 @@ const STEPS: Record<string, Step> = {
   RELEASED: {
     title: "Comandă finalizată",
     icon: "donation",
-    by: "BUYER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? sentence(
+            "Ai confirmat primirea coletului.",
+            c.money("donation") &&
+              `${c.money("donation")} au ajuns la cauză, iar ${c.money("sellerShare")} la vânzător.`,
+          )
+        : sentence(
+            `${buyer(c)} a confirmat primirea coletului.`,
+            c.money("sellerShare") &&
+              `Ai încasat ${c.money("sellerShare")}, iar ${c.money("donation")} au ajuns la cauză.`,
+          ),
   },
   DISPUTE_OPENED: {
     title: "Sesizare deschisă",
     icon: "dispute",
+    line: () => "Comanda este în analiză la echipa bid4.",
     waiting: "Sesizarea este în analiză la echipa bid4.",
   },
-  CANCELLED: { title: "Comandă anulată", icon: "close" },
+  CANCELLED: {
+    title: "Comandă anulată",
+    icon: "close",
+    line: () => "Comanda a fost anulată și nu mai poate fi reluată.",
+  },
 };
-
-/**
- * The second line, built from the snapshot the server froze.
- *
- * <p>From the payload rather than from the order, so a card written three steps ago still says what
- * was true then — the amount at the time, the locker that was chosen, the AWB that was issued.
- */
-function detail(item: ThreadItem): string | null {
-  const value = (key: string) => item.payload?.[key];
-  const money = (key: string) => {
-    const raw = value(key);
-    return raw === undefined ? null : formatMoney(Number(raw) as Bani);
-  };
-  const line = (...parts: (string | null | undefined)[]) =>
-    parts.filter(Boolean).join(" · ") || null;
-
-  switch (item.eventType) {
-    case "OFFER_ACCEPTED":
-      return line(
-        money("price") && `Preț: ${money("price")}`,
-        money("donation") &&
-          `Donație: ${money("donation")} (${value("donationPercent")}%)`,
-      );
-    case "DELIVERY_CHOSEN":
-      return line(
-        value("delivery"),
-        money("total") && `Total de plată: ${money("total")}`,
-      );
-    case "PAYMENT_HELD":
-      return line(
-        money("total") && `${money("total")} în contul de garanție`,
-      );
-    case "LABEL_READY":
-      return line(value("courier"), value("awb") && `AWB ${value("awb")}`);
-    case "SHIPPED":
-      return line(value("awb") && `AWB ${value("awb")}`);
-    case "RELEASED":
-      return line(
-        money("donation") && `Donație către cauză: ${money("donation")}`,
-        money("sellerShare") && `Încasat de vânzător: ${money("sellerShare")}`,
-      );
-    default:
-      return null;
-  }
-}
 
 /**
  * What a step is called, for anywhere that is not the card itself.

@@ -1,12 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 import { Icons } from "@/components/icons";
-import { Avatar, EmptyState, FadeImage, Skeleton } from "@/components/ui";
+import {
+  Avatar,
+  Bid4Icon,
+  CrossFade,
+  EmptyState,
+  FadeImage,
+  LoadMore,
+  rowDelay,
+  Skeleton,
+} from "@/components/ui";
 import { listConversations } from "@/lib/api/inbox";
+import { lastOpenThread, useInboxRevision } from "@/lib/api/inbox-sync";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useIsPhone } from "@/lib/hooks/useBreakpoint";
 import { useCursorList } from "@/lib/hooks/useCursorList";
 import type { Conversation } from "@/lib/types";
 import { formatRelativeRo } from "@/lib/utils/date";
@@ -24,13 +36,44 @@ import { stepTitle } from "./EventCard";
 export function ConversationList() {
   const { user } = useAuth();
   const params = useParams<{ id?: string }>();
+  const pathname = usePathname();
+  const router = useRouter();
+  const phone = useIsPhone();
 
-  const { items, error, loading, loadingMore, sentinel } = useCursorList({
+  // Re-read when the inbox says something changed — a thread marked read, a
+  // message arriving. This list is cursor-paged rather than held in SWR, so a
+  // `mutate` elsewhere never reached it: the bar's badge cleared and the row it
+  // belonged to went on claiming three unread until something unrelated
+  // happened to refetch.
+  const revision = useInboxRevision();
+
+  const { items, error, loading, loadingMore, hasMore, loadMore } = useCursorList({
     load: (cursor) => listConversations(cursor),
     key: `inbox:conversations:${user?.id}`,
+    revision,
   });
 
-  if (loading) return <ListSkeleton />;
+  /**
+   * On a desktop, the right pane opens on a thread rather than on a prompt.
+   *
+   * <p>The one they were last reading, if it is still in the list — glancing at another page and
+   * coming back should not put somebody mid-negotiation back at bid4's greeting. Otherwise the
+   * first row, which is that greeting: the server pins it there and so does the mock, so this is
+   * not "whatever happened to be top".
+   *
+   * <p>Checked against the rows rather than trusted: the remembered id is only ever used to pick
+   * between conversations the server has just confirmed this account is in.
+   *
+   * <p>Replace rather than push: `/cont/inbox` is a pane that was never read, and leaving it in the
+   * history would make Back look broken. Not on a phone, where this route *is* the list and opening
+   * a thread over it would put the reader somewhere they did not ask to be.
+   */
+  useEffect(() => {
+    if (phone || pathname !== "/cont/inbox" || !items?.length) return;
+    const remembered = lastOpenThread();
+    const open = items.find((row) => row.id === remembered) ?? items[0];
+    if (open) router.replace(`/cont/inbox/${open.id}`);
+  }, [phone, pathname, items, router]);
 
   if (error) {
     return (
@@ -48,10 +91,16 @@ export function ConversationList() {
   const rows = items ?? [];
 
   return (
-    <>
-      <ul className="flex animate-fade-in flex-col gap-1">
-        {rows.map((conversation) => (
-          <li key={conversation.id}>
+    <CrossFade ready={!loading} placeholder={<ListSkeleton />}>
+      <ul className="flex flex-col gap-1">
+        {rows.map((conversation, index) => (
+          // One after another. Keyed by id, so this plays for a row that is new
+          // and not for the ones already standing there.
+          <li
+            key={conversation.id}
+            className="animate-fade-up"
+            style={rowDelay(index)}
+          >
             <Row
               conversation={conversation}
               active={params.id === conversation.id}
@@ -59,9 +108,14 @@ export function ConversationList() {
           </li>
         ))}
       </ul>
-      <div ref={sentinel} aria-hidden="true" className="h-px" />
-      {loadingMore ? <ListSkeleton rows={2} /> : null}
-    </>
+      <LoadMore
+        hasMore={hasMore}
+        loading={loadingMore}
+        onReach={loadMore}
+        waiting={<ListSkeleton rows={2} />}
+        className="mt-1"
+      />
+    </CrossFade>
   );
 }
 
@@ -73,10 +127,10 @@ function Row({
   active: boolean;
 }) {
   // The open one is being read right now, whatever the page it was fetched with
-  // said. This list keeps its own rows rather than going through SWR, so it
-  // hears nothing when the thread beside it marks itself seen — and a mark that
-  // stays lit on the conversation somebody is looking at is the one place the
-  // count is obviously wrong.
+  // said. The list does re-read when a thread is marked seen, but that is a
+  // request, and for the row the reader is looking at the answer is already
+  // known — a mark that stays lit for the length of a round trip on the
+  // conversation being read is the one place the count is obviously wrong.
   const unread = !active && conversation.unreadCount > 0;
 
   return (
@@ -85,15 +139,18 @@ function Row({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex items-center gap-3 rounded-2xl p-2.5 transition",
-        active ? "bg-ink-100" : "hover:bg-ink-50",
+        // The open row wears the hover fill, and keeps it. Anything heavier read
+        // as a dimmed row rather than a chosen one.
+        active ? "bg-ink-50" : "hover:bg-ink-50",
       )}
     >
       <span className="relative shrink-0">
         {conversation.kind === "SUPPORT" ? (
-          // bid4 itself. A mark rather than a face: the other side is the
-          // platform, and giving it a person's avatar would be a small lie.
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
-            <Icons.donation aria-hidden="true" className="h-5 w-5" />
+          // bid4 itself, wearing its own mark. A face would be a small lie —
+          // the other side is the platform — but a generic icon made the one
+          // thread that is genuinely from somebody look like the one that is not.
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50/50 ring-1 ring-edge">
+            <Bid4Icon size={28} />
           </span>
         ) : conversation.listingImageUrl ? (
           // The object, not the person: an inbox of faces says nothing about
@@ -151,7 +208,10 @@ function Row({
           {unread ? (
             <span
               aria-label={`${conversation.unreadCount} necitite`}
-              className="numeric shrink-0 rounded-full bg-primary-600 px-1.5 py-0.5 text-[11px] font-extrabold text-white"
+              // A disc, not a lozenge: h-5 with a matching min-w-5 and the text
+              // centred in it, so one digit sits in a circle and only a third
+              // digit is allowed to stretch it.
+              className="numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary-600 px-1 text-[11px] leading-none font-extrabold text-white"
             >
               {conversation.unreadCount}
             </span>
@@ -176,15 +236,28 @@ function preview(conversation: Conversation): string {
   return "Actualizare";
 }
 
+/**
+ * The list's own shape, bar for bar.
+ *
+ * <p>A 48px tile, then a title with a timestamp at the far end of the same line, then the preview
+ * under it. The tile is what sets the row's height in both, so these line up whatever the type
+ * does — but the bars sat where no text does, and a placeholder that is only the right height is
+ * still the wrong picture.
+ */
 function ListSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <ul className="flex flex-col gap-1">
       {Array.from({ length: rows }).map((_, index) => (
         <li key={index} className="flex items-center gap-3 p-2.5">
-          <Skeleton className="h-12 w-12 rounded-xl" />
-          <span className="flex-1">
-            <Skeleton className="h-3.5 w-2/3" />
-            <Skeleton className="mt-2 h-3 w-1/2" />
+          <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <Skeleton className="h-[15px] flex-1" />
+              <Skeleton className="h-3 w-10 shrink-0" />
+            </span>
+            <span className="mt-1 flex items-center gap-2">
+              <Skeleton className="h-[13px] flex-1" />
+            </span>
           </span>
         </li>
       ))}

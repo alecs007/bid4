@@ -225,9 +225,14 @@ function ToastCard({
               {icon ?? DEFAULT_ICONS[tone]}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-ink-900">{title}</p>
+              {/* Both lines on leading-snug. The title was on the default 1.5,
+                  which put 8px of half-leading under a 16px line and read as a
+                  gap somebody had asked for. */}
+              <p className="font-display leading-snug font-bold text-ink-900">
+                {title}
+              </p>
               {description ? (
-                <p className="mt-0.5 text-sm leading-snug text-ink-600">
+                <p className="text-sm leading-snug text-ink-600">
                   {description}
                 </p>
               ) : null}

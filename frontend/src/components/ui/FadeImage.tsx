@@ -28,6 +28,15 @@ export function FadeImage({
   className?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  /**
+   * Already in the browser when this mounted, so there is nothing to wait for.
+   *
+   * <p>Without this a cached picture still played the whole 300ms fade, which is the one case where
+   * the fade is a lie: the list scrolls back into view and every thumbnail dissolves in again as
+   * though it were being fetched. Set in the same commit as `loaded`, so such a picture is painted
+   * at full opacity and never transitions at all.
+   */
+  const [instant, setInstant] = useState(false);
 
   return (
     <>
@@ -37,7 +46,9 @@ export function FadeImage({
       <span
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 bg-ink-100 transition-opacity duration-300 ease-[var(--ease-out-soft)]",
+          "absolute inset-0 bg-ink-100",
+          !instant &&
+            "transition-opacity duration-300 ease-[var(--ease-out-soft)]",
           loaded ? "opacity-0" : "shimmer opacity-100",
         )}
       />
@@ -52,6 +63,7 @@ export function FadeImage({
           if (!node) return;
           if (node.complete) {
             setLoaded(true);
+            setInstant(true);
             return;
           }
           const done = () => setLoaded(true);
@@ -70,7 +82,9 @@ export function FadeImage({
         sizes={sizes}
         draggable={false}
         className={cn(
-          "object-cover transition-opacity duration-300 ease-[var(--ease-out-soft)]",
+          "object-cover",
+          !instant &&
+            "transition-opacity duration-300 ease-[var(--ease-out-soft)]",
           loaded ? "opacity-100" : "opacity-0",
           className,
         )}

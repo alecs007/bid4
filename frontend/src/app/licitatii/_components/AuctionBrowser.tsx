@@ -569,7 +569,7 @@ export function AuctionBrowser() {
       </div>
       <div className="grid gap-8 lg:grid-cols-[264px_minmax(0,1fr)]">
         <aside className="hidden min-w-0 lg:block">
-          <div className="sticky top-18">
+          <div className="sticky top-22">
             <div className="rounded-3xl bg-white ring-1 ring-edge p-5">
               <div className="mb-5 flex items-center justify-between gap-2 border-b border-line pb-2">
                 <h2 className="font-display text-lg font-extrabold text-ink-900">

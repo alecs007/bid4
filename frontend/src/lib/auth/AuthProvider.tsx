@@ -13,6 +13,7 @@ import {
 import { useSWRConfig } from "swr";
 
 import * as authApi from "@/lib/api/auth";
+import { clearPages } from "@/lib/hooks/cursorCache";
 import { rememberSession } from "./session-hint";
 import type {
   AuthSession,
@@ -110,6 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // the data is still sitting in memory on a machine its owner has just
     // walked away from, and nothing needs it again.
     await mutate(() => true, undefined, { revalidate: false });
+    // The cursor-paged lists keep their rows outside SWR, so they are emptied
+    // separately or an inbox would survive its own sign-out.
+    clearPages();
   }, [mutate]);
 
   const refresh = useCallback(async () => {

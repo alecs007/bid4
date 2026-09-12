@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
-import type { StatusMeta, Tone } from "@/lib/labels";
+import { ACCOUNT_TYPE, type StatusMeta, type Tone } from "@/lib/labels";
 import type { AccountType } from "@/lib/types";
 
 const SOFT: Record<Tone, string> = {
@@ -191,36 +191,34 @@ export function MetaChip({
 }
 
 /**
- * "Vânzător verificat", "Organizație verificată", or nothing at all.
+ * Who somebody is selling as: "Persoană fizică" or "Organizație".
  *
- * <p>What stood here before was the account type — "Persoană fizică" or "Organizație" — in a green
- * chip with a tick beside it. It said nothing about the person, and it looked exactly like a check
- * the platform had carried out. Whether somebody is an individual or an organisation is not news;
- * whether bid4 verified them is, and only that earns a tag.
+ * <p>Neutral on purpose. A buyer reads this to know who is on the other side of the deal, and it is
+ * a fact about the account rather than anything bid4 has checked — so it is the same grey chip the
+ * city wears beside it, and never a green one with a tick, which reads as a verification.
  *
- * <p>One component rather than the condition written out at each call site, so a profile and a
- * listing cannot end up disagreeing about who is verified.
+ * <p>One component rather than the label written out at each call site, so a profile and a listing
+ * cannot end up describing the same seller differently.
  */
-export function VerifiedTag({
+export function AccountTypeTag({
   user,
   className,
 }: {
-  user: { accountType: AccountType; verified?: boolean };
+  user: { accountType: AccountType };
   className?: string;
 }) {
-  if (!user.verified) return null;
+  const organization = user.accountType === "ORGANIZATION";
+  const Mark = organization ? Icons.organization : Icons.account;
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-900",
+        "inline-flex items-center gap-1 rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700",
         className,
       )}
     >
-      <Icons.check aria-hidden="true" className="h-3 w-3 shrink-0" />
-      {user.accountType === "ORGANIZATION"
-        ? "Organizație verificată"
-        : "Vânzător verificat"}
+      <Mark aria-hidden="true" className="h-3 w-3 shrink-0" />
+      {ACCOUNT_TYPE[user.accountType]}
     </span>
   );
 }

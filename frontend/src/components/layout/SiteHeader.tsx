@@ -50,6 +50,10 @@ const ACCOUNT_LINKS: {
     group: true,
   },
   { href: "/cont/comenzi", label: "Comenzile mele", icon: "parcel" },
+  // The mark is the one the save toggle already wears on every card and on the
+  // listing itself, so the row and the button that fills it are recognisably
+  // the same thing.
+  { href: "/cont/urmarite", label: "Licitații urmărite", icon: "watchlist" },
 
   { href: "/cont/portofel", label: "Portofel", icon: "wallet", group: true },
   { href: "/cont/cauze", label: "Cauze", icon: "cause" },
@@ -373,9 +377,14 @@ function InboxMark({
         // The swap around this mark clips what leaves it — that is what makes
         // the width animate — so a badge hung off the corner comes back cut in
         // half.
+        //
+        // Inset by 4px rather than 2: the white ring is drawn outside the
+        // badge, so at 2px it landed exactly on the button's edge and the mark
+        // read as wider on the side that carried a number. At 4px the ring
+        // stays inside, and a counted mark occupies what an uncounted one does.
         <span
           aria-hidden="true"
-          className="numeric absolute top-0.5 right-0.5 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-danger-600 px-1 text-[9px] leading-none font-extrabold text-white ring-2 ring-white"
+          className="numeric absolute top-1 right-1 inline-flex h-3 min-w-3 items-center justify-center rounded-full bg-danger-600 px-0.5 text-[9px] leading-none font-extrabold text-white ring-2 ring-white"
         >
           {count > 9 ? "9+" : count}
         </span>
@@ -389,8 +398,8 @@ function iconButton(active: boolean, size = "h-10 w-10") {
     "inline-flex shrink-0 items-center justify-center rounded-xl transition",
     size,
     active
-      ? "bg-ink-100 text-ink-900"
-      : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
+      ? "bg-ink-75 text-ink-900"
+      : "text-ink-700 hover:bg-ink-50 hover:text-ink-900",
   );
 }
 
@@ -669,7 +678,9 @@ export function SiteHeader() {
               icon="inbox"
               label="Mesaje"
               count={unreadMessages}
-              active={pathname === "/cont/inbox" || isActive("/cont/inbox/conv")}
+              active={
+                pathname === "/cont/inbox" || isActive("/cont/inbox/conv")
+              }
             />
           </AuthSwap>
 
@@ -687,32 +698,26 @@ export function SiteHeader() {
             />
           </AuthSwap>
 
-          {/* Desktop only, and only a mark: on a phone the same destination is
-              a named row in the menu, where there is room to name it. */}
-          <Link
-            href="/ajutor"
-            aria-label="Centru de ajutor"
-            title="Centru de ajutor"
-            className={cn(
-              iconButton(isActive("/ajutor"), "h-9 w-9"),
-              // Round, like the account mark it sits beside: both stand for a
-              // person asking something rather than for a place on the site.
-              // After iconButton, whose own inline-flex would otherwise win the
-              // merge and show this on a phone as well.
-              "hidden rounded-full lg:inline-flex",
-            )}
-          >
-            <Icons.help aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </Link>
+          {/* The help centre is reached from the menu and the footer. It had a
+              mark up here too and it was the one control in the bar nobody was
+              looking for. */}
 
-          <AuthSwap when="in" openWidth="10rem">
+          {/* signed-in:ml-2, and only when open. The row's gap is even, but the
+              white between two controls is not: an icon carries 8px of its own
+              inside its box and this button carries a hard edge, so 4px beside
+              it reads as half the space that the same 4px reads as between two
+              marks. Eight more evens the two out. Closed it has no margin, or a
+              zero-width last child would hold the row off its right edge. */}
+          <AuthSwap when="in" openWidth="10rem" className="signed-in:ml-2">
             {/* Flat: --btn-depth off. The 3D edge is for buttons on a
                 page, and among the bar's other controls a raised one
-                reads as a stray card. */}
+                reads as a stray card.
+                h-8 on a phone: at the icons' own 36px, a two-word label in a
+                48px bar reads as a slab rather than a control. */}
             <ButtonLink
               href="/cont/vanzari/nou"
               size="sm"
-              className="[--btn-depth:0px]"
+              className="h-8 [--btn-depth:0px] sm:h-9"
             >
               Vinde acum
             </ButtonLink>
@@ -741,8 +746,8 @@ export function SiteHeader() {
                 // adds, so the picture sits the same distance from both edges.
                 "inline-flex h-9 items-center rounded-2xl px-2.5 font-display text-[15px] font-bold whitespace-nowrap transition signed-in:pl-2",
                 openPanel === "account"
-                  ? "bg-ink-100 text-ink-900"
-                  : "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
+                  ? "bg-ink-75 text-ink-900"
+                  : "text-ink-700 hover:bg-ink-50 hover:text-ink-900",
               )}
             >
               {/* The avatar is xs because sm is 36px and would fill the pill

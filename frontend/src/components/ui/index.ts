@@ -13,7 +13,7 @@ export {
   StatusBadge,
   DonationBadge,
   MetaChip,
-  VerifiedTag,
+  AccountTypeTag,
 } from "./Badge";
 export { Alert } from "./Alert";
 export { ConditionBars } from "./ConditionBars";
@@ -51,6 +51,7 @@ export {
   SkeletonDetail,
   SkeletonCauseDetail,
   SkeletonProfile,
+  SkeletonStatTiles,
   SkeletonStats,
   Reveal,
 } from "./Skeleton";
@@ -79,4 +80,5 @@ export { CategoryIcon, Illustration } from "./Illustration";
 export type { IconSet } from "./Illustration";
 export { Mascot } from "./Mascot";
 export type { MascotMood } from "./Mascot";
-export { Logo, LogoMark } from "./Logo";
+export { Bid4Icon, Logo, LogoMark } from "./Logo";
+export { CrossFade, rowDelay, tailDelay } from "./CrossFade";

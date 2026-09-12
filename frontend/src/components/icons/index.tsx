@@ -64,29 +64,6 @@ export interface IconProps {
 
 export type Icon = ComponentType<IconProps>;
 
-export function LeafHeartIcon({ className, ...props }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...props}
-    >
-      <path d="M12 20.5C7 17 3.5 13.8 3.5 10.4A4.4 4.4 0 0 1 8 6c1.7 0 3.2 1 4 2.4C12.8 7 14.3 6 16 6a4.4 4.4 0 0 1 4.5 4.4c0 3.4-3.5 6.6-8.5 10.1Z" />
-      {/* Filled, because an outlined leaf this small closes up. */}
-      <path
-        d="M12.3 5.2Q12.9 1.7 16.4 1.4 15.9 4.9 12.3 5.2Z"
-        fill="currentColor"
-        stroke="none"
-      />
-    </svg>
-  );
-}
-
 export function ParcelIcon({ className, ...props }: IconProps) {
   return (
     <svg
@@ -109,7 +86,10 @@ export function ParcelIcon({ className, ...props }: IconProps) {
 
 export const Icons = {
   auction: LuHandCoins,
-  donation: LeafHeartIcon,
+  // The same glyph as `cause`, and deliberately: giving and the thing given to
+  // are one idea here, and two drawings for it only asked the reader which was
+  // which.
+  donation: LuHeartHandshake,
   cause: LuHeartHandshake,
   parcel: ParcelIcon,
   delivery: LuTruck,

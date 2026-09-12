@@ -58,10 +58,15 @@ export async function listConversations(
   if (!cursor && !archived) ensureWelcome(me);
   const world = getWorld();
 
+  // bid4's own thread first, then everything else by when it last moved. The
+  // server pins it the same way and for the same reason — see InboxService.list.
   const rows = world.conversations
     .filter((item) => item.buyerId === me || item.sellerId === me)
     .filter((item) => Boolean(item.archived) === archived)
-    .sort((a, b) => b.lastItemAt.localeCompare(a.lastItemAt));
+    .sort((a, b) => {
+      const support = Number(b.kind === "SUPPORT") - Number(a.kind === "SUPPORT");
+      return support || b.lastItemAt.localeCompare(a.lastItemAt);
+    });
 
   const start = cursor ? rows.findIndex((row) => row.id === cursor) + 1 : 0;
   const page = rows.slice(start, start + LIST_PAGE);
@@ -303,15 +308,11 @@ export async function getUnreadCounts(): Promise<UnreadCounts> {
 
 /* --- the mock's own half ---------------------------------------------------- */
 
-const WELCOME = {
-  greeting:
-    "Bun venit pe bid4! Aici ajung mesajele despre anunțurile tale și pașii fiecărei vânzări — " +
-    "întrebările și afacerea stau în același fir, ca să vezi dintr-o privire unde ai rămas.",
-  howItWorks:
-    "Când o ofertă e acceptată, tot ce urmează apare aici: alegi livrarea, plătești în siguranță, " +
-    "iar banii ajung la vânzător și la cauză abia după ce confirmi că ai primit coletul. " +
-    "Dacă ai nevoie de noi, scrie-ne chiar în această conversație.",
-};
+/** Word for word what `Welcome.java` writes, so the demo says what the real thing says. */
+const WELCOME =
+  "Bun venit pe bid4! În această conversație ne poți adresa orice întrebare despre platformă, " +
+  "licitații sau comenzi. Echipa bid4 îți stă la dispoziție și îți va răspunde în cel mai scurt " +
+  "timp.";
 
 /**
  * Neither half of the inbox is ever empty, exactly as on the server.
@@ -332,21 +333,17 @@ function ensureWelcome(me: ID): void {
       buyerId: me,
       archived: false,
       muted: false,
-      unread: { [me]: 2 },
-      lastItemAt: new Date(opened + 1).toISOString(),
+      unread: { [me]: 1 },
+      lastItemAt: new Date(opened).toISOString(),
     });
-    // A millisecond apart, or the thread's own ordering puts the explanation
-    // above the greeting it explains.
-    [WELCOME.greeting, WELCOME.howItWorks].forEach((body, index) => {
-      world.threadItems.push({
-        conversationId: id,
-        id: nextId("item"),
-        kind: "SYSTEM",
-        mine: false,
-        body,
-        imageUrls: [],
-        createdAt: new Date(opened + index).toISOString(),
-      });
+    world.threadItems.push({
+      conversationId: id,
+      id: nextId("item"),
+      kind: "SYSTEM",
+      mine: false,
+      body: WELCOME,
+      imageUrls: [],
+      createdAt: new Date(opened).toISOString(),
     });
   }
 

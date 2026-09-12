@@ -3,8 +3,10 @@ import type { ItemCondition } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
 const SIZE = {
-  /** Beside a line of small print, where it has to read as punctuation. */
-  sm: { row: "h-2.5 gap-[3px]", bar: "w-[3px]" },
+  /** In a line of small print, where it has to read as punctuation. */
+  xs: { row: "h-2.5 gap-[3px]", bar: "w-[3px]" },
+  /** Beside a line of text, where the words lead and this only ranks them. */
+  sm: { row: "h-3.5 gap-[3px]", bar: "w-1" },
   /** In the picker, where choosing between two adjacent states is the whole job. */
   md: { row: "h-5 gap-1", bar: "w-2" },
 } as const;

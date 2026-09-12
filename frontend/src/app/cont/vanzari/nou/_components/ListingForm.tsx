@@ -205,13 +205,24 @@ export function ListingForm() {
   }, [created]);
 
   // The tiles only mount when a modal opens, and a drawing that starts loading
-  // then arrives after the grid it belongs to. Nine files of about five
-  // kilobytes each, fetched while the seller is still typing the title.
+  // then arrives after the grid it belongs to. A few files of about five
+  // kilobytes each, fetched while the seller is still typing the title, so
+  // every modal on this page opens with its pictures already there.
   for (const entry of AUCTION_CATEGORIES) {
     preload(`/images/illustrations/categories/${entry.id}.webp`, {
       as: "image",
     });
   }
+  for (const entry of AUCTION.PARCEL_TYPES) {
+    if (entry.illustration) {
+      preload(`/images/illustrations/${entry.illustration}.webp`, {
+        as: "image",
+      });
+    }
+  }
+  // The screen that replaces the form. It is the one drawing nobody is waiting
+  // in front of, and the one place a blank would land on good news.
+  preload("/images/illustrations/listing-submitted.webp", { as: "image" });
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -439,7 +450,7 @@ export function ListingForm() {
               >
                 {condition ? (
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <ConditionBars condition={condition.value} />
+                    <ConditionBars condition={condition.value} size="sm" />
                     <span className="truncate font-display text-sm font-extrabold text-ink-900">
                       {condition.label}
                     </span>
@@ -757,6 +768,7 @@ function ParcelArt({
         fill
         unoptimized
         loading="eager"
+        fetchPriority="high"
         sizes="64px"
         style={{ scale: parcel.illustrationScale }}
         className="object-contain"

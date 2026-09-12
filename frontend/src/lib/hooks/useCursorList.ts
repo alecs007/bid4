@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CursorPage } from "@/lib/types";
+import { isFresh, readPages, writePages } from "./cursorCache";
 
 /**
  * The handles one page-load needs.
@@ -21,6 +22,15 @@ interface Paging<T> {
   setLoadedKey: (key: string) => void;
   setError: (message: string | null) => void;
   setLoadingMore: (busy: boolean) => void;
+  /**
+   * The ref's twin, for rendering.
+   *
+   * <p>`exhausted` is a ref because the guard above has to see it the instant it is set, before any
+   * render. A render cannot read a ref and be told when it changes, so the same fact is kept twice:
+   * the ref decides whether to fetch, this decides whether to draw the bottom of the list. Only set
+   * after an await, so starting a page from an effect never cascades a render.
+   */
+  setHasMore: (value: boolean) => void;
 }
 
 /**
@@ -49,9 +59,19 @@ async function loadPage<T>(page: Paging<T>, first: boolean, forKey: string) {
 
     page.cursor.current = answer.nextCursor;
     page.exhausted.current = !answer.nextCursor;
-    page.setItems((current) =>
-      first ? answer.items : [...(current ?? []), ...answer.items],
-    );
+    page.setHasMore(Boolean(answer.nextCursor));
+    page.setItems((current) => {
+      const rows = first ? answer.items : [...(current ?? []), ...answer.items];
+      // Kept for the next visit, pages and all, so coming back to this list is
+      // free and scrolling it again does not start from the top.
+      writePages(forKey, {
+        items: rows,
+        cursor: answer.nextCursor,
+        exhausted: !answer.nextCursor,
+        at: Date.now(),
+      });
+      return rows;
+    });
     page.setLoadedKey(forKey);
     page.setError(null);
   } catch (failure) {
@@ -66,6 +86,7 @@ async function loadPage<T>(page: Paging<T>, first: boolean, forKey: string) {
     // Stop rather than spin: an observer that keeps firing against a failing
     // endpoint is a request every time the list moves a pixel.
     page.exhausted.current = true;
+    page.setHasMore(false);
   } finally {
     page.inFlight.current = false;
     page.setLoadingMore(false);
@@ -79,9 +100,11 @@ async function loadPage<T>(page: Paging<T>, first: boolean, forKey: string) {
  * page and the one after it. Nothing here counts pages or knows how many there are, because neither
  * is knowable on a list that is appended to while it is being read.
  *
- * <p>The sentinel is watched rather than the scroll position. A scroll handler would have to know
- * which element scrolls — the page on a phone, a pinned column on a desktop — and would be wrong the
- * first time that changed; an element that says when it comes into view does not care.
+ * <p>Watching for the end is `<LoadMore>`'s job, the same component the catalogue and the search
+ * results use — so every scrolling list on the site waits the same distance from its bottom, stops
+ * the same way, and draws the same placeholder for the rows on their way in. A scroll handler here
+ * would have had to know which element scrolls, the page on a phone and a pinned column on a
+ * desktop, and would have been wrong the first time that changed.
  *
  * <p>One page in flight at a time, and the guard is a ref rather than state: the observer can fire
  * twice before React has re-rendered, and two identical requests would append the same rows twice.
@@ -89,20 +112,31 @@ async function loadPage<T>(page: Paging<T>, first: boolean, forKey: string) {
 export function useCursorList<T>({
   load,
   key,
+  revision = 0,
 }: {
   load: (cursor?: string) => Promise<CursorPage<T>>;
   /** Changing this starts the list again — a different account, a different tab. */
   key: string;
+  /**
+   * Changing this re-reads the list where it stands.
+   *
+   * <p>Not folded into `key`, which is the stronger statement: a new key means a different list, so
+   * the rows on screen belong to nobody and are dropped for a skeleton. A new revision means the
+   * same list said something new — a thread was read, a message arrived — and the rows stay up
+   * until the new ones land, because a list that blinks every time a number changes is worse than
+   * one that is a moment out of date.
+   */
+  revision?: number;
 }) {
   const [items, setItems] = useState<T[] | null>(null);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const cursor = useRef<string | undefined>(undefined);
   const exhausted = useRef(false);
   const inFlight = useRef(false);
-  const sentinel = useRef<HTMLDivElement>(null);
   const active = useRef(key);
   const loader = useRef(load);
 
@@ -124,6 +158,7 @@ export function useCursorList<T>({
       setLoadedKey,
       setError,
       setLoadingMore,
+      setHasMore,
     }),
     [],
   );
@@ -131,35 +166,50 @@ export function useCursorList<T>({
   useEffect(() => {
     active.current = key;
     inFlight.current = false;
+
+    // Picked up where it was left. The rows are already on screen by now — the
+    // render below reads them straight out of the cache — so this only decides
+    // whether to ask the server again, and the refs have to be told where the
+    // paging had got to either way.
+    const cached = readPages<T>(key);
+    if (cached) {
+      cursor.current = cached.cursor;
+      exhausted.current = cached.exhausted;
+      if (isFresh(cached)) return;
+    }
+
     void loadPage(paging(), true, key);
   }, [key, paging]);
 
+  // A re-read of the first page in place. Pages scrolled in past it are given
+  // up, which is the right trade for an inbox: what changes is at the top, and
+  // holding twenty rows of history to avoid re-reading ten is the wrong saving.
+  const firstRevision = useRef(revision);
   useEffect(() => {
-    const mark = sentinel.current;
-    if (!mark) return;
+    if (revision === firstRevision.current) return;
+    firstRevision.current = revision;
+    void loadPage(paging(), true, active.current);
+  }, [revision, paging]);
 
-    // A margin, so the next page is already arriving by the time the last row
-    // is reached rather than starting when it is.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          void loadPage(paging(), false, active.current);
-        }
-      },
-      { rootMargin: "300px" },
-    );
-    observer.observe(mark);
-    return () => observer.disconnect();
-  }, [paging, items]);
+  const loadMore = useCallback(() => {
+    void loadPage(paging(), false, active.current);
+  }, [paging]);
+
+  // What this render shows. Rows loaded in this mount win; otherwise whatever
+  // the last visit left behind for this exact key. Stale rows belong to a list
+  // nobody asked for, so a key with neither shows nothing rather than somebody
+  // else's — which is what the skeleton is for.
+  const loaded = loadedKey === key;
+  const cached = loaded ? undefined : readPages<T>(key);
 
   return {
-    // Stale rows belong to a list nobody asked for. Until the first page of
-    // this one lands there is nothing to show, rather than somebody else's.
-    items: loadedKey === key ? items : null,
+    items: loaded ? items : (cached?.items ?? null),
     error,
-    loading: loadedKey !== key,
+    loading: !loaded && !cached,
     loadingMore,
-    /** Put this after the last row. */
-    sentinel,
+    /** Whether there is another page to ask for. */
+    hasMore: loaded ? hasMore : !cached?.exhausted,
+    /** Hand this to `<LoadMore>`, the same bottom every scrolling list on the site uses. */
+    loadMore,
   };
 }

@@ -57,6 +57,28 @@ export const metadata: Metadata = {
   creator: "bid4",
   publisher: "bid4",
   alternates: { canonical: "/" },
+  /**
+   * Declared rather than written as <link> tags: Next emits these into the head
+   * itself, and a hand-written tag beside a generated one is how a page ends up
+   * asking for two different icons.
+   *
+   * <p>Both a PNG and an SVG, in that order, because the SVG is the one that
+   * stays sharp on a high-density tab strip and the PNG is what answers when it
+   * is not understood. The .ico is for the browsers that still look for one
+   * before reading the head at all.
+   */
+  icons: {
+    icon: [
+      { url: "/icon/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+      { url: "/icon/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon/favicon.ico",
+    apple: [{ url: "/icon/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  manifest: "/site.webmanifest",
+  // The name under the icon when somebody adds the site to a home screen. iOS
+  // reads this one rather than the manifest's short_name.
+  appleWebApp: { title: "Bid4" },
   openGraph: {
     type: "website",
     locale: "ro_RO",

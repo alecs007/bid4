@@ -42,7 +42,20 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
       <InboxTabs className={threadOpen ? "hidden" : undefined} />
 
       {onNotifications ? (
-        <div className={cn("min-h-[60vh]", DESKTOP_FRAME, "lg:overflow-y-auto")}>
+        <div
+          className={cn(
+            "min-h-[60vh]",
+            DESKTOP_FRAME,
+            // x hidden with y auto, the pair the thread's own stream uses: a
+            // pane that scrolls cannot leave the other axis visible, so without
+            // this any child a few pixels too wide becomes a horizontal bar.
+            //
+            // And a pixel of room inside it, because a card's ring is drawn
+            // outside its box: flush against the clip, the left and right edges
+            // of every card were shaved off.
+            "lg:overflow-x-hidden lg:overflow-y-auto lg:px-px",
+          )}
+        >
           {children}
         </div>
       ) : (
@@ -50,8 +63,9 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
           <div
             className={cn(
               // Its own scroll on a desktop, so reading a long thread does not
-              // carry the list away with it.
-              "lg:h-full lg:overflow-y-auto",
+              // carry the list away with it. The pixel of padding is for the
+              // rows' own edges, which the clip would otherwise shave.
+              "lg:h-full lg:overflow-x-hidden lg:overflow-y-auto lg:px-px",
               threadOpen ? "hidden lg:block" : "block min-h-[60vh] lg:min-h-0",
             )}
             data-lenis-prevent

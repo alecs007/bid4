@@ -193,6 +193,35 @@ function SkeletonPersonRow() {
   );
 }
 
+/**
+ * The three tiles, at the height `<StatTiles>` actually occupies.
+ *
+ * <p>Shared rather than drawn twice: the profile and the listing's seller block show the same three
+ * tiles, and two copies of this drifted apart once already — one of them was a single 64px bar for a
+ * row that stands 110px tall.
+ *
+ * <p>The bars mirror `<StatTile>` line for line: a drawing, a `text-lg`/`sm:text-xl` figure on
+ * `leading-none`, and a `text-xs` label a `mt-1` below it.
+ */
+export function SkeletonStatTiles({ className }: { className?: string }) {
+  return (
+    <div className={cn("grid grid-cols-3 gap-2 sm:gap-3", className)}>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 ring-1 ring-edge"
+        >
+          <Skeleton className="h-8 w-8 rounded-xl sm:h-10 sm:w-10" />
+          <div className="flex flex-col items-center">
+            <Skeleton className="h-[18px] w-12 rounded-md sm:h-5" />
+            <Skeleton className="mt-1 h-[15px] w-16 rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Full `/licitatii/[id]` page. */
 export function SkeletonDetail() {
   return (
@@ -207,8 +236,17 @@ export function SkeletonDetail() {
         {/* title above the photographs on a desktop, under them on a phone */}
         <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
           <div className="order-2 lg:order-1">
-            <Skeleton className="h-9 w-4/5" />
-            <div className="mt-2 flex gap-2">
+            {/* The heading is text-2xl/leading-tight, text-3xl from sm — 30px
+                then 38px — and the two action squares stand beside it from lg,
+                which is what sets that row's height there. */}
+            <div className="flex items-start justify-between gap-3">
+              <Skeleton className="h-[30px] w-4/5 sm:h-[38px]" />
+              <div className="hidden shrink-0 gap-1 lg:flex">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <Skeleton className="h-10 w-10 rounded-xl" />
+              </div>
+            </div>
+            <div className="mt-2 flex gap-3">
               <Skeleton className="h-5 w-28 rounded-lg" />
               <Skeleton className="h-5 w-20 rounded-lg" />
               <Skeleton className="h-5 w-24 rounded-lg" />
@@ -296,13 +334,14 @@ export function SkeletonDetail() {
         </div>
 
         {/* description, details, seller */}
+        {/* Every heading here is a `<Section>` title: text-lg, so 28px. */}
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">
           <div>
-            <Skeleton className="mb-3 h-6 w-28" />
+            <Skeleton className="mb-3 h-7 w-28" />
             <SkeletonParagraph lines={3} />
           </div>
           <div className="border-t border-line pt-5">
-            <Skeleton className="mb-3 h-6 w-20" />
+            <Skeleton className="mb-3 h-7 w-20" />
             <div className="grid gap-x-8 sm:grid-cols-2">
               {Array.from({ length: 2 }).map((_, index) => (
                 <div
@@ -315,10 +354,21 @@ export function SkeletonDetail() {
               ))}
             </div>
           </div>
+          {/* The seller: a 44px avatar beside a text-lg name over the chips that
+              say where they are and who they sell as, then the three tiles. */}
           <div className="border-t border-line pt-5">
-            <Skeleton className="mb-3 h-6 w-28" />
-            <SkeletonPersonRow />
-            <Skeleton className="mt-3 h-16 w-full rounded-2xl" />
+            <Skeleton className="mb-3 h-7 w-28" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-11 w-11 rounded-full" />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Skeleton className="h-7 w-1/2" />
+                <div className="mt-1 flex gap-1.5">
+                  <Skeleton className="h-5 w-24 rounded-lg" />
+                  <Skeleton className="h-5 w-28 rounded-lg" />
+                </div>
+              </div>
+            </div>
+            <SkeletonStatTiles className="mt-4" />
           </div>
         </div>
       </div>
@@ -429,20 +479,8 @@ export function SkeletonProfile() {
         </div>
       </SkeletonCard>
 
-      {/* The three tiles: a drawing over a figure over a label, centred, and
-          three across on a phone as well — the shape StatTiles renders. */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 ring-1 ring-edge"
-          >
-            <Skeleton className="h-8 w-8 rounded-xl sm:h-10 sm:w-10" />
-            <Skeleton className="h-[18px] w-12 rounded-md sm:h-5" />
-            <Skeleton className="h-3 w-16 rounded-md" />
-          </div>
-        ))}
-      </div>
+      {/* Three across on a phone as well — the shape StatTiles renders. */}
+      <SkeletonStatTiles />
 
       {/* No tab row: it is drawn only for a profile that has both kinds, and
           which that is cannot be known while this is on screen. */}

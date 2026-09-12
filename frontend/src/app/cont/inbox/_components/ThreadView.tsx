@@ -2,19 +2,27 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSWRConfig } from "swr";
 
 import { Icons } from "@/components/icons";
 import {
   Avatar,
+  Bid4Icon,
   Button,
   EmptyState,
   FadeImage,
   Skeleton,
+  tailDelay,
 } from "@/components/ui";
 import { getThread, markThreadRead, sendMessage } from "@/lib/api/inbox";
+import {
+  bumpInbox,
+  rememberOpenThread,
+  unreadKey,
+  withThreadRead,
+} from "@/lib/api/inbox-sync";
 import {
   chooseDelivery,
   confirmReceipt,
@@ -54,8 +62,14 @@ const THREAD_SHELL =
   // A phone opens a conversation the way a phone does: over everything, edge to
   // edge, pushed in from the side. A desktop keeps it as the right-hand panel,
   // because there the list beside it is the point.
+  // lg:relative, so the placeholder can be laid over the panel while it fades
+  // out. On a phone `fixed` already makes one.
+  //
+  // lg:overflow-hidden, so the rounded corner is the panel's actual edge: the
+  // header's rule and the composer's ran square across it, and the corner read
+  // as something clipping the content rather than as the shape of the card.
   "fixed inset-0 z-50 flex flex-col bg-white " +
-  "lg:static lg:z-auto lg:h-full lg:min-h-0 lg:rounded-3xl lg:ring-1 lg:ring-edge";
+  "lg:relative lg:z-auto lg:h-full lg:min-h-0 lg:overflow-hidden lg:rounded-3xl lg:ring-1 lg:ring-edge";
 
 export function ThreadView({ conversationId }: { conversationId: string }) {
   const { data, error, loading, reload } = useApi(
@@ -69,10 +83,22 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   const [acting, setActing] = useState(false);
   const [pickingDelivery, setPickingDelivery] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  /**
+   * Whether a placeholder of this exact shape was just standing here.
+   *
+   * <p>If it was, the conversation does not animate in. The skeleton is the panel's own box in the
+   * panel's own place, so the swap moves nothing — and fading the thread up once it is already
+   * loaded is a quarter of a second of the screen doing something for no reason. It only arrives
+   * when it arrives on its own: opened straight from the cache, with nothing in its place first.
+   */
+  const [afterSkeleton, setAfterSkeleton] = useState(false);
+  const waited = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
   const stream = useRef<HTMLDivElement>(null);
   const wasAtBottom = useRef(true);
   const settled = useRef(false);
+  /** The last (thread, newest item) this told the server it had seen. */
+  const marked = useRef<string | null>(null);
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
   const router = useRouter();
@@ -85,11 +111,24 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   // The sale behind the thread, if there is one. This is what decides which
   // card is live and who may press it — the items never decide that themselves.
   const orderId = data?.conversation.orderId;
-  const { data: order, reload: reloadOrder } = useApi(
-    () => getOrder(orderId!, user!.id),
-    `inbox:order:${orderId}`,
-    { enabled: Boolean(orderId && user) },
-  );
+  const {
+    data: order,
+    loading: orderLoading,
+    reload: reloadOrder,
+  } = useApi(() => getOrder(orderId!, user!.id), `inbox:order:${orderId}`, {
+    enabled: Boolean(orderId && user),
+  });
+
+  /**
+   * Not until the sale behind it has arrived too.
+   *
+   * <p>The order decides which step of the deal is live and whether there is a button under it, so
+   * a thread drawn before it lands is drawn a button short — and the one that appears afterwards
+   * adds height to a stream already scrolled to its end, which shifts everything the reader is
+   * looking at. Waiting costs a second request behind the placeholder; not waiting costs a jump in
+   * the middle of the conversation.
+   */
+  const settlingOrder = Boolean(orderId) && orderLoading;
 
   /**
    * While the conversation covers the screen, the page behind it holds still.
@@ -124,6 +163,19 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     window.setTimeout(() => router.push("/cont/inbox"), 200);
   };
 
+  // A layout effect, so the panel's first frame already knows. An ordinary
+  // effect set this a render late and the entrance had been handed to the
+  // browser before the answer arrived.
+  useLayoutEffect(() => {
+    if (loading || settlingOrder) {
+      waited.current = true;
+      return;
+    }
+    if (!waited.current) return;
+    waited.current = false;
+    setAfterSkeleton(true);
+  }, [loading, settlingOrder]);
+
   const unreadCount = data?.conversation.unreadCount ?? 0;
   const newestId = data?.items[0]?.id;
 
@@ -143,17 +195,32 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
 
     const markSeen = () => {
       if (document.visibilityState !== "visible") return;
+      // Once per thread per newest item. This also runs on visibilitychange, and
+      // the count below is moved on trust rather than on an answer — so without
+      // this, a tab left and returned to before the refetch landed took one off
+      // the bar twice for a thread it had already read once.
+      const stamp = `${conversationId}:${newestId ?? ""}`;
+      if (marked.current === stamp) return;
+      marked.current = stamp;
+
+      // The badge in the bar goes now, on what is already known, rather than
+      // after the round trip — the reader is looking at the thread the number
+      // is about, and a mark that lingers for a request is the one place the
+      // count is visibly wrong. The refetch behind it is what makes it true.
+      void mutate(unreadKey(user?.id), withThreadRead, { revalidate: false });
       void markThreadRead(conversationId).then(() => {
         void mutate(
           (key) => typeof key === "string" && key.startsWith("inbox:"),
         );
+        // The list beside this one is cursor-paged and hears nothing from SWR.
+        bumpInbox();
       });
     };
 
     markSeen();
     document.addEventListener("visibilitychange", markSeen);
     return () => document.removeEventListener("visibilitychange", markSeen);
-  }, [conversationId, unreadCount, newestId, mutate]);
+  }, [conversationId, unreadCount, newestId, mutate, user?.id]);
 
   /**
    * Follows the conversation down, unless the reader has gone looking back through it.
@@ -162,7 +229,23 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
    * about: they were reading something further up and the page moved. So the position is measured
    * before the change and only restored if they were already at the end of it.
    */
-  useEffect(() => {
+  // A different conversation is a first paint again. Both of these are refs that
+  // outlive the route change — this component is one segment and React keeps the
+  // instance — so without the reset a new thread inherited the last one's state:
+  // it travelled to its end instead of opening there, or, if the reader had
+  // scrolled up in the thread before, never went to the end at all.
+  useLayoutEffect(() => {
+    settled.current = false;
+    wasAtBottom.current = true;
+    // Where to come back to. Written on opening rather than on leaving, because
+    // leaving is not always an event this sees — a closed tab is not.
+    rememberOpenThread(conversationId);
+  }, [conversationId]);
+
+  // useLayoutEffect, so the end of the conversation is where it is painted
+  // rather than where it arrives a frame later. As an effect this ran after the
+  // browser had already drawn the thread at the top, and opening one was a jump.
+  useLayoutEffect(() => {
     const scroller = stream.current;
     if (!scroller) return;
     if (!wasAtBottom.current) return;
@@ -175,7 +258,39 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       behavior: settled.current ? "smooth" : "auto",
     });
     settled.current = true;
-  }, [newestId, data?.items.length]);
+    // settlingOrder is in here because the panel is not on the page while it is
+    // true — the placeholder is. Without it this ran against a scroller that did
+    // not exist yet, found nothing, and never came back once one did.
+  }, [newestId, data?.items.length, settlingOrder]);
+
+  /**
+   * Holds the end of the conversation while it is still settling.
+   *
+   * <p>The scroll above lands the moment the items do, and the thread is not finished growing then:
+   * a photograph decodes, a long line wraps once the font arrives, a card lays itself out. Each of
+   * those adds height under a view that was already at the bottom, and the last message ends up cut
+   * off below the fold — which is the load looking as though it clipped.
+   *
+   * <p>Only while they were at the end of it. Somebody who has scrolled back through a thread must
+   * not be dragged to the bottom because a picture further down finished loading.
+   */
+  useEffect(() => {
+    const scroller = stream.current;
+    if (!scroller) return;
+
+    const pin = () => {
+      if (!wasAtBottom.current) return;
+      // Assigned rather than animated: this is correcting a measurement, not
+      // travelling anywhere, and a smooth scroll here would fight the next one.
+      scroller.scrollTop = scroller.scrollHeight;
+    };
+
+    // The children rather than the scroller: its own box is fixed by the panel,
+    // so it never resizes — what changes is what is inside it.
+    const observer = new ResizeObserver(pin);
+    for (const child of Array.from(scroller.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [data?.items.length, settlingOrder]);
 
   /**
    * Loading and failure are the same box in the same place as the thread itself.
@@ -184,7 +299,10 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
    * page, under the site bar, and the conversation then jumped out over it. Placing every state
    * the same way is the difference between a panel filling in and a panel arriving.
    */
-  if (loading) return place(<ThreadSkeleton />);
+  if (loading || settlingOrder)
+    return place(
+      <ThreadSkeleton className="animate-thread-in lg:animate-fade-in" />,
+    );
   if (error || !data) {
     return place(
       <section className={cn(THREAD_SHELL, "items-center justify-center p-6")}>
@@ -274,6 +392,9 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       // keeps their place when a message arrives; they do not when it is theirs.
       wasAtBottom.current = true;
       reload();
+      // The row in the list beside this one shows the last line of the thread
+      // and sorts on when it was written. Both just changed.
+      bumpInbox();
     } catch (failure) {
       setSendError(
         failure instanceof Error ? failure.message : "Mesajul nu a plecat.",
@@ -287,9 +408,8 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     <section
       className={cn(
         THREAD_SHELL,
-        leaving
-          ? "animate-thread-out lg:animate-fade-in"
-          : "animate-thread-in lg:animate-fade-in",
+        leaving && "animate-thread-out lg:animate-fade-in",
+        !leaving && !afterSkeleton && "animate-thread-in lg:animate-fade-in",
       )}
     >
       {/* What the conversation is about, kept in view — three screens down a
@@ -299,7 +419,7 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
           the person is who a conversation is with — so they lead, and what it
           is about sits under them as its own strip. */}
       <header className="shrink-0 border-b border-line">
-        <div className="flex items-center gap-2 p-3">
+        <div className="flex animate-fade-in items-center gap-2 p-3">
           {/* A button rather than a link, because leaving has to be played
               before it happens: a route change unmounts this instantly, and a
               panel that vanishes is not the same thing as one that closes.
@@ -319,15 +439,19 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
             <span className="flex min-w-0 flex-1 items-center gap-3">
               <span
                 aria-hidden="true"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50/50 ring-1 ring-edge"
               >
-                <Icons.donation className="h-5 w-5" />
+                <Bid4Icon size={24} />
               </span>
+              {/* Both lines on leading-snug: an arbitrary font size carries no
+                  line height of its own, so these inherited the body's 1.5 and
+                  stood further apart than the two lines of a name and a price
+                  in the same slot. */}
               <span className="min-w-0">
-                <span className="block truncate font-display text-[15px] font-extrabold text-ink-900">
+                <span className="block truncate font-display text-[15px] leading-snug font-extrabold text-ink-900">
                   Echipa bid4
                 </span>
-                <span className="block text-[13px] text-ink-600">
+                <span className="block text-[13px] leading-snug text-ink-600">
                   Suport și anunțuri
                 </span>
               </span>
@@ -427,23 +551,36 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
         }}
         className="flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
       >
-        {items.map((item) =>
-          item.kind === "EVENT" ? (
-            <EventCard
-              key={item.id}
-              item={item}
-              order={order ?? null}
-              newest={item.id === newestEventId}
-              viewerIsBuyer={viewerIsBuyer}
-              buyerName={buyerName}
-              sellerName={sellerName}
-              busy={acting}
-              onAct={act}
-            />
-          ) : (
-            <Item key={item.id} item={item} />
-          ),
-        )}
+        {items.map((item, index) => (
+          // One after another, towards the newest. Opacity and nothing else:
+          // the stream is already scrolled to its end when this paints, and a
+          // line that rises ten pixels into that end looks like the thread
+          // scrolling itself after the fact.
+          //
+          // Wrapped rather than animated in place so a message and a step of
+          // the sale arrive the same way, and keyed by id, so this plays for a
+          // line that is new and leaves the ones already read alone.
+          <div
+            key={item.id}
+            className="animate-fade-in"
+            style={tailDelay(index, items.length, 60)}
+          >
+            {item.kind === "EVENT" ? (
+              <EventCard
+                item={item}
+                order={order ?? null}
+                newest={item.id === newestEventId}
+                viewerIsBuyer={viewerIsBuyer}
+                buyerName={buyerName}
+                sellerName={sellerName}
+                busy={acting}
+                onAct={act}
+              />
+            ) : (
+              <Item item={item} />
+            )}
+          </div>
+        ))}
         <div ref={bottom} />
       </div>
 
@@ -455,7 +592,11 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
         load={() => listDeliveryMethods(user!.id)}
       />
 
-      <form onSubmit={send} className="border-t border-line p-3">
+      <form
+        onSubmit={send}
+        className="animate-fade-in border-t border-line p-3"
+        style={{ animationDelay: "60ms" }}
+      >
         {sendError ? (
           <p className="mb-2 text-[13px] font-semibold text-danger-700">
             {sendError}
@@ -508,11 +649,9 @@ function Item({ item }: { item: ThreadItem }) {
   }
 
   return (
-    // Keyed by id upstream, so React reuses the node and this plays once per
-    // message rather than on every re-render of the thread around it.
     <div
       className={cn(
-        "flex animate-fade-in",
+        "flex",
         item.mine ? "justify-end" : "justify-start",
       )}
     >
@@ -573,18 +712,27 @@ const FLAG_COPY: Record<string, string> = {
     "Detalii de plată în afara bid4. Banii nu mai sunt protejați, iar cauza nu primește nimic.",
 };
 
-function ThreadSkeleton() {
+/**
+ * The panel's box, empty.
+ *
+ * <p>It carries no entrance of its own: it is shown on its way in, where the caller gives it the
+ * panel's animation, and again on its way out as a curtain over the loaded thread, where playing
+ * that animation again would have it fading in and out at the same moment.
+ */
+export function ThreadSkeleton({ className }: { className?: string }) {
   return (
-    <section className={THREAD_SHELL}>
+    <section className={cn(THREAD_SHELL, className)}>
       {/* The same three boxes the loaded thread has, at the same heights: a
           header of 40px marks, a run of bubbles, and the composer. A skeleton
           that is not the shape of what replaces it is a jump with extra steps. */}
-      <div className="flex items-center gap-3 border-b border-line p-3">
+      <div className="flex items-center gap-2 border-b border-line p-3">
         <Skeleton className="h-9 w-9 shrink-0 rounded-xl lg:hidden" />
         <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
         <span className="flex-1">
-          <Skeleton className="h-3.5 w-40" />
-          <Skeleton className="mt-1.5 h-3 w-16" />
+          {/* text-[15px] over text-[13px], which is what the name and the line
+              under it occupy. */}
+          <Skeleton className="h-[15px] w-40" />
+          <Skeleton className="mt-1 h-[13px] w-24" />
         </span>
         <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
       </div>
@@ -596,8 +744,14 @@ function ThreadSkeleton() {
         <Skeleton className="mx-auto h-4 w-1/2 rounded-full" />
       </div>
 
+      {/* The field and the button beside it, both 44px, the pair the composer
+          actually is — a single bar across the bottom was the wrong shape and
+          the send button appeared out of nothing. */}
       <div className="border-t border-line p-3">
-        <Skeleton className="h-11 w-full rounded-2xl" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-11 flex-1 rounded-2xl" />
+          <Skeleton className="h-11 w-24 shrink-0 rounded-2xl" />
+        </div>
       </div>
     </section>
   );

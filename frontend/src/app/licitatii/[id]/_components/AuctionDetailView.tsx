@@ -23,7 +23,7 @@ import {
   StatTile,
   StatTiles,
   useToast,
-  VerifiedTag,
+  AccountTypeTag,
 } from "@/components/ui";
 import { getAuction, toggleWatch } from "@/lib/api/auctions";
 import { listBids } from "@/lib/api/bids";
@@ -308,7 +308,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 &middot;
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <ConditionBars condition={auction.condition} size="sm" />
+                <ConditionBars condition={auction.condition} size="xs" />
                 {ITEM_CONDITION[auction.condition]}
               </span>
               <span aria-hidden="true" className="text-ink-300">
@@ -585,7 +585,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                       {auction.seller.city}
                     </span>
                   ) : null}
-                  <VerifiedTag user={auction.seller} />
+                  <AccountTypeTag user={auction.seller} />
                 </span>
               </span>
             </Link>

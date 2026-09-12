@@ -71,6 +71,9 @@
      faintest edge: readable, but not a line anyone would call a border. */
   --color-edge: rgb(26 31 27 / 0.05);
   --color-ink-50: #f8f9f8;
+  --color-ink-75: #f4f5f4; /* what "this one is open" fills with: enough to
+                              read as selected on white, short of the grey
+                              that ink-100 turns into on a small control    */
   --color-ink-100: #f1f2f1;
   --color-ink-200: #e5e8e5;
   --color-ink-300: #cbcfcb;

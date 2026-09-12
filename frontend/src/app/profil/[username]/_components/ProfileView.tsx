@@ -17,7 +17,7 @@ import {
   SkeletonProfile,
   StatTile,
   StatTiles,
-  VerifiedTag,
+  AccountTypeTag,
 } from "@/components/ui";
 import { listAuctions } from "@/lib/api/auctions";
 import { listCauses } from "@/lib/api/causes";
@@ -124,7 +124,7 @@ export function ProfileView({ username }: { username: string }) {
             <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
               {user.displayName}
             </h1>
-            <VerifiedTag user={user} />
+            <AccountTypeTag user={user} />
           </div>
 
           {/* Only when it says something the display name does not. */}

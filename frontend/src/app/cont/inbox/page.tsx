@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { EmptyState } from "@/components/ui";
+import { ThreadSkeleton } from "./_components/ThreadView";
 
 export const metadata: Metadata = {
   title: "Mesaje",
@@ -9,21 +9,16 @@ export const metadata: Metadata = {
 };
 
 /**
- * The right pane, before a thread is chosen.
+ * The right pane, for the moment before a thread is chosen.
  *
  * <p>Only ever seen on a desktop: on a phone this route is the list itself, and the shell hides
  * this side until there is something to show in it.
+ *
+ * <p>It used to say "alege o conversație", and there is no longer such a state — the list opens
+ * bid4's own thread as soon as it knows what it is, which is the one conversation every account has
+ * and the only sensible thing to land on. So what stands here is the panel that is arriving, in the
+ * shape it will arrive in, rather than a message telling somebody to do what is already being done.
  */
 export default function InboxPage() {
-  return (
-    // Fills the frame rather than sitting in the top of it, so choosing a
-    // conversation swaps one full-height panel for another.
-    <div className="flex h-full items-center justify-center rounded-3xl bg-white ring-1 ring-edge">
-      <EmptyState
-        className="border-0 ring-0"
-        title="Alege o conversație"
-        description="Mesajele despre un anunț și pașii vânzării stau în același fir."
-      />
-    </div>
-  );
+  return <ThreadSkeleton className="animate-fade-in" />;
 }

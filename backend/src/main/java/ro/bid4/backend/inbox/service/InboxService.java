@@ -1,6 +1,7 @@
 package ro.bid4.backend.inbox.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -118,7 +119,27 @@ public class InboxService {
                 me, archived, before, Cursors.idOf(cursor), Limit.of(LIST_PAGE + 1));
 
     boolean more = page.size() > LIST_PAGE;
-    List<Conversation> visible = more ? page.subList(0, LIST_PAGE) : page;
+    List<Conversation> listings = more ? page.subList(0, LIST_PAGE) : page;
+
+    // bid4's own thread sits at the top of the first page and nowhere else. It
+    // is the one conversation a member never started and always has, so letting
+    // it sink under whoever wrote last is how it stops being found. Pinned here
+    // rather than ordered in SQL: the page below it is a keyset over when a
+    // thread last moved, and a row exempt from that ordering cannot be paged by
+    // it. The cursor still comes from the last listing row, so it is unaffected.
+    List<Conversation> visible = new ArrayList<>(listings);
+    if (before == null) {
+      conversations
+          .findSupportThread(me)
+          .filter(
+              support ->
+                  participants
+                      .findMembership(support.getId(), me)
+                      .map(seat -> seat.isArchived() == archived)
+                      .orElse(false))
+          .ifPresent(support -> visible.add(0, support));
+    }
+
     if (visible.isEmpty()) {
       return CursorPage.of(List.of(), null);
     }
@@ -130,7 +151,7 @@ public class InboxService {
 
     return CursorPage.of(
         mapper.toSummaries(visible, membership, newestItems(ids), me),
-        more ? cursorOf(visible.getLast()) : null);
+        more ? cursorOf(listings.getLast()) : null);
   }
 
   /** The head and the first page of items together — the page cannot draw either one alone. */

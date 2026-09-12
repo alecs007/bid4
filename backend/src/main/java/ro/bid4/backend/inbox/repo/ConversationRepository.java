@@ -50,12 +50,19 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
    *
    * <p>Split in two rather than taking a nullable cursor — see {@code ThreadItemRepository}, where
    * the same split is explained.
+   *
+   * <p>Listing threads only. bid4's own thread is pinned to the top of the first page by the
+   * service, and a row that is always first cannot also sit in a keyset ordered by when it last
+   * moved — it would come back twice, or fall off the bottom of page one the moment somebody else
+   * wrote. Excluded here, it keeps the cursor a plain {@code (lastItemAt, id)} over the rest.
    */
   @Query(
       """
       select c from Conversation c
       join ConversationParticipant p on p.id.conversationId = c.id
-      where p.id.userId = :userId and p.archived = :archived
+      where p.id.userId = :userId
+        and p.archived = :archived
+        and c.kind <> ro.bid4.backend.inbox.domain.ConversationKind.SUPPORT
       order by c.lastItemAt desc, c.id desc
       """)
   List<Conversation> firstPageFor(
@@ -67,6 +74,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
       join ConversationParticipant p on p.id.conversationId = c.id
       where p.id.userId = :userId
         and p.archived = :archived
+        and c.kind <> ro.bid4.backend.inbox.domain.ConversationKind.SUPPORT
         and (c.lastItemAt < :beforeAt or (c.lastItemAt = :beforeAt and c.id < :beforeId))
       order by c.lastItemAt desc, c.id desc
       """)

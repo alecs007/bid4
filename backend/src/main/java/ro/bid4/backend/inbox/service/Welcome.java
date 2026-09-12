@@ -20,9 +20,12 @@ import ro.bid4.backend.inbox.repo.ThreadItemRepository;
  *
  * <p>An empty inbox is the worst first impression a feature like this can make: it looks broken, it
  * explains nothing, and the one moment somebody is willing to read how a thing works is the moment
- * they open it and find nothing to read. So both halves start with something — a thread from bid4
- * that says what this place is for, and a line in the notifications saying the same in one
+ * they open it and find nothing to read. So both halves start with something: a single message from
+ * bid4 saying what this place is for, and a line in the notifications saying the same in one
  * sentence.
+ *
+ * <p>One message rather than two. Split in half it read as a pair of announcements, and the second
+ * arrived as though something had happened since the first.
  *
  * <p>Written on first read rather than at registration, because accounts already exist and a
  * greeting only for people who sign up after today is a greeting most people never get. Idempotent
@@ -34,13 +37,9 @@ public class Welcome {
   public static final String NOTIFICATION_TYPE = "WELCOME";
 
   private static final String GREETING =
-      "Bun venit pe bid4! Aici ajung mesajele despre anunțurile tale și pașii fiecărei vânzări — "
-          + "întrebările și afacerea stau în același fir, ca să vezi dintr-o privire unde ai rămas.";
-
-  private static final String HOW_IT_WORKS =
-      "Când o ofertă e acceptată, tot ce urmează apare aici: alegi livrarea, plătești în siguranță, "
-          + "iar banii ajung la vânzător și la cauză abia după ce confirmi că ai primit coletul. "
-          + "Dacă ai nevoie de noi, scrie-ne chiar în această conversație.";
+      "Bun venit pe bid4! În această conversație ne poți adresa orice întrebare despre platformă,"
+          + " licitații sau comenzi. Echipa bid4 îți stă la dispoziție și îți va răspunde în cel"
+          + " mai scurt timp.";
 
   private final ConversationRepository conversations;
   private final ConversationParticipantRepository participants;
@@ -79,17 +78,9 @@ public class Welcome {
     conversation.setLastItemAt(Instant.now());
     Conversation saved = conversations.save(conversation);
 
-    // Written a millisecond apart on purpose. The thread is ordered by time,
-    // and two lines saved in the same instant come back in whichever order the
-    // index felt like — which put the explanation above the greeting.
-    Instant now = Instant.now();
     ThreadItem greeting = ThreadItem.system(saved.getId(), GREETING);
-    greeting.setCreatedAt(now);
+    greeting.setCreatedAt(Instant.now());
     items.save(greeting);
-
-    ThreadItem howItWorks = ThreadItem.system(saved.getId(), HOW_IT_WORKS);
-    howItWorks.setCreatedAt(now.plusMillis(1));
-    items.save(howItWorks);
 
     // The member is the only participant. An operator joins when there is
     // something to answer, rather than every account carrying a second row for
@@ -97,10 +88,10 @@ public class Welcome {
     //
     // Unread on the row rather than through markUnreadForAll: a bulk update does
     // not reach the instance this method is holding, and the list that follows
-    // would read the stale zero. Two items, so two.
+    // would read the stale zero. One message, so one.
     ConversationParticipant member =
         new ConversationParticipant(saved.getId(), userId, ParticipantRole.BUYER);
-    member.setUnreadCount(2);
+    member.setUnreadCount(1);
     participants.save(member);
   }
 
