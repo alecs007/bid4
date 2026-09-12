@@ -3,6 +3,7 @@ package ro.bid4.backend.orders.api;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,8 +13,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import ro.bid4.backend.orders.api.dto.AgreementResponse;
+import ro.bid4.backend.orders.api.dto.CancelOrderRequest;
 import ro.bid4.backend.orders.api.dto.ChooseDeliveryRequest;
+import ro.bid4.backend.orders.api.dto.OpenDisputeRequest;
 import ro.bid4.backend.orders.api.dto.OrderResponse;
+import ro.bid4.backend.orders.api.dto.ResolveDisputeRequest;
 import ro.bid4.backend.orders.api.dto.TrackingEventResponse;
 import ro.bid4.backend.orders.service.OrderMapper;
 import ro.bid4.backend.orders.service.OrderService;
@@ -89,5 +94,48 @@ public class OrderController {
   @PostMapping("/{id}/receipt")
   OrderResponse confirmReceipt(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
     return mapper.toResponse(orders.confirmReceipt(id, Viewers.from(jwt)));
+  }
+
+  /** What both parties agreed to on this sale, and when. */
+  @GetMapping("/{id}/agreements")
+  List<AgreementResponse> agreements(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    return mapper.toAgreements(orders.agreementsFor(id, Viewers.from(jwt)));
+  }
+
+  /** Either party, while the escrow is still empty. After payment it is a dispute, not a cancel. */
+  @PostMapping("/{id}/cancel")
+  OrderResponse cancel(
+      @PathVariable UUID id,
+      @RequestBody(required = false) @Valid CancelOrderRequest request,
+      @AuthenticationPrincipal Jwt jwt) {
+    String reason = request == null ? null : request.reason();
+    return mapper.toResponse(orders.cancel(id, reason, Viewers.from(jwt)));
+  }
+
+  /**
+   * Operator: settle a frozen sale.
+   *
+   * <p>The role is checked in the service rather than only here, because this moves money and a
+   * route annotation is the wrong place for the only check that stands between an ordinary account
+   * and somebody else's escrow.
+   */
+  @PostMapping("/{id}/dispute/resolve")
+  @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
+  OrderResponse resolveDispute(
+      @PathVariable UUID id,
+      @RequestBody @Valid ResolveDisputeRequest request,
+      @AuthenticationPrincipal Jwt jwt) {
+    return mapper.toResponse(
+        orders.resolveDispute(id, request.outcome(), request.note(), Viewers.from(jwt)));
+  }
+
+  /** Buyer: it arrived and it is not right. The money stops where it is until this is settled. */
+  @PostMapping("/{id}/dispute")
+  OrderResponse openDispute(
+      @PathVariable UUID id,
+      @RequestBody(required = false) @Valid OpenDisputeRequest request,
+      @AuthenticationPrincipal Jwt jwt) {
+    String reason = request == null ? null : request.reason();
+    return mapper.toResponse(orders.openDispute(id, reason, Viewers.from(jwt)));
   }
 }

@@ -102,6 +102,40 @@ public class ThreadEvents {
     notifyParticipants(conversationId, saved.getId());
   }
 
+  /**
+   * Writes something that happened before there was a sale: an offer sent, raised, withdrawn.
+   *
+   * <p>No order, and deliberately not idempotent. The unique index that holds one card per step
+   * exists because a step of a sale happens once and may be retried; an offer is the opposite —
+   * raising it twice is two events, and the thread is the record of both. Postgres treats null
+   * order ids as distinct, so the index does not stand in the way.
+   *
+   * <p>The thread is opened if it is not already there, so a seller's first sight of a buyer can be
+   * the offer itself rather than a message.
+   */
+  @Transactional
+  public void offer(
+      UUID listingId,
+      UUID buyerId,
+      UUID sellerId,
+      String eventType,
+      String body,
+      Map<String, String> payload) {
+
+    UUID conversationId = ensureThread(listingId, buyerId, sellerId).getId();
+
+    ThreadItem item = ThreadItem.event(conversationId, null, eventType, null);
+    item.setBody(body);
+    item.setPayload(payload);
+
+    ThreadItem saved = items.save(item);
+    conversations.touch(conversationId, saved.getCreatedAt());
+    // The other side only. An offer is the bidder's own doing, and a badge on
+    // their own inbox for it is a notification about themselves.
+    participants.markUnreadForOthers(conversationId, buyerId);
+    notifyParticipants(conversationId, saved.getId());
+  }
+
   /** A plain line from the platform, for anything that is not a step of a sale. */
   @Transactional
   public void system(UUID conversationId, String body) {

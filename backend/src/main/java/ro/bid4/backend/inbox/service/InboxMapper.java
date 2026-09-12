@@ -111,6 +111,7 @@ public class InboxMapper {
             : MediaUrls.resolveAll(listing.getImages()).getFirst(),
         listing == null ? 0L : listing.getCurrentPrice(),
         otherParty,
+        membership == null ? null : membership.getRole(),
         conversation.getOrderId(),
         newestItem == null ? null : toItem(newestItem, viewerId),
         membership == null ? 0 : membership.getUnreadCount(),

@@ -1,11 +1,14 @@
 package ro.bid4.backend.orders.service;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
+import ro.bid4.backend.orders.api.dto.AgreementResponse;
 import ro.bid4.backend.orders.api.dto.DeliverySnapshotResponse;
 import ro.bid4.backend.orders.api.dto.OrderResponse;
 import ro.bid4.backend.orders.api.dto.TrackingEventResponse;
 import ro.bid4.backend.orders.domain.DeliverySnapshot;
 import ro.bid4.backend.orders.domain.Order;
+import ro.bid4.backend.orders.domain.OrderAgreement;
 import ro.bid4.backend.orders.domain.OrderTrackingEvent;
 
 /** Rows into the shape the thread and the order page are drawn from. */
@@ -68,5 +71,19 @@ public class OrderMapper {
         delivery.getPostalCode(),
         delivery.getAddressDetails(),
         delivery.getPhone());
+  }
+
+  /**
+   * The acceptances, as the order page shows them.
+   *
+   * <p>Mapped here rather than in the controller: reading an entity's getters from {@code ..api} is
+   * exactly what the architecture rule forbids, and the reason it forbids it is that a route which
+   * knows the shape of a table row will eventually bind a request onto one.
+   */
+  public List<AgreementResponse> toAgreements(List<OrderAgreement> rows) {
+    return rows.stream()
+        .map(
+            row -> new AgreementResponse(row.getKind(), row.getTermsVersion(), row.getAcceptedAt()))
+        .toList();
   }
 }

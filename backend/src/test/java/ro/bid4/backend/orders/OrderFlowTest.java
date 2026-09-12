@@ -41,7 +41,10 @@ import ro.bid4.backend.inbox.domain.ThreadItemKind;
 import ro.bid4.backend.inbox.service.InboxService;
 import ro.bid4.backend.ledger.domain.AccountKind;
 import ro.bid4.backend.ledger.service.LedgerService;
+import ro.bid4.backend.orders.domain.AgreementKind;
+import ro.bid4.backend.orders.domain.DisputeOutcome;
 import ro.bid4.backend.orders.domain.Order;
+import ro.bid4.backend.orders.domain.OrderAgreement;
 import ro.bid4.backend.orders.domain.OrderStatus;
 import ro.bid4.backend.orders.repo.OrderRepository;
 import ro.bid4.backend.orders.service.Fees;
@@ -292,6 +295,166 @@ class OrderFlowTest {
     assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.COMPLETED);
   }
 
+  @Test
+  @DisplayName("a buyer who reports a problem stops the money where it is")
+  void disputeHoldsTheMoney() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-dispute");
+
+    orders.openDispute(order.getId(), "Produsul a ajuns deteriorat.", viewer(buyer));
+
+    Order disputed = reload(order);
+    assertThat(disputed.getStatus()).isEqualTo(OrderStatus.DISPUTE_OPEN);
+    // And nothing releases it on the buyer's behalf while it is open.
+    assertThat(disputed.getConfirmationDeadline()).isNull();
+
+    disputed.setAutoReleaseAt(Instant.now().minus(Duration.ofMinutes(1)));
+    orderRows.save(disputed);
+    orders.releaseWhatIsDue();
+    assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.DISPUTE_OPEN);
+  }
+
+  @Test
+  @DisplayName("only the buyer may hold their own money back")
+  void onlyTheBuyerDisputes() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+
+    assertThatThrownBy(() -> orders.openDispute(order.getId(), null, viewer(seller)))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("an operator refunding a dispute empties escrow back the way it came")
+  void disputeRefundReturnsTheMoney() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-refund");
+    orders.openDispute(order.getId(), "Deteriorat", viewer(buyer));
+
+    // Deltas, not totals: the platform accounts are shared and the other tests
+    // in this class leave their own money in them.
+    long escrowBefore = balanceOf(AccountKind.PLATFORM_ESCROW);
+    long sellerBefore = balanceOfUser(seller.getId());
+
+    orders.resolveDispute(order.getId(), DisputeOutcome.REFUND, "Returnare integrală", staff());
+
+    Order refunded = reload(order);
+    assertThat(refunded.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+    // The whole amount leaves escrow, and nobody's balance moved: a refund is
+    // never a division.
+    assertThat(escrowBefore - balanceOf(AccountKind.PLATFORM_ESCROW))
+        .isEqualTo(refunded.getTotalPaid());
+    assertThat(balanceOfUser(seller.getId())).isEqualTo(sellerBefore);
+  }
+
+  @Test
+  @DisplayName("an operator releasing a dispute divides it exactly as a confirmation would")
+  void disputeReleasePaysOut() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-release");
+    orders.openDispute(order.getId(), "Întârziere", viewer(buyer));
+
+    // Deltas, not totals: the platform accounts are shared and the other tests
+    // in this class leave their own money in them.
+    long escrowBefore = balanceOf(AccountKind.PLATFORM_ESCROW);
+    long sellerBefore = balanceOfUser(seller.getId());
+
+    orders.resolveDispute(
+        order.getId(), DisputeOutcome.RELEASE, "Livrarea stă în picioare", staff());
+
+    Order settled = reload(order);
+    assertThat(settled.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+    assertThat(escrowBefore - balanceOf(AccountKind.PLATFORM_ESCROW))
+        .isEqualTo(settled.getTotalPaid());
+    assertThat(balanceOfUser(seller.getId()) - sellerBefore).isEqualTo(settled.getSellerShare());
+  }
+
+  @Test
+  @DisplayName("neither party may settle their own dispute")
+  void onlyStaffResolve() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.openDispute(order.getId(), null, viewer(buyer));
+
+    assertThatThrownBy(
+            () ->
+                orders.resolveDispute(order.getId(), DisputeOutcome.RELEASE, null, viewer(seller)))
+        .isInstanceOf(ApiException.class);
+    assertThatThrownBy(
+            () -> orders.resolveDispute(order.getId(), DisputeOutcome.REFUND, null, viewer(buyer)))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("a sale can be called off while the escrow is empty, and not after")
+  void cancellingOnlyBeforeTheMoney() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+
+    orders.cancel(order.getId(), "M-am răzgândit", viewer(buyer));
+    assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.CANCELLED);
+
+    Auction second = liveListing();
+    Order paid = accept(second, 100 * LEU);
+    orders.chooseDelivery(paid.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(paid.getId(), viewer(buyer));
+
+    assertThatThrownBy(() -> orders.cancel(paid.getId(), null, viewer(seller)))
+        .isInstanceOf(ApiException.class);
+  }
+
+  @Test
+  @DisplayName("a buyer who never chooses delivery has the sale closed for them")
+  void lapsedOrdersAreCancelled() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+
+    Order waiting = reload(order);
+    waiting.setConfirmationDeadline(Instant.now().minus(Duration.ofMinutes(1)));
+    orderRows.save(waiting);
+
+    assertThat(orders.cancelWhatHasLapsed()).isPositive();
+    assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.CANCELLED);
+  }
+
+  @Test
+  @DisplayName("each party's agreement is recorded at the step it governs, and only once")
+  void agreementsAreRecordedWhereTheyAreMade() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 100 * LEU);
+
+    // Nothing agreed to yet: accepting an offer is the seller's act, and the
+    // buyer has not been shown a total.
+    assertThat(orders.agreementsFor(order.getId(), viewer(buyer))).isEmpty();
+
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    orders.generateLabel(order.getId(), viewer(seller));
+
+    var agreed = orders.agreementsFor(order.getId(), viewer(buyer));
+    assertThat(agreed).hasSize(3);
+    assertThat(agreed)
+        .extracting(OrderAgreement::getKind)
+        .containsExactlyInAnyOrder(
+            AgreementKind.SALE, AgreementKind.PAYMENT, AgreementKind.SHIPPING);
+    // The buyer promises two of them, the seller one.
+    assertThat(agreed).filteredOn(row -> row.getUserId().equals(buyer.getId())).hasSize(2);
+    assertThat(agreed).allSatisfy(row -> assertThat(row.getTermsVersion()).isNotBlank());
+  }
+
   /* --- the money ---------------------------------------------------------- */
 
   @Test
@@ -444,6 +607,19 @@ class OrderFlowTest {
 
   private static Viewer viewer(UserAccount account) {
     return Viewer.of(account.getId(), false);
+  }
+
+  /** Somebody from the bid4 team, which is the only kind of viewer that may settle a dispute. */
+  private static Viewer staff() {
+    return Viewer.of(UUID.randomUUID(), true);
+  }
+
+  private long balanceOf(AccountKind kind) {
+    return ledger.platform(kind).getBalance();
+  }
+
+  private long balanceOfUser(UUID userId) {
+    return ledger.balanceOf(AccountKind.USER_AVAILABLE, userId);
   }
 
   private UserAccount user(String displayName) {

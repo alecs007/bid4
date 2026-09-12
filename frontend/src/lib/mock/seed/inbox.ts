@@ -1,4 +1,4 @@
-import type { Auction, ID, Order, ThreadItem } from "@/lib/types";
+import type { Auction, Cause, ID, Order, ThreadItem } from "@/lib/types";
 import type { MockConversation, MockNotification } from "@/lib/api/inbox";
 
 /**
@@ -37,6 +37,17 @@ const REACHED: Partial<Record<Order["status"], number>> = {
   DELIVERED: 6,
   DISPUTE_OPEN: 6,
   COMPLETED: 7,
+  // Ended threads keep everything that got them there; the card that ends them
+  // is appended after the journey rather than being part of it.
+  DISPUTE_RESOLVED: 7,
+  REFUNDED: 7,
+  CANCELLED: 2,
+};
+
+/** The card that closes a thread whose sale did not end in a handover. */
+const ENDING: Partial<Record<Order["status"], string>> = {
+  DISPUTE_OPEN: "DISPUTE_OPENED",
+  CANCELLED: "CANCELLED",
 };
 
 /** The statuses where the sale is waiting on the buyer, and so the badge should be lit. */
@@ -55,9 +66,12 @@ export interface InboxSeed {
 export function buildInbox({
   orders,
   auctions,
+  causes,
 }: {
   orders: Order[];
   auctions: Auction[];
+  /** So a card can name the cause it gives to rather than calling it "cauza". */
+  causes: Cause[];
 }): InboxSeed {
   const conversations: MockConversation[] = [];
   const threadItems: (ThreadItem & { conversationId: ID })[] = [];
@@ -102,8 +116,32 @@ export function buildInbox({
         createdAt: at(),
       });
 
-    say(order.buyerId, "Bună! Mai este disponibil?");
-    say(order.sellerId, "Da, este. Îl trimit imediat ce se încheie.");
+    say(order.buyerId, "Bună ziua! Mai este disponibil?");
+    say(order.sellerId, "Bună ziua! Da, este disponibil.");
+
+    const event = (eventType: string, payload: Record<string, string>) =>
+      threadItems.push({
+        conversationId,
+        id: `item_seed_${threadItems.length}`,
+        kind: "EVENT",
+        mine: false,
+        imageUrls: [],
+        eventType,
+        payload,
+        createdAt: at(),
+      });
+
+    // How the sale was arrived at, which is what the seller actually watched
+    // happen. Every other thread also shows the offer being raised, so both the
+    // single-offer and the bidding case are somewhere in the demo.
+    const opening = Math.round(order.finalPrice * 0.8);
+    event("OFFER_PLACED", { amount: String(opening) });
+    if (index % 2 === 0) {
+      event("OFFER_RAISED", {
+        previous: String(opening),
+        amount: String(order.finalPrice),
+      });
+    }
 
     JOURNEY.slice(0, REACHED[order.status] ?? 1).forEach(
       ({ event, status }) => {
@@ -115,17 +153,102 @@ export function buildInbox({
           imageUrls: [],
           eventType: event,
           orderStatus: status,
-          payload: payloadFor(event, order),
+          payload: payloadFor(event, order, causes),
           createdAt: at(),
         });
       },
     );
+
+    const ending = ENDING[order.status];
+    if (ending) {
+      threadItems.push({
+        conversationId,
+        id: `item_seed_${threadItems.length}`,
+        kind: "EVENT",
+        mine: false,
+        imageUrls: [],
+        eventType: ending,
+        orderStatus: order.status,
+        payload:
+          ending === "DISPUTE_OPENED"
+            ? { reason: "Produsul nu corespunde descrierii." }
+            : {},
+        createdAt: at(),
+      });
+    }
 
     const last = threadItems[threadItems.length - 1];
     if (last) {
       conversations[conversations.length - 1]!.lastItemAt = last.createdAt;
     }
   });
+
+  // One thread that never became a sale: an offer sent, then withdrawn. Every
+  // other seeded conversation ends in an acceptance, so without this the demo
+  // never shows what a seller sees when a buyer changes their mind.
+  // One of the demo account's own listings, so this lands in the inbox the demo
+  // is read from rather than in a stranger's.
+  const walkedAway = auctions.find(
+    (item) =>
+      item.sellerId === "usr_maria" &&
+      !orders.some((order) => order.auctionId === item.id),
+  );
+  if (walkedAway) {
+    const id = "conv_seed_withdrawn";
+    const opened = Date.now() - 9 * 60 * 60 * 1000;
+    const buyerId = "usr_vlad";
+    let tick = 0;
+    const at = () => new Date(opened + tick++ * 6 * 60_000).toISOString();
+
+    conversations.push({
+      id,
+      kind: "LISTING",
+      listingId: walkedAway.id,
+      buyerId,
+      sellerId: walkedAway.sellerId,
+      archived: false,
+      muted: false,
+      unread: { [walkedAway.sellerId]: 1 },
+      lastItemAt: new Date(opened).toISOString(),
+    });
+
+    const push = (item: Partial<ThreadItem> & { kind: ThreadItem["kind"] }) =>
+      threadItems.push({
+        conversationId: id,
+        id: `item_seed_${threadItems.length}`,
+        mine: false,
+        imageUrls: [],
+        createdAt: at(),
+        ...item,
+      } as ThreadItem & { conversationId: ID });
+
+    push({
+      kind: "TEXT",
+      senderId: buyerId,
+      body: "Bună ziua! Aș dori să fac o ofertă.",
+    });
+    push({ kind: "EVENT", eventType: "OFFER_PLACED", payload: { amount: "18000" } });
+    push({
+      kind: "EVENT",
+      eventType: "OFFER_RAISED",
+      payload: { previous: "18000", amount: "21500" },
+    });
+    push({
+      kind: "TEXT",
+      senderId: buyerId,
+      body: "Îmi cer scuze, am găsit între timp altceva. Retrag oferta.",
+    });
+    push({
+      kind: "EVENT",
+      eventType: "OFFER_WITHDRAWN",
+      payload: { amount: "21500" },
+    });
+
+    const last = threadItems[threadItems.length - 1];
+    if (last) {
+      conversations[conversations.length - 1]!.lastItemAt = last.createdAt;
+    }
+  }
 
   // A handful for the other tab. Pointers, exactly as the server writes them —
   // the sentence is built in the client from the type and these values.
@@ -147,17 +270,23 @@ export function buildInbox({
 }
 
 /** The frozen snapshot each card shows, exactly as the server writes it. */
-function payloadFor(event: string, order: Order): Record<string, string> {
+function payloadFor(
+  event: string,
+  order: Order,
+  causes: Cause[],
+): Record<string, string> {
   switch (event) {
     case "OFFER_ACCEPTED":
       return {
         price: String(order.finalPrice),
         donation: String(order.donationAmount),
         donationPercent: String(order.donationPercent),
+        cause: causes.find((item) => item.id === order.causeId)?.name ?? "",
       };
     case "DELIVERY_CHOSEN":
       return {
-        delivery: order.deliveryMethod?.lockerName ?? "Curier la adresă",
+        // The method, not the locker. See the card's own note.
+        method: order.deliveryMethod?.lockerName ? "EASYBOX" : "HOME_COURIER",
         shipping: String(order.shipping),
         total: String(order.totalPaid),
       };

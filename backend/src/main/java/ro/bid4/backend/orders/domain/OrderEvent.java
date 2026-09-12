@@ -27,5 +27,7 @@ public enum OrderEvent {
   RELEASED,
   /** Something went wrong, and the clock stops until it is settled. */
   DISPUTE_OPENED,
+  /** An operator has settled it, one way or the other. The clock starts again or it ends here. */
+  DISPUTE_RESOLVED,
   CANCELLED
 }

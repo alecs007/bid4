@@ -76,6 +76,7 @@ export function createWorld(): World {
   const { conversations, threadItems, notifications } = buildInbox({
     orders,
     auctions,
+    causes,
   });
 
   // A starter watchlist for the demo buyer, so the dashboard is never empty.

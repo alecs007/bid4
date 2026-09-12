@@ -440,6 +440,7 @@ function decorate(conversation: MockConversation, me: ID): Conversation {
     listingImageUrl: listing?.images[0],
     listingPrice: listing?.currentPrice ?? 0,
     otherParty: world.users.find((item) => item.id === otherId),
+    viewerRole: conversation.buyerId === me ? "BUYER" : "SELLER",
     orderId: conversation.orderId,
     lastItem: itemsOf(conversation.id, me)[0],
     unreadCount: conversation.unread[me] ?? 0,

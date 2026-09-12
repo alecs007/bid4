@@ -26,10 +26,10 @@ import {
 import {
   chooseDelivery,
   confirmReceipt,
-  dispatchOrder,
   generateLabel,
   getOrder,
   payOrder,
+  reportProblem,
 } from "@/lib/api/orders";
 import { listDeliveryMethods } from "@/lib/api/users";
 import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
@@ -342,14 +342,16 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       setPickingDelivery(true);
       return;
     }
+    // Copying is the card's own business — it never reaches the server.
+    if (action === "COPY_AWB") return;
 
     setActing(true);
     setSendError(null);
     try {
       if (action === "PAY") await payOrder(order.id, user!.id);
       if (action === "LABEL") await generateLabel(order.id);
-      if (action === "DISPATCH") await dispatchOrder(order.id, user!.id);
       if (action === "CONFIRM_RECEIPT") await confirmReceipt(order.id, user!.id);
+      if (action === "REPORT_PROBLEM") await reportProblem(order.id, user!.id);
       reload();
       reloadOrder();
     } catch (failure) {
@@ -501,8 +503,16 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
                     <span className="block truncate font-display text-[15px] font-bold text-ink-900 lg:text-[13px] lg:text-ink-800">
                       {conversation.otherParty.displayName}
                     </span>
+                    {/* Which side of this listing they are on, rather than their
+                        handle. The same two people are buyer in one thread and
+                        seller in the next, and knowing which is the difference
+                        between reading a step and working it out. */}
                     <span className="block truncate text-[12px] text-ink-500 lg:text-[11px]">
-                      @{conversation.otherParty.username}
+                      {conversation.viewerRole === "BUYER"
+                        ? "Vânzător"
+                        : conversation.viewerRole === "SELLER"
+                          ? "Cumpărător"
+                          : `@${conversation.otherParty.username}`}
                     </span>
                   </span>
                 </Link>
@@ -549,7 +559,10 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
           wasAtBottom.current =
             box.scrollHeight - box.scrollTop - box.clientHeight < 160;
         }}
-        className="flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
+        // no-scrollbar: the conversation scrolls, and a bar down the side of it
+        // reads as a panel within a panel. The thread already tells you where
+        // you are — it opens at the end and the messages are dated.
+        className="no-scrollbar flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
       >
         {items.map((item, index) => (
           // One after another, towards the newest. Opacity and nothing else:

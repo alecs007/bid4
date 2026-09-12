@@ -11,3 +11,7 @@ backend/target/
 
 # Local notes, never committed
 HANDOFF.md
+
+# JVM crash dumps from builds that ran out of host memory.
+hs_err_pid*.log
+replay_pid*.log

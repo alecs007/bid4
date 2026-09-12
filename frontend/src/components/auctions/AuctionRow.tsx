@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils/cn";
  * placeholder that is a different height from the thing it stands in for makes
  * the page jump when the data lands, which is the one job it had.
  */
-const ROW = "rounded-3xl bg-white ring-1 ring-edge p-3 sm:p-4";
+export const ROW = "rounded-3xl bg-white ring-1 ring-edge p-3 sm:p-4";
 
 /**
  * Columns, declared, rather than fixed widths that hold their size and end up on
@@ -27,10 +27,10 @@ const ROW = "rounded-3xl bg-white ring-1 ring-edge p-3 sm:p-4";
  * four columns without the title becoming a word and a half, so everything
  * stacks instead.
  */
-const GRID =
+export const GRID =
   "lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-5 lg:gap-y-0";
 
-const THUMB = "aspect-square w-20 shrink-0 rounded-2xl sm:w-24";
+export const THUMB = "aspect-square w-20 shrink-0 rounded-2xl sm:w-24";
 
 export interface RowStat {
   label: string;
@@ -128,7 +128,7 @@ export function AuctionRow({
  * bidder cares about their own offer against the current one. A number with no
  * label above it is a number somebody has to guess at.
  */
-function Stats({ stats }: { stats: RowStat[] }) {
+export function Stats({ stats }: { stats: RowStat[] }) {
   return (
     <dl className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
       {stats.map((stat) => (

@@ -97,6 +97,13 @@ export interface Order {
 }
 
 /** Order plus every join the tracking page needs in one payload. */
+/** What a party agreed to, and when. Evidence, so it is shown rather than implied. */
+export interface OrderAgreement {
+  kind: "SALE" | "PAYMENT" | "SHIPPING";
+  termsVersion: string;
+  acceptedAt: ISODateString;
+}
+
 export interface OrderDetail extends Order {
   auction: Auction;
   buyer: PublicUser;

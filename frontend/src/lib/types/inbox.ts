@@ -51,6 +51,13 @@ export interface Conversation {
   listingPrice: Bani;
   /** The one name the row shows: the reader is always the other party. */
   otherParty?: PublicUser;
+  /**
+   * Which side of this listing the reader is on.
+   *
+   * <p>A fact about the conversation, not about either person: the same two people can be buyer in
+   * one thread and seller in the next, and every step of a sale reads differently depending on it.
+   */
+  viewerRole?: "BUYER" | "SELLER";
   /** Set when an offer is accepted. Null while the thread is only a conversation. */
   orderId?: ID;
   lastItem?: ThreadItem;

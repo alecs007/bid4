@@ -24,7 +24,7 @@ import type { Conversation } from "@/lib/types";
 import { formatRelativeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
-import { stepTitle } from "./EventCard";
+import { stepMark, stepTitle } from "./EventCard";
 
 /**
  * Every thread this account is in, newest activity first.
@@ -132,6 +132,8 @@ function Row({
   // known — a mark that stays lit for the length of a round trip on the
   // conversation being read is the one place the count is obviously wrong.
   const unread = !active && conversation.unreadCount > 0;
+  const last = conversation.lastItem;
+  const mark = last?.kind === "EVENT" ? stepMark(last.eventType) : null;
 
   return (
     <Link
@@ -197,13 +199,27 @@ function Row({
         </span>
 
         <span className="mt-0.5 flex items-center gap-2">
-          <span
-            className={cn(
-              "min-w-0 flex-1 truncate text-[13px]",
-              unread ? "font-semibold text-ink-800" : "text-ink-600",
-            )}
-          >
-            {preview(conversation)}
+          {/* The step's own mark, where the last thing to happen was a step.
+              A row that reads "Plată confirmată" beside the same green tick the
+              card carries is recognised without being read.
+              Closer to its own words than to the count at the far end: the mark
+              and the line are one phrase, so they keep the row's gap between
+              them and the badge, not between each other. */}
+          <span className="flex min-w-0 flex-1 items-center gap-1">
+            {mark ? (
+              <mark.Icon
+                aria-hidden="true"
+                className={cn("h-3.5 w-3.5 shrink-0", mark.accent.icon)}
+              />
+            ) : null}
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px]",
+                unread ? "font-semibold text-ink-800" : "text-ink-600",
+              )}
+            >
+              {preview(conversation)}
+            </span>
           </span>
           {unread ? (
             <span

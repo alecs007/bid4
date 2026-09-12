@@ -41,4 +41,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
    * says nothing must not leave a seller unpaid forever.
    */
   List<Order> findByStatusAndAutoReleaseAtBefore(OrderStatus status, Instant before);
+
+  /** Sales whose buyer never said where to send it, past the window they had to. */
+  List<Order> findByStatusAndConfirmationDeadlineBefore(OrderStatus status, Instant before);
 }

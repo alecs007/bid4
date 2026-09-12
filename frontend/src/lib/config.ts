@@ -294,7 +294,7 @@ export const MOCK = {
   // 7: conversations, thread items and notifications joined the world, so a
   // world seeded before them has an inbox that is empty rather than wrong —
   // which is the worse of the two, because nothing about it looks broken.
-  SCHEMA_VERSION: 8,
+  SCHEMA_VERSION: 9,
   /**
    * Seeded auctions are dated from when the world was created, so an old world
    * ends up with everything closed. Past this age it is reseeded.

@@ -2,6 +2,7 @@ package ro.bid4.backend.catalog.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ import ro.bid4.backend.common.error.ErrorCode;
 import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.domain.UserAccount;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
+import ro.bid4.backend.inbox.service.ThreadEvents;
 
 /**
  * Bidding, retracting, and following an auction.
@@ -44,18 +46,21 @@ public class BidService {
   private final AuctionWatchRepository watches;
   private final UserAccountRepository users;
   private final AuctionMapper mapper;
+  private final ThreadEvents threads;
 
   public BidService(
       AuctionRepository auctions,
       BidRepository bids,
       AuctionWatchRepository watches,
       UserAccountRepository users,
-      AuctionMapper mapper) {
+      AuctionMapper mapper,
+      ThreadEvents threads) {
     this.auctions = auctions;
     this.bids = bids;
     this.watches = watches;
     this.users = users;
     this.mapper = mapper;
+    this.threads = threads;
   }
 
   /**
@@ -172,6 +177,19 @@ public class BidService {
       log.info("Bid accepted on {}: {} bani by {}", auctionId, price, viewer.id());
     }
 
+    // Into the thread, so the seller watches the offer arrive where they will
+    // answer it. Raising replaces the bid but not the record: both cards stay.
+    long before = previous.map(Bid::getAmount).orElse(0L);
+    threads.offer(
+        auctionId,
+        viewer.id(),
+        auction.getSellerId(),
+        before > 0 ? "OFFER_RAISED" : "OFFER_PLACED",
+        before > 0 ? "Oferta a fost majorată." : "A fost trimisă o ofertă.",
+        before > 0
+            ? Map.of("amount", String.valueOf(price), "previous", String.valueOf(before))
+            : Map.of("amount", String.valueOf(price)));
+
     AuctionResponse view = mapper.toResponse(auction, viewer.id());
     BidResponse placed = mapper.toBidResponse(bid, viewer.id());
     return new PlaceBidResponse(placed, view, boughtNow ? true : null);
@@ -225,6 +243,14 @@ public class BidService {
     auction.setCurrentPrice(next == null ? auction.getStartingPrice() : next.getAmount());
     auction.setBidCount(Math.max(0, auction.getBidCount() - 1));
     auctions.save(auction);
+
+    threads.offer(
+        auctionId,
+        viewer.id(),
+        auction.getSellerId(),
+        "OFFER_WITHDRAWN",
+        "Oferta a fost retrasă.",
+        Map.of("amount", String.valueOf(top.getAmount())));
 
     log.info(
         "Bid retracted on {} by {}; price back to {} bani",

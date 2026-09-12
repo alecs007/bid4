@@ -21,7 +21,9 @@ import type {
   ID,
   Order,
   OrderDetail,
+  OrderAgreement,
   OrderFilters,
+  OrderStatus,
   UserRole,
 } from "@/lib/types";
 
@@ -426,5 +428,101 @@ export async function confirmReceipt(orderId: ID, userId: ID): Promise<Order> {
   }
   return (await confirmPickup(orderId, userId)) as Order;
 }
+
+/**
+ * POST /orders/{id}/dispute — buyer.
+ *
+ * <p>The other half of confirming, and the one the thread offers: the money is already held by
+ * bid4, and this is what stops it moving. The deadline that would otherwise have released it on the
+ * buyer's behalf is cleared with it, so a parcel somebody has objected to cannot pay itself out by
+ * running out of time.
+ *
+ * <p>Not `disputes.ts`, which opens a case with a reason, a description and photographs for an
+ * operator to judge. That is the formal route from the order page; this is the button beside
+ * "confirm primirea", where the only thing being asked is whether to let the money go.
+ */
+export async function reportProblem(
+  orderId: ID,
+  userId: ID,
+  reason?: string,
+): Promise<Order> {
+  if (!USE_MOCK) {
+    return http<Order>(`/orders/${orderId}/dispute`, {
+      method: "POST",
+      body: { reason },
+    });
+  }
+
+  await delay();
+  const world = getWorld();
+  const order = world.orders.find((item) => item.id === orderId);
+  if (!order) notFound("Comanda");
+  if (order.buyerId !== userId) {
+    forbidden("Doar cumpărătorul poate semnala o problemă.");
+  }
+  if (!PROTECTED.has(order.status)) {
+    badRequest("Comanda nu se află într-o etapă în care poate fi contestată.");
+  }
+
+  order.status = "DISPUTE_OPEN";
+  order.autoReleaseAt = undefined;
+  pushEvent(
+    order,
+    "DISPUTE_OPEN",
+    "Cumpărătorul a semnalat o problemă cu această comandă.",
+  );
+  commit();
+
+  const detail = toOrderDetail(order);
+  if (!detail) notFound("Comanda");
+  return detail;
+}
+
+/** Where the money is in, and not yet out: the window a buyer may hold it in. */
+const PROTECTED = new Set<OrderStatus>([
+  "PAID_HELD",
+  "LABEL_GENERATED",
+  "DROPPED_OFF",
+  "IN_TRANSIT",
+  "ARRIVED_AT_LOCKER",
+  "DELIVERED",
+]);
+
+/**
+ * GET /orders/{id}/agreements — what each party accepted, and when.
+ *
+ * <p>The mock answers from the order's own timeline rather than storing rows: the demo's world was
+ * seeded before this existed, and a sale that has been paid for demonstrably had its terms accepted
+ * at payment. It is a reconstruction, and it is marked as one by carrying the same version string
+ * the server would have written.
+ */
+export async function listAgreements(orderId: ID): Promise<OrderAgreement[]> {
+  if (!USE_MOCK) return http<OrderAgreement[]>(`/orders/${orderId}/agreements`);
+
+  await delay();
+  const world = getWorld();
+  const order = world.orders.find((item) => item.id === orderId);
+  if (!order) notFound("Comanda");
+
+  const reached = (status: OrderStatus) =>
+    order.trackingEvents.some((event) => event.status === status) ||
+    order.status === status;
+
+  const at = (fallback: string) => fallback;
+  const rows: OrderAgreement[] = [];
+  if (order.deliveryMethod || reached("AWAITING_PAYMENT")) {
+    rows.push({ kind: "SALE", termsVersion: TERMS_VERSION, acceptedAt: at(order.createdAt) });
+  }
+  if (order.status !== "AWAITING_CONFIRMATION" && order.status !== "AWAITING_PAYMENT") {
+    rows.push({ kind: "PAYMENT", termsVersion: TERMS_VERSION, acceptedAt: at(order.createdAt) });
+  }
+  if (order.awb) {
+    rows.push({ kind: "SHIPPING", termsVersion: TERMS_VERSION, acceptedAt: at(order.createdAt) });
+  }
+  return rows;
+}
+
+/** Kept in step with `Terms.CURRENT_VERSION` on the server. */
+const TERMS_VERSION = "2026-09-12";
 
 export { ORDER as ORDER_TIMINGS };
