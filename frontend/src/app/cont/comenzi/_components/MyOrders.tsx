@@ -1,47 +1,36 @@
 "use client";
 
-import { useState } from "react";
-
 import Link from "next/link";
 
-import {
-  AuctionRowSkeleton,
-  GRID,
-  ROW,
-  Stats,
-  THUMB,
-} from "@/components/auctions/AuctionRow";
-import { FadeImage } from "@/components/ui";
 import { ListState } from "@/app/cont/_components/ListState";
 import { useListView } from "@/app/cont/_components/useListView";
+import { Parties } from "@/components/orders/Parties";
 import {
   Button,
   ButtonLink,
   ErrorState,
+  FadeImage,
   Pagination,
   SegmentedControl,
+  Skeleton,
   StatusBadge,
 } from "@/components/ui";
 import { listOrders } from "@/lib/api/orders";
 import { useCurrentUserId } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import { ORDER_STATUS } from "@/lib/labels";
-import { formatMoney } from "@/lib/money";
 import type { OrderDetail } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 import { countRo } from "@/lib/utils/plural";
-import { formatDateRo } from "@/lib/utils/date";
 
-import { OrderRecord } from "./OrderRecord";
-
-/** Where a sale has got to, in the four answers a buyer actually wants. */
+/** Where a sale has got to, in the answers a buyer actually wants. */
 type Bucket = "all" | "active" | "delivery" | "done";
 
 const FILTERS: { value: Bucket; label: string }[] = [
   { value: "all", label: "Toate" },
   { value: "active", label: "De rezolvat" },
   { value: "delivery", label: "În livrare" },
-  { value: "done", label: "Finalizate" },
+  { value: "done", label: "Încheiate" },
 ];
 
 function bucketOf(order: OrderDetail): Bucket {
@@ -64,14 +53,15 @@ function bucketOf(order: OrderDetail): Bucket {
 /**
  * What this account has bought.
  *
- * <p>Purchases only: the other side of the market is {@code /cont/vanzari}, and a page that mixed
- * the two would make "what do I owe" and "what am I owed" the same list. Built on the same row, the
- * same filter strip and the same paging as that page, because a buyer and a seller are the same
- * person and should not have to learn the screen twice.
+ * <p>A list, and only a list. It used to borrow the row from {@code /cont/vanzari} and expand a
+ * full record inside it, which made the same screen answer two different questions badly: a row
+ * that unfolds into a fee breakdown, an address and a document list is neither scannable nor a
+ * document. The record moved to its own page, and what is left here is the four things somebody
+ * scanning their orders needs — what it was, who it was with, where it has got to, and what it
+ * cost.
  */
 export function MyOrders() {
   const userId = useCurrentUserId();
-  const [open, setOpen] = useState<string | null>(null);
 
   const { data, error, loading, reload } = useApi(
     () => listOrders(userId!, { role: "BUYER" }),
@@ -113,9 +103,9 @@ export function MyOrders() {
           }
         />
       ) : !userId || (loading && !data) ? (
-        <AuctionRowSkeleton rows={4} />
+        <OrderCardSkeleton rows={4} />
       ) : view.settling ? (
-        <AuctionRowSkeleton rows={view.outgoing} />
+        <OrderCardSkeleton rows={view.outgoing} />
       ) : view.shown.length === 0 ? (
         <ListState
           filtered={view.hiddenByFilter}
@@ -134,12 +124,7 @@ export function MyOrders() {
             className="animate-reveal flex flex-col gap-2.5"
           >
             {view.shown.map((order) => (
-              <OrderRow
-                key={order.id}
-                order={order}
-                open={open === order.id}
-                onToggle={() => setOpen(open === order.id ? null : order.id)}
-              />
+              <OrderCard key={order.id} order={order} />
             ))}
           </ul>
           <Pagination
@@ -154,84 +139,99 @@ export function MyOrders() {
 }
 
 /**
- * One purchase, in the same box a sale uses.
+ * One purchase, as a card that opens the record.
  *
- * <p>Not `<AuctionRow>` itself: that one wants a full `AuctionDetail` so it can draw the cause
- * block, and an order carries only the listing and a slim cause. It shares the row's chrome and its
- * stat block, so the two lists are the same object rather than two that resemble each other.
+ * <p>The parties come first and the item second. A card led by a large photograph of the object is
+ * a shop window, and this is not a catalogue — somebody scanning their orders is looking for the
+ * one with a particular person, or the one that needs something, and the photograph answers
+ * neither. So the two people are the first line, the item is a quiet row under them, and the
+ * thumbnail is small enough to identify it without being the subject.
+ *
+ * <p>The whole card is the link. A row with a "see details" button next to a clickable title gives
+ * two controls for one destination, and the earlier version had exactly that.
  */
-function OrderRow({
-  order,
-  open,
-  onToggle,
-}: {
-  order: OrderDetail;
-  open: boolean;
-  onToggle: () => void;
-}) {
+function OrderCard({ order }: { order: OrderDetail }) {
+  const status = ORDER_STATUS[order.status];
+
   return (
-    <li className={cn(ROW, "transition hover:ring-ink-300")}>
-      <div className={GRID}>
-        <div className="flex items-start gap-3 sm:gap-4 lg:contents">
-          <Link
-            href={`/licitatii/${order.auctionId}`}
-            className={cn(THUMB, "relative block overflow-hidden")}
-          >
-            {order.auction.images[0] ? (
-              <FadeImage
-                src={order.auction.images[0]}
-                sizes="96px"
-                className="object-cover"
-              />
-            ) : null}
-          </Link>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={`/licitatii/${order.auctionId}`}
-                className="font-display text-[15px] font-extrabold text-ink-900 hover:text-primary-700"
-              >
-                {order.auction.title}
-              </Link>
-              <StatusBadge meta={ORDER_STATUS[order.status]} />
-            </div>
-            <p className="numeric mt-0.5 text-[13px] text-ink-500">
-              {order.reference} · deschisă {formatDateRo(order.createdAt)}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 lg:mt-0">
-          <Stats
-            stats={[
-              { label: "Total plătit", value: formatMoney(order.totalPaid), emphasis: true },
-              {
-                label: `Către ${order.cause.name}`,
-                value: formatMoney(order.donationAmount),
-                tone: "positive",
-              },
-            ]}
+    <li>
+      <Link
+        href={`/cont/comenzi/${order.id}`}
+        className="group flex flex-col gap-2.5 rounded-3xl bg-white p-3.5 ring-1 ring-edge transition hover:ring-ink-300 sm:p-4"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <Parties
+            seller={order.seller}
+            buyer={order.buyer}
+            className="min-w-0 flex-1 basis-64"
+          />
+          {/* The same badge the sales list wears, so the two read as one system
+              rather than two that resemble each other. */}
+          <StatusBadge
+            meta={status}
+            size="sm"
+            marker={false}
+            className="shrink-0 border-transparent text-[11px]"
           />
         </div>
 
-        <div className="mt-3 lg:mt-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-expanded={open}
-            onClick={onToggle}
-          >
-            {open ? "Ascunde detaliile" : "Vezi detaliile"}
-          </Button>
-        </div>
-      </div>
+        {status.hint ? (
+          <p className="text-[13px] leading-snug text-ink-600">{status.hint}</p>
+        ) : null}
 
-      {open ? (
-        <div className="mt-3 border-t border-line pt-3">
-          <OrderRecord order={order} />
+        <div className="flex items-center gap-2.5 border-t border-line pt-2.5">
+          <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-ink-100">
+            {order.auction?.images[0] ? (
+              <FadeImage
+                src={order.auction.images[0]}
+                sizes="36px"
+                className="object-cover"
+              />
+            ) : null}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-bold text-ink-800 group-hover:text-primary-700">
+              {/* A listing can be withdrawn after the sale, and the order is
+                  then exactly the record somebody is looking for. */}
+              {order.auction?.title ?? "Anunț retras"}
+            </span>
+            <span className="numeric block text-[11px] text-ink-500">
+              {order.reference}
+            </span>
+          </span>
+
         </div>
-      ) : null}
+      </Link>
     </li>
+  );
+}
+
+/** The card, box for box, so the list fills in rather than jumping. */
+function OrderCardSkeleton({ rows }: { rows: number }) {
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {Array.from({ length: Math.max(1, rows) }).map((_, index) => (
+        <li
+          key={index}
+          className={cn("rounded-3xl bg-white p-3.5 ring-1 ring-edge sm:p-4")}
+        >
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-16 w-16 shrink-0 rounded-2xl sm:h-[4.5rem] sm:w-[4.5rem]" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3.5 w-1/3" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+          <div className="mt-2.5 border-t border-line pt-2.5">
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

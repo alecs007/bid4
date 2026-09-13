@@ -12,8 +12,14 @@ import ro.bid4.backend.orders.domain.OrderStatus;
  * items above it are a record and carry no controls at all, so nothing a forged or replayed item
  * could say produces a button — and pressing one is re-checked here anyway.
  *
- * <p>Flat on purpose. There is no nested auction, buyer, seller or cause here, so anything the UI
- * wants to name rather than reference comes from an event's frozen payload instead.
+ * <p>It carries slim summaries of the auction, the two parties and the cause, because every screen
+ * that draws an order needs to name them and a page holding only ids cannot. Each one is a subset,
+ * not the whole object: the full auction carries the seller's reserve, and a full profile carries
+ * things the other party has no business with.
+ *
+ * <p>This response was flat, and both order screens were written against a frontend type that
+ * claimed otherwise — so they worked against the mock world and threw against this. If a field is
+ * added to the type in `lib/types/order.ts`, it is added here in the same change.
  */
 public record OrderResponse(
     UUID id,
@@ -39,4 +45,9 @@ public record OrderResponse(
     Instant createdAt,
     Instant paidAt,
     Instant deliveredAt,
-    Instant releasedAt) {}
+    Instant releasedAt,
+    OrderListingResponse auction,
+    OrderPartyResponse buyer,
+    OrderPartyResponse seller,
+    OrderCauseResponse cause,
+    boolean hasOpenDispute) {}

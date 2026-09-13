@@ -314,7 +314,14 @@ export const MOCK = {
   // which is the worse of the two, because nothing about it looks broken.
   // 10: the cards are written per side and need more of the payload to do it —
   // the cause on release, which side cancelled, how a dispute was settled.
-  SCHEMA_VERSION: 10,
+  // 11: the demo account is a party to every seeded case, including the
+  // cancelled one and the resolved dispute, which used to belong to two other
+  // accounts and so could not be opened at all.
+  // 12: a cancelled sale is no longer seeded as paid, which the state machine
+  // cannot produce, and the history reads formally.
+  // 13: the order history no longer says a comanda was "deschisă" or a
+  // delivery "stabilită".
+  SCHEMA_VERSION: 13,
   /**
    * Seeded auctions are dated from when the world was created, so an old world
    * ends up with everything closed. Past this age it is reseeded.

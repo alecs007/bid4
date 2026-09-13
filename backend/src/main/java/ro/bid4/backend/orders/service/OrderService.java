@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.bid4.backend.billing.domain.DocumentKind;
@@ -70,6 +71,15 @@ public class OrderService {
 
   /** How long a buyer has to complain after delivery before the money releases itself. */
   private static final Duration AUTO_RELEASE_WINDOW = Duration.ofDays(3);
+
+  /**
+   * A ceiling on one person's order list.
+   *
+   * <p>The screens page client-side, so this is a bound on the response rather than a page size.
+   * High enough that nobody reaches it and low enough that the per-row joins in the mapper cannot
+   * turn one request into thousands of reads.
+   */
+  private static final int MAX_ORDERS_LISTED = 200;
 
   private final CauseRepository causes;
   private final OrderAgreementRepository agreements;
@@ -725,6 +735,30 @@ public class OrderService {
   // ---------------------------------------------------------------------------------------------
   // Reading
   // ---------------------------------------------------------------------------------------------
+
+  /**
+   * The sales this account is a party to.
+   *
+   * <p>Filtered by side in memory rather than in a second query: the list is one person's own
+   * orders, the repository already reads them in one go, and two near-identical queries are two
+   * places for the party check to drift.
+   */
+  @Transactional(readOnly = true)
+  public List<Order> forParty(String role, Viewer viewer) {
+    if (viewer.isAnonymous()) {
+      throw new ApiException(ErrorCode.UNAUTHENTICATED);
+    }
+    UUID me = viewer.id();
+    return orders.findForParty(me, Limit.of(MAX_ORDERS_LISTED)).stream()
+        .filter(
+            order ->
+                switch (role == null ? "" : role.toUpperCase()) {
+                  case "BUYER" -> order.getBuyerId().equals(me);
+                  case "SELLER" -> order.getSellerId().equals(me);
+                  default -> true;
+                })
+        .toList();
+  }
 
   @Transactional(readOnly = true)
   public Order get(UUID orderId, Viewer viewer) {

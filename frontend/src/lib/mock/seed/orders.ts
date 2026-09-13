@@ -20,6 +20,9 @@ import { snapshotDelivery } from "../delivery";
  * genuinely looks older than a PAID_HELD one.
  */
 
+/** Whose account the demo is opened as. Every seeded case has them on one side. */
+const DEMO_ACCOUNT = "usr_maria";
+
 /** How far into the past each status started, in hours. */
 const AGE_HOURS: Record<OrderStatus, number> = {
   AWAITING_CONFIRMATION: 6,
@@ -38,20 +41,27 @@ const AGE_HOURS: Record<OrderStatus, number> = {
   CANCELLED: 340,
 };
 
+/**
+ * What each step reads as in the order history.
+ *
+ * <p>Formal, and in the third person: these lines are the audit trail of a transaction, read by
+ * both parties and quoted back in a dispute, so none of them addresses one side as "tu". Kept in
+ * the same register as the cards in the conversation and the badges on the list.
+ */
 const EVENT_COPY: Record<OrderStatus, string> = {
-  AWAITING_CONFIRMATION: "Ai câștigat licitația. Confirmă datele de livrare.",
-  AWAITING_PAYMENT: "Datele de livrare confirmate. Procesăm plata.",
-  PAYMENT_FAILED: "Plata a fost refuzată de bancă.",
-  PAID_HELD: "Plată autorizată. Fondurile sunt reținute de bid4.",
-  LABEL_GENERATED: "Etichetă AWB generată. Vânzătorul poate expedia.",
-  DROPPED_OFF: "Colet predat la Easybox.",
-  IN_TRANSIT: "Colet în tranzit către destinație.",
+  AWAITING_CONFIRMATION: "Comandă înregistrată. Se așteaptă alegerea livrării.",
+  AWAITING_PAYMENT: "Modalitate de livrare aleasă. Se așteaptă plata.",
+  PAYMENT_FAILED: "Plata a fost refuzată de banca emitentă.",
+  PAID_HELD: "Plată înregistrată. Suma este păstrată de bid4.",
+  LABEL_GENERATED: "Etichetă de expediere emisă.",
+  DROPPED_OFF: "Colet preluat de curier.",
+  IN_TRANSIT: "Colet în tranzit.",
   ARRIVED_AT_LOCKER: "Colet disponibil pentru ridicare.",
-  DELIVERED: "Colet ridicat de destinatar.",
-  COMPLETED: "Fonduri eliberate: donația către cauză, restul către vânzător.",
-  DISPUTE_OPEN: "Dispută deschisă. Eliberarea fondurilor este blocată.",
-  DISPUTE_RESOLVED: "Dispută rezolvată de un operator bid4.",
-  REFUNDED: "Suma a fost rambursată integral cumpărătorului.",
+  DELIVERED: "Colet livrat.",
+  COMPLETED: "Suma a fost eliberată către cauză și către vânzător.",
+  DISPUTE_OPEN: "Sesizare înregistrată. Eliberarea sumei este suspendată.",
+  DISPUTE_RESOLVED: "Sesizare soluționată de un reprezentant bid4.",
+  REFUNDED: "Suma a fost restituită integral cumpărătorului.",
   CANCELLED: "Comandă anulată.",
 };
 
@@ -75,7 +85,7 @@ function buildTimeline(
       : status === "PAYMENT_FAILED"
         ? ["AWAITING_CONFIRMATION", "AWAITING_PAYMENT", "PAYMENT_FAILED"]
         : status === "CANCELLED"
-          ? ["AWAITING_CONFIRMATION", "AWAITING_PAYMENT", "PAYMENT_FAILED", "CANCELLED"]
+          ? ["AWAITING_CONFIRMATION", "AWAITING_PAYMENT", "CANCELLED"]
           : status === "DISPUTE_OPEN"
             ? [...ORDER_FLOW.slice(0, ORDER_FLOW.indexOf("DELIVERED") + 1), "DISPUTE_OPEN"]
             : status === "DISPUTE_RESOLVED"
@@ -142,7 +152,14 @@ export function buildOrders({
     const auction = auctions.find((item) => item.id === auctionId);
     if (!auction || !auction.winnerId) return;
 
-    const buyerId = auction.winnerId;
+    // The demo is read as Maria, so she is on one side of every case. Without
+    // this, the winner is whoever the catalogue happened to name and a third of
+    // the cases — cancelled, a resolved dispute — belonged to two other
+    // accounts and were invisible to the only session anybody opens.
+    const buyerId = auction.sellerId === DEMO_ACCOUNT ? auction.winnerId : DEMO_ACCOUNT;
+    // Kept in step, or the listing page would name a different winner than the
+    // order it produced.
+    auction.winnerId = buyerId;
     const delivery =
       deliveryMethods.find(
         (method) => method.userId === buyerId && method.isDefault,
@@ -162,7 +179,14 @@ export function buildOrders({
     orderNumber += 1;
     const createdAt = isoAgo(AGE_HOURS[status], "hours");
     const reference = `CMD-2026-0${orderNumber}`;
-    const paid = status !== "AWAITING_CONFIRMATION" && status !== "AWAITING_PAYMENT";
+    const paid =
+      status !== "AWAITING_CONFIRMATION" &&
+      status !== "AWAITING_PAYMENT" &&
+      // Cancelling is only possible while the escrow is empty, so a cancelled
+      // sale has never been paid. With this missing, the record showed a held
+      // payment and "nu a fost încasată nicio sumă" on the same screen.
+      status !== "PAYMENT_FAILED" &&
+      status !== "CANCELLED";
     const labelled = ORDER_FLOW.indexOf(status) >= ORDER_FLOW.indexOf("LABEL_GENERATED");
     const hasLabel =
       labelled ||
@@ -231,7 +255,7 @@ export function buildOrders({
     orders.push(order);
 
     // Invoices
-    if (paid && status !== "CANCELLED") {
+    if (paid) {
       invoiceNumber += 1;
       invoices.push({
         id: `inv_${order.id}_fee`,

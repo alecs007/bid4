@@ -7,15 +7,22 @@ import type { DeliveryMethod, DeliverySnapshot } from "@/lib/types";
  * its own so the seed can use it without importing the store.
  */
 export function snapshotDelivery(method: DeliveryMethod): DeliverySnapshot {
+  // Flattened, the way the server sends it. The saved method nests the address;
+  // the snapshot on the wire does not, and the mock must not offer a screen a
+  // shape the API will never produce.
   return {
-    id: method.id,
     type: method.type,
     label: method.label,
+    phone: method.phone,
     easyboxLockerId: method.easyboxLockerId,
     lockerName: method.lockerName,
     lockerAddress: method.lockerAddress,
-    homeAddress: method.homeAddress,
-    phone: method.phone,
+    recipientName: method.homeAddress?.recipientName,
+    street: method.homeAddress?.street,
+    city: method.homeAddress?.city,
+    county: method.homeAddress?.county,
+    postalCode: method.homeAddress?.postalCode,
+    addressDetails: method.homeAddress?.details,
   };
 }
 

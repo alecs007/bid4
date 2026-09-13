@@ -126,15 +126,16 @@ export function toOrderDetail(order: Order): OrderDetail | null {
 
   return {
     ...order,
-    auction,
+    auction: { id: auction.id, title: auction.title, images: auction.images },
     buyer: publicUserById(order.buyerId),
     seller: publicUserById(order.sellerId),
+    // Exactly the fields OrderResponse sends, so the mock cannot offer a screen
+    // something the API will not.
     cause: {
       id: cause.id,
       name: cause.name,
       slug: cause.slug,
       imageUrl: cause.imageUrl,
-      category: cause.category,
     },
     hasOpenDispute: world.disputes.some(
       (dispute) =>

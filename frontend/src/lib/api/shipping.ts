@@ -129,13 +129,12 @@ function addressLinesOf(delivery: DeliverySnapshot): string[] {
       Boolean,
     );
   }
-  const home = delivery.homeAddress;
-  if (!home) return [];
+  // Flat, the way the snapshot arrives from the server.
   return [
-    home.street,
-    `${home.city}, ${home.county}`,
-    home.postalCode,
-    home.details ?? "",
+    delivery.street ?? "",
+    [delivery.city, delivery.county].filter(Boolean).join(", "),
+    delivery.postalCode ?? "",
+    delivery.addressDetails ?? "",
   ].filter(Boolean);
 }
 
@@ -239,7 +238,7 @@ export async function trackAwb(awb: string): Promise<TrackingEvent[]> {
   const world = getWorld();
   const order = world.orders.find((item) => item.awb === awb);
   if (!order) notFound("AWB-ul");
-  return order.trackingEvents;
+  return order.trackingEvents ?? [];
 }
 
 /** Courier-facing states only — used by the tracking timeline component. */
@@ -251,7 +250,7 @@ export function courierEvents(order: Order): TrackingEvent[] {
     "ARRIVED_AT_LOCKER",
     "DELIVERED",
   ]);
-  return order.trackingEvents.filter((event) =>
+  return (order.trackingEvents ?? []).filter((event) =>
     courierStatuses.has(event.status),
   );
 }

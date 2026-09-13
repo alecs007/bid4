@@ -22,8 +22,10 @@ import type {
   Order,
   OrderDetail,
   OrderAgreement,
+  OrderDocument,
   OrderFilters,
   OrderStatus,
+  TrackingEvent,
   UserRole,
 } from "@/lib/types";
 
@@ -190,7 +192,7 @@ export async function markDroppedOff(
   userId: ID,
 ): Promise<OrderDetail> {
   if (!USE_MOCK) {
-    return http<OrderDetail>(`/orders/${orderId}/dropped-off`, {
+    return http<OrderDetail>(`/orders/${orderId}/dispatch`, {
       method: "POST",
     });
   }
@@ -525,20 +527,116 @@ export async function listAgreements(orderId: ID): Promise<OrderAgreement[]> {
   const order = world.orders.find((item) => item.id === orderId);
   if (!order) notFound("Comanda");
 
-  const reached = (status: OrderStatus) =>
-    order.trackingEvents.some((event) => event.status === status) ||
-    order.status === status;
-
-  const at = (fallback: string) => fallback;
+  // Each acceptance is tied to the act it governs, exactly as OrderService
+  // records it: the sale at the moment delivery is chosen, the payment at the
+  // moment it is made, the shipping terms when the label is issued. Keyed on
+  // the status instead, a cancelled order claimed the buyer had accepted the
+  // payment terms for a payment that never happened.
   const rows: OrderAgreement[] = [];
-  if (order.deliveryMethod || reached("AWAITING_PAYMENT")) {
-    rows.push({ kind: "SALE", termsVersion: TERMS_VERSION, acceptedAt: at(order.createdAt) });
+  if (order.deliveryMethod) {
+    rows.push({
+      kind: "SALE",
+      termsVersion: TERMS_VERSION,
+      acceptedAt: order.createdAt,
+    });
   }
-  if (order.status !== "AWAITING_CONFIRMATION" && order.status !== "AWAITING_PAYMENT") {
-    rows.push({ kind: "PAYMENT", termsVersion: TERMS_VERSION, acceptedAt: at(order.createdAt) });
+  if (order.paidAt) {
+    rows.push({
+      kind: "PAYMENT",
+      termsVersion: TERMS_VERSION,
+      acceptedAt: order.paidAt,
+    });
   }
   if (order.awb) {
-    rows.push({ kind: "SHIPPING", termsVersion: TERMS_VERSION, acceptedAt: at(order.createdAt) });
+    rows.push({
+      kind: "SHIPPING",
+      termsVersion: TERMS_VERSION,
+      acceptedAt: order.paidAt ?? order.createdAt,
+    });
+  }
+  return rows;
+}
+
+/**
+ * GET /orders/{id}/tracking
+ *
+ * <p>The courier's scans, as their own resource. They are not part of the order response: there can
+ * be many of them and most screens want none, so a page that needs the parcel's history asks for it.
+ */
+export async function listTracking(orderId: ID): Promise<TrackingEvent[]> {
+  if (!USE_MOCK) return http<TrackingEvent[]>(`/orders/${orderId}/tracking`);
+
+  await delay();
+  const world = getWorld();
+  const order = world.orders.find((item) => item.id === orderId);
+  if (!order) notFound("Comanda");
+  return order.trackingEvents ?? [];
+}
+
+/**
+ * GET /orders/{id}/documents
+ *
+ * <p>Lists what the sale has on paper, including documents that are promised and not yet rendered.
+ * Showing an invoice before it exists is deliberate: somebody looking for one can see that there
+ * will be one, which is a better answer than an empty list.
+ */
+export async function listDocuments(
+  orderId: ID,
+  viewerId: ID,
+): Promise<OrderDocument[]> {
+  if (!USE_MOCK) return http<OrderDocument[]>(`/orders/${orderId}/documents`);
+
+  await delay();
+  const world = getWorld();
+  const order = world.orders.find((item) => item.id === orderId);
+  if (!order) notFound("Comanda");
+
+  const buyer = world.users.find((item) => item.id === order.buyerId);
+  const seller = world.users.find((item) => item.id === order.sellerId);
+  const rows: OrderDocument[] = [];
+
+  // The same moments the server issues them at: the proforma when the money
+  // arrives, the invoice and the payout statement when the sale completes, the
+  // label when the parcel is booked.
+  if (order.paidAt) {
+    rows.push({
+      kind: "PROFORMA",
+      number: `PRO-2026-${order.reference.slice(-6)}`,
+      issuedToName: buyer?.displayName ?? "",
+      amount: order.totalPaid,
+      available: false,
+      issuedAt: order.paidAt,
+    });
+  }
+  if (order.awb) {
+    rows.push({
+      kind: "SHIPPING_LABEL",
+      issuedToName: seller?.displayName ?? "",
+      amount: 0,
+      // The courier document belongs to the party who hands the parcel over.
+      // Listed for both — the buyer can see one was issued — but downloadable
+      // only by the seller, which is also what the server enforces.
+      available: order.sellerId === viewerId,
+      issuedAt: order.paidAt ?? order.createdAt,
+    });
+  }
+  if (order.releasedAt) {
+    rows.push({
+      kind: "INVOICE",
+      number: `BID4-2026-${order.reference.slice(-6)}`,
+      issuedToName: buyer?.displayName ?? "",
+      amount: order.totalPaid,
+      available: false,
+      issuedAt: order.releasedAt,
+    });
+    rows.push({
+      kind: "PAYOUT_STATEMENT",
+      number: `PAY-2026-${order.reference.slice(-6)}`,
+      issuedToName: seller?.displayName ?? "",
+      amount: order.sellerShare,
+      available: false,
+      issuedAt: order.releasedAt,
+    });
   }
   return rows;
 }

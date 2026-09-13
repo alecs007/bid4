@@ -50,13 +50,42 @@ public class SaleDocuments {
     this.renderers = renderers;
   }
 
-  /** Everything on the file, including what is promised and not yet rendered. */
+  /**
+   * Everything on the file, including what is promised and not yet rendered.
+   *
+   * <p>Both parties see the whole list, because knowing a label was issued is part of knowing where
+   * the parcel is. What each of them may fetch is narrower, and {@code available} says so — a buyer
+   * offered a download that {@link #download} will refuse is worse than one that is plainly not
+   * theirs.
+   */
   @Transactional(readOnly = true)
   public List<DocumentResponse> listFor(UUID orderId, Viewer viewer) {
-    orders.get(orderId, viewer);
-    return documents.forOrder(
-        orderId,
-        userId -> users.findById(userId).map(account -> account.getDisplayName()).orElse("bid4"));
+    Order order = orders.get(orderId, viewer);
+    boolean isSeller = viewer.is(order.getSellerId()) || viewer.staff();
+
+    return documents
+        .forOrder(
+            orderId,
+            userId ->
+                users.findById(userId).map(account -> account.getDisplayName()).orElse("bid4"))
+        .stream()
+        .map(
+            row ->
+                row.kind().equals(DocumentKind.SHIPPING_LABEL.name()) ? label(row, isSeller) : row)
+        .toList();
+  }
+
+  /**
+   * The label, whose availability is not a question about storage.
+   *
+   * <p>Every other document is available once its bytes have been rendered and stored, which is
+   * what {@code DocumentService} reports. The label is fetched from the courier on demand and is
+   * therefore available as soon as it exists — to the seller, who is the one who hands the parcel
+   * over.
+   */
+  private static DocumentResponse label(DocumentResponse row, boolean isSeller) {
+    return new DocumentResponse(
+        row.kind(), row.number(), row.issuedToName(), row.amount(), isSeller, row.issuedAt());
   }
 
   /**

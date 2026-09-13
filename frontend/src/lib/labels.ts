@@ -58,52 +58,67 @@ export const AUCTION_STATUS: Record<AuctionStatus, StatusMeta> = {
   CANCELLED: { label: "Retras", tone: "neutral" },
 };
 
+/**
+ * Where a sale stands, as a badge.
+ *
+ * <p>Formal throughout, and consistent with the wording of the steps in the conversation: the same
+ * moment must not be a "dispută" here and a "sesizare" there. Each label names the state of the
+ * order rather than what somebody is waiting for, because a badge is read next to a name and a
+ * date, not as a sentence.
+ *
+ * <p>None of them names a courier or a locker. DROPPED_OFF used to read "Predat la Easybox", which
+ * is simply wrong for the half of orders delivered by courier to an address.
+ */
 export const ORDER_STATUS: Record<OrderStatus, StatusMeta> = {
   AWAITING_CONFIRMATION: {
-    label: "Așteaptă confirmarea",
+    label: "Livrare de ales",
     tone: "sun",
-    hint: "Câștigătorul confirmă datele de livrare.",
+    hint: "Cumpărătorul urmează să aleagă modalitatea de livrare.",
   },
   AWAITING_PAYMENT: {
-    label: "Așteaptă plata",
+    label: "Plată în așteptare",
     tone: "sun",
-    hint: "Procesăm plata cu cardul salvat.",
+    hint: "Expedierea se face numai după înregistrarea plății.",
   },
   PAYMENT_FAILED: {
-    label: "Plată eșuată",
+    label: "Plată nefinalizată",
     tone: "danger",
-    hint: "Cardul a fost refuzat. Încearcă din nou sau schimbă cardul.",
+    hint: "Comanda rămâne valabilă și plata poate fi reluată.",
   },
   PAID_HELD: {
-    label: "Fonduri reținute",
+    label: "Plată înregistrată",
     tone: "sky",
-    hint: "Banii sunt păstrați în siguranță de bid4 până la livrare.",
+    hint: "Suma este păstrată de bid4 până la confirmarea livrării.",
   },
   LABEL_GENERATED: {
-    label: "Etichetă generată",
+    label: "Etichetă emisă",
     tone: "sky",
-    hint: "Vânzătorul poate descărca eticheta AWB.",
+    hint: "Coletul urmează să fie predat curierului.",
   },
-  DROPPED_OFF: { label: "Predat la Easybox", tone: "sky" },
+  DROPPED_OFF: { label: "Preluat de curier", tone: "sky" },
   IN_TRANSIT: { label: "În tranzit", tone: "sky" },
   ARRIVED_AT_LOCKER: {
-    label: "Ajuns la Easybox",
+    label: "Disponibil pentru ridicare",
     tone: "primary",
-    hint: "Coletul te așteaptă la locker.",
+    hint: "Coletul poate fi ridicat de cumpărător.",
   },
-  DELIVERED: { label: "Livrat", tone: "primary" },
+  DELIVERED: {
+    label: "Livrat",
+    tone: "primary",
+    hint: "Se așteaptă confirmarea din partea cumpărătorului.",
+  },
   COMPLETED: {
     label: "Finalizată",
     tone: "success",
-    hint: "Fondurile au fost eliberate către cauză și vânzător.",
+    hint: "Suma a fost eliberată către cauză și către vânzător.",
   },
   DISPUTE_OPEN: {
-    label: "Dispută deschisă",
+    label: "Sesizare în analiză",
     tone: "danger",
-    hint: "Eliberarea fondurilor este blocată până la rezolvare.",
+    hint: "Suma rămâne blocată până la soluționare.",
   },
-  DISPUTE_RESOLVED: { label: "Dispută rezolvată", tone: "sky" },
-  REFUNDED: { label: "Rambursată", tone: "neutral" },
+  DISPUTE_RESOLVED: { label: "Sesizare soluționată", tone: "sky" },
+  REFUNDED: { label: "Sumă restituită", tone: "neutral" },
   CANCELLED: { label: "Anulată", tone: "neutral" },
 };
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 
 import { Icons, type Icon } from "@/components/icons";
+import { TrackingNumber } from "@/components/orders/TrackingNumber";
 import { Button } from "@/components/ui";
 import { formatMoney } from "@/lib/money";
-import type { Bani } from "@/lib/config";
+import { ORDER, SHIPPING, type Bani } from "@/lib/config";
 import type { Order, OrderStatus, ThreadItem } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
@@ -20,6 +21,10 @@ import { cn } from "@/lib/utils/cn";
  * moment produced, and it never carries the next action — {@link NextStep} does, once, at the end
  * of the thread. Keeping the two apart is what makes the thread read as a history with something
  * pending after it, rather than as a history whose last line keeps changing what it asks for.
+ *
+ * <p>The register is formal throughout, and closer to a statement of account than to a chat. These
+ * are the steps of a transaction between two people who may end up disagreeing about it, and the
+ * record is what either of them will be read back.
  */
 export function EventCard({
   item,
@@ -68,77 +73,27 @@ export function EventCard({
         </p>
       ) : null}
 
-      {/* Paperwork and tracking, offered wherever they were produced and for as
-          long as they are useful — not only while the step is the newest one. A
-          seller who has not yet been to the courier still needs the label.
-          TODO(backend): GET /orders/{id}/documents/{kind} for the proforma and
-          the invoice; GET /orders/{id}/tracking for the courier's own page. */}
-      {document || (step?.tracking && viewerIsBuyer) ? (
-        <span className="mt-1 flex flex-wrap items-center justify-center gap-1.5">
-          {document ? (
-            <button
-              type="button"
-              disabled
-              title="Disponibil după integrarea serviciului de facturare"
-              className={SECONDARY}
-            >
-              <Icons.download aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-              {document}
-            </button>
-          ) : null}
-          {step?.tracking && viewerIsBuyer ? (
-            <button
-              type="button"
-              disabled
-              title="Disponibil după integrarea curierului"
-              className={SECONDARY}
-            >
-              <Icons.locker aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-              Urmărește coletul
-            </button>
-          ) : null}
-        </span>
+      {awb ? (
+        <TrackingNumber awb={awb} viewerIsBuyer={viewerIsBuyer} className="mt-1.5" />
       ) : null}
 
-      {awb ? <Awb awb={awb} quiet={!viewerIsBuyer} /> : null}
+      {/* Paperwork, offered where it was produced and for as long as it is
+          useful rather than only while the step is the newest one: a seller who
+          has not yet been to the courier still needs the label. */}
+      {document ? (
+        <span className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
+          <button
+            type="button"
+            disabled
+            title="Se emite după integrarea serviciului de facturare"
+            className={SECONDARY}
+          >
+            <Icons.download aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+            {document}
+          </button>
+        </span>
+      ) : null}
     </div>
-  );
-}
-
-/**
- * The tracking number, weighted by who is reading it.
- *
- * <p>For the buyer it is the thing they follow the parcel with, so it is a control. For the seller
- * it is printed on the label they are about to download and it is not what they came for, so it
- * stays available and stops competing with the label for attention.
- */
-function Awb({ awb, quiet }: { awb: string; quiet: boolean }) {
-  const [copied, setCopied] = useState(false);
-  const CopyIcon = copied ? Icons.check : Icons.copy;
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        void navigator.clipboard?.writeText(awb).then(() => setCopied(true));
-      }}
-      className={cn(
-        "numeric mt-1",
-        quiet
-          ? "inline-flex items-center gap-1.5 rounded-lg text-[11px] font-semibold text-ink-500 transition hover:text-ink-700"
-          : SECONDARY,
-      )}
-    >
-      <CopyIcon
-        aria-hidden="true"
-        className={cn(
-          "shrink-0",
-          quiet ? "h-3 w-3" : "h-3.5 w-3.5",
-          copied && "text-primary-700",
-        )}
-      />
-      {copied ? "AWB copiat" : `AWB ${awb}`}
-    </button>
   );
 }
 
@@ -151,7 +106,7 @@ function Awb({ awb, quiet }: { awb: string; quiet: boolean }) {
  * done drops into the history and the next one appears below it, instead of the same card at the
  * bottom quietly swapping its button for the next one.
  *
- * <p>It is also the only thing on the page with any weight to it, which is the point: the thread is
+ * <p>It is also the only thing in the thread with any weight to it, which is the point: the rest is
  * a record, and this is the one part of it that wants something.
  */
 export function NextStep({
@@ -179,11 +134,9 @@ export function NextStep({
   onAct: (action: OrderAction) => void;
 }) {
   const step = PENDING[order.status];
-  if (!step) return null;
-
-  const Icon = Icons[step.icon];
-  const accent = ACCENTS[step.accent ?? "sky"];
-  const turn = step.actor === (viewerIsBuyer ? "BUYER" : "SELLER");
+  const Icon = Icons[step?.icon ?? "invoice"];
+  const accent = ACCENTS[step?.accent ?? "sky"];
+  const turn = step?.actor === (viewerIsBuyer ? "BUYER" : "SELLER");
 
   const context: PendingContext = {
     viewerIsBuyer,
@@ -193,6 +146,17 @@ export function NextStep({
     order,
     money: (amount) => formatMoney(amount),
   };
+
+  // A finished sale is waiting for nothing, and the panel is still the way to
+  // the record — so it collapses to the one link rather than disappearing and
+  // taking the only route to the order's own page with it.
+  if (!step) {
+    return (
+      <div className="my-3 flex justify-center px-3">
+        <OrderLink order={order} />
+      </div>
+    );
+  }
 
   return (
     <div className="my-3 -mx-3 flex flex-col items-center gap-1 border-y border-line bg-canvas px-3 py-4 text-center">
@@ -214,8 +178,8 @@ export function NextStep({
         {step.line(context)}
       </p>
 
-      {/* Only for the person whose turn it is. The other side has just been told
-          what is happening, which is all there is for them to know. */}
+      {/* Only for the party whose turn it is. The other has just been told what
+          is happening, which is all there is for them to know. */}
       {turn && step.action ? (
         <>
           <Button
@@ -228,7 +192,7 @@ export function NextStep({
           </Button>
 
           {/* The fork, and deliberately not a second button: two of equal weight
-              would make holding the money look like the expected answer. */}
+              would make withholding the funds look like the expected answer. */}
           {step.alternative ? (
             <button
               type="button"
@@ -241,7 +205,51 @@ export function NextStep({
           ) : null}
         </>
       ) : null}
+
+      <OrderLink order={order} className="mt-2.5" />
     </div>
+  );
+}
+
+/**
+ * The way from a conversation to the sale's own record.
+ *
+ * <p>A control rather than a line of underlined text: it is the only way out of the thread and it
+ * competes with the step's own button, so it needs an edge to be findable without being mistaken
+ * for the action. On the pending panel at every stage, including after the sale ends, because the
+ * questions the record answers — what was charged, where it went, which documents exist — are asked
+ * most often once something has gone wrong or a receipt is needed.
+ *
+ * <p>The reference is the label, not a decoration on it. "Detaliile comenzii" alone says what the
+ * page is; naming the order says which one, and it is the string somebody quotes to support.
+ */
+function OrderLink({ order, className }: { order: Order; className?: string }) {
+  return (
+    <Link
+      href={`/cont/comenzi/${order.id}`}
+      className={cn(
+        "inline-flex w-full max-w-xs items-center gap-2 rounded-xl bg-white px-3 py-2 text-left",
+        "ring-1 ring-edge transition hover:ring-ink-300",
+        className,
+      )}
+    >
+      <Icons.invoice
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-ink-500"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-bold text-ink-800">
+          Detaliile comenzii
+        </span>
+        <span className="numeric block text-[11px] text-ink-500">
+          {order.reference}
+        </span>
+      </span>
+      <Icons.forward
+        aria-hidden="true"
+        className="h-3.5 w-3.5 shrink-0 text-ink-400"
+      />
+    </Link>
   );
 }
 
@@ -257,7 +265,7 @@ export type OrderAction =
  *
  * <p>The figures come from the payload the server froze rather than from the order, so a card
  * written three steps ago still says what was true then: the amount at the time, the method that
- * was chosen, the AWB that was issued.
+ * was chosen, the consignment number that was issued.
  */
 interface StepContext {
   viewerIsBuyer: boolean;
@@ -286,9 +294,9 @@ interface PendingContext {
  * One event, as a record.
  *
  * <p>Every sentence is written twice, because the same step is different news to each side: the one
- * who acted is told what they did, the other is told who did it to them. And each side is told only
- * what bears on them — a seller has no use for the buyer's delivery cost or for the total they were
- * charged, and quoting figures at somebody they have no claim on invites the wrong conclusion about
+ * who acted is told what they did, the other is told who did it. And each side is told only what
+ * bears on them — a seller has no use for the buyer's delivery cost or for the total they were
+ * charged, and quoting figures at somebody with no claim on them invites the wrong conclusion about
  * whose money it is.
  */
 interface Step {
@@ -302,13 +310,11 @@ interface Step {
    * A document this step produced, offered where it was produced.
    *
    * <p>A proforma at payment and an invoice at completion belong in the conversation that generated
-   * them rather than three screens away in the account area.
+   * them as well as on the order's own page.
    */
   document?: (context: StepContext) => string | null;
-  /** Whether this step is the one that carries the tracking number. */
+  /** Whether this step is the one that carries the consignment number. */
   awb?: boolean;
-  /** Whether the buyer may follow the parcel from here. */
-  tracking?: boolean;
 }
 
 /** What the sale is waiting for, in one status. */
@@ -322,17 +328,23 @@ interface Pending {
    * What is happening, in the reader's own terms.
    *
    * <p>"Se așteaptă plata" is true for both of them and useful to neither: one of them is the
-   * person being waited on. So the side with the button is told what to do and the other is told
-   * what is happening and roughly when it ends.
+   * person being waited on. So the party with the button is told what to do and the other is told
+   * what is happening and when it ends.
    */
   line: (context: PendingContext) => string;
   action?: OrderAction;
-  /** Built from the order, so a button can name the sum it is about to move. */
+  /**
+   * Built from the order, so a button names what it is about to do.
+   *
+   * <p>"Plătește" is a category, not an action. A control that moves money says how much, and one
+   * that issues a document says which — so pressing it is a decision rather than a guess.
+   */
   cta?: (context: PendingContext) => string;
   /**
    * The quieter second choice, for a step that is genuinely a fork.
    *
-   * <p>Only one step is: the parcel has arrived and the buyer either lets the money go or holds it.
+   * <p>Only one step is: the parcel has arrived and the buyer either releases the funds or holds
+   * them.
    */
   alternative?: { cta: string; action: OrderAction };
 }
@@ -376,15 +388,15 @@ const STEPS: Record<string, Step> = {
      done about it belongs to the listing page rather than to a thread. */
   OFFER_PLACED: {
     // The same event, and not the same news: one of them sent it, the other had
-    // it arrive. "Ofertă trimisă" on a seller's screen describes somebody else's
-    // act as though it were theirs.
-    title: (c) => (c.viewerIsBuyer ? "Ofertă trimisă" : "Ofertă primită"),
+    // it arrive. "Ofertă transmisă" on a seller's screen describes somebody
+    // else's act as though it were theirs.
+    title: (c) => (c.viewerIsBuyer ? "Ofertă transmisă" : "Ofertă primită"),
     icon: "auction",
     accent: "sky",
     line: (c) =>
       c.viewerIsBuyer
-        ? `Ai trimis o ofertă de ${c.money("amount")}.`
-        : `${buyer(c)} a trimis o ofertă de ${c.money("amount")}.`,
+        ? `Ai transmis o ofertă de ${c.money("amount")}.`
+        : `${buyer(c)} a transmis o ofertă de ${c.money("amount")}.`,
   },
   OFFER_RAISED: {
     title: () => "Ofertă majorată",
@@ -396,31 +408,33 @@ const STEPS: Record<string, Step> = {
         : `${buyer(c)} a majorat oferta de la ${c.money("previous")} la ${c.money("amount")}.`,
   },
   OFFER_WITHDRAWN: {
-    title: (c) => (c.viewerIsBuyer ? "Ofertă retrasă" : "Ofertă retrasă de cumpărător"),
+    title: (c) =>
+      c.viewerIsBuyer ? "Ofertă retrasă" : "Ofertă retrasă de cumpărător",
     icon: "close",
     accent: "ink",
     line: (c) =>
       c.viewerIsBuyer
-        ? `Ți-ai retras oferta de ${c.money("amount")}.`
-        : `${buyer(c)} și-a retras oferta de ${c.money("amount")}.`,
+        ? `Ai retras oferta de ${c.money("amount")}.`
+        : `${buyer(c)} a retras oferta de ${c.money("amount")}.`,
   },
 
   OFFER_ACCEPTED: {
-    title: (c) => (c.viewerIsBuyer ? "Oferta ta a fost acceptată" : "Ofertă acceptată"),
+    title: (c) =>
+      c.viewerIsBuyer ? "Oferta ta a fost acceptată" : "Ofertă acceptată",
     icon: "success",
     accent: "primary",
     line: (c) =>
       sentence(
         c.viewerIsBuyer
-          ? `${seller(c)} a acceptat oferta ta de ${c.money("price")}.`
-          : `Ai acceptat oferta de ${c.money("price")} a lui ${buyer(c)}.`,
+          ? `${seller(c)} a acceptat oferta de ${c.money("price")}.`
+          : `Ai acceptat oferta de ${c.money("price")} transmisă de ${buyer(c)}.`,
         c.money("donation") &&
           c.value("cause") &&
           `Din această sumă, ${c.money("donation")} (${c.value("donationPercent")}%) revin cauzei ${c.value("cause")}.`,
       ),
   },
   DELIVERY_CHOSEN: {
-    title: () => "Livrare aleasă",
+    title: () => "Modalitate de livrare aleasă",
     icon: "delivery",
     accent: "sky",
     // The cost is the buyer's and so is the total. A seller reading this needs
@@ -436,29 +450,30 @@ const STEPS: Record<string, Step> = {
         : `${buyer(c)} a ales livrarea ${method(c)}.`,
   },
   PAYMENT_HELD: {
-    title: () => "Plată confirmată",
+    title: () => "Plată înregistrată",
     icon: "escrow",
     accent: "primary",
     // Not what the buyer paid, on the seller's screen. The total is the price
     // plus the buyer's own fee plus the delivery, so naming it to a seller
     // quotes them a number they have no claim on and then has to explain why
-    // they are not getting it. What is theirs is settled on the release card.
+    // they are not receiving it. What is theirs is settled on the release card.
     line: (c) =>
       c.viewerIsBuyer
-        ? `Ai plătit ${c.money("total")}. Suma este administrată de bid4 și se eliberează după confirmarea primirii coletului.`
-        : `${buyer(c)} a făcut plata. Suma este administrată de bid4 până la confirmarea primirii coletului.`,
+        ? `Ai achitat suma de ${c.money("total")}. Suma este păstrată de bid4 și va fi eliberată după confirmarea livrării.`
+        : "Plata a fost înregistrată. Suma este păstrată de bid4 până la confirmarea livrării.",
     document: (c) => (c.viewerIsBuyer ? "Descarcă proforma" : null),
   },
   LABEL_READY: {
-    title: (c) => (c.viewerIsBuyer ? "Eticheta este gata" : "Etichetă emisă"),
+    title: (c) =>
+      c.viewerIsBuyer ? "Expediere pregătită" : "Etichetă de expediere emisă",
     icon: "invoice",
     accent: "sky",
     line: (c) =>
       c.viewerIsBuyer
         ? `${seller(c)} a emis eticheta de expediere prin ${c.value("courier")}.`
         : `Ai emis eticheta de expediere prin ${c.value("courier")}.`,
-    // The buyer follows the parcel by this number, so for them it is a control.
-    // The seller has it printed on the label and does not need to read it.
+    // The buyer follows the parcel by this number, so for them it is a field
+    // they act on. The seller has it printed on the label.
     awb: true,
     // Stays on the card rather than only on the newest step: a seller who has
     // not yet been to the courier needs the label, and the sale may by then have
@@ -471,9 +486,8 @@ const STEPS: Record<string, Step> = {
     accent: "sky",
     line: (c) =>
       c.viewerIsBuyer
-        ? `Curierul a preluat coletul de la ${seller(c)}.`
-        : `Curierul a preluat coletul și îl duce către ${buyer(c)}.`,
-    tracking: true,
+        ? "Coletul a fost preluat de curier și se află în curs de livrare."
+        : "Coletul a fost preluat de curier. Din acest moment transportul este în responsabilitatea curierului.",
   },
   DELIVERED: {
     title: () => "Colet livrat",
@@ -484,7 +498,7 @@ const STEPS: Record<string, Step> = {
     // instruction that stayed on screen after it had been carried out.
     line: (c) =>
       c.viewerIsBuyer
-        ? "Coletul ți-a fost livrat."
+        ? "Coletul a fost livrat la adresa aleasă."
         : `Coletul a fost livrat către ${buyer(c)}.`,
   },
   RELEASED: {
@@ -494,27 +508,27 @@ const STEPS: Record<string, Step> = {
     line: (c) =>
       c.viewerIsBuyer
         ? sentence(
-            "Ai confirmat primirea coletului.",
+            "Ai confirmat livrarea coletului.",
             c.money("donation") &&
-              `${c.money("donation")} au fost virați către ${c.value("cause") || "cauză"}, iar ${c.money("sellerShare")} vânzătorului.`,
+              `${c.money("donation")} au fost virați către ${c.value("cause") || "cauză"}, iar ${c.money("sellerShare")} către vânzător.`,
           )
         : sentence(
-            `${buyer(c)} a confirmat primirea coletului.`,
+            "Livrarea coletului a fost confirmată.",
             c.money("sellerShare") &&
-              `Ai încasat ${c.money("sellerShare")}, iar ${c.money("donation")} au fost virați către ${c.value("cause") || "cauză"}.`,
+              `Ți-au fost virați ${c.money("sellerShare")}, iar ${c.money("donation")} au fost virați către ${c.value("cause") || "cauză"}.`,
           ),
     document: () => "Descarcă factura",
   },
   DISPUTE_OPENED: {
-    title: (c) => (c.viewerIsBuyer ? "Ai semnalat o problemă" : "Problemă semnalată"),
+    title: (c) => (c.viewerIsBuyer ? "Sesizare transmisă" : "Sesizare înregistrată"),
     icon: "dispute",
     accent: "danger",
     line: (c) =>
       sentence(
         c.viewerIsBuyer
-          ? "Ai semnalat o problemă cu această comandă."
-          : `${buyer(c)} a semnalat o problemă cu această comandă.`,
-        c.value("reason") && `Motiv: ${quoted(c.value("reason")!)}.`,
+          ? "Ai transmis o sesizare privind această comandă."
+          : `${buyer(c)} a transmis o sesizare privind această comandă.`,
+        c.value("reason") && `Motiv invocat: ${quoted(c.value("reason")!)}.`,
       ),
   },
   DISPUTE_RESOLVED: {
@@ -522,17 +536,17 @@ const STEPS: Record<string, Step> = {
     icon: "success",
     accent: "ink",
     // Four sentences for two outcomes, because "soluționată" on its own tells
-    // neither party the one thing they want to know, which is where the money
+    // neither party the one thing they need to know, which is where the funds
     // went.
     line: (c) =>
       sentence(
         c.value("outcome") === "REFUND"
           ? c.viewerIsBuyer
-            ? `Sesizarea a fost soluționată în favoarea ta. Suma de ${c.money("total")} ți-a fost returnată.`
-            : `Sesizarea a fost soluționată în favoarea cumpărătorului. Suma a fost returnată lui ${buyer(c)}.`
+            ? `Sesizarea a fost soluționată în favoarea ta. Suma de ${c.money("total")} a fost restituită.`
+            : "Sesizarea a fost soluționată în favoarea cumpărătorului. Suma a fost restituită integral."
           : c.viewerIsBuyer
             ? "Sesizarea a fost soluționată în favoarea vânzătorului. Suma a fost eliberată."
-            : `Sesizarea a fost soluționată în favoarea ta. Ai încasat ${c.money("sellerShare")}.`,
+            : `Sesizarea a fost soluționată în favoarea ta. Ți-au fost virați ${c.money("sellerShare")}.`,
         c.value("note") && `Motivarea bid4: ${quoted(c.value("note")!)}.`,
       ),
   },
@@ -540,13 +554,13 @@ const STEPS: Record<string, Step> = {
     title: () => "Comandă anulată",
     icon: "close",
     accent: "danger",
-    // Who walked away is the question being asked, and the passive hid it from
+    // Who withdrew is the question being asked, and the passive hid it from
     // both of them. The server records which side it was.
     line: (c) => {
       const by = c.value("by");
       const who =
         by === "SYSTEM"
-          ? "Comanda a fost anulată automat."
+          ? "Comanda a fost anulată automat, prin depășirea termenului."
           : by === "STAFF"
             ? "Comanda a fost anulată de echipa bid4."
             : by === "BUYER"
@@ -558,7 +572,7 @@ const STEPS: Record<string, Step> = {
                 : "Ai anulat comanda.";
       return sentence(
         who,
-        c.value("reason") && `Motiv: ${quoted(c.value("reason")!)}.`,
+        c.value("reason") && `Motiv invocat: ${quoted(c.value("reason")!)}.`,
       );
     },
   },
@@ -568,19 +582,19 @@ const STEPS: Record<string, Step> = {
  * What each status is waiting for, and from whom.
  *
  * <p>A status with no entry here is a sale that is waiting for nothing: finished, refunded or
- * cancelled. Those draw no panel at all, which is why the set needs no separate list of endings.
+ * cancelled. Those draw no panel, which is why the set needs no separate list of endings.
  */
 const PENDING: Partial<Record<OrderStatus, Pending>> = {
   AWAITING_CONFIRMATION: {
-    title: () => "Alegerea livrării",
+    title: () => "Alegerea modalității de livrare",
     icon: "delivery",
     actor: "BUYER",
     line: (c) =>
       c.viewerIsBuyer
-        ? "Alege unde vrei să primești coletul. Costul livrării se adaugă la plată după ce alegi."
-        : `${buyer(c)} are de ales adresa de livrare. Comanda se anulează dacă nu o alege la timp.`,
+        ? `Alege unde urmează să fie livrat coletul. Costul livrării se adaugă la total după această etapă, iar termenul de finalizare este de ${ORDER.CONFIRMATION_HOURS} de ore.`
+        : `${buyer(c)} urmează să aleagă modalitatea de livrare. Comanda se anulează automat dacă termenul de ${ORDER.CONFIRMATION_HOURS} de ore nu este respectat.`,
     action: "CHOOSE_DELIVERY",
-    cta: () => "Alege adresa de livrare",
+    cta: () => "Alege modalitatea de livrare",
   },
   AWAITING_PAYMENT: {
     title: () => "Plata comenzii",
@@ -591,15 +605,13 @@ const PENDING: Partial<Record<OrderStatus, Pending>> = {
     // of this that is theirs.
     line: (c) =>
       c.viewerIsBuyer
-        ? `Totalul de ${c.money(c.order.totalPaid)} include produsul, taxa platformei și livrarea ${methodOf(c.order)}. Banii sunt administrați de bid4 până confirmi că ai primit coletul.`
-        : `${buyer(c)} are de făcut plata. Nu expedia coletul înainte ca plata să fie confirmată.`,
+        ? `Totalul de ${c.money(c.order.totalPaid)} include produsul, comisionul platformei și livrarea ${methodOf(c.order)}. Suma este păstrată de bid4 și va fi eliberată după confirmarea livrării.`
+        : `${buyer(c)} urmează să achite comanda. Expedierea se face numai după înregistrarea plății.`,
     action: "PAY",
-    // Not "Plătește". A button that moves money says how much it is about to
-    // move, so the number the reader agrees to is on the thing they press.
     cta: (c) => `Plătește ${c.money(c.order.totalPaid)}`,
   },
   PAYMENT_FAILED: {
-    title: () => "Plata nu a reușit",
+    title: () => "Plată nefinalizată",
     icon: "warning",
     accent: "danger",
     actor: "BUYER",
@@ -607,9 +619,9 @@ const PENDING: Partial<Record<OrderStatus, Pending>> = {
       c.viewerIsBuyer
         ? sentence(
             c.order.paymentFailureReason,
-            "Încearcă din nou pentru a duce comanda mai departe.",
+            "Comanda rămâne valabilă și plata poate fi reluată.",
           )!
-        : `Plata lui ${buyer(c)} nu a reușit. Nu expedia coletul până când nu este confirmată.`,
+        : `Plata nu a fost finalizată. Comanda rămâne valabilă, iar ${buyer(c)} poate relua plata.`,
     action: "PAY",
     cta: (c) => `Reia plata de ${c.money(c.order.totalPaid)}`,
   },
@@ -619,28 +631,28 @@ const PENDING: Partial<Record<OrderStatus, Pending>> = {
     actor: "SELLER",
     line: (c) =>
       c.viewerIsBuyer
-        ? `${seller(c)} pregătește expedierea. Vei primi AWB-ul aici, de îndată ce eticheta este emisă.`
-        : `Plata este confirmată și administrată de bid4. Emite eticheta și trimite coletul ${methodOf(c.order)}.`,
+        ? `${seller(c)} urmează să emită eticheta de expediere. Numărul de urmărire va fi afișat aici.`
+        : `Ai ${ORDER.DROP_OFF_DAYS} zile pentru a expedia coletul ${methodOf(c.order)}.`,
     action: "LABEL",
     cta: () => "Emite eticheta de expediere",
   },
   LABEL_GENERATED: {
-    title: () => "Predarea la curier",
+    title: () => "Predarea coletului la curier",
     icon: "delivery",
     actor: null,
     line: (c) =>
       c.viewerIsBuyer
-        ? `${seller(c)} are de predat coletul curierului. Îl poți urmări de îndată ce este preluat.`
-        : "Predă coletul curierului folosind eticheta de mai sus. Preluarea este confirmată de curier.",
+        ? `${seller(c)} urmează să predea coletul curierului. Coletul poate fi urmărit din momentul preluării.`
+        : "Atașează eticheta pe colet și predă-l curierului. Preluarea este confirmată de curier, nu de vânzător.",
   },
   DROPPED_OFF: {
-    title: () => "Colet preluat",
+    title: () => "Colet preluat de curier",
     icon: "parcel",
     actor: null,
     line: (c) =>
       c.viewerIsBuyer
-        ? "Coletul a fost preluat de curier și este în drum spre tine."
-        : `Coletul a fost preluat de curier și este în drum spre ${buyer(c)}.`,
+        ? "Coletul a fost preluat și se află în curs de livrare."
+        : `Coletul a fost preluat de curier pentru livrare către ${buyer(c)}.`,
   },
   IN_TRANSIT: {
     title: () => "Colet în tranzit",
@@ -648,28 +660,28 @@ const PENDING: Partial<Record<OrderStatus, Pending>> = {
     actor: null,
     line: (c) =>
       c.viewerIsBuyer
-        ? "Coletul este în drum spre tine."
-        : `Coletul este în drum spre ${buyer(c)}.`,
+        ? `Coletul se află în curs de livrare, în termenul estimat de ${SHIPPING.DELIVERY_DAYS_MIN}-${SHIPPING.DELIVERY_DAYS_MAX} zile lucrătoare.`
+        : `Coletul se află în curs de livrare către ${buyer(c)}.`,
   },
   ARRIVED_AT_LOCKER: {
-    title: () => "Colet ajuns",
+    title: () => "Colet disponibil pentru ridicare",
     icon: "locker",
     actor: null,
     line: (c) =>
       c.viewerIsBuyer
-        ? "Coletul te așteaptă la ridicare."
-        : `Coletul îl așteaptă pe ${buyer(c)} la ridicare.`,
+        ? "Coletul este disponibil pentru ridicare. Confirmarea se face după verificarea produsului."
+        : `Coletul este disponibil pentru ridicare de către ${buyer(c)}.`,
   },
   DELIVERED: {
-    title: () => "Confirmarea primirii",
+    title: () => "Confirmarea livrării",
     icon: "success",
     actor: "BUYER",
     line: (c) =>
       c.viewerIsBuyer
-        ? `Verifică coletul și confirmă dacă este conform. Abia după confirmare ${c.money(c.order.donationAmount)} ajung la ${cause(c)}, iar restul la vânzător.`
-        : `${buyer(c)} are de confirmat primirea coletului. Suma se eliberează după confirmare, sau de la sine dacă nu răspunde.`,
+        ? `Verifică produsul și confirmă conformitatea cu anunțul. După confirmare, ${c.money(c.order.donationAmount)} se virează către ${cause(c)}, iar restul către vânzător. În lipsa unui răspuns, suma se eliberează automat în ${ORDER.AUTO_RELEASE_HOURS} de ore.`
+        : `${buyer(c)} urmează să confirme livrarea. Suma va fi eliberată la confirmare sau automat, în ${ORDER.AUTO_RELEASE_HOURS} de ore.`,
     action: "CONFIRM_RECEIPT",
-    cta: () => "Confirm primirea coletului",
+    cta: () => "Confirm livrarea",
     alternative: { cta: "Semnalează o problemă", action: "REPORT_PROBLEM" },
   },
   DISPUTE_OPEN: {
@@ -679,8 +691,8 @@ const PENDING: Partial<Record<OrderStatus, Pending>> = {
     actor: null,
     line: (c) =>
       c.viewerIsBuyer
-        ? "Suma achitată rămâne blocată până la soluționare. Un reprezentant bid4 analizează sesizarea și vei primi decizia pe email și în această comandă."
-        : "Suma rămâne blocată până la soluționare. Un reprezentant bid4 analizează sesizarea și veți primi amândoi decizia pe email și în această comandă.",
+        ? "Suma achitată rămâne blocată până la soluționare. Un reprezentant bid4 analizează sesizarea, iar decizia va fi comunicată pe email și în această comandă."
+        : "Suma rămâne blocată până la soluționare. Un reprezentant bid4 analizează sesizarea, iar decizia va fi comunicată ambelor părți pe email și în această comandă.",
   },
 };
 
@@ -698,7 +710,7 @@ const ACCENTS = {
   ink: { icon: "text-ink-400", disc: "bg-ink-50 text-ink-600" },
 } as const;
 
-/** The quiet controls a card can carry: a document, a tracking link, the AWB. */
+/** The quiet control a card can carry: a document. */
 const SECONDARY =
   "inline-flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-[13px] font-bold " +
   "text-ink-700 ring-1 ring-edge transition hover:ring-ink-300 disabled:text-ink-500 disabled:opacity-70";

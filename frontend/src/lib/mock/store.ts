@@ -157,7 +157,7 @@ export function pushEvent(
     location,
     at: new Date().toISOString(),
   };
-  order.trackingEvents = [...order.trackingEvents, event];
+  order.trackingEvents = [...(order.trackingEvents ?? []), event];
   order.status = status;
 }
 
@@ -169,7 +169,8 @@ function secondsSince(iso: string | undefined): number {
 }
 
 function lastEventAt(order: Order): string | undefined {
-  return order.trackingEvents[order.trackingEvents.length - 1]?.at;
+  const events = order.trackingEvents ?? [];
+  return events[events.length - 1]?.at;
 }
 
 /** Releases escrow. The single place where `raisedAmount` moves. */

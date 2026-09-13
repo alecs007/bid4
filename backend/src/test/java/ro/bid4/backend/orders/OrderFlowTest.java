@@ -2,6 +2,9 @@ package ro.bid4.backend.orders;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -13,8 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import ro.bid4.backend.TestcontainersConfiguration;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.catalog.domain.AuctionStatus;
@@ -48,8 +54,10 @@ import ro.bid4.backend.orders.domain.OrderAgreement;
 import ro.bid4.backend.orders.domain.OrderStatus;
 import ro.bid4.backend.orders.repo.OrderRepository;
 import ro.bid4.backend.orders.service.Fees;
+import ro.bid4.backend.orders.service.OrderMapper;
 import ro.bid4.backend.orders.service.OrderService;
 import ro.bid4.backend.orders.service.ShippingPrices;
+import ro.bid4.backend.security.jwt.JwtService;
 
 /**
  * A sale, from the seller taking an offer to the money being released — and the thread it writes
@@ -60,6 +68,7 @@ import ro.bid4.backend.orders.service.ShippingPrices;
  * row having moved is a button that does nothing.
  */
 @SpringBootTest
+@AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
@@ -72,6 +81,9 @@ class OrderFlowTest {
   @Autowired private InboxService inbox;
   @Autowired private LedgerService ledger;
   @Autowired private OrderRepository orderRows;
+  @Autowired private OrderMapper mapper;
+  @Autowired private MockMvc mvc;
+  @Autowired private JwtService tokens;
   @Autowired private AuctionRepository auctions;
   @Autowired private BidRepository bids;
   @Autowired private CauseRepository causes;
@@ -538,6 +550,84 @@ class OrderFlowTest {
         .isEqualTo(sellerAfterFirst);
   }
 
+  /* --- reading them back --------------------------------------------------- */
+
+  @Test
+  @DisplayName("A party can list their own sales, narrowed to the side they asked for")
+  void bothSidesCanListTheirOwnSales() {
+    Auction listing = liveListing();
+    accept(listing, 200 * LEU);
+
+    // The route did not exist at all, so both order screens asked for a list
+    // and got a 404 while the database held the sales they were asking about.
+    assertThat(orders.forParty("BUYER", viewer(buyer)))
+        .extracting(Order::getAuctionId)
+        .contains(listing.getId());
+    assertThat(orders.forParty("SELLER", viewer(seller)))
+        .extracting(Order::getAuctionId)
+        .contains(listing.getId());
+
+    // Narrowed by side: what a buyer owes and what a seller is owed are two
+    // different lists, and two different screens.
+    assertThat(orders.forParty("SELLER", viewer(buyer))).isEmpty();
+    assertThat(orders.forParty("BUYER", viewer(seller))).isEmpty();
+
+    // And with no role, both sides of everything they are party to.
+    assertThat(orders.forParty(null, viewer(buyer))).isNotEmpty();
+  }
+
+  @Test
+  @DisplayName("An order carries the summaries the screens name things with")
+  void anOrderCarriesItsSummaries() {
+    Auction listing = liveListing();
+    Order order = accept(listing, 200 * LEU);
+
+    // The response was flat while the frontend type claimed nested objects, so
+    // every order screen worked against the mock world and threw against this.
+    var response = mapper.toResponse(reload(order));
+    assertThat(response.auction()).isNotNull();
+    assertThat(response.auction().title()).isEqualTo(listing.getTitle());
+    assertThat(response.buyer()).isNotNull();
+    assertThat(response.buyer().displayName()).isEqualTo(buyer.getDisplayName());
+    assertThat(response.seller()).isNotNull();
+    assertThat(response.seller().displayName()).isEqualTo(seller.getDisplayName());
+    assertThat(response.cause()).isNotNull();
+    assertThat(response.cause().name()).isEqualTo(approved.getName());
+  }
+
+  /**
+   * The two order routes, over HTTP, as a party.
+   *
+   * <p>Through MockMvc rather than the service, because the bug these exist for was in neither: the
+   * mapper read {@code Auction.images}, a lazy collection, after the transaction had closed, so
+   * Jackson threw LazyInitializationException halfway through writing the body. Every order screen
+   * got a 500 and rendered an empty page. A service-level assertion cannot see it — only something
+   * that serialises the response can.
+   */
+  @Test
+  @DisplayName("Both order routes serialise, summaries and all")
+  void theOrderRoutesSerialise() throws Exception {
+    Auction listing = liveListing();
+    Order order = accept(listing, 200 * LEU);
+
+    mvc.perform(get("/orders").header(HttpHeaders.AUTHORIZATION, bearer(buyer)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].auction.title").value(listing.getTitle()))
+        .andExpect(jsonPath("$[0].buyer.displayName").value(buyer.getDisplayName()))
+        .andExpect(jsonPath("$[0].seller.displayName").value(seller.getDisplayName()))
+        .andExpect(jsonPath("$[0].cause.name").value(approved.getName()));
+
+    mvc.perform(get("/orders/" + order.getId()).header(HttpHeaders.AUTHORIZATION, bearer(buyer)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.auction.images").isArray())
+        .andExpect(jsonPath("$.reference").value(order.getReference()));
+
+    // The other side sees it too, and a stranger does not.
+    mvc.perform(get("/orders").header(HttpHeaders.AUTHORIZATION, bearer(seller)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].reference").value(order.getReference()));
+  }
+
   /* --- fixtures ----------------------------------------------------------- */
 
   private Order accept(Auction listing, long price) {
@@ -603,6 +693,10 @@ class OrderFlowTest {
     method.setLockerAddress("Piața Unirii 1");
     method.setPhone("0722333444");
     return deliveryMethods.save(method).getId();
+  }
+
+  private String bearer(UserAccount account) {
+    return "Bearer " + tokens.issueAccessToken(account).value();
   }
 
   private static Viewer viewer(UserAccount account) {

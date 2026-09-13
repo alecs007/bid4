@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ro.bid4.backend.orders.api.dto.AgreementResponse;
 import ro.bid4.backend.orders.api.dto.CancelOrderRequest;
@@ -45,6 +46,22 @@ public class OrderController {
   public OrderController(OrderService orders, OrderMapper mapper) {
     this.orders = orders;
     this.mapper = mapper;
+  }
+
+  /**
+   * Every sale this account is a party to, newest first.
+   *
+   * <p>{@code role} narrows it to one side: a buyer asking what they owe and a seller asking what
+   * they are owed are two different lists, and /cont/comenzi and /cont/vanzari are two screens.
+   * Omitted, it answers both sides, which is what a single "my orders" view would want.
+   *
+   * <p>This route did not exist. Both order screens called it and got a 404, so a signed-in person
+   * with fourteen sales in the database saw an empty list and no error worth reading.
+   */
+  @GetMapping
+  List<OrderResponse> list(
+      @RequestParam(required = false) String role, @AuthenticationPrincipal Jwt jwt) {
+    return mapper.toResponses(orders.forParty(role, Viewers.from(jwt)));
   }
 
   @GetMapping("/{id}")

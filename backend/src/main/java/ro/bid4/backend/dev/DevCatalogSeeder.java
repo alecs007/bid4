@@ -337,7 +337,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
     // volume — enough listings, in enough states, that filtering and paging on
     // the account pages are exercised by the seed rather than by hand.
     List<Planned> everything = new ArrayList<>(planned);
-    everything.addAll(volume(mariaId, seededCauses.get("ana"), now));
+    everything.addAll(volume(mariaId, zambetId, seededCauses.get("ana"), now));
 
     // Three passes, in the order the real thing happens in.
     //
@@ -389,7 +389,14 @@ public class DevCatalogSeeder implements ApplicationRunner {
    * need one account to have bid on more auctions than fit on a page. Written out rather than
    * randomised — a seed that differs run to run is one that cannot be described in a bug report.
    */
-  private List<Planned> volume(UUID sellerId, Cause cause, Instant now) {
+  /**
+   * Volume, so the account pages have something to filter and page over.
+   *
+   * <p>Split between two sellers rather than all given to Maria. The order seed needs open listings
+   * on both sides of the market — she buys in half of its cases and sells in the other half — and
+   * with one seller owning every one of these, the half where she buys ran out after five sales.
+   */
+  private List<Planned> volume(UUID sellerId, UUID otherSellerId, Cause cause, Instant now) {
     record Item(String title, String category, ItemCondition condition, long price, int offers) {}
 
     List<Item> items =
@@ -417,19 +424,42 @@ public class DevCatalogSeeder implements ApplicationRunner {
             new Item("Servietă din piele, model clasic", "moda", ItemCondition.VERY_GOOD, 410, 3),
             new Item("Vinil: colecție rock, 20 de discuri", "colectii", ItemCondition.GOOD, 540, 2),
             new Item("Tablou în ulei, peisaj de munte", "arta", ItemCondition.VERY_GOOD, 800, 1),
-            new Item("Robot de bucătărie Bosch", "casa", ItemCondition.GOOD, 330, 0));
+            new Item("Robot de bucătărie Bosch", "casa", ItemCondition.GOOD, 330, 0),
+            // The eight below exist so the order seed can reach every case it
+            // has. A sale needs a LIVE listing with a cause and consumes it, so
+            // fourteen cases plus the ones held back for accepting an offer need
+            // more open listings than the shop window alone provides.
+            new Item("Drujbă electrică Bosch AKE 35", "casa", ItemCondition.GOOD, 290, 2),
+            new Item("Bicicletă pentru copii, 20 inch", "sport", ItemCondition.VERY_GOOD, 240, 1),
+            new Item("Set de acuarele profesionale", "arta", ItemCondition.LIKE_NEW, 180, 3),
+            new Item("Monede de colecție, perioada regală", "colectii", ItemCondition.GOOD, 660, 2),
+            new Item("Rochie de seară, mărimea S", "moda", ItemCondition.LIKE_NEW, 320, 1),
+            new Item("Telescop astronomic 70/700", "electronice", ItemCondition.GOOD, 430, 2),
+            new Item("Puzzle 5.000 de piese, sigilat", "jucarii", ItemCondition.LIKE_NEW, 150, 1),
+            new Item(
+                "Atlas geografic, ediție cartonată", "carti", ItemCondition.VERY_GOOD, 210, 2));
 
     // Cycled rather than random, so the same index is always the same status,
     // and every status the model still has appears at least twice.
+    //
+    // Weighted towards LIVE, because an open listing is the one the rest of the
+    // seed consumes: every sale takes one and does not give it back, and the
+    // order seed walks fourteen cases on top of the three held open so that an
+    // offer is always there to accept. The other five statuses are still here
+    // twice each, which is what the account pages need to filter over.
     AuctionStatus[] cycle = {
       AuctionStatus.LIVE,
       AuctionStatus.LIVE,
       AuctionStatus.SOLD,
+      AuctionStatus.LIVE,
       AuctionStatus.PENDING_REVIEW,
       AuctionStatus.LIVE,
       AuctionStatus.RESERVED,
+      AuctionStatus.LIVE,
       AuctionStatus.DRAFT,
-      AuctionStatus.CANCELLED
+      AuctionStatus.LIVE,
+      AuctionStatus.CANCELLED,
+      AuctionStatus.LIVE
     };
 
     List<Planned> generated = new ArrayList<>(items.size());
@@ -444,7 +474,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
       generated.add(
           new Planned(
               listing(
-                  sellerId,
+                  index % 2 == 0 ? sellerId : otherSellerId,
                   cause,
                   item.title(),
                   "Stare bună, folosit cu grijă. Fotografiile sunt făcute în lumină naturală "
