@@ -27,6 +27,7 @@ import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.domain.UserAccount;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.inbox.service.ThreadEvents;
+import ro.bid4.backend.orders.service.Terms;
 
 /**
  * Bidding, retracting, and following an auction.
@@ -77,9 +78,20 @@ public class BidService {
 
   /** POST /auctions/{id}/bids */
   @Transactional
-  public PlaceBidResponse place(UUID auctionId, long amount, Viewer viewer) {
+  public PlaceBidResponse place(
+      UUID auctionId, long amount, String acceptedTermsVersion, Viewer viewer) {
     if (viewer.isAnonymous()) {
       throw new ApiException(ErrorCode.UNAUTHENTICATED);
+    }
+
+    // Before anything is read or locked. An offer is a commitment to pay, and
+    // the version has to be the one currently published rather than any version
+    // the caller happens to name — an old string would otherwise be a way to
+    // consent to terms nobody is being shown.
+    if (!Terms.CURRENT_VERSION.equals(acceptedTermsVersion)) {
+      throw new ApiException(
+          ErrorCode.TERMS_REQUIRED,
+          "Trebuie să accepți condițiile de licitare pentru a trimite o ofertă.");
     }
 
     Auction auction =
@@ -150,6 +162,10 @@ public class BidService {
     bid.setBidderId(viewer.id());
     bid.setAmount(price);
     bid.setStatus(boughtNow ? BidStatus.ACCEPTED : BidStatus.WINNING);
+    // Stored beside the act, with the version rather than a flag: "they agreed"
+    // is worth nothing in a dispute without "to which text, and when".
+    bid.setTermsVersion(Terms.CURRENT_VERSION);
+    bid.setTermsAcceptedAt(now);
     bids.save(bid);
     bids.flush();
 

@@ -244,9 +244,27 @@ export const DONATION = {
   HERO_PERCENT: 75,
 } as const;
 
+/**
+ * Which version of the terms is currently published.
+ *
+ * <p>Must match Terms.CURRENT_VERSION in the backend: an offer that names any other version is
+ * refused, because consenting to a text nobody is being shown is not consent. Bump both when the
+ * wording changes in substance — acceptances already recorded keep naming the version their party
+ * was actually given.
+ */
+export const TERMS = {
+  VERSION: "2026-09-12",
+} as const;
+
 export const ORDER = {
-  /** Winner has 24h to confirm delivery details before we auto-confirm. */
-  CONFIRMATION_HOURS: 24,
+  /**
+   * How long the buyer has to choose delivery before the sale lapses.
+   *
+   * <p>Three days, which is OrderService.CONFIRMATION_WINDOW. This said 24 while the clock that
+   * actually cancels an order gave 72, so the listing page promised a deadline the backend did not
+   * keep.
+   */
+  CONFIRMATION_HOURS: 72,
   /** Funds auto-release this long after DELIVERED if the buyer stays silent. */
   AUTO_RELEASE_HOURS: 72,
   /** Seller must drop the parcel off within this window. */
@@ -294,7 +312,9 @@ export const MOCK = {
   // 7: conversations, thread items and notifications joined the world, so a
   // world seeded before them has an inbox that is empty rather than wrong —
   // which is the worse of the two, because nothing about it looks broken.
-  SCHEMA_VERSION: 9,
+  // 10: the cards are written per side and need more of the payload to do it —
+  // the cause on release, which side cancelled, how a dispute was settled.
+  SCHEMA_VERSION: 10,
   /**
    * Seeded auctions are dated from when the world was created, so an old world
    * ends up with everything closed. Past this age it is reseeded.

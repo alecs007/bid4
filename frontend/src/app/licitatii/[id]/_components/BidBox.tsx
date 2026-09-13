@@ -7,7 +7,10 @@ import { Icons } from "@/components/icons";
 import {
   Button,
   ButtonLink,
+  Checkbox,
   Confetti,
+  FeeBreakdown,
+  Legal,
   Modal,
   Sheet,
   useToast,
@@ -19,9 +22,9 @@ import {
   placeBid,
   retractBid,
 } from "@/lib/api/bids";
-import { AUCTION, ORDER } from "@/lib/config";
+import { AUCTION, ORDER, TERMS, type Bani } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { formatMoney, parseLeiInput } from "@/lib/money";
+import { computeFees, formatMoney, parseLeiInput } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
 import { isOfferable } from "@/lib/types";
 import { errorMessage } from "@/lib/hooks/useApi";
@@ -36,13 +39,24 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(0);
+  // The amount waiting on consent. Null means nothing is waiting, which is also
+  // what closes the modal — one piece of state rather than an amount and a flag
+  // that can disagree about whether there is an offer pending.
+  const [consenting, setConsenting] = useState<number | null>(null);
 
   const eligibility = checkBidEligibility(user);
   const retract = checkRetractEligibility(auction, user?.id);
   const isSeller = user?.id === auction.sellerId;
   const isLeading = auction.viewerBidStatus === "WINNING";
 
-  const submit = async () => {
+  /**
+   * Checks the amount and hands it to the consent modal. Nothing is sent from here.
+   *
+   * <p>Every way of making an offer arrives at this one function — the panel on a desktop, the
+   * sheet on a phone, and the button that fills in the final price — so the consent cannot be
+   * reached around by using a different entrance.
+   */
+  const request = () => {
     if (!user) return false;
     const parsed = parseLeiInput(amount);
     if (parsed === null) {
@@ -61,10 +75,22 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
     }
 
     setError(null);
+    setConsenting(parsed);
+    return true;
+  };
+
+  /** The offer itself, once the terms on screen have been accepted. */
+  const confirm = async () => {
+    if (!user || consenting === null) return false;
+
     setPending(true);
     try {
       const result = await placeBid(
-        { auctionId: auction.id, amount: parsed },
+        {
+          auctionId: auction.id,
+          amount: consenting,
+          acceptedTermsVersion: TERMS.VERSION,
+        },
         user.id,
       );
       setCelebrate((value) => value + 1);
@@ -75,11 +101,15 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
           `Reținut la ${formatMoney(result.auction.currentPrice)}. Urmează plata.`,
         );
       } else {
-        toast.success("Ești pe primul loc", formatMoney(parsed));
+        toast.success("Ești pe primul loc", formatMoney(consenting));
       }
+      setConsenting(null);
       onChanged();
       return true;
     } catch (caught) {
+      // The modal stays open on a refusal. Closing it would throw away an
+      // acceptance the reader has already given, and make them give it again
+      // for a failure that was not theirs.
       toast.error("Oferta nu a fost acceptată", errorMessage(caught));
       return false;
     } finally {
@@ -113,7 +143,10 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
     retract,
     isSeller,
     isLeading,
-    submit,
+    consenting,
+    request,
+    confirm,
+    cancelConsent: () => setConsenting(null),
     undo,
   };
 }
@@ -127,14 +160,15 @@ function AmountForm({
   auction: AuctionDetail;
   onDone?: () => void;
 }) {
-  const { amount, setAmount, minimum, error, pending, submit } = bidding;
+  const { amount, setAmount, minimum, error, request } = bidding;
 
   return (
     <form
-      onSubmit={async (event) => {
+      onSubmit={(event) => {
         event.preventDefault();
-        const ok = await submit();
-        if (ok) onDone?.();
+        // The sheet closes as the consent opens rather than stacking under it:
+        // two overlays deep on a phone leaves nothing of the page to orient by.
+        if (request()) onDone?.();
       }}
       className="flex flex-col gap-3"
     >
@@ -177,7 +211,7 @@ function AmountForm({
           );
         })}
       </div>
-      <Button type="submit" size="lg" fullWidth loading={pending}>
+      <Button type="submit" size="lg" fullWidth>
         {bidding.isLeading ? "Mărește oferta" : "Licitează"}
       </Button>
 
@@ -217,6 +251,153 @@ function RuleSection({
         <div className="mt-1 text-[15px]">{children}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * What the bidder is agreeing to, before the offer goes anywhere.
+ *
+ * <p>An offer is a commitment to pay, so it is not sent by a button press alone. Everything the
+ * commitment carries is on one screen: what it costs, where the donation goes, how long they have
+ * if it is taken, and what may still be undone. The version ticked here is sent with the offer and
+ * stored beside it, and the server refuses an offer that does not name the version it is currently
+ * publishing.
+ *
+ * <p>It opens from the one place every entrance leads to, so there is no route to an offer that
+ * skips it.
+ */
+function OfferConsent({
+  auction,
+  amount,
+  busy,
+  onClose,
+  onAccept,
+}: {
+  auction: AuctionDetail;
+  /** The offer awaiting consent, or null when nothing is. */
+  amount: number | null;
+  busy: boolean;
+  onClose: () => void;
+  onAccept: () => Promise<boolean>;
+}) {
+  const [accepted, setAccepted] = useState(false);
+
+  const pending = amount ?? 0;
+  const takesItOutright =
+    auction.buyNowPrice !== undefined && pending >= auction.buyNowPrice;
+  // Settled at the advertised price when the offer reaches it, which is what
+  // the server will charge — so it is the number this screen has to show.
+  const price = takesItOutright ? auction.buyNowPrice! : pending;
+  const breakdown = computeFees({
+    finalPrice: price as Bani,
+    donationPercent: auction.donationPercent,
+  });
+
+  return (
+    <Modal
+      open={amount !== null}
+      onClose={onClose}
+      title={takesItOutright ? "Confirmă cumpărarea" : "Confirmă oferta"}
+      description={
+        takesItOutright
+          ? "Prețul este cel publicat de vânzător, iar anunțul îți este reținut imediat."
+          : "Verifică ce se întâmplă dacă vânzătorul acceptă această ofertă."
+      }
+    >
+      <div className="flex flex-col gap-5 pb-1">
+        <FeeBreakdown
+          breakdown={breakdown}
+          perspective="BUYER"
+          causeName={auction.cause.name}
+          showExplainer={false}
+          className="p-4"
+        />
+
+        <RuleSection
+          icon={<Icons.auction aria-hidden="true" className="h-5 w-5" />}
+          title="Oferta te obligă"
+        >
+          <p>
+            {takesItOutright ? (
+              <>
+                La acest preț anunțul îți este reținut pe loc, fără să mai fie
+                nevoie de acordul vânzătorului.
+              </>
+            ) : (
+              <>
+                Dacă vânzătorul o acceptă, ai obligația de a finaliza cumpărarea
+                la{" "}
+                <strong className="numeric font-bold text-ink-900">
+                  {formatMoney(price)}
+                </strong>
+                , plus taxa platformei și livrarea.
+              </>
+            )}
+          </p>
+          <p className="mt-2.5">
+            Ai{" "}
+            <strong className="font-bold text-ink-900">
+              {ORDER.CONFIRMATION_HOURS} de ore
+            </strong>{" "}
+            pentru a alege livrarea și a face plata. După acest termen comanda
+            se anulează.
+          </p>
+        </RuleSection>
+
+        <RuleSection
+          icon={<Icons.close aria-hidden="true" className="h-5 w-5" />}
+          title="Până la acceptare o poți retrage"
+        >
+          <p>
+            Cât timp oferta nu a fost acceptată, o poți retrage oricând. Odată
+            acceptată nu mai poate fi retrasă.
+          </p>
+        </RuleSection>
+
+        <RuleSection
+          icon={<Icons.escrow aria-hidden="true" className="h-5 w-5" />}
+          title="Banii sunt păstrați de bid4"
+        >
+          <p>
+            Cardul nu este debitat acum. Suma este administrată de bid4 pe toată
+            durata livrării, iar{" "}
+            <strong className="numeric font-bold text-ink-900">
+              {formatMoney(breakdown.donationAmount)}
+            </strong>{" "}
+            ajung la {auction.cause.name} abia după ce confirmi că ai primit
+            coletul.
+          </p>
+        </RuleSection>
+
+        <div className="border-t border-line pt-4">
+          <Checkbox
+            checked={accepted}
+            onChange={(event) => setAccepted(event.target.checked)}
+            label={
+              <>
+                Am citit cele de mai sus și accept{" "}
+                <Legal href="/termeni">Termenii și Condițiile</Legal>.
+              </>
+            }
+          />
+        </div>
+
+        <Button
+          size="lg"
+          fullWidth
+          disabled={!accepted}
+          loading={busy}
+          onClick={async () => {
+            const ok = await onAccept();
+            if (ok) setAccepted(false);
+          }}
+        >
+          {takesItOutright
+            ? `Cumpără la ${formatMoney(price)}`
+            : `Trimite oferta de ${formatMoney(price)}`}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 
@@ -513,6 +694,16 @@ export function BidBox({
           </div>
         </div>
       ) : null}
+
+      {/* Rendered once, outside both the desktop panel and the phone sheet, so
+          one consent screen serves every way of making an offer. */}
+      <OfferConsent
+        auction={auction}
+        amount={bidding.consenting}
+        busy={pending}
+        onClose={bidding.cancelConsent}
+        onAccept={bidding.confirm}
+      />
 
       <Modal
         open={rulesOpen}

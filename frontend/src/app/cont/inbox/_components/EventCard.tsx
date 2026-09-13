@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import { Icons, type Icon } from "@/components/icons";
 import { Button } from "@/components/ui";
-import type { Bani } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
+import type { Bani } from "@/lib/config";
 import type { Order, OrderStatus, ThreadItem } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
@@ -16,51 +16,26 @@ import { cn } from "@/lib/utils/cn";
  * than to either person, and putting it on one side would read as that person having done it to
  * the other.
  *
- * <p>Which card carries a button is not a property of the card. The item records the status the
- * order was in when it was written; the live step is the one whose status still matches the order's
- * — everything above it is history and draws without controls. So a forged or replayed item can
- * show the wrong words and cannot produce a working control, and pressing one calls the order
- * endpoint, which decides for itself.
+ * <p>A card is a record and nothing else. It says what happened and carries the paperwork that
+ * moment produced, and it never carries the next action — {@link NextStep} does, once, at the end
+ * of the thread. Keeping the two apart is what makes the thread read as a history with something
+ * pending after it, rather than as a history whose last line keeps changing what it asks for.
  */
 export function EventCard({
   item,
-  order,
-  newest,
   viewerIsBuyer,
   buyerName,
   sellerName,
-  busy,
-  onAct,
 }: {
   item: ThreadItem;
-  /** Null until the sale is loaded, or when the thread has no sale behind it. */
-  order: Order | null;
-  /** Whether this is the last step written. */
-  newest: boolean;
   viewerIsBuyer: boolean;
   /** Who the two sides are, so a step can say whose it was. */
   buyerName?: string;
   sellerName?: string;
-  busy: boolean;
-  onAct: (action: OrderAction) => void;
 }) {
   const step = STEPS[item.eventType ?? ""];
   const Icon = Icons[step?.icon ?? "info"];
   const accent = ACCENTS[step?.accent ?? "ink"];
-
-  // Where the sale has got to: the last step written, while there is still a
-  // sale to get anywhere. Not strict equality against the item's frozen status,
-  // because the stretch the courier owns moves the order through three of them
-  // without writing a card — and a thread that goes blank while a parcel is in
-  // transit is a thread that stops answering the only question being asked.
-  const live = Boolean(order) && newest && !FINISHED.has(order!.status);
-
-  // The button, though, is gated on the order actually being at the step this
-  // action expects. Being the newest card is not permission to do anything.
-  const turn =
-    live &&
-    step?.actor === (viewerIsBuyer ? "BUYER" : "SELLER") &&
-    step?.needs === order!.status;
 
   const context: StepContext = {
     viewerIsBuyer,
@@ -77,91 +52,30 @@ export function EventCard({
   // On the one card that issues it. The steps after it inherit the same parcel
   // and repeating the number there is noise, not information.
   const awb = step?.awb ? item.payload?.awb || null : null;
-  const [copied, setCopied] = useState(false);
+  const document = step?.document?.(context) ?? null;
 
-  /**
-   * Past and live are the same three things stacked the same way — a mark, a name, a sentence — so a
-   * step is recognisable as a step wherever it appears in the thread. Only the weight changes.
-   *
-   * <p>The live one is a full-width band on the page's own canvas, and whose turn it is shows in the
-   * mark and the button rather than in the ground: a green wash behind a green button was two things
-   * saying the same thing, and it turned the one step that matters into a coloured panel rather than
-   * a moment in a conversation.
-   */
   return (
-    <div
-      className={cn(
-        "my-2 flex flex-col items-center gap-1 px-3 text-center",
-        live && "my-3 -mx-3 border-y border-line bg-canvas px-3 py-4",
-      )}
-    >
-      {live ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "mb-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 ring-edge",
-            accent.disc,
-          )}
-        >
-          <Icon className="h-4 w-4" />
-        </span>
-      ) : (
-        <Icon aria-hidden="true" className={cn("h-4 w-4 shrink-0", accent.icon)} />
-      )}
+    <div className="my-2 flex flex-col items-center gap-1 px-3 text-center">
+      <Icon aria-hidden="true" className={cn("h-4 w-4 shrink-0", accent.icon)} />
 
-      <p
-        className={cn(
-          "max-w-sm font-display leading-snug font-extrabold text-balance",
-          live ? "text-[15px] text-ink-900" : "text-[13px] text-ink-600",
-        )}
-      >
-        {step?.title ?? item.body}
+      <p className="max-w-sm font-display text-[13px] leading-snug font-extrabold text-balance text-ink-600">
+        {step?.title?.(context) ?? item.body}
       </p>
 
       {sentence ? (
-        <p
-          className={cn(
-            "leading-snug text-balance",
-            "max-w-sm",
-            live ? "text-[13px] text-ink-600" : "text-[12px] text-ink-500",
-          )}
-        >
+        <p className="max-w-sm text-[12px] leading-snug text-balance text-ink-500">
           {sentence}
         </p>
       ) : null}
 
-      {/* The AWB is a number to be used, not read. A button that copies it beats
-          a line that has to be selected off a phone screen without losing a
-          digit — so it is never in the sentence above. */}
-      {awb ? (
-        <button
-          type="button"
-          onClick={() => {
-            void navigator.clipboard?.writeText(awb).then(() => setCopied(true));
-          }}
-          className={cn("numeric mt-1", SECONDARY)}
-        >
-          {copied ? (
-            <Icons.check aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-primary-700" />
-          ) : (
-            <Icons.copy aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-          )}
-          {copied ? "AWB copiat" : `AWB ${awb}`}
-        </button>
-      ) : null}
-
-      {/* The paperwork this step produced, offered where it was produced.
-          TODO(backend): GET /orders/{id}/documents/{kind} — the proforma and the
-          invoice are generated by the billing service and streamed from there;
-          this is the link that will carry them. */}
       {/* Paperwork and tracking, offered wherever they were produced and for as
-          long as they are useful — not only while the step is the live one. A
+          long as they are useful — not only while the step is the newest one. A
           seller who has not yet been to the courier still needs the label.
           TODO(backend): GET /orders/{id}/documents/{kind} for the proforma and
           the invoice; GET /orders/{id}/tracking for the courier's own page. */}
-      {(step?.document?.(context) || (step?.tracking && viewerIsBuyer)) ? (
+      {document || (step?.tracking && viewerIsBuyer) ? (
         <span className="mt-1 flex flex-wrap items-center justify-center gap-1.5">
-          {step.document?.(context) ? (
+          {document ? (
             <button
               type="button"
               disabled
@@ -169,10 +83,10 @@ export function EventCard({
               className={SECONDARY}
             >
               <Icons.download aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-              {step.document(context)}
+              {document}
             </button>
           ) : null}
-          {step.tracking && viewerIsBuyer ? (
+          {step?.tracking && viewerIsBuyer ? (
             <button
               type="button"
               disabled
@@ -186,9 +100,123 @@ export function EventCard({
         </span>
       ) : null}
 
-      {/* Only for the person whose turn it is. The other side sees what they
-          are waiting for rather than a button that would refuse them. */}
-      {turn && step?.action ? (
+      {awb ? <Awb awb={awb} quiet={!viewerIsBuyer} /> : null}
+    </div>
+  );
+}
+
+/**
+ * The tracking number, weighted by who is reading it.
+ *
+ * <p>For the buyer it is the thing they follow the parcel with, so it is a control. For the seller
+ * it is printed on the label they are about to download and it is not what they came for, so it
+ * stays available and stops competing with the label for attention.
+ */
+function Awb({ awb, quiet }: { awb: string; quiet: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const CopyIcon = copied ? Icons.check : Icons.copy;
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(awb).then(() => setCopied(true));
+      }}
+      className={cn(
+        "numeric mt-1",
+        quiet
+          ? "inline-flex items-center gap-1.5 rounded-lg text-[11px] font-semibold text-ink-500 transition hover:text-ink-700"
+          : SECONDARY,
+      )}
+    >
+      <CopyIcon
+        aria-hidden="true"
+        className={cn(
+          "shrink-0",
+          quiet ? "h-3 w-3" : "h-3.5 w-3.5",
+          copied && "text-primary-700",
+        )}
+      />
+      {copied ? "AWB copiat" : `AWB ${awb}`}
+    </button>
+  );
+}
+
+/**
+ * What the sale is waiting for, once, at the end of the thread.
+ *
+ * <p>Read off the order rather than off the newest card. The order is the authority on what may be
+ * done next and by whom — every button here is re-checked against it on the server — and deriving
+ * the panel from the status means the record above stays exactly as it was written. A step that is
+ * done drops into the history and the next one appears below it, instead of the same card at the
+ * bottom quietly swapping its button for the next one.
+ *
+ * <p>It is also the only thing on the page with any weight to it, which is the point: the thread is
+ * a record, and this is the one part of it that wants something.
+ */
+export function NextStep({
+  order,
+  viewerIsBuyer,
+  buyerName,
+  sellerName,
+  causeName,
+  busy,
+  onAct,
+}: {
+  order: Order;
+  viewerIsBuyer: boolean;
+  buyerName?: string;
+  sellerName?: string;
+  /**
+   * The cause, by name, off the acceptance card's payload.
+   *
+   * <p>Not from the order: {@code GET /orders/{id}} carries only a causeId, and the nested cause on
+   * OrderDetail exists in the mock world alone. Reading it here would work in the preview and throw
+   * against the real backend.
+   */
+  causeName?: string;
+  busy: boolean;
+  onAct: (action: OrderAction) => void;
+}) {
+  const step = PENDING[order.status];
+  if (!step) return null;
+
+  const Icon = Icons[step.icon];
+  const accent = ACCENTS[step.accent ?? "sky"];
+  const turn = step.actor === (viewerIsBuyer ? "BUYER" : "SELLER");
+
+  const context: PendingContext = {
+    viewerIsBuyer,
+    buyerName,
+    sellerName,
+    causeName,
+    order,
+    money: (amount) => formatMoney(amount),
+  };
+
+  return (
+    <div className="my-3 -mx-3 flex flex-col items-center gap-1 border-y border-line bg-canvas px-3 py-4 text-center">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "mb-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 ring-edge",
+          accent.disc,
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+
+      <p className="max-w-sm font-display text-[15px] leading-snug font-extrabold text-balance text-ink-900">
+        {step.title(context)}
+      </p>
+
+      <p className="max-w-sm text-[13px] leading-snug text-balance text-ink-600">
+        {step.line(context)}
+      </p>
+
+      {/* Only for the person whose turn it is. The other side has just been told
+          what is happening, which is all there is for them to know. */}
+      {turn && step.action ? (
         <>
           <Button
             size="sm"
@@ -196,7 +224,7 @@ export function EventCard({
             disabled={busy}
             onClick={() => onAct(step.action!)}
           >
-            {step.cta}
+            {step.cta?.(context)}
           </Button>
 
           {/* The fork, and deliberately not a second button: two of equal weight
@@ -213,22 +241,6 @@ export function EventCard({
           ) : null}
         </>
       ) : null}
-
-      {/* And for the side that cannot act: what is happening, in their terms.
-          Given the weight the button has on the other screen, so waiting reads
-          as a state of the sale rather than as an absence of one. */}
-      {live && !turn && step?.waiting ? (
-        <p
-          className={cn(
-            "mt-1.5 max-w-sm rounded-xl px-3 py-2 text-[13px] leading-snug font-semibold",
-            step.tone === "alert"
-              ? "bg-danger-50 text-danger-700"
-              : "bg-white text-ink-600 ring-1 ring-edge",
-          )}
-        >
-          {step.waiting(context)}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -238,14 +250,13 @@ export type OrderAction =
   | "PAY"
   | "LABEL"
   | "CONFIRM_RECEIPT"
-  | "REPORT_PROBLEM"
-  | "COPY_AWB";
+  | "REPORT_PROBLEM";
 
 /**
- * What a step's sentence is built from.
+ * What a record's sentence is built from.
  *
  * <p>The figures come from the payload the server froze rather than from the order, so a card
- * written three steps ago still says what was true then: the amount at the time, the locker that
+ * written three steps ago still says what was true then: the amount at the time, the method that
  * was chosen, the AWB that was issued.
  */
 interface StepContext {
@@ -256,62 +267,81 @@ interface StepContext {
   money: (key: string) => string | null;
 }
 
+/**
+ * What the pending panel's sentence is built from.
+ *
+ * <p>The live order, not a frozen payload: this panel is about what is true now, and the totals it
+ * quotes have to be the ones the next step will actually charge.
+ */
+interface PendingContext {
+  viewerIsBuyer: boolean;
+  buyerName?: string;
+  sellerName?: string;
+  causeName?: string;
+  order: Order;
+  money: (amount: Bani) => string;
+}
+
+/**
+ * One event, as a record.
+ *
+ * <p>Every sentence is written twice, because the same step is different news to each side: the one
+ * who acted is told what they did, the other is told who did it to them. And each side is told only
+ * what bears on them — a seller has no use for the buyer's delivery cost or for the total they were
+ * charged, and quoting figures at somebody they have no claim on invites the wrong conclusion about
+ * whose money it is.
+ */
 interface Step {
-  title: string;
+  /** Written per side too: what a seller received, the buyer sent. */
+  title: (context: StepContext) => string;
   icon: keyof typeof Icons;
-  /** "alert" for the steps that are not the sale going well. */
-  tone?: "alert";
   /** Which of the four colours this step is recognised by. */
   accent?: keyof typeof ACCENTS;
-  /**
-   * The line under the title, written from the reader's side.
-   *
-   * <p>A sentence rather than a name on one line and figures on another. "de Vlad Georgescu" above
-   * "Preț: 290,00 lei" is two fragments the reader has to assemble; "Vlad Georgescu a acceptat
-   * oferta ta de 290,00 lei" is the same facts already assembled.
-   *
-   * <p>And written twice, because the same step is different news to each side: the one who acted
-   * is told what they did, the other is told who did it to them.
-   */
   line?: (context: StepContext) => string | null;
-  /** Whose turn it is while this step is the live one. */
-  actor?: "BUYER" | "SELLER";
-  action?: OrderAction;
-  /** The status the order must be in for the action to be offered at all. */
-  needs?: OrderStatus;
-  cta?: string;
   /**
-   * The quieter second choice, for a step that is genuinely a fork.
-   *
-   * <p>Only one step is: the parcel has arrived and the buyer either lets the money go or holds it.
-   * Offering both as equals would make refusing look like the expected answer, so this is a link
-   * under the button rather than a button beside it.
-   */
-  alternative?: { cta: string; action: OrderAction };
-  /**
-   * What the step tells the side that cannot act, in their own terms.
-   *
-   * <p>"Se așteaptă plata" is true for both of them and useful to neither: one of them is the
-   * person being waited on. So the side with the button is told what to do and the other is told
-   * what is happening and roughly when it ends.
-   */
-  waiting?: (context: StepContext) => string;
-  /**
-   * A document this step produces, offered where it is produced.
+   * A document this step produced, offered where it was produced.
    *
    * <p>A proforma at payment and an invoice at completion belong in the conversation that generated
    * them rather than three screens away in the account area.
    */
   document?: (context: StepContext) => string | null;
-  /** Whether this step is one that carries the tracking number. */
+  /** Whether this step is the one that carries the tracking number. */
   awb?: boolean;
   /** Whether the buyer may follow the parcel from here. */
   tracking?: boolean;
 }
 
+/** What the sale is waiting for, in one status. */
+interface Pending {
+  title: (context: PendingContext) => string;
+  icon: keyof typeof Icons;
+  accent?: keyof typeof ACCENTS;
+  /** Whose turn it is, or null when it is neither party's: the courier, or bid4. */
+  actor: "BUYER" | "SELLER" | null;
+  /**
+   * What is happening, in the reader's own terms.
+   *
+   * <p>"Se așteaptă plata" is true for both of them and useful to neither: one of them is the
+   * person being waited on. So the side with the button is told what to do and the other is told
+   * what is happening and roughly when it ends.
+   */
+  line: (context: PendingContext) => string;
+  action?: OrderAction;
+  /** Built from the order, so a button can name the sum it is about to move. */
+  cta?: (context: PendingContext) => string;
+  /**
+   * The quieter second choice, for a step that is genuinely a fork.
+   *
+   * <p>Only one step is: the parcel has arrived and the buyer either lets the money go or holds it.
+   */
+  alternative?: { cta: string; action: OrderAction };
+}
+
 /** The other party, when the thread has not said who they are. */
-const seller = (c: StepContext) => c.sellerName ?? "Vânzătorul";
-const buyer = (c: StepContext) => c.buyerName ?? "Cumpărătorul";
+const seller = (c: { sellerName?: string }) => c.sellerName ?? "Vânzătorul";
+const buyer = (c: { buyerName?: string }) => c.buyerName ?? "Cumpărătorul";
+/** The cause by name, and only "cauză" when the thread genuinely does not carry one. */
+const cause = (c: { causeName?: string }) => c.causeName || "cauză";
 
 /**
  * How it travels, never where it lands.
@@ -321,28 +351,34 @@ const buyer = (c: StepContext) => c.buyerName ?? "Cumpărătorul";
  * courier.
  */
 const method = (c: StepContext) =>
-  c.value("method") === "HOME_COURIER" ? "prin curier, la adresă" : "prin easybox";
+  c.value("method") === "HOME_COURIER" ? "prin curier, la adresă" : "prin Easybox";
+
+const methodOf = (order: Order) =>
+  order.deliveryMethod?.type === "HOME_COURIER"
+    ? "prin curier, la adresă"
+    : "prin Easybox";
+
+/**
+ * A free-text reason, ended once.
+ *
+ * <p>The note is written by a person and may or may not have been finished with a full stop, so
+ * quoting it inside a sentence of ours produced "descrierii.." about half the time.
+ */
+const quoted = (text: string) => text.replace(/\s*[.]+\s*$/, "");
 
 /** Drops the clauses whose figures the payload does not carry. */
 const sentence = (...parts: (string | null | undefined | false)[]) =>
   parts.filter(Boolean).join(" ") || null;
 
-/**
- * The Romanian, and whose turn each step is.
- *
- * <p>An event type with no entry still draws — its body is what the server wrote — so a step added
- * on the server before its copy lands here degrades to a line of text rather than to a gap.
- */
-/** A sale that has stopped. Nothing after one of these is waiting on anybody. */
-const FINISHED = new Set<OrderStatus>(["COMPLETED", "REFUNDED", "CANCELLED"]);
-
 const STEPS: Record<string, Step> = {
   /* --- before there is a sale ---------------------------------------------
-     These carry no order, so nothing about them is ever live: an offer is a
-     thing that happened, and what may be done about it belongs to the listing
-     page rather than to a card in a thread. */
+     These carry no order. An offer is a thing that happened, and what may be
+     done about it belongs to the listing page rather than to a thread. */
   OFFER_PLACED: {
-    title: "Ofertă trimisă",
+    // The same event, and not the same news: one of them sent it, the other had
+    // it arrive. "Ofertă trimisă" on a seller's screen describes somebody else's
+    // act as though it were theirs.
+    title: (c) => (c.viewerIsBuyer ? "Ofertă trimisă" : "Ofertă primită"),
     icon: "auction",
     accent: "sky",
     line: (c) =>
@@ -351,7 +387,7 @@ const STEPS: Record<string, Step> = {
         : `${buyer(c)} a trimis o ofertă de ${c.money("amount")}.`,
   },
   OFFER_RAISED: {
-    title: "Ofertă majorată",
+    title: () => "Ofertă majorată",
     icon: "auction",
     accent: "sky",
     line: (c) =>
@@ -360,7 +396,7 @@ const STEPS: Record<string, Step> = {
         : `${buyer(c)} a majorat oferta de la ${c.money("previous")} la ${c.money("amount")}.`,
   },
   OFFER_WITHDRAWN: {
-    title: "Ofertă retrasă",
+    title: (c) => (c.viewerIsBuyer ? "Ofertă retrasă" : "Ofertă retrasă de cumpărător"),
     icon: "close",
     accent: "ink",
     line: (c) =>
@@ -370,7 +406,7 @@ const STEPS: Record<string, Step> = {
   },
 
   OFFER_ACCEPTED: {
-    title: "Ofertă acceptată",
+    title: (c) => (c.viewerIsBuyer ? "Oferta ta a fost acceptată" : "Ofertă acceptată"),
     icon: "success",
     accent: "primary",
     line: (c) =>
@@ -382,95 +418,77 @@ const STEPS: Record<string, Step> = {
           c.value("cause") &&
           `Din această sumă, ${c.money("donation")} (${c.value("donationPercent")}%) revin cauzei ${c.value("cause")}.`,
       ),
-    actor: "BUYER",
-    action: "CHOOSE_DELIVERY",
-    needs: "AWAITING_CONFIRMATION",
-    cta: "Alege adresa de livrare",
-    waiting: (c) =>
-      `Comanda este în așteptarea adresei de livrare alese de ${buyer(c)}.`,
   },
   DELIVERY_CHOSEN: {
-    title: "Adresă de livrare aleasă",
+    title: () => "Livrare aleasă",
     icon: "delivery",
     accent: "sky",
+    // The cost is the buyer's and so is the total. A seller reading this needs
+    // to know how the parcel travels, because that is what they will hand over;
+    // what it cost the buyer to receive it is not theirs, and the total least of
+    // all, since most of it never reaches them.
     line: (c) =>
-      sentence(
-        c.viewerIsBuyer
-          ? `Ai ales livrarea ${method(c)}.`
-          : `${buyer(c)} a ales livrarea ${method(c)}.`,
-        c.money("shipping") && `Cost livrare: ${c.money("shipping")}.`,
-        c.viewerIsBuyer && c.money("total") && `Total de plată: ${c.money("total")}.`,
-      ),
-    actor: "BUYER",
-    action: "PAY",
-    needs: "AWAITING_PAYMENT",
-    cta: "Plătește",
-    waiting: () => "Comanda este în așteptarea plății.",
+      c.viewerIsBuyer
+        ? sentence(
+            `Ai ales livrarea ${method(c)}.`,
+            c.money("shipping") && `Cost livrare: ${c.money("shipping")}.`,
+          )
+        : `${buyer(c)} a ales livrarea ${method(c)}.`,
   },
   PAYMENT_HELD: {
-    title: "Plată confirmată",
+    title: () => "Plată confirmată",
     icon: "escrow",
     accent: "primary",
+    // Not what the buyer paid, on the seller's screen. The total is the price
+    // plus the buyer's own fee plus the delivery, so naming it to a seller
+    // quotes them a number they have no claim on and then has to explain why
+    // they are not getting it. What is theirs is settled on the release card.
     line: (c) =>
       c.viewerIsBuyer
         ? `Ai plătit ${c.money("total")}. Suma este administrată de bid4 și se eliberează după confirmarea primirii coletului.`
-        : `${buyer(c)} a plătit ${c.money("total")}. Suma este administrată de bid4 și îți revine după confirmarea primirii coletului.`,
+        : `${buyer(c)} a făcut plata. Suma este administrată de bid4 până la confirmarea primirii coletului.`,
     document: (c) => (c.viewerIsBuyer ? "Descarcă proforma" : null),
-    actor: "SELLER",
-    action: "LABEL",
-    needs: "PAID_HELD",
-    cta: "Emite AWB",
-    waiting: () => "Comanda este în așteptarea expedierii.",
   },
   LABEL_READY: {
-    title: "AWB emis",
+    title: (c) => (c.viewerIsBuyer ? "Eticheta este gata" : "Etichetă emisă"),
     icon: "invoice",
     accent: "sky",
     line: (c) =>
       c.viewerIsBuyer
         ? `${seller(c)} a emis eticheta de expediere prin ${c.value("courier")}.`
         : `Ai emis eticheta de expediere prin ${c.value("courier")}.`,
+    // The buyer follows the parcel by this number, so for them it is a control.
+    // The seller has it printed on the label and does not need to read it.
     awb: true,
-    // Stays on the card rather than only on the live step: a seller who has not
-    // yet been to the courier needs the label, and the sale may by then have
+    // Stays on the card rather than only on the newest step: a seller who has
+    // not yet been to the courier needs the label, and the sale may by then have
     // moved on to a step that is not theirs.
     document: (c) => (c.viewerIsBuyer ? null : "Descarcă eticheta"),
-    // No button. Predarea către curier este confirmată de curier, prin prima
-    // scanare a coletului, nu de vânzător — nimeni nu declară singur că a
-    // expediat ceva.
-    waiting: (c) =>
-      c.viewerIsBuyer
-        ? "Comanda este în așteptarea preluării de către curier."
-        : "Comanda este în așteptarea preluării de către curier. Predă coletul folosind AWB-ul de mai sus.",
   },
   SHIPPED: {
-    title: "Colet preluat de curier",
+    title: () => "Colet preluat de curier",
     icon: "parcel",
     accent: "sky",
     line: (c) =>
       c.viewerIsBuyer
         ? `Curierul a preluat coletul de la ${seller(c)}.`
-        : "Curierul a preluat coletul.",
+        : `Curierul a preluat coletul și îl duce către ${buyer(c)}.`,
     tracking: true,
-    waiting: () => "Coletul se află în curs de livrare.",
   },
   DELIVERED: {
-    title: "Colet livrat",
+    title: () => "Colet livrat",
     icon: "locker",
     accent: "primary",
+    // A record of the fact. What the buyer is asked to do about it is the
+    // pending panel's business, and saying it twice made the card read as an
+    // instruction that stayed on screen after it had been carried out.
     line: (c) =>
       c.viewerIsBuyer
-        ? "Coletul a fost livrat. Verifică-l și confirmă dacă este conform."
+        ? "Coletul ți-a fost livrat."
         : `Coletul a fost livrat către ${buyer(c)}.`,
-    actor: "BUYER",
-    action: "CONFIRM_RECEIPT",
-    needs: "DELIVERED",
-    cta: "Confirm primirea",
-    alternative: { cta: "Semnalează o problemă", action: "REPORT_PROBLEM" },
-    waiting: () => "Comanda este în așteptarea confirmării primirii.",
   },
   RELEASED: {
-    title: "Comandă finalizată",
+    title: () => "Comandă finalizată",
     icon: "donation",
     accent: "primary",
     line: (c) =>
@@ -478,38 +496,191 @@ const STEPS: Record<string, Step> = {
         ? sentence(
             "Ai confirmat primirea coletului.",
             c.money("donation") &&
-              `${c.money("donation")} au fost virați cauzei, iar ${c.money("sellerShare")} vânzătorului.`,
+              `${c.money("donation")} au fost virați către ${c.value("cause") || "cauză"}, iar ${c.money("sellerShare")} vânzătorului.`,
           )
         : sentence(
             `${buyer(c)} a confirmat primirea coletului.`,
             c.money("sellerShare") &&
-              `Ai încasat ${c.money("sellerShare")}, iar ${c.money("donation")} au fost virați cauzei.`,
+              `Ai încasat ${c.money("sellerShare")}, iar ${c.money("donation")} au fost virați către ${c.value("cause") || "cauză"}.`,
           ),
     document: () => "Descarcă factura",
   },
   DISPUTE_OPENED: {
-    title: "Problemă semnalată",
+    title: (c) => (c.viewerIsBuyer ? "Ai semnalat o problemă" : "Problemă semnalată"),
     icon: "dispute",
     accent: "danger",
-    tone: "alert",
     line: (c) =>
       sentence(
         c.viewerIsBuyer
           ? "Ai semnalat o problemă cu această comandă."
           : `${buyer(c)} a semnalat o problemă cu această comandă.`,
-        c.value("reason") && `Motiv: ${c.value("reason")}.`,
+        c.value("reason") && `Motiv: ${quoted(c.value("reason")!)}.`,
       ),
-    waiting: (c) =>
+  },
+  DISPUTE_RESOLVED: {
+    title: () => "Sesizare soluționată",
+    icon: "success",
+    accent: "ink",
+    // Four sentences for two outcomes, because "soluționată" on its own tells
+    // neither party the one thing they want to know, which is where the money
+    // went.
+    line: (c) =>
+      sentence(
+        c.value("outcome") === "REFUND"
+          ? c.viewerIsBuyer
+            ? `Sesizarea a fost soluționată în favoarea ta. Suma de ${c.money("total")} ți-a fost returnată.`
+            : `Sesizarea a fost soluționată în favoarea cumpărătorului. Suma a fost returnată lui ${buyer(c)}.`
+          : c.viewerIsBuyer
+            ? "Sesizarea a fost soluționată în favoarea vânzătorului. Suma a fost eliberată."
+            : `Sesizarea a fost soluționată în favoarea ta. Ai încasat ${c.money("sellerShare")}.`,
+        c.value("note") && `Motivarea bid4: ${quoted(c.value("note")!)}.`,
+      ),
+  },
+  CANCELLED: {
+    title: () => "Comandă anulată",
+    icon: "close",
+    accent: "danger",
+    // Who walked away is the question being asked, and the passive hid it from
+    // both of them. The server records which side it was.
+    line: (c) => {
+      const by = c.value("by");
+      const who =
+        by === "SYSTEM"
+          ? "Comanda a fost anulată automat."
+          : by === "STAFF"
+            ? "Comanda a fost anulată de echipa bid4."
+            : by === "BUYER"
+              ? c.viewerIsBuyer
+                ? "Ai anulat comanda."
+                : `${buyer(c)} a anulat comanda.`
+              : c.viewerIsBuyer
+                ? `${seller(c)} a anulat comanda.`
+                : "Ai anulat comanda.";
+      return sentence(
+        who,
+        c.value("reason") && `Motiv: ${quoted(c.value("reason")!)}.`,
+      );
+    },
+  },
+};
+
+/**
+ * What each status is waiting for, and from whom.
+ *
+ * <p>A status with no entry here is a sale that is waiting for nothing: finished, refunded or
+ * cancelled. Those draw no panel at all, which is why the set needs no separate list of endings.
+ */
+const PENDING: Partial<Record<OrderStatus, Pending>> = {
+  AWAITING_CONFIRMATION: {
+    title: () => "Alegerea livrării",
+    icon: "delivery",
+    actor: "BUYER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? "Alege unde vrei să primești coletul. Costul livrării se adaugă la plată după ce alegi."
+        : `${buyer(c)} are de ales adresa de livrare. Comanda se anulează dacă nu o alege la timp.`,
+    action: "CHOOSE_DELIVERY",
+    cta: () => "Alege adresa de livrare",
+  },
+  AWAITING_PAYMENT: {
+    title: () => "Plata comenzii",
+    icon: "payment",
+    actor: "BUYER",
+    // The buyer is told the total because they are about to be charged it. The
+    // seller is told the parcel is not to be sent yet, which is the only part
+    // of this that is theirs.
+    line: (c) =>
+      c.viewerIsBuyer
+        ? `Totalul de ${c.money(c.order.totalPaid)} include produsul, taxa platformei și livrarea ${methodOf(c.order)}. Banii sunt administrați de bid4 până confirmi că ai primit coletul.`
+        : `${buyer(c)} are de făcut plata. Nu expedia coletul înainte ca plata să fie confirmată.`,
+    action: "PAY",
+    // Not "Plătește". A button that moves money says how much it is about to
+    // move, so the number the reader agrees to is on the thing they press.
+    cta: (c) => `Plătește ${c.money(c.order.totalPaid)}`,
+  },
+  PAYMENT_FAILED: {
+    title: () => "Plata nu a reușit",
+    icon: "warning",
+    accent: "danger",
+    actor: "BUYER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? sentence(
+            c.order.paymentFailureReason,
+            "Încearcă din nou pentru a duce comanda mai departe.",
+          )!
+        : `Plata lui ${buyer(c)} nu a reușit. Nu expedia coletul până când nu este confirmată.`,
+    action: "PAY",
+    cta: (c) => `Reia plata de ${c.money(c.order.totalPaid)}`,
+  },
+  PAID_HELD: {
+    title: () => "Expedierea coletului",
+    icon: "parcel",
+    actor: "SELLER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? `${seller(c)} pregătește expedierea. Vei primi AWB-ul aici, de îndată ce eticheta este emisă.`
+        : `Plata este confirmată și administrată de bid4. Emite eticheta și trimite coletul ${methodOf(c.order)}.`,
+    action: "LABEL",
+    cta: () => "Emite eticheta de expediere",
+  },
+  LABEL_GENERATED: {
+    title: () => "Predarea la curier",
+    icon: "delivery",
+    actor: null,
+    line: (c) =>
+      c.viewerIsBuyer
+        ? `${seller(c)} are de predat coletul curierului. Îl poți urmări de îndată ce este preluat.`
+        : "Predă coletul curierului folosind eticheta de mai sus. Preluarea este confirmată de curier.",
+  },
+  DROPPED_OFF: {
+    title: () => "Colet preluat",
+    icon: "parcel",
+    actor: null,
+    line: (c) =>
+      c.viewerIsBuyer
+        ? "Coletul a fost preluat de curier și este în drum spre tine."
+        : `Coletul a fost preluat de curier și este în drum spre ${buyer(c)}.`,
+  },
+  IN_TRANSIT: {
+    title: () => "Colet în tranzit",
+    icon: "delivery",
+    actor: null,
+    line: (c) =>
+      c.viewerIsBuyer
+        ? "Coletul este în drum spre tine."
+        : `Coletul este în drum spre ${buyer(c)}.`,
+  },
+  ARRIVED_AT_LOCKER: {
+    title: () => "Colet ajuns",
+    icon: "locker",
+    actor: null,
+    line: (c) =>
+      c.viewerIsBuyer
+        ? "Coletul te așteaptă la ridicare."
+        : `Coletul îl așteaptă pe ${buyer(c)} la ridicare.`,
+  },
+  DELIVERED: {
+    title: () => "Confirmarea primirii",
+    icon: "success",
+    actor: "BUYER",
+    line: (c) =>
+      c.viewerIsBuyer
+        ? `Verifică coletul și confirmă dacă este conform. Abia după confirmare ${c.money(c.order.donationAmount)} ajung la ${cause(c)}, iar restul la vânzător.`
+        : `${buyer(c)} are de confirmat primirea coletului. Suma se eliberează după confirmare, sau de la sine dacă nu răspunde.`,
+    action: "CONFIRM_RECEIPT",
+    cta: () => "Confirm primirea coletului",
+    alternative: { cta: "Semnalează o problemă", action: "REPORT_PROBLEM" },
+  },
+  DISPUTE_OPEN: {
+    title: () => "Sesizare în analiză",
+    icon: "dispute",
+    accent: "danger",
+    actor: null,
+    line: (c) =>
       c.viewerIsBuyer
         ? "Suma achitată rămâne blocată până la soluționare. Un reprezentant bid4 analizează sesizarea și vei primi decizia pe email și în această comandă."
         : "Suma rămâne blocată până la soluționare. Un reprezentant bid4 analizează sesizarea și veți primi amândoi decizia pe email și în această comandă.",
-  },
-  CANCELLED: {
-    title: "Comandă anulată",
-    icon: "close",
-    accent: "danger",
-    tone: "alert",
-    line: () => "Comanda a fost anulată.",
   },
 };
 
@@ -520,17 +691,17 @@ const STEPS: Record<string, Step> = {
  * somebody's turn or something is in motion, red where it stopped, grey where it simply ended.
  * Written out rather than composed, because Tailwind only ships the class names it can see.
  */
-/** The quiet controls a card can carry: a document, a tracking link, the AWB. */
-const SECONDARY =
-  "inline-flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-[13px] font-bold " +
-  "text-ink-700 ring-1 ring-edge transition hover:ring-ink-300 disabled:text-ink-500 disabled:opacity-70";
-
 const ACCENTS = {
   primary: { icon: "text-primary-700", disc: "bg-primary-50 text-primary-700" },
   sky: { icon: "text-sky-700", disc: "bg-sky-50 text-sky-700" },
   danger: { icon: "text-danger-600", disc: "bg-danger-50 text-danger-700" },
   ink: { icon: "text-ink-400", disc: "bg-ink-50 text-ink-600" },
 } as const;
+
+/** The quiet controls a card can carry: a document, a tracking link, the AWB. */
+const SECONDARY =
+  "inline-flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-[13px] font-bold " +
+  "text-ink-700 ring-1 ring-edge transition hover:ring-ink-300 disabled:text-ink-500 disabled:opacity-70";
 
 /** The mark a step wears, for the thread and for the row in the list beside it. */
 export function stepMark(
@@ -545,8 +716,18 @@ export function stepMark(
  * What a step is called, for anywhere that is not the card itself.
  *
  * <p>The inbox list shows it as the last thing that happened, so a row about a sale says which step
- * it reached rather than that something, somewhere, changed.
+ * it reached rather than that something, somewhere, changed. Written from the reader's side there
+ * too: the row in a seller's inbox says an offer arrived, not that one was sent.
  */
-export function stepTitle(eventType: string | undefined): string | null {
-  return eventType ? (STEPS[eventType]?.title ?? null) : null;
+export function stepTitle(
+  eventType: string | undefined,
+  viewerIsBuyer: boolean,
+): string | null {
+  const step = eventType ? STEPS[eventType] : undefined;
+  if (!step) return null;
+  return step.title({
+    viewerIsBuyer,
+    value: () => undefined,
+    money: () => null,
+  });
 }

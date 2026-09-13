@@ -29,6 +29,7 @@ export {
   Input,
   Textarea,
   Checkbox,
+  Legal,
   RadioCard,
   useFieldProps,
 } from "./Field";

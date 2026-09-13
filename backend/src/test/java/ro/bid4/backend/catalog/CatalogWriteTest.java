@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -47,6 +48,10 @@ import ro.bid4.backend.identity.domain.UserRole;
 import ro.bid4.backend.identity.repo.DeliveryMethodRepository;
 import ro.bid4.backend.identity.repo.PaymentMethodRepository;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
+import ro.bid4.backend.inbox.api.dto.ThreadItemResponse;
+import ro.bid4.backend.inbox.domain.ThreadItemKind;
+import ro.bid4.backend.inbox.service.InboxService;
+import ro.bid4.backend.orders.service.Terms;
 
 /**
  * The rules that decide who owns an item and for how much.
@@ -71,6 +76,7 @@ class CatalogWriteTest {
   @Autowired private UserAccountRepository users;
   @Autowired private DeliveryMethodRepository deliveryMethods;
   @Autowired private PaymentMethodRepository paymentMethods;
+  @Autowired private InboxService inbox;
 
   /* --- buy now ------------------------------------------------------------ */
 
@@ -82,7 +88,8 @@ class CatalogWriteTest {
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
 
     // Offered well over the advertised price.
-    PlaceBidResponse result = bidding.place(auction.getId(), 700 * LEU, viewer(buyer));
+    PlaceBidResponse result =
+        bidding.place(auction.getId(), 700 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     assertThat(result.boughtNow()).isTrue();
     // Reserved, not sold: the seller is bound by the price they published, but
@@ -106,9 +113,10 @@ class CatalogWriteTest {
     // Increment of 50 lei, final price only 20 lei above the standing offer:
     // the next valid raise (150) overshoots the price that ends it (120).
     Auction auction = auction(seller, 100 * LEU, 50 * LEU, 120 * LEU);
-    bidding.place(auction.getId(), 100 * LEU, viewer(first));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
 
-    PlaceBidResponse result = bidding.place(auction.getId(), 120 * LEU, viewer(second));
+    PlaceBidResponse result =
+        bidding.place(auction.getId(), 120 * LEU, Terms.CURRENT_VERSION, viewer(second));
 
     assertThat(result.boughtNow()).isTrue();
     assertThat(result.auction().currentPrice()).isEqualTo(120 * LEU);
@@ -122,8 +130,8 @@ class CatalogWriteTest {
     UserAccount winner = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
 
-    bidding.place(auction.getId(), 110 * LEU, viewer(loser));
-    bidding.place(auction.getId(), 300 * LEU, viewer(winner));
+    bidding.place(auction.getId(), 110 * LEU, Terms.CURRENT_VERSION, viewer(loser));
+    bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(winner));
 
     List<Bid> history = bids.findByAuctionIdOrderByAmountDesc(auction.getId());
     assertThat(history).hasSize(2);
@@ -141,8 +149,8 @@ class CatalogWriteTest {
     UserAccount top = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(modest));
-    bidding.place(auction.getId(), 200 * LEU, viewer(top));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(modest));
+    bidding.place(auction.getId(), 200 * LEU, Terms.CURRENT_VERSION, viewer(top));
 
     Bid lower = offerOf(auction, modest);
     var reserved = offers.accept(auction.getId(), lower.getId(), viewer(seller));
@@ -164,13 +172,13 @@ class CatalogWriteTest {
     UserAccount latecomer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid taken = offerOf(auction, buyer);
     offers.accept(auction.getId(), taken.getId(), viewer(seller));
 
     // The whole reason the room stays open: the seller can still change their
     // mind, so a better offer is worth making and worth seeing.
-    bidding.place(auction.getId(), 500 * LEU, viewer(latecomer));
+    bidding.place(auction.getId(), 500 * LEU, Terms.CURRENT_VERSION, viewer(latecomer));
 
     assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.RESERVED);
     assertThat(reload(auction).getCurrentPrice()).isEqualTo(500 * LEU);
@@ -190,9 +198,9 @@ class CatalogWriteTest {
     UserAccount better = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(first));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
     offers.accept(auction.getId(), offerOf(auction, first).getId(), viewer(seller));
-    bidding.place(auction.getId(), 500 * LEU, viewer(better));
+    bidding.place(auction.getId(), 500 * LEU, Terms.CURRENT_VERSION, viewer(better));
 
     Bid betterOffer = offerOf(auction, better);
     assertThatThrownBy(() -> offers.accept(auction.getId(), betterOffer.getId(), viewer(seller)))
@@ -214,7 +222,7 @@ class CatalogWriteTest {
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     offers.accept(auction.getId(), offerOf(auction, buyer).getId(), viewer(seller));
 
     assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(buyer)))
@@ -230,12 +238,13 @@ class CatalogWriteTest {
     UserAccount latecomer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     offers.accept(auction.getId(), offerOf(auction, buyer).getId(), viewer(seller));
 
     // The price is still published, but it cannot take the item over the top of
     // a buyer the seller has already chosen. It lands as an ordinary offer.
-    var result = bidding.place(auction.getId(), 300 * LEU, viewer(latecomer));
+    var result =
+        bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(latecomer));
 
     assertThat(result.boughtNow()).isNull();
     assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.RESERVED);
@@ -249,7 +258,7 @@ class CatalogWriteTest {
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid only = offerOf(auction, buyer);
     offers.accept(auction.getId(), only.getId(), viewer(seller));
 
@@ -272,8 +281,8 @@ class CatalogWriteTest {
     UserAccount loser = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(loser));
-    bidding.place(auction.getId(), 200 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(loser));
+    bidding.place(auction.getId(), 200 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid taken = offerOf(auction, buyer);
     offers.accept(auction.getId(), taken.getId(), viewer(seller));
 
@@ -300,7 +309,7 @@ class CatalogWriteTest {
     UserAccount stranger = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid offer = offerOf(auction, buyer);
 
     assertThatThrownBy(() -> offers.accept(auction.getId(), offer.getId(), viewer(stranger)))
@@ -316,7 +325,7 @@ class CatalogWriteTest {
     Auction mine = auction(seller, 100 * LEU, 10 * LEU, null);
     Auction other = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(other.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(other.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid elsewhere = offerOf(other, buyer);
 
     assertThatThrownBy(() -> offers.accept(mine.getId(), elsewhere.getId(), viewer(seller)))
@@ -331,10 +340,11 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     UserAccount other = bidder();
-    assertThatThrownBy(() -> bidding.place(auction.getId(), 105 * LEU, viewer(other)))
+    assertThatThrownBy(
+            () -> bidding.place(auction.getId(), 105 * LEU, Terms.CURRENT_VERSION, viewer(other)))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("110");
   }
@@ -346,7 +356,10 @@ class CatalogWriteTest {
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    assertThatThrownBy(() -> bidding.place(auction.getId(), 900_000_000_000L, viewer(buyer)))
+    assertThatThrownBy(
+            () ->
+                bidding.place(
+                    auction.getId(), 900_000_000_000L, Terms.CURRENT_VERSION, viewer(buyer)))
         .isInstanceOf(ApiException.class);
   }
 
@@ -356,7 +369,8 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, viewer(seller)))
+    assertThatThrownBy(
+            () -> bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(seller)))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("propriul");
   }
@@ -368,7 +382,10 @@ class CatalogWriteTest {
     UserAccount unequipped = user("Fara Card", UserRole.USER);
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, viewer(unequipped)))
+    assertThatThrownBy(
+            () ->
+                bidding.place(
+                    auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(unequipped)))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("card");
   }
@@ -380,8 +397,9 @@ class CatalogWriteTest {
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
-    PlaceBidResponse second = bidding.place(auction.getId(), 200 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+    PlaceBidResponse second =
+        bidding.place(auction.getId(), 200 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     assertThat(bids.findByAuctionIdOrderByAmountDesc(auction.getId())).hasSize(1);
     assertThat(second.auction().bidCount()).isEqualTo(1);
@@ -397,8 +415,8 @@ class CatalogWriteTest {
     UserAccount second = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(first));
-    bidding.place(auction.getId(), 150 * LEU, viewer(second));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
+    bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
 
     var after = bidding.retract(auction.getId(), viewer(second));
 
@@ -416,8 +434,8 @@ class CatalogWriteTest {
     UserAccount second = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    bidding.place(auction.getId(), 100 * LEU, viewer(first));
-    bidding.place(auction.getId(), 150 * LEU, viewer(second));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
+    bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
 
     assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(first)))
         .isInstanceOf(ApiException.class);
@@ -429,7 +447,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
-    bidding.place(auction.getId(), 100 * LEU, viewer(buyer));
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     Bid offer = bids.findByAuctionIdOrderByAmountDesc(auction.getId()).getFirst();
     offers.accept(auction.getId(), offer.getId(), viewer(seller));
@@ -475,7 +493,7 @@ class CatalogWriteTest {
           () -> {
             try {
               go.await();
-              bidding.place(auction.getId(), 100 * LEU, viewer(who));
+              bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(who));
               accepted.incrementAndGet();
             } catch (Exception ignored) {
               // One of the two is expected to lose the race and be refused for
@@ -495,6 +513,102 @@ class CatalogWriteTest {
     assertThat(auctions.findById(auction.getId()).orElseThrow().getBidCount())
         .isEqualTo(history.size());
     assertThat(accepted.get()).isPositive();
+  }
+
+  /* --- what the bidder accepted -------------------------------------------- */
+
+  @Test
+  @DisplayName("An offer that names no accepted terms is refused")
+  void anOfferWithoutAcceptedTermsIsRefused() {
+    UserAccount seller = seller();
+    UserAccount buyer = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, null, viewer(buyer)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("accepți");
+
+    assertThat(bids.countByAuctionId(auction.getId())).isZero();
+  }
+
+  @Test
+  @DisplayName("An offer naming a version that is no longer published is refused")
+  void anOfferNamingStaleTermsIsRefused() {
+    UserAccount seller = seller();
+    UserAccount buyer = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    // Consenting to a text nobody is being shown is not consent.
+    assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, "1999-01-01", viewer(buyer)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("accepți");
+  }
+
+  @Test
+  @DisplayName("A standing offer carries which terms were accepted, and when")
+  void anOfferRecordsTheAcceptanceBesideIt() {
+    UserAccount seller = seller();
+    UserAccount buyer = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    Instant before = Instant.now().minusSeconds(1);
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+
+    Bid stored = bids.findByAuctionIdAndBidderId(auction.getId(), buyer.getId()).orElseThrow();
+    assertThat(stored.getTermsVersion()).isEqualTo(Terms.CURRENT_VERSION);
+    assertThat(stored.getTermsAcceptedAt()).isAfter(before);
+  }
+
+  /* --- the offer events ----------------------------------------------------- */
+
+  @Test
+  @DisplayName("A first offer writes OFFER_PLACED into the thread, with its amount")
+  void aFirstOfferIsNarratedIntoTheThread() {
+    UserAccount seller = seller();
+    UserAccount buyer = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+
+    ThreadItemResponse card = newestEvent(auction, buyer);
+    assertThat(card.eventType()).isEqualTo("OFFER_PLACED");
+    assertThat(card.payload()).containsEntry("amount", String.valueOf(100 * LEU));
+  }
+
+  @Test
+  @DisplayName("Raising writes OFFER_RAISED carrying both the old amount and the new")
+  void raisingIsNarratedWithWhatItWasBefore() {
+    UserAccount seller = seller();
+    UserAccount buyer = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+    bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+
+    ThreadItemResponse card = newestEvent(auction, buyer);
+    assertThat(card.eventType()).isEqualTo("OFFER_RAISED");
+    assertThat(card.payload())
+        .containsEntry("previous", String.valueOf(100 * LEU))
+        .containsEntry("amount", String.valueOf(150 * LEU));
+
+    // Raising replaces the offer but not the record: both cards stay, so the
+    // seller can see the offer move rather than only where it ended up.
+    assertThat(eventTypes(auction, buyer)).containsExactly("OFFER_RAISED", "OFFER_PLACED");
+  }
+
+  @Test
+  @DisplayName("Withdrawing writes OFFER_WITHDRAWN, naming the amount that was pulled")
+  void withdrawingIsNarratedIntoTheThread() {
+    UserAccount seller = seller();
+    UserAccount buyer = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+    bidding.retract(auction.getId(), viewer(buyer));
+
+    ThreadItemResponse card = newestEvent(auction, buyer);
+    assertThat(card.eventType()).isEqualTo("OFFER_WITHDRAWN");
+    assertThat(card.payload()).containsEntry("amount", String.valueOf(100 * LEU));
   }
 
   /* --- fixtures ------------------------------------------------------------- */
@@ -586,6 +700,26 @@ class CatalogWriteTest {
     auction.setStartTime(Instant.now().minus(Duration.ofHours(1)));
     auction.setStatus(AuctionStatus.LIVE);
     return auctions.save(auction);
+  }
+
+  /** The cards an offer wrote, newest first, read as the bidder who wrote them. */
+  private List<String> eventTypes(Auction listing, UserAccount bidder) {
+    return events(listing, bidder).map(ThreadItemResponse::eventType).toList();
+  }
+
+  private ThreadItemResponse newestEvent(Auction listing, UserAccount bidder) {
+    return events(listing, bidder).findFirst().orElseThrow();
+  }
+
+  private Stream<ThreadItemResponse> events(Auction listing, UserAccount bidder) {
+    UUID conversationId =
+        inbox.list(null, false, viewer(bidder)).items().stream()
+            .filter(row -> listing.getId().equals(row.listingId()))
+            .findFirst()
+            .orElseThrow()
+            .id();
+    return inbox.thread(conversationId, viewer(bidder)).items().stream()
+        .filter(item -> item.kind() == ThreadItemKind.EVENT);
   }
 
   private static Viewer viewer(UserAccount account) {

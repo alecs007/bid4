@@ -1,4 +1,4 @@
-import { USE_MOCK } from "@/lib/config";
+import { TERMS, USE_MOCK } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 import { toAuctionDetail } from "@/lib/mock/join";
 import {
@@ -137,13 +137,26 @@ export async function placeBid(
   if (!USE_MOCK) {
     return http<PlaceBidResult>(`/auctions/${payload.auctionId}/bids`, {
       method: "POST",
-      body: { amount: payload.amount },
+      body: {
+        amount: payload.amount,
+        acceptedTermsVersion: payload.acceptedTermsVersion,
+      },
     });
   }
 
   await delay();
   syncWorld(true);
   const world = getWorld();
+
+  // Refused here too, and first, exactly as the server refuses it. A gate the
+  // mock does not enforce is a gate that looks fine in the preview and fails
+  // the moment the real backend is behind it.
+  if (payload.acceptedTermsVersion !== TERMS.VERSION) {
+    badRequest(
+      "Trebuie să accepți condițiile de licitare pentru a trimite o ofertă.",
+      "TERMS_REQUIRED",
+    );
+  }
 
   const auction = world.auctions.find((item) => item.id === payload.auctionId);
   if (!auction) notFound("Licitația");

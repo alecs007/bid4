@@ -285,8 +285,10 @@ function payloadFor(
       };
     case "DELIVERY_CHOSEN":
       return {
-        // The method, not the locker. See the card's own note.
-        method: order.deliveryMethod?.lockerName ? "EASYBOX" : "HOME_COURIER",
+        // The method, not the locker. See the card's own note. Off the snapshot's
+        // own type rather than guessed from whether a locker name happens to be
+        // set, which said HOME_COURIER for any locker saved without one.
+        method: order.deliveryMethod?.type ?? "EASYBOX",
         shipping: String(order.shipping),
         total: String(order.totalPaid),
       };
@@ -300,7 +302,18 @@ function payloadFor(
       return {
         donation: String(order.donationAmount),
         sellerShare: String(order.sellerShare),
+        cause: causes.find((item) => item.id === order.causeId)?.name ?? "",
       };
+    case "DISPUTE_RESOLVED":
+      // The seeded world settles in the buyer's favour, because a refund is the
+      // outcome with a figure on both sides of it.
+      return {
+        outcome: "REFUND",
+        total: String(order.totalPaid),
+        note: "Coletul nu corespundea descrierii din anunț.",
+      };
+    case "CANCELLED":
+      return { by: "BUYER" };
     default:
       return {};
   }

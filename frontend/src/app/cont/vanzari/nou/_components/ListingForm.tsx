@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { preload } from "react-dom";
 
@@ -17,6 +16,7 @@ import {
   Field,
   Illustration,
   Input,
+  Legal,
   Modal,
   Slider,
   Textarea,
@@ -655,21 +655,6 @@ function Section({
       </h2>
       {children}
     </section>
-  );
-}
-
-/** A document the reader is agreeing to. Stops the click so following it does not also tick the box. */
-function Legal({ href, children }: { href: string; children: string }) {
-  return (
-    <Link
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(event) => event.stopPropagation()}
-      className="font-bold text-primary-700 underline underline-offset-2 hover:text-primary-800"
-    >
-      {children}
-    </Link>
   );
 }
 

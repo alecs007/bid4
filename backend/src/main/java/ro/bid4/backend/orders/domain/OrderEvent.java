@@ -6,9 +6,10 @@ package ro.bid4.backend.orders.domain;
  * <p>One per transition worth showing, and at most one of each per order — a unique index says so,
  * which is what makes a transition safe to retry.
  *
- * <p>An event is a record. Which of them still carries a button, and for whom, is worked out from
- * the order's current {@link OrderStatus} when the thread is drawn, so the one at the bottom is
- * live and everything above it is history.
+ * <p>An event is a record and only that. No event carries a button: what may be done next, and by
+ * whom, is worked out from the order's current {@link OrderStatus} and drawn once below the whole
+ * history. So a step that is done stays worded exactly as it was written, and a forged or replayed
+ * item cannot produce a control at all.
  */
 public enum OrderEvent {
   /** The seller took the offer. The buyer is asked where it should go. */

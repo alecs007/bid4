@@ -35,6 +35,7 @@ import ro.bid4.backend.identity.domain.UserAccount;
 import ro.bid4.backend.identity.repo.DeliveryMethodRepository;
 import ro.bid4.backend.identity.repo.PaymentMethodRepository;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
+import ro.bid4.backend.orders.service.Terms;
 
 /**
  * Causes and listings for the four demo accounts, so /licitatii has something to show.
@@ -628,7 +629,12 @@ public class DevCatalogSeeder implements ApplicationRunner {
       bid.setBidderId(bidders.get(index));
       bid.setAmount(amount);
       bid.setStatus(BidStatus.OUTBID);
-      bid.setCreatedAt(now.minus(Duration.ofHours(bidders.size() - (long) index)));
+      Instant at = now.minus(Duration.ofHours(bidders.size() - (long) index));
+      bid.setCreatedAt(at);
+      // As BidService would have written it. A seeded offer with no acceptance
+      // beside it would make the demo the one place a bid can exist without one.
+      bid.setTermsVersion(Terms.CURRENT_VERSION);
+      bid.setTermsAcceptedAt(at);
       placed.add(bid);
       amount += auction.getBidIncrement();
     }

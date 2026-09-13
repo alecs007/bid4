@@ -393,7 +393,28 @@ export async function payOrder(orderId: ID, userId: ID): Promise<Order> {
   if (!USE_MOCK) {
     return http<Order>(`/orders/${orderId}/payment`, { method: "POST" });
   }
-  return (await retryPayment(orderId, userId)) as Order;
+
+  // Its own implementation rather than a call to retryPayment, which refuses
+  // anything that is not already PAYMENT_FAILED — so paying an ordinary order
+  // answered "Comanda nu are o plată eșuată." and the step could not be walked
+  // in the preview at all. Mirrors OrderService.markPaid: either status may pay,
+  // and the whole amount is held rather than split.
+  await delay();
+  const world = getWorld();
+  const order = world.orders.find((item) => item.id === orderId);
+  if (!order) notFound("Comanda");
+  if (order.buyerId !== userId) {
+    forbidden("Doar cumpărătorul poate plăti comanda.");
+  }
+  if (order.status !== "AWAITING_PAYMENT" && order.status !== "PAYMENT_FAILED") {
+    badRequest("Comanda nu se află în etapa de plată.");
+  }
+
+  order.paymentFailureReason = undefined;
+  order.paidAt = new Date().toISOString();
+  pushEvent(order, "PAID_HELD", "Plată confirmată. Suma este ținută de bid4.");
+  commit();
+  return order;
 }
 
 /** POST /orders/{id}/label — seller. */

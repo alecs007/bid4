@@ -318,13 +318,18 @@ public class OrderService {
     order.setConfirmationDeadline(null);
     orders.save(order);
 
+    // Who walked away, so the card can be written for each side. "Comanda a
+    // fost anulată" is the one thing both of them already know; which of them
+    // did it is the part being asked about, and a passive sentence hides it.
+    String by =
+        viewer.is(order.getBuyerId())
+            ? "BUYER"
+            : viewer.is(order.getSellerId()) ? "SELLER" : "STAFF";
+
     String note = reason == null ? "" : reason.strip();
-    post(
-        conversationOf(order),
-        order,
-        OrderEvent.CANCELLED,
-        "Comanda a fost anulată.",
-        note.isEmpty() ? Map.of() : Map.of("reason", note));
+    Map<String, String> payload =
+        note.isEmpty() ? Map.of("by", by) : Map.of("by", by, "reason", note);
+    post(conversationOf(order), order, OrderEvent.CANCELLED, "Comanda a fost anulată.", payload);
     return order;
   }
 
@@ -351,7 +356,9 @@ public class OrderService {
           order,
           OrderEvent.CANCELLED,
           "Comanda a fost anulată automat.",
-          Map.of("reason", "Termenul pentru alegerea livrării a expirat."));
+          Map.of(
+              "by", "SYSTEM",
+              "reason", "Termenul pentru alegerea livrării a expirat."));
     }
     return stale.size();
   }
@@ -601,7 +608,11 @@ public class OrderService {
         "Comanda s-a încheiat. Donația pleacă spre cauză.",
         Map.of(
             "donation", String.valueOf(order.getDonationAmount()),
-            "sellerShare", String.valueOf(order.getSellerShare())));
+            "sellerShare", String.valueOf(order.getSellerShare()),
+            // Named here as it is on the acceptance card. This is the moment the
+            // donation actually leaves, so it is the last place that should be
+            // vague about where it went.
+            "cause", causeName(order.getCauseId())));
     return order;
   }
 

@@ -42,7 +42,7 @@ import { formatTimeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
 import { DeliverySheet } from "./DeliverySheet";
-import { EventCard, type OrderAction } from "./EventCard";
+import { EventCard, NextStep, type OrderAction } from "./EventCard";
 
 /**
  * One conversation, and — from phase two — one sale.
@@ -318,17 +318,28 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
 
   const { conversation } = data;
   const items = [...data.items].reverse();
-  const viewerIsBuyer = order ? order.buyerId === user?.id : false;
+  // From the conversation, not the order: the offer cards exist before there is
+  // an order at all, and while one is still loading this used to answer "seller"
+  // for everybody — which is the one value that rewrites every card's wording.
+  const viewerIsBuyer = conversation.viewerRole
+    ? conversation.viewerRole === "BUYER"
+    : order
+      ? order.buyerId === user?.id
+      : true;
 
   // Real names on both sides rather than "tu" for one of them: a thread is the
   // record of a sale, and a record does not change wording depending on who is
   // reading it.
+  // The cause by name, off the acceptance card the server wrote. The order
+  // itself carries only a causeId, so this is the only source that answers the
+  // same way against the mock world and against the API.
+  const causeName = data.items.find(
+    (item) => item.eventType === "OFFER_ACCEPTED",
+  )?.payload?.cause;
+
   const otherName = conversation.otherParty?.displayName;
   const buyerName = viewerIsBuyer ? user?.displayName : otherName;
   const sellerName = viewerIsBuyer ? otherName : user?.displayName;
-  // data.items is newest first, so the first EVENT in it is the last one written.
-  const newestEventId = data.items.find((item) => item.kind === "EVENT")?.id;
-
   /**
    * A press on a card.
    *
@@ -342,9 +353,6 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       setPickingDelivery(true);
       return;
     }
-    // Copying is the card's own business — it never reaches the server.
-    if (action === "COPY_AWB") return;
-
     setActing(true);
     setSendError(null);
     try {
@@ -581,19 +589,34 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
             {item.kind === "EVENT" ? (
               <EventCard
                 item={item}
-                order={order ?? null}
-                newest={item.id === newestEventId}
                 viewerIsBuyer={viewerIsBuyer}
                 buyerName={buyerName}
                 sellerName={sellerName}
-                busy={acting}
-                onAct={act}
               />
             ) : (
               <Item item={item} />
             )}
           </div>
         ))}
+        {/* After the record, never inside it. What is pending comes from the
+            order rather than from the last card, so a step that is done stays
+            done and the next one appears below it. */}
+        {order ? (
+          <div
+            className="animate-fade-in"
+            style={tailDelay(items.length, items.length + 1, 60)}
+          >
+            <NextStep
+              order={order}
+              viewerIsBuyer={viewerIsBuyer}
+              buyerName={buyerName}
+              sellerName={sellerName}
+              causeName={causeName}
+              busy={acting}
+              onAct={act}
+            />
+          </div>
+        ) : null}
         <div ref={bottom} />
       </div>
 

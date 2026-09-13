@@ -48,6 +48,18 @@ public class Bid {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt = Instant.now();
 
+  /**
+   * Which terms the bidder accepted before this offer went in, and when.
+   *
+   * <p>Null only on offers placed before the consent gate existed — see V12. The service refuses a
+   * new offer that does not name the current version, so nothing written from here on is null.
+   */
+  @Column(name = "terms_version", updatable = false)
+  private String termsVersion;
+
+  @Column(name = "terms_accepted_at", updatable = false)
+  private Instant termsAcceptedAt;
+
   @Override
   public boolean equals(Object other) {
     if (this == other) {

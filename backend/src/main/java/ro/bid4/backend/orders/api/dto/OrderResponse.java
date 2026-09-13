@@ -7,10 +7,13 @@ import ro.bid4.backend.orders.domain.OrderStatus;
 /**
  * One sale, as either party sees it — the Order type in frontend/src/lib/types/order.ts.
  *
- * <p>This is what the thread's live card is drawn from. The client works out which step is being
- * waited on by comparing an event item's frozen status against {@link #status} here, and who may
- * press it from {@link #buyerId} and {@link #sellerId} — so the answer always comes from the order
- * rather than from the item, and pressing anything is re-checked here anyway.
+ * <p>This is what the thread's pending step is drawn from, entirely: what is being waited on comes
+ * from {@link #status} and who may act on it from {@link #buyerId} and {@link #sellerId}. The event
+ * items above it are a record and carry no controls at all, so nothing a forged or replayed item
+ * could say produces a button — and pressing one is re-checked here anyway.
+ *
+ * <p>Flat on purpose. There is no nested auction, buyer, seller or cause here, so anything the UI
+ * wants to name rather than reference comes from an event's frozen payload instead.
  */
 public record OrderResponse(
     UUID id,

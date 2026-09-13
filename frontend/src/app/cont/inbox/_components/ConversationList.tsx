@@ -245,7 +245,11 @@ function preview(conversation: Conversation): string {
   // The step before the words, or a sale reads as "something happened" all the
   // way from acceptance to release.
   if (item.kind === "EVENT") {
-    return stepTitle(item.eventType) ?? item.body ?? "Pas nou în comandă";
+    return (
+      stepTitle(item.eventType, conversation.viewerRole !== "SELLER") ??
+      item.body ??
+      "Pas nou în comandă"
+    );
   }
   if (item.body) return item.body;
   if (item.kind === "IMAGE") return "A trimis o fotografie";

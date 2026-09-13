@@ -110,14 +110,14 @@ public class AuctionController {
    * Places an offer.
    *
    * <p>The bidder comes from the token and the auction from the path, so the body carries only the
-   * amount and cannot be made to bid on someone else's behalf.
+   * amount and the accepted terms, and cannot be made to bid on someone else's behalf.
    */
   @PostMapping("/{id}/bids")
   PlaceBidResponse placeBid(
       @PathVariable UUID id,
       @Valid @RequestBody PlaceBidRequest request,
       @AuthenticationPrincipal Jwt jwt) {
-    return bidding.place(id, request.amount(), Viewers.from(jwt));
+    return bidding.place(id, request.amount(), request.acceptedTermsVersion(), Viewers.from(jwt));
   }
 
   /**

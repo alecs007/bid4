@@ -169,6 +169,13 @@ export interface BidWithBidder extends Bid {
 export interface PlaceBidPayload {
   auctionId: ID;
   amount: Bani;
+  /**
+   * Which version of the terms the bidder accepted before this offer went in.
+   *
+   * <p>Sent rather than implied. The server checks it against the version it is currently
+   * publishing and refuses anything else, and stores it beside the bid as evidence.
+   */
+  acceptedTermsVersion: string;
 }
 
 export interface PlaceBidResult {

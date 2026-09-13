@@ -2,6 +2,7 @@
 
 import type { ComponentPropsWithoutRef, ReactNode, Ref } from "react";
 import { createContext, useContext, useId } from "react";
+import Link from "next/link";
 import { Icons } from "@/components/icons";
 
 import { cn } from "@/lib/utils/cn";
@@ -211,6 +212,27 @@ export function Checkbox({
         ) : null}
       </label>
     </div>
+  );
+}
+
+/** A document the reader is agreeing to. Stops the click so following it does not also tick the box. */
+export function Legal({
+  href,
+  children,
+}: {
+  href: string;
+  children: string;
+}) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(event) => event.stopPropagation()}
+      className="font-bold text-primary-700 underline underline-offset-2 hover:text-primary-800"
+    >
+      {children}
+    </Link>
   );
 }
 
