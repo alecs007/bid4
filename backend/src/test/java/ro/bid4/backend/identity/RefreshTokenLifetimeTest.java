@@ -148,7 +148,7 @@ class RefreshTokenLifetimeTest {
                     """
                     {"token":"%s"}
                     """
-                        .formatted(MailCaptureConfiguration.LAST_TOKEN.get())))
+                        .formatted(MailCaptureConfiguration.awaitTokenFor(email))))
         .andExpect(status().isNoContent());
 
     return mvc.perform(

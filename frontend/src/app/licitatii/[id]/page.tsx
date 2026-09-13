@@ -59,7 +59,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function AuctionPage({ params }: PageProps<"/licitatii/[id]">) {
+export default async function AuctionPage({
+  params,
+}: PageProps<"/licitatii/[id]">) {
   const { id } = await params;
   // The same read generateMetadata already made. Next dedupes a fetch with the
   // same URL and options inside one request, so this costs nothing twice.
@@ -79,7 +81,7 @@ export default async function AuctionPage({ params }: PageProps<"/licitatii/[id]
           />
         </>
       ) : null}
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <AuctionDetailView auctionId={id} />
       </main>
     </PageTransition>

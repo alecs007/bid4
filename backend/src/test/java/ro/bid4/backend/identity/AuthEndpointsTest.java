@@ -74,7 +74,7 @@ class AuthEndpointsTest {
   /** Registers, redeems the emailed link, signs in, and returns the session response. */
   private MvcResult registerVerifiedAndLogin(String email, String displayName) throws Exception {
     register(email, displayName);
-    confirm(MailCaptureConfiguration.LAST_TOKEN.get());
+    confirm(MailCaptureConfiguration.awaitTokenFor(email));
     return mvc.perform(
             post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -119,8 +119,8 @@ class AuthEndpointsTest {
         .andExpect(jsonPath("$.passwordHash").doesNotExist())
         .andExpect(header().exists("X-Request-Id"));
 
-    assertThat(MailCaptureConfiguration.LAST_RECIPIENT.get()).isEqualTo(email);
-    assertThat(MailCaptureConfiguration.LAST_TOKEN.get()).isNotBlank();
+    // Awaiting the address asserts the mail went there; the value asserts it carried a link.
+    assertThat(MailCaptureConfiguration.awaitTokenFor(email)).isNotBlank();
   }
 
   @Test
@@ -219,8 +219,9 @@ class AuthEndpointsTest {
   @Test
   @DisplayName("visiting the link twice succeeds, because mail clients prefetch")
   void confirmingTwiceIsIdempotent() throws Exception {
-    register(freshEmail(), "Prefetch Test");
-    String token = MailCaptureConfiguration.LAST_TOKEN.get();
+    String email = freshEmail();
+    register(email, "Prefetch Test");
+    String token = MailCaptureConfiguration.awaitTokenFor(email);
 
     confirm(token);
     confirm(token);
@@ -231,7 +232,7 @@ class AuthEndpointsTest {
   void reissuingRetiresTheOldLink() throws Exception {
     String email = freshEmail();
     register(email, "Doua Linkuri");
-    String first = MailCaptureConfiguration.LAST_TOKEN.get();
+    String first = MailCaptureConfiguration.awaitTokenFor(email);
 
     mvc.perform(
             post("/auth/resend-verification")
@@ -243,7 +244,7 @@ class AuthEndpointsTest {
                         .formatted(email)))
         .andExpect(status().isNoContent());
 
-    String second = MailCaptureConfiguration.LAST_TOKEN.get();
+    String second = MailCaptureConfiguration.awaitTokenFor(email);
     assertThat(second).isNotEqualTo(first);
 
     mvc.perform(
