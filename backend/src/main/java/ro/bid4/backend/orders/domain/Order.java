@@ -100,6 +100,18 @@ public class Order {
   @Column(name = "payment_failure_reason")
   private String paymentFailureReason;
 
+  /**
+   * The provider's own id for the checkout, and which provider it was.
+   *
+   * <p>A callback names its session rather than our order, so without these a payment can only be
+   * believed. Null for sales opened before a provider existed.
+   */
+  @Column(name = "payment_reference")
+  private String paymentReference;
+
+  @Column(name = "payment_provider")
+  private String paymentProvider;
+
   @Version
   @Column(nullable = false)
   private int version;

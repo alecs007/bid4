@@ -26,7 +26,14 @@ class ArchitectureTest {
     "ro.bid4.backend.identity..",
     "ro.bid4.backend.cause..",
     "ro.bid4.backend.catalog..",
-    "ro.bid4.backend.order..",
+    // "order.." for a package called "orders" matched nothing, so the rule
+    // below never covered the largest feature in the application.
+    "ro.bid4.backend.orders..",
+    "ro.bid4.backend.inbox..",
+    "ro.bid4.backend.ledger..",
+    "ro.bid4.backend.shipping..",
+    "ro.bid4.backend.payments..",
+    "ro.bid4.backend.billing..",
     "ro.bid4.backend.storage.."
   };
 

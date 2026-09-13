@@ -143,6 +143,15 @@ public class SecurityConfig {
                     // the same reason the profiles it links to are.
                     .requestMatchers(HttpMethod.GET, "/users", "/users/*")
                     .permitAll()
+                    // Callbacks from the courier and the payment provider. Open
+                    // by necessity: neither has an account here and neither can
+                    // present a bearer token. They are not unauthenticated,
+                    // though — each body carries an HMAC over its exact bytes,
+                    // checked before it is parsed, and with no secret configured
+                    // the verifier refuses everything rather than waving it
+                    // through. See WebhookSignatures.
+                    .requestMatchers(HttpMethod.POST, "/webhooks/courier", "/webhooks/payments")
+                    .permitAll()
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

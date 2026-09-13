@@ -24,6 +24,17 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
       """)
   Optional<Order> findOpenForAuction(@Param("auctionId") UUID auctionId);
 
+  /**
+   * The sale a parcel belongs to.
+   *
+   * <p>A courier's callback names the consignment, not the order: it has never heard of our ids.
+   * One AWB belongs to one sale because a sale books at most one parcel.
+   */
+  Optional<Order> findByAwb(String awb);
+
+  /** The sale a payment provider's callback is about. */
+  Optional<Order> findByPaymentReference(String paymentReference);
+
   @Query(
       """
       select o from Order o

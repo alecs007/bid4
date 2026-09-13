@@ -7,16 +7,20 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ro.bid4.backend.billing.domain.DocumentKind;
+import ro.bid4.backend.billing.service.DocumentService;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.cause.repo.CauseRepository;
 import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.error.ErrorCode;
 import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.domain.DeliveryMethod;
+import ro.bid4.backend.identity.domain.DeliveryMethodType;
 import ro.bid4.backend.identity.repo.DeliveryMethodRepository;
 import ro.bid4.backend.inbox.service.ThreadEvents;
 import ro.bid4.backend.ledger.service.OrderLedger;
@@ -31,6 +35,13 @@ import ro.bid4.backend.orders.domain.OrderTrackingEvent;
 import ro.bid4.backend.orders.repo.OrderAgreementRepository;
 import ro.bid4.backend.orders.repo.OrderRepository;
 import ro.bid4.backend.orders.repo.OrderTrackingRepository;
+import ro.bid4.backend.payments.service.CheckoutSession;
+import ro.bid4.backend.payments.service.PaymentGateway;
+import ro.bid4.backend.payments.service.PaymentIntent;
+import ro.bid4.backend.shipping.service.AwbIssued;
+import ro.bid4.backend.shipping.service.CourierGateway;
+import ro.bid4.backend.shipping.service.LabelDocument;
+import ro.bid4.backend.shipping.service.Shipment;
 
 /**
  * The sale, from acceptance to release.
@@ -41,13 +52,15 @@ import ro.bid4.backend.orders.repo.OrderTrackingRepository;
  * never from an item in a conversation — which is what makes the thread safe to render as a set of
  * buttons.
  *
- * <p>Nothing here charges anybody. {@link #markPaid} is where a payment provider goes in phase
- * three; today it is an endpoint that says the money arrived, so the rest of the machine can be
- * built and tested without one.
+ * <p>Nothing here charges anybody, and nothing here knows how. {@link #markPaid} opens a checkout
+ * through {@link PaymentGateway} and {@link #settle} records the outcome; against the stub gateway
+ * the two happen in one call, and against a real one the second arrives from a webhook. Neither the
+ * state machine nor its callers change when a provider is wired up.
  *
  * <p>The three statuses in the middle of the journey are not reachable from here at all.
- * IN_TRANSIT, ARRIVED_AT_LOCKER and DELIVERED come from the courier through {@link
- * #recordTracking}, because neither party should be able to claim a parcel moved.
+ * IN_TRANSIT, ARRIVED_AT_LOCKER and DELIVERED arrive from the courier, through {@link
+ * #applyCourierScan} and the webhook behind it, because neither party should be able to claim a
+ * parcel moved.
  */
 @Service
 public class OrderService {
@@ -65,6 +78,9 @@ public class OrderService {
   private final DeliveryMethodRepository deliveryMethods;
   private final ThreadEvents threads;
   private final OrderLedger books;
+  private final CourierGateway courier;
+  private final PaymentGateway payments;
+  private final DocumentService files;
 
   public OrderService(
       CauseRepository causes,
@@ -73,7 +89,10 @@ public class OrderService {
       OrderTrackingRepository tracking,
       DeliveryMethodRepository deliveryMethods,
       ThreadEvents threads,
-      OrderLedger books) {
+      OrderLedger books,
+      CourierGateway courier,
+      PaymentGateway payments,
+      DocumentService files) {
     this.causes = causes;
     this.agreements = agreements;
     this.orders = orders;
@@ -81,6 +100,9 @@ public class OrderService {
     this.deliveryMethods = deliveryMethods;
     this.threads = threads;
     this.books = books;
+    this.courier = courier;
+    this.payments = payments;
+    this.files = files;
   }
 
   /**
@@ -222,28 +244,107 @@ public class OrderService {
    * nobody yet.
    */
   @Transactional
-  public Order markPaid(UUID orderId, Viewer viewer) {
+  public Settlement markPaid(UUID orderId, Viewer viewer) {
     Order order = load(orderId);
     requireBuyer(order, viewer);
+    requireStatus(order, OrderStatus.AWAITING_PAYMENT, OrderStatus.PAYMENT_FAILED);
+
+    CheckoutSession session =
+        payments.open(
+            new PaymentIntent(
+                order.getReference(),
+                order.getTotalPaid(),
+                PaymentIntent.RON,
+                "Comanda " + order.getReference(),
+                null,
+                null));
+    order.setPaymentReference(session.providerReference());
+    order.setPaymentProvider(payments.name());
+
+    // A provider with a redirect has not been paid yet: the buyer has not even
+    // seen the form. The sale stays where it is and its webhook settles it.
+    // Asked of the gateway rather than inferred from a null URL, so a provider
+    // that redirects and also settles synchronously cannot be misread.
+    if (!payments.settlesImmediately()) {
+      orders.save(order);
+      return new Settlement(order, session.redirectUrl());
+    }
+
+    return new Settlement(settle(order), session.redirectUrl());
+  }
+
+  /**
+   * A sale and where its buyer has to go next.
+   *
+   * <p>The URL is not stored: a provider issues it per session and it expires, so a page that
+   * needed it again would have to open a second checkout rather than reuse a stale link.
+   */
+  public record Settlement(Order order, String redirectUrl) {}
+
+  /**
+   * The money has arrived and is held by bid4.
+   *
+   * <p>Separated from {@link #markPaid} because the two are answers to different questions. That
+   * one is a buyer asking to pay; this is the fact that they did, and it arrives from a webhook for
+   * any real provider. Nothing here trusts the caller: it is package-visible and the only public
+   * routes to it are a buyer's own request against the stub and a signature-checked callback.
+   */
+  @Transactional
+  public Order settle(Order order) {
+    if (order.getStatus() == OrderStatus.PAID_HELD) {
+      return order;
+    }
     requireStatus(order, OrderStatus.AWAITING_PAYMENT, OrderStatus.PAYMENT_FAILED);
 
     order.setStatus(OrderStatus.PAID_HELD);
     order.setPaidAt(Instant.now());
     order.setPaymentFailureReason(null);
+    orders.save(order);
 
     // Into escrow, whole. Not a leu of it belongs to anybody yet — which is what
     // the promise on the listing page actually means.
     books.recordPayment(order.getId(), order.getTotalPaid());
 
     agree(order, order.getBuyerId(), AgreementKind.PAYMENT);
+    // The buyer is owed a statement of what they were charged from this moment,
+    // not from the moment the sale finishes: they have paid.
+    files.issue(order.getId(), DocumentKind.PROFORMA, order.getBuyerId(), order.getTotalPaid());
 
     post(
         conversationOf(order),
         order,
         OrderEvent.PAYMENT_HELD,
-        "Plata a fost primită și este ținută în siguranță.",
+        "Plata a fost înregistrată și suma este păstrată de bid4.",
         Map.of("total", String.valueOf(order.getTotalPaid())));
     return order;
+  }
+
+  /**
+   * A provider reported that a checkout failed.
+   *
+   * <p>Reached only from a verified callback. The sale is left where a buyer can retry it rather
+   * than cancelled, because a declined card is usually a second attempt away from working.
+   */
+  @Transactional
+  public void settlementFailed(String paymentReference, String reason) {
+    orders
+        .findByPaymentReference(paymentReference)
+        .ifPresent(
+            order -> {
+              if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
+                return;
+              }
+              order.setStatus(OrderStatus.PAYMENT_FAILED);
+              order.setPaymentFailureReason(
+                  reason == null || reason.isBlank() ? "Plata a fost refuzată." : reason);
+              orders.save(order);
+            });
+  }
+
+  /** The sale a provider's callback is about. */
+  @Transactional
+  public Optional<Order> bySettlementReference(String paymentReference) {
+    return orders.findByPaymentReference(paymentReference);
   }
 
   /** The parcel arrived and is what it was supposed to be. This is what releases the money. */
@@ -438,10 +539,12 @@ public class OrderService {
   // ---------------------------------------------------------------------------------------------
 
   /**
-   * There is an AWB.
+   * Books the parcel with the courier.
    *
-   * <p>Phase four asks a courier for it. Until then the number is minted here, which is enough for
-   * the thread and the label to be built and read.
+   * <p>The number comes from {@link CourierGateway} rather than from here, so the provider is one
+   * class and one property away and no caller of this method knows which courier answered. Against
+   * the stub gateway the number is minted locally, which is enough for the thread, the label and
+   * the whole journey to be walked.
    */
   @Transactional
   public Order generateLabel(UUID orderId, Viewer viewer) {
@@ -449,18 +552,88 @@ public class OrderService {
     requireSeller(order, viewer);
     requireStatus(order, OrderStatus.PAID_HELD);
 
-    order.setAwb(nextAwb());
-    order.setCourier("Sameday");
+    AwbIssued booked = courier.issue(shipmentFor(order));
+    order.setAwb(booked.awb());
+    order.setCourier(booked.courier());
     order.setStatus(OrderStatus.LABEL_GENERATED);
     agree(order, order.getSellerId(), AgreementKind.SHIPPING);
+    files.issue(order.getId(), DocumentKind.SHIPPING_LABEL, order.getSellerId(), 0);
 
     post(
         conversationOf(order),
         order,
         OrderEvent.LABEL_READY,
-        "Eticheta de expediere este gata.",
+        "Eticheta de expediere a fost emisă.",
         Map.of("awb", order.getAwb(), "courier", order.getCourier()));
     return order;
+  }
+
+  /**
+   * What the courier is told about the parcel.
+   *
+   * <p>Built from the delivery snapshot rather than from the buyer's saved address, which they may
+   * have edited or deleted since: the parcel goes where the order said it would go.
+   */
+  private Shipment shipmentFor(Order order) {
+    DeliverySnapshot to = order.getDelivery();
+    return new Shipment(
+        order.getReference(),
+        to == null ? DeliveryMethodType.EASYBOX : to.getType(),
+        listingWeight(order),
+        "",
+        "",
+        "",
+        to == null ? "" : to.getRecipientName(),
+        to == null ? "" : to.getPhone(),
+        to == null ? null : to.getEasyboxLockerId(),
+        to == null ? null : to.getStreet(),
+        to == null ? null : to.getCity(),
+        to == null ? null : to.getCounty(),
+        to == null ? null : to.getPostalCode());
+  }
+
+  /**
+   * The parcel's weight, or the default the courier prices against.
+   *
+   * <p>TODO(shipping): read the listing's declared weight. It lives in the catalogue and this
+   * service does not hold the listing, so booking currently quotes the default. Nothing downstream
+   * depends on it while the gateway is the stub, and a real booking would be mispriced.
+   */
+  private int listingWeight(Order order) {
+    return 500;
+  }
+
+  /**
+   * A scan, arriving from the courier rather than from either party.
+   *
+   * <p>The callback names the consignment, so this is where an AWB becomes an order. Unknown
+   * parcels are ignored quietly and answered 200: a courier retries anything else forever, and an
+   * AWB we have never heard of is their bookkeeping problem rather than an error on this side.
+   *
+   * @return whether anything was recorded, for the log only
+   */
+  @Transactional
+  public boolean applyCourierScan(
+      String awb, OrderStatus status, String label, String location, String externalId) {
+    Optional<Order> found = orders.findByAwb(awb);
+    if (found.isEmpty()) {
+      return false;
+    }
+    recordTracking(found.get().getId(), status, label, location, externalId);
+    return true;
+  }
+
+  /** The label to print, fetched from the courier on demand rather than stored. */
+  @Transactional(readOnly = true)
+  public LabelDocument labelFor(UUID orderId, Viewer viewer) {
+    Order order = get(orderId, viewer);
+    if (!viewer.is(order.getSellerId()) && !viewer.staff()) {
+      throw ApiException.forbidden("Eticheta este disponibilă vânzătorului.");
+    }
+    if (order.getAwb() == null) {
+      throw new ApiException(ErrorCode.CONFLICT, "Eticheta nu a fost emisă încă.");
+    }
+    return courier.label(order.getAwb());
   }
 
   /** Handed to the courier. The last thing either party declares about the journey. */
@@ -601,6 +774,13 @@ public class OrderService {
         order.getPlatformTax(),
         order.getShipping());
 
+    // The three documents the release creates, one per party. Issued here
+    // rather than when somebody asks for them, so the numbers are allocated in
+    // the order the sales actually completed.
+    files.issue(order.getId(), DocumentKind.INVOICE, order.getBuyerId(), order.getTotalPaid());
+    files.issue(
+        order.getId(), DocumentKind.PAYOUT_STATEMENT, order.getSellerId(), order.getSellerShare());
+
     post(
         conversationOf(order),
         order,
@@ -678,9 +858,5 @@ public class OrderService {
       }
     }
     throw new ApiException(ErrorCode.INTERNAL, "Comanda nu a putut fi creată.");
-  }
-
-  private static String nextAwb() {
-    return "SMD%011d".formatted(ThreadLocalRandom.current().nextLong(100_000_000_000L));
   }
 }

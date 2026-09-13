@@ -18,6 +18,7 @@ import ro.bid4.backend.orders.api.dto.CancelOrderRequest;
 import ro.bid4.backend.orders.api.dto.ChooseDeliveryRequest;
 import ro.bid4.backend.orders.api.dto.OpenDisputeRequest;
 import ro.bid4.backend.orders.api.dto.OrderResponse;
+import ro.bid4.backend.orders.api.dto.PaymentStartResponse;
 import ro.bid4.backend.orders.api.dto.ResolveDisputeRequest;
 import ro.bid4.backend.orders.api.dto.TrackingEventResponse;
 import ro.bid4.backend.orders.service.OrderMapper;
@@ -69,13 +70,16 @@ public class OrderController {
   /**
    * Buyer: pay.
    *
-   * <p>A stub until phase three, and deliberately shaped like the thing that replaces it — the
-   * caller asks for the order to be paid and is told what state it ended in, rather than being
-   * handed a provider's session to reason about.
+   * <p>Answers the sale plus somewhere to go, because a hosted checkout is a redirect out and back
+   * and the client has to be told where. Against a provider that settles immediately there is
+   * nowhere to go and the sale comes back already paid, which is what the stub does today.
+   *
+   * <p>The shape is the point: wiring a real provider in changes which of the two fields is filled,
+   * and nothing about this route or its callers.
    */
   @PostMapping("/{id}/payment")
-  OrderResponse pay(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-    return mapper.toResponse(orders.markPaid(id, Viewers.from(jwt)));
+  PaymentStartResponse pay(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    return mapper.toPaymentStart(orders.markPaid(id, Viewers.from(jwt)));
   }
 
   /** Seller: get an AWB. */

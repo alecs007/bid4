@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import ro.bid4.backend.orders.api.dto.AgreementResponse;
 import ro.bid4.backend.orders.api.dto.DeliverySnapshotResponse;
 import ro.bid4.backend.orders.api.dto.OrderResponse;
+import ro.bid4.backend.orders.api.dto.PaymentStartResponse;
 import ro.bid4.backend.orders.api.dto.TrackingEventResponse;
 import ro.bid4.backend.orders.domain.DeliverySnapshot;
 import ro.bid4.backend.orders.domain.Order;
@@ -14,6 +15,16 @@ import ro.bid4.backend.orders.domain.OrderTrackingEvent;
 /** Rows into the shape the thread and the order page are drawn from. */
 @Service
 public class OrderMapper {
+
+  /**
+   * The answer to a request to pay: the sale, and somewhere to send the buyer.
+   *
+   * <p>Mapped here rather than assembled in the controller so that nothing in the api layer has to
+   * name an entity, which is a rule ArchUnit enforces.
+   */
+  public PaymentStartResponse toPaymentStart(OrderService.Settlement settlement) {
+    return new PaymentStartResponse(toResponse(settlement.order()), settlement.redirectUrl());
+  }
 
   public OrderResponse toResponse(Order order) {
     return new OrderResponse(
