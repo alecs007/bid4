@@ -483,6 +483,65 @@
   animation: var(--animate-shimmer);
 }
 
+/* ==========================================================================
+   Scrollbars
+   ==========================================================================
+
+   The browser's default bar is the one element on the page nobody styled: grey,
+   square, and the same on a warm off-white ground as on a dark one. Every
+   scrolling box on the site gets a thin rounded thumb in the ink palette
+   instead.
+
+   The two mechanisms do NOT combine, which is the whole reason for the
+   @supports below. Chrome treats `scrollbar-color` as opting into its standard
+   scrollbar and then ignores every ::-webkit-scrollbar rule for that scroller —
+   so declaring both meant the colour applied and the width, radius and inset
+   silently did not. Measured: a plain scrolling div still reported a 15px bar.
+
+   So: the pseudo-elements where they exist, which is Chrome, Edge and Safari
+   and where the rounded inset thumb is possible; and the standard properties
+   only in browsers that have no pseudo-elements to offer, which today is
+   Firefox. Neither branch ever runs alongside the other. */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink-200);
+  /* Round, and inset so the thumb floats on the surface rather than filling a
+     gutter. A transparent border with the background clipped to the padding box
+     is the only way to inset a WebKit thumb. */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-ink-300);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--color-ink-400);
+}
+
+/* Where two bars meet. Left alone it is a small grey square. */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: var(--color-ink-200) transparent;
+    scrollbar-width: thin;
+  }
+}
+
 /* A rail the user drives with arrows or by dragging: the scrollbar would be a
    third control saying the same thing, and a permanent line under the cards. */
 @utility no-scrollbar {
