@@ -14,7 +14,6 @@ function tooBig(file: File, maxMb: number): boolean {
   return file.size > maxMb * 1024 * 1024;
 }
 
-/** A thumbnail for images, a document glyph for everything else. */
 function Thumb({ file, className }: { file: UploadedFileRef; className?: string }) {
   const [broken, setBroken] = useState(false);
   const showImage = Boolean(file.previewUrl) && !broken;
@@ -42,7 +41,6 @@ function Thumb({ file, className }: { file: UploadedFileRef; className?: string 
   );
 }
 
-/** Nothing is uploaded — see `toFileRef` for what happens once there is a server. */
 export function FileUpload({
   label,
   hint,
@@ -169,7 +167,6 @@ export function FileUpload({
   );
 }
 
-/** Several images at once — the cause gallery, and nothing heavier. */
 export function FileUploadGrid({
   label,
   hint,

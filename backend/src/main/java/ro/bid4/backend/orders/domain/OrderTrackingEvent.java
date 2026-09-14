@@ -14,21 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One scan, in the courier's words.
- *
- * <p>Its own rows rather than a column on the order, because the order holds one status and this
- * holds the journey — and a buyer watching a parcel wants the journey.
- *
- * <p>{@code externalId} is the courier's id for the scan and is unique, so a webhook delivered
- * twice moves the parcel once.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "order_tracking_events")
 public class OrderTrackingEvent {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

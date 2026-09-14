@@ -123,8 +123,6 @@ export default function HelpPage() {
           a ta nu este aici, scrie-ne — răspunde un om.
         </p>
 
-        {/* A row of jumps rather than a table of contents: four topics is short
-            enough to be read at a glance and long enough to scroll past. */}
         <nav aria-label="Subiecte" className="mt-5 flex flex-wrap gap-2">
           {TOPICS.map((topic) => (
             <Link

@@ -1,8 +1,3 @@
-/**
- * One takes the singular; two to nineteen the plural bare; twenty and up take
- * "de" — "31 de produse". The rule works off the last two digits, so it holds at
- * 101 (bare) and 120 ("de") too.
- */
 export function countRo(count: number, one: string, many: string): string {
   if (count === 1) return `1 ${one}`;
 
@@ -12,11 +7,6 @@ export function countRo(count: number, one: string, many: string): string {
   return `${count} ${needsDe ? "de " : ""}${many}`;
 }
 
-/**
- * The noun on its own, agreed with a count that is printed somewhere else.
- * `countRo` carries the number with it, so using it as a label under its own
- * figure prints the number twice: "0" above "0 evaluări".
- */
 export function pluralRo(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
 }

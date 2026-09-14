@@ -13,8 +13,6 @@ import ro.bid4.backend.inbox.domain.Conversation;
 import ro.bid4.backend.inbox.domain.ConversationKind;
 
 public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
-
-  /** The thread a buyer already has on a listing, if they have written before. */
   @Query(
       """
       select c from Conversation c
@@ -24,10 +22,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
   Optional<Conversation> findListingThread(
       @Param("listingId") UUID listingId, @Param("buyerId") UUID buyerId);
 
-  /** How many real exchanges there are, ignoring the greeting every account gets. */
   long countByKind(ConversationKind kind);
 
-  /** The thread bid4 itself has with a member. One each, and it is always there. */
   @Query(
       """
       select c from Conversation c
@@ -36,26 +32,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
       """)
   Optional<Conversation> findSupportThread(@Param("userId") UUID userId);
 
-  /**
-   * One page of somebody's inbox, newest activity first.
-   *
-   * <p>Keyset rather than offset: an inbox is appended to constantly, so a page number drifts under
-   * the reader between one request and the next, and the cost of skipping rows grows with how far
-   * down they have gone. The cursor is the timestamp of the last row seen, with the id breaking a
-   * tie between two threads touched in the same instant.
-   *
-   * <p>Joined through the participant row rather than matched on buyer_id or seller_id, because
-   * that row is the permission: no participant, no thread, and support joining a dispute needs no
-   * second branch here.
-   *
-   * <p>Split in two rather than taking a nullable cursor — see {@code ThreadItemRepository}, where
-   * the same split is explained.
-   *
-   * <p>Listing threads only. bid4's own thread is pinned to the top of the first page by the
-   * service, and a row that is always first cannot also sit in a keyset ordered by when it last
-   * moved — it would come back twice, or fall off the bottom of page one the moment somebody else
-   * wrote. Excluded here, it keeps the cursor a plain {@code (lastItemAt, id)} over the rest.
-   */
   @Query(
       """
       select c from Conversation c
@@ -85,12 +61,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
       @Param("beforeId") UUID beforeId,
       Limit limit);
 
-  /**
-   * Moves a thread to the top of both inboxes.
-   *
-   * <p>A statement rather than a setter on the managed entity: the caller has just written an item
-   * and is about to answer, and this is the only field of the row it touches.
-   */
   @Modifying(flushAutomatically = true)
   @Query("update Conversation c set c.lastItemAt = :at where c.id = :id")
   int touch(@Param("id") UUID id, @Param("at") Instant at);

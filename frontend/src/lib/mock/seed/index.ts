@@ -31,7 +31,6 @@ import {
 
 export { DEMO_PASSWORD, FEATURED_ACCOUNT_IDS } from "./users";
 
-/** Everything the mock backend knows. One object, easy to snapshot and reset. */
 export interface World {
   users: User[];
   deliveryMethods: DeliveryMethod[];
@@ -42,13 +41,9 @@ export interface World {
   orders: Order[];
   invoices: Invoice[];
   disputes: Dispute[];
-  /** auctionIds the user follows. */
   watchlist: { userId: ID; auctionId: ID }[];
-  /** Half-finished cause applications, one per organiser. */
   causeDrafts: CauseDraftRecord[];
-  /** One per (listing, buyer). Empty until somebody writes. */
   conversations: MockConversation[];
-  /** Flat, and carrying the thread they belong to — the wire shape does not need it. */
   threadItems: (ThreadItem & { conversationId: ID })[];
   notifications: MockNotification[];
 }
@@ -79,7 +74,6 @@ export function createWorld(): World {
     causes,
   });
 
-  // A starter watchlist for the demo buyer, so the dashboard is never empty.
   const watchlist = [
     { userId: "usr_maria", auctionId: "auc_ilustratie" },
     { userId: "usr_maria", auctionId: "auc_lego" },
@@ -99,8 +93,6 @@ export function createWorld(): World {
     disputes,
     watchlist,
     causeDrafts: [],
-    // Every seeded sale gets the conversation it would have had. A demo where
-    // the threads are empty shows none of what the inbox is for.
     conversations,
     threadItems,
     notifications,

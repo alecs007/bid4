@@ -21,20 +21,10 @@ import { slugify, uniqueSlug } from "@/lib/utils/slug";
 
 import { http, refreshSession, writeToken } from "./http";
 
-/** Seven days, matching the mock token's stated lifetime. */
 const SESSION_DAYS = 7;
 
-/**
- * Mock mode only, and the one place an id is written to storage.
- *
- * A real session leaves nothing here: the token is in memory and the httpOnly
- * refresh cookie restores it. The mock world has no cookies and no server, and
- * it already persists itself to localStorage beside this — a mock id is a
- * pointer into that fixture, not a credential.
- */
 const MOCK_USER_KEY = "bid4.mock.userId";
 
-/** Who the mock world is being read as. Mock mode only; there is no such thing in the real one. */
 export function currentMockUserId(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(MOCK_USER_KEY);
@@ -54,7 +44,6 @@ function mockSession(user: User): AuthSession {
   };
 }
 
-/** POST /auth/login */
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   if (!USE_MOCK) {
     const session = await http<AuthSession>("/auth/login", {
@@ -92,13 +81,6 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   return session;
 }
 
-/**
- * POST /auth/register
- *
- * Returns the account and no session: the address is unconfirmed, so there is
- * nothing to sign in to yet. The real backend mails a link; the mock world has
- * no post, so a mock account is usable straight away.
- */
 export async function register(payload: RegisterPayload): Promise<User> {
   if (!USE_MOCK) {
     return http<User>("/auth/register", { method: "POST", body: payload });
@@ -135,7 +117,6 @@ export async function register(payload: RegisterPayload): Promise<User> {
     bio: "",
     createdAt: new Date().toISOString(),
     stripeReady: false,
-    // A brand-new account cannot bid yet — that is the point of the gate.
     hasPaymentMethod: false,
     defaultDeliveryMethodId: undefined,
     rating: 0,
@@ -148,7 +129,6 @@ export async function register(payload: RegisterPayload): Promise<User> {
   return user;
 }
 
-/** POST /auth/verify — redeems the link from the confirmation message. */
 export async function verifyEmail(token: string): Promise<void> {
   if (!USE_MOCK) {
     await http<void>("/auth/verify", { method: "POST", body: { token } });
@@ -157,7 +137,6 @@ export async function verifyEmail(token: string): Promise<void> {
   await delay();
 }
 
-/** POST /auth/resend-verification — always succeeds, so it reveals no accounts. */
 export async function resendVerification(email: string): Promise<void> {
   if (!USE_MOCK) {
     await http<void>("/auth/resend-verification", {
@@ -169,15 +148,6 @@ export async function resendVerification(email: string): Promise<void> {
   await delay();
 }
 
-/**
- * Restores a session on boot, or reports that there is none.
- *
- * Nothing readable survived the reload — the access token was a module variable
- * in a page that no longer exists. The httpOnly refresh cookie did, so the only
- * way to find out whether someone is signed in is to spend it. The exchange
- * answers with the user as well as the token, so this costs one request rather
- * than a refresh followed by `/auth/me`.
- */
 export async function restore(): Promise<User | null> {
   if (!USE_MOCK) return (await refreshSession())?.user ?? null;
 
@@ -190,7 +160,6 @@ export async function restore(): Promise<User | null> {
   return getWorld().users.find((item) => item.id === userId) ?? null;
 }
 
-/** GET /auth/me — re-reads the signed-in user after a profile change. */
 export async function me(userId?: string): Promise<User> {
   if (!USE_MOCK) return http<User>("/auth/me");
 
@@ -201,7 +170,6 @@ export async function me(userId?: string): Promise<User> {
   return user;
 }
 
-/** POST /auth/logout */
 export async function logout(): Promise<void> {
   if (!USE_MOCK) {
     await http<void>("/auth/logout", { method: "POST" }).catch(() => undefined);
@@ -210,7 +178,6 @@ export async function logout(): Promise<void> {
   rememberMockUser(null);
 }
 
-/** Dev-only: no backend counterpart — the role switcher is stripped in prod. */
 export async function loginAsSeedAccount(userId: string): Promise<AuthSession> {
   await delay();
   const world = getWorld();
@@ -223,7 +190,6 @@ export async function loginAsSeedAccount(userId: string): Promise<AuthSession> {
   return session;
 }
 
-/** The four accounts offered on the login screen and the role switcher. */
 export async function listSeedAccounts(): Promise<User[]> {
   await delay();
   const world = getWorld();

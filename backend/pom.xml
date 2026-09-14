@@ -6,8 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.1.0</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
+		<relativePath/>	</parent>
 	<groupId>ro.bid4</groupId>
 	<artifactId>backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
@@ -28,22 +27,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-		<!-- Overrides the version Boot manages (42.7.11), which is vulnerable to a
-		     SCRAM-SHA-256-PLUS downgrade — CVE-2026-54291. -->
 		<postgresql.version>42.7.12</postgresql.version>
-		<!-- The three below are the same thing: a fix published after the Boot
-		     release that pins them, so the version is overridden here until a
-		     Boot patch catches up. Each is CRITICAL with a fix available, which
-		     is what the security workflow refuses to let through.
-
-		     netty 4.2.15 — CVE-2026-75595.
-		     tomcat 11.0.22 — CVE-2026-65182, CVE-2026-65905, CVE-2026-68525:
-		     a security-constraint bypass, a DIGEST replay, and a FORM auth
-		     bypass. This one is a servlet container serving the whole API.
-		     bouncycastle 1.81 — CVE-2025-14813. That one is not Boot's to
-		     manage: it rides in under MinIO, so it is pinned in
-		     dependencyManagement below rather than by a property nothing
-		     reads. -->
 		<netty.version>4.2.17.Final</netty.version>
 		<tomcat.version>11.0.25</tomcat.version>
 		<bouncycastle.version>1.81.1</bouncycastle.version>
@@ -54,8 +38,6 @@
 		<archunit.version>1.4.0</archunit.version>
 		<spotless.version>2.44.0</spotless.version>
 	</properties>
-	<!-- Constrains a version without taking on the dependency: bcprov is
-	     MinIO's, and this only says which one of it. -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -99,13 +81,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
-		<!-- JWT issuing and verification via Nimbus, so no hand-rolled token code. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
 		</dependency>
-		<!-- Sign-in with Google or Facebook. The provider does the authenticating;
-		     we still issue our own tokens, so the rest of the API is unchanged. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security-oauth2-client</artifactId>
@@ -124,18 +103,11 @@
 			<artifactId>minio</artifactId>
 			<version>${minio.version}</version>
 		</dependency>
-		<!-- MinIO's client is built on OkHttp, and from OkHttp 5 the artifact it
-		     depends on is an empty aggregator: the JVM classes moved to okhttp-jvm,
-		     and which one a build gets is decided by Gradle module metadata that
-		     Maven does not read. Without this, okhttp3.HttpUrl is on no classpath
-		     at all and anything touching the client fails to compile. Pinned beside
-		     minio's own version, which is what decides the OkHttp it expects. -->
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
 			<artifactId>okhttp-jvm</artifactId>
 			<version>${okhttp.version}</version>
 		</dependency>
-		<!-- Strips active markup from the one free-text field a cause carries. -->
 		<dependency>
 			<groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
 			<artifactId>owasp-java-html-sanitizer</artifactId>
@@ -234,11 +206,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<!-- The application refuses to start without these, which is the
-					     point. Tests still have to run on a clean checkout and in CI,
-					     where there is no .env, so the test JVM gets obvious fakes.
-					     Nothing here weakens the real thing: a deployment with these
-					     values would be as broken as one with none. -->
 					<environmentVariables>
 						<BID4_JWT_SECRET>test-only-secret-not-used-outside-the-test-jvm</BID4_JWT_SECRET>
 						<MINIO_ROOT_USER>test-only-minio-user</MINIO_ROOT_USER>
@@ -251,9 +218,6 @@
 				<artifactId>spotless-maven-plugin</artifactId>
 				<version>${spotless.version}</version>
 				<configuration>
-					<!-- Pinned, not inherited. Spotless defaults to reading .gitattributes,
-					     which on a machine with core.autocrlf=true means CRLF — and the
-					     Docker build has no .git, expects LF, and fails every file. -->
 					<lineEndings>UNIX</lineEndings>
 					<java>
 						<googleJavaFormat>
@@ -264,8 +228,6 @@
 				</configuration>
 				<executions>
 					<execution>
-						<!-- Fails the build on unformatted code, so formatting is
-						     never a review comment. `mvn spotless:apply` fixes it. -->
 						<id>check-format</id>
 						<phase>validate</phase>
 						<goals>

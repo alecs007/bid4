@@ -18,16 +18,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-/**
- * Turns every exception into the one error body the frontend understands.
- *
- * <p>The rule throughout: the client is told what it can act on, and the server keeps the detail.
- * An unexpected failure is logged in full with its correlation id and answered with a sentence that
- * describes nothing about the internals.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler(ApiException.class)
@@ -36,14 +28,6 @@ public class GlobalExceptionHandler {
         .body(ApiErrorResponse.of(ex.code(), ex.getMessage(), ex.fieldErrors()));
   }
 
-  /**
-   * A request body or a bound query object that failed its constraints: the caller gets the field
-   * map.
-   *
-   * <p>Typed as BindException rather than MethodArgumentNotValidException, which extends it. Query
-   * objects bound with {@code @ModelAttribute} report failures as the plain parent, and without
-   * this they would fall through to the catch-all and answer 500 to what is a bad request.
-   */
   @ExceptionHandler(BindException.class)
   ResponseEntity<ApiErrorResponse> handleBodyValidation(BindException ex) {
     Map<String, String> fields = new LinkedHashMap<>();
@@ -54,7 +38,6 @@ public class GlobalExceptionHandler {
     return respond(ErrorCode.VALIDATION_FAILED, ErrorCode.VALIDATION_FAILED.message(), fields);
   }
 
-  /** The same, for constraints on path variables and query parameters. */
   @ExceptionHandler(HandlerMethodValidationException.class)
   ResponseEntity<ApiErrorResponse> handleParamValidation(HandlerMethodValidationException ex) {
     Map<String, String> fields = new LinkedHashMap<>();
@@ -71,7 +54,6 @@ public class GlobalExceptionHandler {
     return respond(ErrorCode.VALIDATION_FAILED, ErrorCode.VALIDATION_FAILED.message(), fields);
   }
 
-  /** Malformed JSON, a wrong type, an unreadable body. Never echoed back. */
   @ExceptionHandler({
     HttpMessageNotReadableException.class,
     MethodArgumentTypeMismatchException.class
@@ -102,10 +84,6 @@ public class GlobalExceptionHandler {
         ErrorCode.UNSUPPORTED_MEDIA_TYPE, ErrorCode.UNSUPPORTED_MEDIA_TYPE.message(), null);
   }
 
-  /**
-   * A unique index or a CHECK rejected the write. The constraint name would tell an attacker the
-   * shape of the schema, so it is logged and never returned.
-   */
   @ExceptionHandler(DataIntegrityViolationException.class)
   ResponseEntity<ApiErrorResponse> handleIntegrity(DataIntegrityViolationException ex) {
     log.warn("Database rejected a write", ex);

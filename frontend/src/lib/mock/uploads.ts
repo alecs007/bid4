@@ -1,10 +1,6 @@
 import type { UploadedFileRef } from "@/lib/types";
 
-/**
- * TODO(backend): POST /uploads returns `{ fileRef }`, and identity documents go
- * to a private bucket. Today nothing leaves the browser — the preview is an
- * object URL, which is why a resumed draft shows a name rather than a thumbnail.
- */
+// TODO(backend): POST /uploads returns { fileRef }; today nothing leaves the browser.
 export function toFileRef(file: File): UploadedFileRef {
   const isImage = file.type.startsWith("image/");
   return {

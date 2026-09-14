@@ -52,7 +52,6 @@ import { PageTransition } from "@/components/layout/PageTransition";
 export const metadata: Metadata = {
   title: "Design system",
   description: "Componentele și tokenurile vizuale ale platformei bid4.",
-  // An internal reference, not a page of the product.
   robots: { index: false, follow: false },
 };
 
@@ -335,8 +334,6 @@ export default function DesignSystemPage() {
                   title="Necitite"
                   subtitle="Un disc pentru o cifră, o pastilă abia de la două."
                 />
-                {/* Here so the centring can be checked without a session: every
-                    other place a count appears is behind one. */}
                 <div className="flex flex-wrap items-center gap-3">
                   {[1, 7, 12, 99, 128].map((count) => (
                     <UnreadBadge

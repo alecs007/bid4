@@ -49,14 +49,6 @@ import ro.bid4.backend.orders.repo.OrderRepository;
 import ro.bid4.backend.orders.repo.OrderTrackingRepository;
 import ro.bid4.backend.orders.service.OrderService;
 
-/**
- * The two routes the outside world calls.
- *
- * <p>These are the only endpoints in the application that answer an unauthenticated caller and then
- * move money or a parcel, so most of what is tested here is what they refuse. A webhook that trusts
- * its caller is a way to mark any sale paid, and one that is not idempotent is a way to pay for a
- * sale twice.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -68,7 +60,6 @@ import ro.bid4.backend.orders.service.OrderService;
       "bid4.payments.webhook-secret=payments-test-secret"
     })
 class WebhookTest {
-
   private static final long LEU = 100;
   private static final String COURIER_SECRET = "courier-test-secret";
   private static final String PAYMENTS_SECRET = "payments-test-secret";
@@ -96,8 +87,6 @@ class WebhookTest {
     approved = cause(seller.getId());
     buyerLocker = locker(buyer.getId());
   }
-
-  /* --- the courier -------------------------------------------------------- */
 
   @Test
   @DisplayName("An unsigned courier callback is refused and moves nothing")
@@ -158,8 +147,6 @@ class WebhookTest {
   @Test
   @DisplayName("A scan for an AWB nobody knows is accepted and dropped")
   void anUnknownParcelIsAcceptedAndDropped() throws Exception {
-    // 200, not 404: a courier retries anything else forever, and an AWB that was
-    // never issued here is their bookkeeping rather than a failure on this side.
     send(
             "/webhooks/courier",
             courierBody("evt-nobody", "SMD00000000000", "DELIVERED"),
@@ -178,8 +165,6 @@ class WebhookTest {
             COURIER_SECRET)
         .andExpect(status().isOk());
 
-    // Inventing a transition from an unrecognised code is how a sale arrives
-    // DELIVERED because a van was loaded.
     assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.LABEL_GENERATED);
   }
 
@@ -197,8 +182,6 @@ class WebhookTest {
     assertThat(delivered.getDeliveredAt()).isNotNull();
     assertThat(delivered.getAutoReleaseAt()).isNotNull();
   }
-
-  /* --- the payment provider ----------------------------------------------- */
 
   @Test
   @DisplayName("An unsigned payment callback is refused and pays nothing")
@@ -241,15 +224,6 @@ class WebhookTest {
     assertThat(failed.getPaymentFailureReason()).isNotBlank();
   }
 
-  /* --- fixtures ----------------------------------------------------------- */
-
-  /**
-   * A sale waiting to be paid, with a checkout session on it.
-   *
-   * <p>Reached by asking the stub gateway to open one and then putting the row back: the stub
-   * settles immediately, and what these tests need is the state a real provider leaves behind, a
-   * session opened with nothing paid against it yet.
-   */
   private Order awaitingPayment() {
     Order order = accept(liveListing(), 200 * LEU);
     orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
@@ -261,7 +235,6 @@ class WebhookTest {
     return orderRows.save(back);
   }
 
-  /** A sale with an AWB, which is the first point a courier could say anything about it. */
   private Order shipped() {
     Order order = accept(liveListing(), 200 * LEU);
     orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
@@ -287,7 +260,6 @@ class WebhookTest {
         + "\"reason\":\"Card refuzat de banca emitenta.\"}";
   }
 
-  /** The same HMAC a provider would compute, so the test signs the way they would. */
   private static String sign(String body, String secret) throws Exception {
     Mac mac = Mac.getInstance("HmacSHA256");
     mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));

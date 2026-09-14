@@ -7,11 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 import ro.bid4.backend.common.web.PublicCaching;
 import ro.bid4.backend.ops.service.StatsService;
 
-/** The counters the homepage puts in front of a first-time visitor. */
 @RestController
 @RequestMapping("/stats")
 public class StatsController {
-
   private final StatsService stats;
 
   public StatsController(StatsService stats) {

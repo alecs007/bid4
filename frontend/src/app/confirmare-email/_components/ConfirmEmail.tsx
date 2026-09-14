@@ -11,12 +11,6 @@ import { errorMessage } from "@/lib/hooks/useApi";
 
 type State = "checking" | "confirmed" | "failed";
 
-/**
- * Where the link in the confirmation message lands.
- *
- * The token is redeemed once, on arrival. The endpoint is idempotent, so a mail
- * client that prefetched the link has not spent it.
- */
 export function ConfirmEmail() {
   const params = useSearchParams();
   const token = params.get("token");
@@ -80,7 +74,6 @@ export function ConfirmEmail() {
   return <ConfirmationFailed reason={failure} />;
 }
 
-/** A link that expired or was already replaced. The way out is a new one. */
 function ConfirmationFailed({ reason }: { reason: string | null }) {
   const toast = useToast();
   const [email, setEmail] = useState("");

@@ -42,16 +42,8 @@ const SORTS: { value: AuctionSort; label: string }[] = [
   { value: "DONATION_DESC", label: "Donație maximă" },
 ];
 
-/** The header bar's height at lg, where this toolbar's stuck state is measured. */
 const HEADER_HEIGHT = 56;
 
-/**
- * The five states a listing can declare, best first.
- *
- * <p>Written out rather than derived from the ITEM_CONDITION map, because that is keyed for
- * lookup and its order is an implementation detail; the order a buyer scans them in is a
- * decision, and this is where it is made.
- */
 const CONDITION_FILTERS: ItemCondition[] = [
   "NEW",
   "LIKE_NEW",
@@ -60,14 +52,11 @@ const CONDITION_FILTERS: ItemCondition[] = [
   "USED",
 ];
 
-/** Mirrors the @Size bound on AuctionQuery.q. */
 const MAX_SEARCH_LENGTH = 120;
 
-/** Rejects a hand-typed causeId before it reaches the API and comes back a 400. */
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** A query-string number, or the fallback when it is missing or not one. */
 function readNumber(raw: string | null, fallback: number): number {
   if (raw === null || raw.trim() === "") return fallback;
   const value = Number(raw);
@@ -140,13 +129,7 @@ export function AuctionBrowser() {
     };
   }, []);
 
-  // Trimmed to the column's own width. The API refuses anything longer, and a
-  // pasted paragraph should narrow the results, not blank the page with a 400.
   const q = (params.get("q") ?? "").slice(0, MAX_SEARCH_LENGTH);
-  // Everything below is read off a URL anybody can type, share or edit, so none
-  // of it is trusted: an unknown sort, a category that does not exist, a price
-  // of "abc" or a range the wrong way round all have to land somewhere sane
-  // rather than reaching the API as NaN or a 400.
   const sort = SORTS.some((option) => option.value === params.get("sort"))
     ? (params.get("sort") as AuctionSort)
     : "NEWEST";
@@ -164,8 +147,6 @@ export function AuctionBrowser() {
     ? params.get("causeId")!
     : undefined;
   const minDonation = clamp(readNumber(params.get("minDonation"), 0), 0, 100);
-  // Read as a pair: a range typed the wrong way round is a range, not an empty
-  // result, so the two ends are sorted rather than passed straight through.
   const [minPrice, maxPrice] = orderedRange(
     clamp(readNumber(params.get("minPrice"), PRICE_MIN), PRICE_MIN, PRICE_MAX),
     clamp(readNumber(params.get("maxPrice"), PRICE_MAX), PRICE_MIN, PRICE_MAX),
@@ -178,13 +159,6 @@ export function AuctionBrowser() {
   ]);
   const [donationDraft, setDonationDraft] = useState(minDonation);
 
-  // The sliders hold a draft so they do not fire a request per pixel, which
-  // means they can fall out of step with the URL — on back and forward, or on a
-  // link someone else sent. The URL is the truth; the draft follows it.
-  //
-  // Adjusted during render rather than in an effect, which is what React asks
-  // for when state has to follow something outside it: no second paint, and no
-  // frame where the sliders disagree with the results beside them.
   const [urlFilter, setUrlFilter] = useState({
     minPrice,
     maxPrice,
@@ -210,25 +184,16 @@ export function AuctionBrowser() {
           sort,
           category: categories.length ? categories : undefined,
           condition: conditions.length ? conditions : undefined,
-          // Fixed, and not readable from the URL. This page is a catalogue of
-          // things you can still make an offer on; a sold listing is history,
-          // and belongs on the seller's own shelf rather than here.
           status: OFFERABLE_AUCTION_STATUSES,
           causeId,
           minDonationPercent: minDonation || undefined,
           minPrice: minPrice > PRICE_MIN ? minPrice : undefined,
           maxPrice: maxPrice < PRICE_MAX ? maxPrice : undefined,
           page: Number.isFinite(page) && page > 0 ? page : 1,
-          // Asked for rather than left to the server's own default: how many
-          // cards fill this page is a question about this page's grid, and the
-          // two agreeing by coincidence is how one of them quietly changes.
           pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
         },
         user?.id,
       ),
-    // Keyed off what is actually being asked for rather than off the raw query
-    // string: two URLs that sanitise to the same filter are the same request,
-    // and ?minPrice=abc must not get a cache entry of its own.
     [
       "auctions",
       q,
@@ -244,10 +209,6 @@ export function AuctionBrowser() {
     ].join(":"),
   );
 
-  // The list of causes is a separate request, and it can fail on its own while
-  // the results beside it load fine. Dropping its loading and error states left
-  // an empty dropdown with nothing to pick and no reason given — which reads,
-  // correctly, as a broken filter.
   const {
     data: causes,
     loading: causesLoading,
@@ -260,30 +221,10 @@ export function AuctionBrowser() {
       ? "Se încarcă…"
       : "Toate cauzele";
 
-  /**
-   * How many placeholders to draw while a page change is in flight, at the size
-   * of the page that is leaving — and at that size for the whole of it.
-   *
-   * <p>They used to take the incoming page's size once the scroll reported back.
-   * That is where the lurch came from: twelve rows becoming two takes 1300px out
-   * of the document, and if the glide has not finished the browser clamps the
-   * scroll to whatever is left and drags the reader down instead of up. Nothing
-   * shrinks until the results themselves arrive, by which time the page is at
-   * the top and a change of height moves nothing.
-   *
-   * <p>Captured rather than read off `data`: a page visited before is already in
-   * the cache, so `data` becomes the incoming page in the same frame as the
-   * click and the count read from it would be the wrong one at the wrong time.
-   */
   const [placeholders, setPlaceholders] = useState<number | null>(null);
 
-  /**
-   * The page a click asked for, so the control can answer at once rather than a
-   * second later, once the glide is over.
-   */
   const [pending, setPending] = useState<number | null>(null);
 
-  /** Placeholders stand from the click until the new page is ready to be seen. */
   const [holding, setHolding] = useState(false);
   const settling = useRef<number | null>(null);
 
@@ -296,26 +237,12 @@ export function AuctionBrowser() {
 
   const busy = navigating || loading || holding;
 
-  /**
-   * Placeholders from the click, the page goes up, and only once it is there are the results
-   * revealed.
-   *
-   * <p>Every change comes through here, a filter as much as a page. A filter answered out of the
-   * cache used to swap under the cursor between one frame and the next, which reads as the list
-   * having always said that; the hold is what makes it read as an answer to something pressed.
-   *
-   * <p>Through Lenis, never `window.scrollTo`: it owns the scroll position while it runs, and a
-   * native smooth scroll animating the same property at the same time is what made these lists
-   * stutter.
-   */
   const update = (
     mutate: (next: URLSearchParams) => void,
     { keepPage = false } = {},
   ) => {
     const next = new URLSearchParams(params.toString());
     mutate(next);
-    // A filter change goes back to page one and cannot know its own size, so
-    // the count from the last page click must not be carried into it.
     if (!keepPage) {
       setPlaceholders(null);
       next.delete("page");
@@ -323,10 +250,6 @@ export function AuctionBrowser() {
     const query = next.toString();
 
     setHolding(true);
-    // The filter lives in the URL, and useSearchParams only catches up once the
-    // router has navigated. Until then the key has not changed, nothing is
-    // loading, and the previous filter's results sit there looking like an
-    // answer. A transition gives an immediate `pending` to show instead.
     startNavigation(() => {
       router.replace(query ? `/licitatii?${query}` : "/licitatii", {
         scroll: false,
@@ -355,14 +278,6 @@ export function AuctionBrowser() {
       remaining.forEach((item) => next.append(key, item));
     });
 
-  /**
-   * What the sliders are showing, written into the URL.
-   *
-   * <p>Carried by every change and not only by the sliders' own, because a slider commits when it
-   * is let go: a value dragged and then left while something else on the row was pressed would
-   * otherwise be overwritten by the URL it had not reached yet, and the filter would appear to
-   * reset itself.
-   */
   const applyDrafts = (next: URLSearchParams) => {
     const [low, high] = priceDraft;
     if (low > PRICE_MIN) next.set("minPrice", String(low));
@@ -480,21 +395,6 @@ export function AuctionBrowser() {
     </div>
   );
 
-  // Not a Button: the two controls on this row do the same kind of job and
-  // should read as a pair, and `secondary` wears a two-pixel ring and a raised
-  // edge that made this one shout beside the sort's hairline.
-  //
-  /**
-   * The trigger for the filter sheet, with or without its word.
-   *
-   * <p>Without, in the toolbar: that row has to hold a heading and two controls across a phone, and
-   * "Filtre" was the only thing on it that could go without anything being lost. With, in the bar
-   * that follows the reader down — there is no heading in it, so the room is there, and a lone
-   * funnel under the header has nothing beside it to say what it belongs to.
-   *
-   * <p>The count rides on the corner of the icon either way, where a number on a control is read as
-   * what that control has done. The label the screen reader is given says it in words regardless.
-   */
   const filterButton = (labelled = false) => (
     <button
       type="button"
@@ -518,8 +418,6 @@ export function AuctionBrowser() {
     </button>
   );
 
-  // Always rendered: a control that disappears when it has nothing to do leaves
-  // people wondering where it went. Grey with nothing to reset, red with something.
   const resetButton = (
     <button
       type="button"
@@ -582,11 +480,6 @@ export function AuctionBrowser() {
           </div>
         </aside>
         <div className="min-w-0">
-          {/* Over the results rather than over the whole page: the filters
-              are their own column with their own heading, and a title spanning
-              both put this page's name above somebody else's panel. On a narrow
-              screen there is one column anyway, so it reads as the page's
-              heading again, with the controls dropping beneath it. */}
           <div
             ref={toolbarRef}
             className="mb-4 flex flex-wrap items-center justify-between gap-2"
@@ -621,19 +514,11 @@ export function AuctionBrowser() {
               }
             />
           ) : (
-            // Fading in rather than replacing the placeholders outright. The
-            // grid keeps its box either way, so nothing moves; only what is in
-            // it changes, and it changes over a beat instead of in a frame.
             <div className={cn(!busy && "animate-reveal")}>
               <AuctionGrid
                 auctions={data?.items ?? []}
                 loading={busy}
                 columns={4}
-                // Placeholders for what is *coming*, not for what is leaving.
-                // Standing in for the outgoing page means twelve of them and then
-                // a collapse to the two rows that actually arrive — the shift
-                // lands after the scroll, once the reader has stopped expecting
-                // movement, which is what made the last page of a filter jump.
                 skeletonCount={
                   placeholders ??
                   data?.items.length ??
@@ -664,10 +549,6 @@ export function AuctionBrowser() {
               className="mt-8"
               onChange={(next) => {
                 if (next === data.page) return;
-                // The placeholders stand in for the page that is leaving, which
-                // is what keeps the glide smooth: swapping twelve cards for two
-                // collapses the document under the scroll, the browser clamps
-                // it, and the glide becomes a lurch.
                 setPending(next);
                 setPlaceholders(data.items.length);
                 update((params) => params.set("page", String(next)), {

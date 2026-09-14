@@ -6,10 +6,6 @@ import { Icons } from "@/components/icons";
 import { Input } from "./Field";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Keeps a draft while you type and seeds it from `term`. Key it on the term, so a
- * search arriving from elsewhere remounts it instead of leaving stale text.
- */
 export function SearchField({
   term,
   onSearch,

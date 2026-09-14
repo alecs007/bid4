@@ -84,12 +84,6 @@ export function Field({
   );
 }
 
-/**
- * The id and description wiring a control needs to belong to the `Field` around it.
- *
- * <p>Exported because not every control is an `<input>`: a row that opens a picker is a button,
- * and it still has to be what the field's label points at.
- */
 export function useFieldProps() {
   const context = useContext(FieldContext);
   if (!context) return {};
@@ -101,14 +95,6 @@ export function useFieldProps() {
   };
 }
 
-/**
- * Anything typed into is 16px on a phone and 15px from `sm` up.
- *
- * <p>Not a taste call: Safari on iOS zooms the page in when a focused field is
- * under 16px, and it does not zoom back out afterwards — the reader is left on a
- * form that no longer fits the screen. Sixteen is the threshold, so the smaller
- * size is kept for the widths where there is a pointer and no zoom to trigger.
- */
 const CONTROL_BASE =
   "w-full rounded-2xl bg-white text-ink-900 placeholder:text-ink-500 " +
   "ring-1 ring-ink-200 transition-[box-shadow] hover:ring-ink-300 " +
@@ -215,7 +201,6 @@ export function Checkbox({
   );
 }
 
-/** A document the reader is agreeing to. Stops the click so following it does not also tick the box. */
 export function Legal({
   href,
   children,

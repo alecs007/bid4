@@ -9,18 +9,10 @@ import lombok.Setter;
 import ro.bid4.backend.identity.domain.DeliveryMethod;
 import ro.bid4.backend.identity.domain.DeliveryMethodType;
 
-/**
- * Where the parcel goes, copied at confirmation.
- *
- * <p>A reference to the saved delivery method would have been smaller and wrong: the buyer can
- * rename it, correct the street or delete it altogether, and a label already in a courier's hands
- * must not change under the parcel. This is what was true when the order was confirmed.
- */
 @Getter
 @Setter
 @Embeddable
 public class DeliverySnapshot {
-
   @Enumerated(EnumType.STRING)
   @Column(name = "delivery_type")
   private DeliveryMethodType type;
@@ -71,7 +63,6 @@ public class DeliverySnapshot {
     return snapshot;
   }
 
-  /** One line for a thread card: the locker's name, or the town it is going to. */
   public String shortDescription() {
     if (type == DeliveryMethodType.EASYBOX) {
       return lockerName == null ? "Easybox" : lockerName;

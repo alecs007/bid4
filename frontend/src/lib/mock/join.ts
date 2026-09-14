@@ -14,11 +14,6 @@ import type {
 
 import { getWorld } from "./store";
 
-/**
- * The mock layer's "joins": what JPA projections will return, stitched from the
- * in-memory world so components consume identical payloads either way.
- */
-
 export function toPublicUser(user: User): PublicUser {
   return {
     id: user.id,
@@ -129,8 +124,6 @@ export function toOrderDetail(order: Order): OrderDetail | null {
     auction: { id: auction.id, title: auction.title, images: auction.images },
     buyer: publicUserById(order.buyerId),
     seller: publicUserById(order.sellerId),
-    // Exactly the fields OrderResponse sends, so the mock cannot offer a screen
-    // something the API will not.
     cause: {
       id: cause.id,
       name: cause.name,

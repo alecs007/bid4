@@ -41,12 +41,6 @@ import { CausePicker } from "./CausePicker";
 import { PhotoPicker } from "./PhotoPicker";
 import { PickerRow } from "./PickerRow";
 
-/**
- * The five states, best first, each with how many of the five bars it fills.
- *
- * <p>"Stare foarte bună" and "Stare bună" are one word apart and sit next to each other in a list;
- * the bars are what separate them at a glance, and they rank the list without numbering it.
- */
 const CONDITIONS: { value: ItemCondition; label: string }[] = [
   { value: "NEW", label: ITEM_CONDITION.NEW },
   { value: "LIKE_NEW", label: ITEM_CONDITION.LIKE_NEW },
@@ -55,7 +49,6 @@ const CONDITIONS: { value: ItemCondition; label: string }[] = [
   { value: "USED", label: ITEM_CONDITION.USED },
 ];
 
-/** What the form holds while it is being filled in: text, because that is what an input has. */
 interface Draft {
   title: string;
   description: string;
@@ -86,12 +79,6 @@ const EMPTY: Draft = {
 
 type Errors = Partial<Record<keyof Draft | "images", string>>;
 
-/**
- * The controls the page can be sent to, in the order they are read.
- *
- * <p>Not one per message: the two prices are filled in together and so are the cause and the
- * percentage, so each pair has a single row to land on.
- */
 const ANCHOR_ORDER = [
   "images",
   "title",
@@ -122,32 +109,16 @@ const ANCHOR_OF: Record<keyof Errors, Anchor> = {
   termsAccepted: "terms",
 };
 
-/** Fixed rather than generated, so the submit can find a control without waiting for a render. */
 const anchorId = (name: Anchor) => `camp-${name}`;
 
-/** Room above the field the page lands on, so it sits under the header rather than beneath it. */
 const FIRST_ERROR_MARGIN_PX = 96;
 
-/** How long the form takes to clear the page, matching `--animate-form-out`. */
 const FORM_LEAVE_MS = 260;
 
-/**
- * "8 caractere", but "20 de caractere".
- *
- * <p>Romanian puts `de` between a number and its noun from twenty up. Every bound this form
- * quotes is either below twenty or a round number above it, which is exactly where the simple
- * form of the rule holds.
- */
 function plural(count: number): string {
   return count < 20 ? `${count} caractere` : `${count} de caractere`;
 }
 
-/**
- * The two prices, checked together because the second one only means anything against the first.
- *
- * <p>Shared with the modal they are typed in, so the message arrives while the reader is still
- * looking at the field rather than after the modal has closed over it.
- */
 function validatePrices(startingText: string, buyNowText: string): Errors {
   const found: Errors = {};
   const startingPrice = parseLeiInput(startingText);
@@ -175,14 +146,6 @@ function validatePrices(startingText: string, buyNowText: string): Errors {
   return found;
 }
 
-/**
- * One box, read top to bottom: the photographs, the object, then what it is worth.
- *
- * <p>The four choices that need room to be made in — category, parcel, price, donation — are made
- * in modals and answered here in a line each. Laid out in the form they were nine tiles, three
- * tiles, two inputs and a rail of portraits, and the seller had to scroll past all of it to reach
- * the next thing to fill in.
- */
 export function ListingForm() {
   const { user } = useAuth();
   const [draft, setDraft] = useState<Draft>(EMPTY);
@@ -190,24 +153,15 @@ export function ListingForm() {
   const [cause, setCause] = useState<CauseDetail | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [opened, setOpened] = useState<Anchor | null>(null);
-  /** The listing, from the moment it exists. The form plays itself out on it. */
   const [created, setCreated] = useState<AuctionDetail | null>(null);
-  /** And the screen that replaces it, once the form has finished leaving. */
   const [handedOver, setHandedOver] = useState(false);
 
-  // Two states rather than one because the form has to still be on the page to
-  // animate off it. Swapping the tree the moment the listing came back cut the
-  // form off mid-frame and the success screen arrived out of nowhere.
   useEffect(() => {
     if (!created) return;
     const timer = window.setTimeout(() => setHandedOver(true), FORM_LEAVE_MS);
     return () => window.clearTimeout(timer);
   }, [created]);
 
-  // The tiles only mount when a modal opens, and a drawing that starts loading
-  // then arrives after the grid it belongs to. A few files of about five
-  // kilobytes each, fetched while the seller is still typing the title, so
-  // every modal on this page opens with its pictures already there.
   for (const entry of AUCTION_CATEGORIES) {
     preload(`/images/illustrations/categories/${entry.id}.webp`, {
       as: "image",
@@ -220,14 +174,10 @@ export function ListingForm() {
       });
     }
   }
-  // The screen that replaces the form. It is the one drawing nobody is waiting
-  // in front of, and the one place a blank would land on good news.
   preload("/images/illustrations/listing-submitted.webp", { as: "image" });
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
-    // The message goes the moment the field it belongs to changes. Leaving it up
-    // while somebody types the fix is the form arguing with them.
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
@@ -248,14 +198,6 @@ export function ListingForm() {
     ? parseLeiInput(draft.buyNowPrice)
     : null;
 
-  /**
-   * Everything that has to happen for a listing to exist, in the order it has to happen in.
-   *
-   * <p>The photographs go up first and separately. Sending them with the listing would mean a
-   * request that can half-succeed — the row written, the pictures lost — and nothing to show the
-   * seller for it. This way the listing is only ever created from stored objects that already have
-   * an address, and a failed upload leaves the form exactly as it was, with everything still in it.
-   */
   const publish = async (): Promise<AuctionDetail> => {
     const stored = await uploadImages(photos);
 
@@ -316,22 +258,11 @@ export function ListingForm() {
 
     const failed = Object.keys(found) as (keyof Errors)[];
     if (failed.length > 0) {
-      // Straight to the first thing that needs attention rather than a list at
-      // the top: on a phone the list and the field are never on screen together.
-      //
-      // Found by id rather than by querying for the invalid control, because
-      // the attribute marking one comes from `errors`, which has not rendered
-      // at this point. That query saw the state before this submit: the first
-      // press scrolled nowhere, and every one after it went to whichever field
-      // had been wrong the time before.
       const first = ANCHOR_ORDER.find((name) =>
         failed.some((key) => ANCHOR_OF[key] === name),
       );
       const target = first ? document.getElementById(anchorId(first)) : null;
       if (target) {
-        // Through Lenis rather than scrollIntoView, which sets the position
-        // directly and leaves Lenis animating towards a target it no longer
-        // agrees with — the page then snaps back a frame later.
         scrollPageTo(target, { offset: -FIRST_ERROR_MARGIN_PX });
         target
           .querySelector<HTMLElement>("input, textarea, button")
@@ -352,14 +283,11 @@ export function ListingForm() {
       noValidate
       className={cn(
         "flex flex-col gap-5",
-        // On its way out, and no longer anybody's to press.
         created && "animate-form-out pointer-events-none",
       )}
     >
       <div className="flex flex-col rounded-3xl bg-white p-4 ring-1 ring-edge sm:p-6">
         <Section title="Fotografii" first>
-          {/* No label over it: the section is called Fotografii and the slots
-              are plainly photographs. */}
           <div id={anchorId("images")}>
             <PhotoPicker value={photos} onChange={setPhotographs} />
           </div>
@@ -627,13 +555,6 @@ export function ListingForm() {
   );
 }
 
-/**
- * A run of fields under a name.
- *
- * <p>One box for the whole form, divided by a rule rather than by a gap between panels: the seller
- * is filling in one thing, and two surfaces read as two of them. The rule says the subject
- * changed and the name says to what.
- */
 function Section({
   title,
   first = false,
@@ -658,7 +579,6 @@ function Section({
   );
 }
 
-/** What `Field` prints under a control, for the three places that have no `Field` around them. */
 function Message({ children }: { children: string }) {
   return (
     <p
@@ -671,7 +591,6 @@ function Message({ children }: { children: string }) {
   );
 }
 
-/** The five states as a column, because they are ranked and a row would not say so. */
 function ConditionModal({
   value,
   onClose,
@@ -716,14 +635,6 @@ function ConditionModal({
   );
 }
 
-/**
- * The artwork once the files are in `public/images/illustrations`, the parcel icon until then.
- *
- * <p>The same square slot for all three, so the row is spaced and aligned identically whatever is
- * in it. How large each parcel is drawn is settled in the file rather than here: the medium one is
- * a wide box, and it is drawn on a canvas its own width so it fills the slot side to side instead
- * of being letterboxed into it and coming out visibly smaller than the other two.
- */
 function ParcelArt({
   parcel,
   className,
@@ -740,9 +651,6 @@ function ParcelArt({
     );
   }
   return (
-    // Not through `Illustration`, which keeps its drawing inside its box: the
-    // point of the scale below is to let this one out of it by a hair, and
-    // clipped instead it would lose its edges.
     <span
       aria-hidden="true"
       className={cn("relative block shrink-0", className)}
@@ -763,15 +671,6 @@ function ParcelArt({
   );
 }
 
-/**
- * A choice made by looking at pictures, given the width to be looked at in.
- *
- * <p>Closes on the tap that answers it. There is one thing to say here, and a footer asking the
- * reader to confirm the tile they have just pressed says nothing.
- *
- * <p>Two across on a phone: at three a tile leaves 88px for its label and "Artă & Handmade" wants
- * a hundred, so the longest names came out cut.
- */
 function CategoryModal({
   value,
   onClose,
@@ -827,7 +726,6 @@ function CategoryModal({
   );
 }
 
-/** The three easybox compartments, each named after something the whole parcel is the size of. */
 function ParcelModal({
   value,
   onClose,
@@ -881,12 +779,6 @@ function ParcelModal({
   );
 }
 
-/**
- * Both prices, typed where they can be checked against each other.
- *
- * <p>Confirmed rather than committed on every keystroke, so a half-typed number never reaches the
- * form, and the message comparing the two is read beside the fields that caused it.
- */
 function PriceModal({
   startingPrice,
   buyNowPrice,
@@ -961,14 +853,6 @@ function PriceModal({
   );
 }
 
-/**
- * Who the money goes to and how much of it, in one place because it is one decision.
- *
- * <p>The presets answer the amount for most sellers; the range is there for whoever wants 35, and
- * only then. The percentage is written once — in the pressed preset, or in the range's own header
- * while it is open — because two live copies of one number invite the reader to check whether they
- * agree.
- */
 function DonationModal({
   cause,
   percent,
@@ -1055,13 +939,6 @@ function DonationModal({
             </button>
           </div>
 
-          {/* Always mounted, opened by a grid row going from 0fr to 1fr. A
-              height animates both ways this way; a component that unmounts can
-              only ever animate in, and vanishes on the way out.
-
-              `inert` while closed, because a collapsed row still holds a
-              focusable range input: tabbing into one lands the caret somewhere
-              nobody can see. */}
           <div
             aria-hidden={!custom}
             inert={!custom}
@@ -1073,10 +950,6 @@ function DonationModal({
             )}
           >
             <div className="overflow-hidden">
-              {/* Slack around the slider, because the clip is a scroll container
-                  and the browser scrolls the range input into it on focus. The
-                  thumb grows past its track on press, and that single pixel of
-                  overflow was enough to shunt the panel upward on first click. */}
               <div
                 className={cn(
                   "px-0.5 pt-3 pb-1.5 transition-transform duration-300 ease-[var(--ease-out-soft)]",
@@ -1105,28 +978,9 @@ function DonationModal({
   );
 }
 
-/**
- * What happens after the send, which is not "it is live".
- *
- * <p>The listing is in review, and the one thing a seller wants to know is when it stops being in
- * review and where to look. Both are here, and the link goes to the page that will show it.
- */
-/**
- * What is left on the page once the form has gone.
- *
- * <p>It arrives in the order it would be read in — the mark, then what happened, then what happens
- * next, then what to do about it — rather than all at once. Each part is a beat behind the one
- * above it, which is short enough that nobody waits for it and long enough that the screen assembles
- * itself instead of appearing.
- *
- * <p>The first button goes to the listing itself in the seller's own panel. It is not public yet, so
- * there is nowhere else it could go, and "Vânzările mele" alone left them to find it.
- */
 function SubmittedScreen({ auction }: { auction: AuctionDetail }) {
   return (
     <div className="flex flex-col items-center gap-5 py-10 text-center">
-      {/* Drop a replacement at this path and it is swapped, with nothing else
-          to change: the box is fixed and the drawing is drawn to fit it. */}
       <Illustration
         src="listing-submitted"
         sizes="128px"

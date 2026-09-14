@@ -5,17 +5,6 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
-/**
- * A photograph that arrives rather than appears.
- *
- * <p>Eager, always. These are pictures somebody has just chosen or just picked out of a row, not
- * something further down a page: lazily loaded they showed up a beat after the thing that asked
- * for them, which reads as the choice not having registered.
- *
- * <p>A pulsing ground holds the space until it decodes and the picture fades over it. The `ref`
- * catches the case the `onLoad` misses — an image already in the browser's cache can be complete
- * before React has attached the handler, and without this it would sit at nought opacity forever.
- */
 export function FadeImage({
   src,
   sizes,
@@ -28,21 +17,10 @@ export function FadeImage({
   className?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
-  /**
-   * Already in the browser when this mounted, so there is nothing to wait for.
-   *
-   * <p>Without this a cached picture still played the whole 300ms fade, which is the one case where
-   * the fade is a lie: the list scrolls back into view and every thumbnail dissolves in again as
-   * though it were being fetched. Set in the same commit as `loaded`, so such a picture is painted
-   * at full opacity and never transitions at all.
-   */
   const [instant, setInstant] = useState(false);
 
   return (
     <>
-      {/* The same shimmer every skeleton on the site uses, so a picture on its
-          way in reads as loading rather than as a grey box that happens to be
-          there. */}
       <span
         aria-hidden="true"
         className={cn(
@@ -53,12 +31,6 @@ export function FadeImage({
         )}
       />
       <Image
-        // Listened for on the element rather than through `onLoad`: an object
-        // URL, or anything already in the cache, can finish before React has
-        // attached its handler, and the picture then sits at nought opacity
-        // under the placeholder for good. `complete` covers that race; the
-        // listeners cover everything slower. Errors count as arrived, or a
-        // broken file pulses for ever.
         ref={(node) => {
           if (!node) return;
           if (node.complete) {

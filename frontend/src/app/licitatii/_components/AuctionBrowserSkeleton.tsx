@@ -2,13 +2,6 @@ import { Skeleton, SkeletonGrid } from "@/components/ui";
 import { PAGINATION, AUCTION_CATEGORIES } from "@/lib/config";
 import { ITEM_CONDITION } from "@/lib/labels";
 
-/**
- * Used by `loading.tsx` and by the page's own Suspense fallback, so whichever the
- * router reaches for, nothing moves when the browser takes over. The filter chips
- * come from the same config, rendered with their labels invisible: same widths,
- * so the rail wraps to the same number of rows.
- */
-
 function ChipGhost({ icon, label }: { icon?: boolean; label: string }) {
   return (
     <span
@@ -59,9 +52,6 @@ export function AuctionBrowserSkeleton() {
                   ))}
                 </FilterGroup>
 
-                {/* Same order as the real panel, and the same labels: the two
-                    have drifted before, and a skeleton that reflows on load is
-                    worse than none. */}
                 <FilterGroup labelWidth="w-14">
                   {(
                     ["NEW", "LIKE_NEW", "VERY_GOOD", "GOOD", "USED"] as const
@@ -73,7 +63,6 @@ export function AuctionBrowserSkeleton() {
                   ))}
                 </FilterGroup>
 
-                {/* The two sliders: label and track share one 48px row. */}
                 <Skeleton className="h-12 w-full rounded-xl" />
                 <Skeleton className="h-12 w-full rounded-xl" />
               </div>
@@ -96,7 +85,6 @@ export function AuctionBrowserSkeleton() {
             <Skeleton className="h-5 w-32" />
           </div>
           <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={4} />
-          {/* Space the pagination will occupy once the results arrive. */}
           <div className="mt-8 h-10" />
         </div>
       </div>

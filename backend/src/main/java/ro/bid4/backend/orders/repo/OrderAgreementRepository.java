@@ -7,7 +7,6 @@ import ro.bid4.backend.orders.domain.AgreementKind;
 import ro.bid4.backend.orders.domain.OrderAgreement;
 
 public interface OrderAgreementRepository extends JpaRepository<OrderAgreement, UUID> {
-
   List<OrderAgreement> findByOrderIdOrderByAcceptedAtAsc(UUID orderId);
 
   boolean existsByOrderIdAndUserIdAndKind(UUID orderId, UUID userId, AgreementKind kind);

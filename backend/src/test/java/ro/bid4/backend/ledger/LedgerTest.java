@@ -20,19 +20,11 @@ import ro.bid4.backend.ledger.repo.LedgerEntryRepository;
 import ro.bid4.backend.ledger.service.LedgerService;
 import ro.bid4.backend.ledger.service.LedgerService.Side;
 
-/**
- * The books, on their own.
- *
- * <p>Every one of these is about an invariant rather than a feature: that a movement adds to zero,
- * that asking twice moves it once, that a balance is what its entries say, and that nothing written
- * can be taken back. They are the properties everything above the ledger is entitled to assume.
- */
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class LedgerTest {
-
   @Autowired private LedgerService ledger;
   @Autowired private LedgerEntryRepository entries;
 
@@ -88,7 +80,6 @@ class LedgerTest {
             null,
             "webhook",
             List.of(new Side(external, -1_000), new Side(escrow, 1_000)));
-    // The same webhook, delivered again.
     LedgerTransaction again =
         ledger.post(
             TransactionKind.PAYMENT,
@@ -116,8 +107,6 @@ class LedgerTest {
         "earned",
         List.of(new Side(external, -2_000), new Side(wallet, 2_000)));
 
-    // Withdrawing more than is there is the failure the whole table exists to
-    // make loud, so it is a constraint rather than a check somebody remembers.
     assertThatThrownBy(
             () ->
                 ledger.post(
@@ -143,7 +132,6 @@ class LedgerTest {
             "final",
             List.of(new Side(external, -700), new Side(escrow, 700)));
 
-    // A mistake is corrected by writing its reverse, exactly as on paper.
     assertThatThrownBy(() -> entries.deleteAll(entries.findByTransactionId(posted.getId())))
         .isInstanceOf(Exception.class);
   }
@@ -155,7 +143,6 @@ class LedgerTest {
 
     assertThat(ledger.balanceOf(AccountKind.USER_AVAILABLE, newcomer)).isZero();
     assertThat(ledger.accountFor(AccountKind.USER_AVAILABLE, newcomer).getId()).isNotNull();
-    // And asking again is the same account, not a second one.
     assertThat(ledger.accountFor(AccountKind.USER_AVAILABLE, newcomer).getId())
         .isEqualTo(ledger.accountFor(AccountKind.USER_AVAILABLE, newcomer).getId());
   }

@@ -39,9 +39,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(0);
-  // The amount waiting on consent. Null means nothing is waiting, which is also
-  // what closes the modal — one piece of state rather than an amount and a flag
-  // that can disagree about whether there is an offer pending.
   const [consenting, setConsenting] = useState<number | null>(null);
 
   const eligibility = checkBidEligibility(user);
@@ -49,13 +46,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const isSeller = user?.id === auction.sellerId;
   const isLeading = auction.viewerBidStatus === "WINNING";
 
-  /**
-   * Checks the amount and hands it to the consent modal. Nothing is sent from here.
-   *
-   * <p>Every way of making an offer arrives at this one function — the panel on a desktop, the
-   * sheet on a phone, and the button that fills in the final price — so the consent cannot be
-   * reached around by using a different entrance.
-   */
   const request = () => {
     if (!user) return false;
     const parsed = parseLeiInput(amount);
@@ -63,9 +53,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
       setError("Introdu o sumă validă.");
       return false;
     }
-    // The final price is checked first, exactly as the server does: with a large
-    // increment it can sit below the next valid raise, and refusing it here
-    // would put the "cumpără acum" button out of reach of its own price.
     const takesItOutright =
       auction.buyNowPrice !== undefined && parsed >= auction.buyNowPrice;
 
@@ -79,7 +66,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
     return true;
   };
 
-  /** The offer itself, once the terms on screen have been accepted. */
   const confirm = async () => {
     if (!user || consenting === null) return false;
 
@@ -95,7 +81,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
       );
       setCelebrate((value) => value + 1);
       if (result.boughtNow) {
-        // Reserved, not sold: the price is settled, but the money has not moved.
         toast.success(
           "Anunțul este al tău",
           `Reținut la ${formatMoney(result.auction.currentPrice)}. Urmează plata.`,
@@ -107,9 +92,6 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
       onChanged();
       return true;
     } catch (caught) {
-      // The modal stays open on a refusal. Closing it would throw away an
-      // acceptance the reader has already given, and make them give it again
-      // for a failure that was not theirs.
       toast.error("Oferta nu a fost acceptată", errorMessage(caught));
       return false;
     } finally {
@@ -166,8 +148,6 @@ function AmountForm({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        // The sheet closes as the consent opens rather than stacking under it:
-        // two overlays deep on a phone leaves nothing of the page to orient by.
         if (request()) onDone?.();
       }}
       className="flex flex-col gap-3"
@@ -228,10 +208,6 @@ function AmountForm({
   );
 }
 
-/**
- * One rule, laid out like the buyer-protection points on the page around it — an icon, a heading
- * and prose — so the two modals read as the same document rather than two different voices.
- */
 function RuleSection({
   icon,
   title,
@@ -254,18 +230,6 @@ function RuleSection({
   );
 }
 
-/**
- * What the bidder is agreeing to, before the offer goes anywhere.
- *
- * <p>An offer is a commitment to pay, so it is not sent by a button press alone. Everything the
- * commitment carries is on one screen: what it costs, where the donation goes, how long they have
- * if it is taken, and what may still be undone. The version ticked here is sent with the offer and
- * stored beside it, and the server refuses an offer that does not name the version it is currently
- * publishing.
- *
- * <p>It opens from the one place every entrance leads to, so there is no route to an offer that
- * skips it.
- */
 function OfferConsent({
   auction,
   amount,
@@ -274,7 +238,6 @@ function OfferConsent({
   onAccept,
 }: {
   auction: AuctionDetail;
-  /** The offer awaiting consent, or null when nothing is. */
   amount: number | null;
   busy: boolean;
   onClose: () => void;
@@ -285,8 +248,6 @@ function OfferConsent({
   const pending = amount ?? 0;
   const takesItOutright =
     auction.buyNowPrice !== undefined && pending >= auction.buyNowPrice;
-  // Settled at the advertised price when the offer reaches it, which is what
-  // the server will charge — so it is the number this screen has to show.
   const price = takesItOutright ? auction.buyNowPrice! : pending;
   const breakdown = computeFees({
     finalPrice: price as Bani,
@@ -413,13 +374,9 @@ function Result({
   const committed = auction.status === "RESERVED" || auction.status === "SOLD";
   const reserved = auction.status === "RESERVED";
   const viewerWon = committed && auction.winnerId === viewerId;
-  // The agreed price, which is not the highest offer if bidding carried on
-  // past the acceptance before the buyer paid.
   const settledPrice = auction.acceptedAmount ?? auction.currentPrice;
   const donation = Math.round((settledPrice * auction.donationPercent) / 100);
 
-  // Withdrawn. Nothing "ended" — the seller took it down, and saying so is
-  // both truer and less deflating than announcing a failed auction.
   if (!committed) {
     return (
       <div className="p-4">
@@ -513,9 +470,6 @@ export function BidBox({
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  // Reserved counts as open. The seller can still release the offer they took,
-  // so the room goes on bidding — and a page that hid the form would be the
-  // reason a better offer never arrived.
   const offerable = isOfferable(auction.status);
 
   const {
@@ -587,27 +541,16 @@ export function BidBox({
     </div>
   ) : null;
 
-  // Only a settled listing gets the terminal panel. A reserved one is still a
-  // listing you can act on, so it keeps the form and explains itself above it.
   if (!offerable) {
     return (
       <Result auction={auction} viewerId={user?.id} winnerName={winnerName} />
     );
   }
 
-  // A reserved listing is deliberately indistinguishable from an open one here.
-  // Whose offer was taken, and for how much, is between the seller and that
-  // buyer — both of them see it on their own pages. Publishing it on the listing
-  // would price every later offer against a number that is nobody else's
-  // business, and the acceptance can still be undone anyway.
-
   return (
     <>
       {celebrate > 0 ? <Confetti trigger={celebrate} count={30} /> : null}
 
-      {/* A countdown used to open this box. Nothing replaced it: the box starts
-          on the price, and how the sale works is one click away rather than a
-          paragraph everyone has to read past to reach the number. */}
       <div className="px-5 py-5">
         {priceBlock}
 
@@ -619,10 +562,6 @@ export function BidBox({
           </div>
         )}
 
-        {/* Always in the flow, at both widths. On a phone the form lives in the
-            bottom bar and its sheet, so a trigger tucked in there is one a
-            signed-out reader never reaches — and they are exactly who the rules
-            are written for. */}
         <button
           type="button"
           onClick={() => setRulesOpen(true)}
@@ -695,8 +634,6 @@ export function BidBox({
         </div>
       ) : null}
 
-      {/* Rendered once, outside both the desktop panel and the phone sheet, so
-          one consent screen serves every way of making an offer. */}
       <OfferConsent
         auction={auction}
         amount={bidding.consenting}

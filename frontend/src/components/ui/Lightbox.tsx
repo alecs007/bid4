@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils/cn";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
-/** One notch of a mouse wheel, roughly. Exponential so each notch feels equal. */
 const WHEEL_SENSITIVITY = 0.0018;
 
 interface View {
@@ -21,10 +20,6 @@ interface View {
 
 const RESET: View = { scale: 1, x: 0, y: 0 };
 
-/**
- * Portalled to `document.body`: the page wrapper's opacity animation makes it a
- * stacking context, so a z-index inside it cannot reach past the header.
- */
 export function Lightbox({
   images,
   alt,
@@ -33,20 +28,9 @@ export function Lightbox({
 }: {
   images: string[];
   alt: string;
-  /** Where to open. The reader's way around in here is their own from then on. */
   startIndex: number;
   onClose: () => void;
 }) {
-  /**
-   * Owned here rather than lifted to the gallery.
-   *
-   * <p>While the gallery held it, every step in this modal was also a step on
-   * the page underneath — and the page's slider answers a change by animating
-   * to it, reporting each slide it passes over on the way. Stepping from the
-   * last picture to the first travelled the whole strip backwards and handed
-   * back every index in between, so the modal appeared to rotate through the
-   * others to reach its neighbour.
-   */
   const [index, setIndex] = useState(startIndex);
   const [view, setView] = useState<View>(RESET);
   const [dragging, setDragging] = useState(false);
@@ -54,27 +38,13 @@ export function Lightbox({
   const stageRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
 
-  /** Live pointers on the stage: one pans, two pinch. */
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  /**
-   * The drag is driven from a ref and only mirrored into state for the cursor
-   * and the transition. As state alone, the first move after the press read the
-   * `false` from its own tick and was dropped — which is exactly the movement a
-   * quick drag is made of.
-   */
   const draggingRef = useRef(false);
   const pinch = useRef<{ distance: number; scale: number } | null>(null);
 
   const count = images.length;
   const zoomed = view.scale > MIN_SCALE + 0.01;
 
-  /**
-   * Keeps the picture over the stage it is being viewed in.
-   *
-   * <p>At scale s the image is s times the stage, so there is exactly
-   * (s-1)/2 of it hidden on each side — pan further than that and the reader is
-   * dragging the photograph off the screen and looking at the backdrop.
-   */
   const contain = useCallback((next: View): View => {
     const stage = stageRef.current;
     if (!stage) return next;
@@ -88,10 +58,6 @@ export function Lightbox({
     };
   }, []);
 
-  /**
-   * Rescales around a point, so whatever is under the cursor or between the
-   * fingers stays under them.
-   */
   const scaleAround = useCallback(
     (factor: number, clientX?: number, clientY?: number) => {
       const stage = stageRef.current;
@@ -102,9 +68,6 @@ export function Lightbox({
 
       setView((current) => {
         const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, current.scale * factor));
-        // All the way out is all the way home: an image at its own size has
-        // nowhere to be panned to, so it returns to the middle rather than
-        // sitting off-centre with no way to tell.
         if (scale === MIN_SCALE) return RESET;
         const k = scale / current.scale;
         return contain({
@@ -130,9 +93,6 @@ export function Lightbox({
     [count],
   );
 
-  // Mount-only: the scroll lock and the initial focus. These used to sit in the
-  // same effect as the key handler, so every arrow press tore the lock down,
-  // set it up again and pulled focus back to the close button.
   useEffect(() => {
     const root = document.documentElement;
     const scrollbar = window.innerWidth - root.clientWidth;
@@ -163,8 +123,6 @@ export function Lightbox({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [go, index, onClose]);
 
-  // Native and non-passive, because a wheel that zooms has to be a wheel that
-  // does not also scroll the page behind it, and React's onWheel cannot say so.
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -176,8 +134,6 @@ export function Lightbox({
     return () => stage.removeEventListener("wheel", onWheel);
   }, [scaleAround]);
 
-  // Keeps the thumbnail for the picture on screen in view, so a long strip
-  // follows along instead of stranding the reader at the start of it.
   useEffect(() => {
     const active = stripRef.current?.querySelector<HTMLElement>('[data-active="true"]');
     active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
@@ -186,13 +142,9 @@ export function Lightbox({
   const onPointerDown = (event: React.PointerEvent) => {
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size === 1 && zoomed) {
-      // Capture keeps the drag alive when the cursor leaves the stage. It
-      // throws for a pointer the browser does not own, and a throw here would
-      // take the whole drag down with it — the pan works without capture.
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch {
-        // Not capturable; dragging still tracks via the move handler.
       }
       draggingRef.current = true;
       setDragging(true);
@@ -247,15 +199,11 @@ export function Lightbox({
         </span>
 
         <div className="flex items-center gap-1.5">
-          {/* Only once there is something to undo. A reset that is always there
-              is a control that does nothing most of the time. */}
           {zoomed ? (
             <StageButton label="Încadrează în ecran" onClick={() => setView(RESET)}>
               <Icons.fitToScreen aria-hidden="true" className="h-5 w-5 shrink-0" />
             </StageButton>
           ) : null}
-          {/* Shown spent rather than removed, so the pair keeps its place and
-              the reader can see they are already all the way in or out. */}
           <StageButton
             label="Micșorează"
             onClick={() => scaleAround(1 / 1.4)}
@@ -290,8 +238,6 @@ export function Lightbox({
           )}
         >
           <Image
-            // Keyed on the position, not the file: the same photograph may be
-            // listed twice, and two slides that share a key share an element.
             key={index}
             src={images[index] ?? ""}
             alt={alt}
@@ -304,9 +250,6 @@ export function Lightbox({
             }}
             className={cn(
               "animate-fade-in object-contain select-none",
-              // Animated except while a finger or the mouse is on it, where the
-              // picture has to keep up with the hand rather than trail it. This
-              // is also what carries it home when the zoom comes back to one.
               !dragging && "transition-transform duration-300 ease-out",
             )}
           />
@@ -326,8 +269,6 @@ export function Lightbox({
           data-lenis-prevent
           className="no-scrollbar flex justify-start gap-2 overflow-x-auto scroll-smooth px-3 py-3 sm:px-5"
         >
-          {/* Centred only when they fit; left-aligned once they scroll, or the
-              first thumbnails sit off the edge with no way back to them. */}
           <div className="mx-auto flex gap-2">
             {images.map((image, thumbIndex) => (
               <button

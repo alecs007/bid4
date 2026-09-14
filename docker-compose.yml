@@ -1,11 +1,3 @@
-# bid4 — local stack.
-#
-#   docker compose up -d                  infrastructure only (fast)
-#   docker compose --profile app up -d    infrastructure + the API container
-#
-# Every published port is bound to 127.0.0.1: the databases are reachable from
-# this machine and from the compose network, never from the LAN.
-
 name: bid4
 
 x-hardening: &hardening
@@ -21,7 +13,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # scram-sha-256 rather than md5, for host and local connections alike.
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "127.0.0.1:5432:5432"
@@ -41,10 +32,6 @@ services:
   redis:
     <<: *hardening
     image: redis:7-alpine
-    # Rate limiting is the reason Redis is here, so it must survive a restart
-    # with its counters intact: appendonly, not the default snapshotting.
-    # The healthcheck runs redis-cli inside this container, so it needs the
-    # password in the environment too, not only on the server's command line.
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     command:
@@ -74,7 +61,6 @@ services:
 
   minio:
     <<: *hardening
-    # Pinned: an unpinned tag changes the stack under you without a commit.
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
@@ -96,9 +82,6 @@ services:
           cpus: "1"
           memory: 512m
 
-  # Creates the two buckets and exits. Neither bucket takes an anonymous policy:
-  # every object is handed out as a short-lived presigned URL by the API, which
-  # is what keeps an identity document from becoming a public link.
   minio-init:
     image: minio/mc:latest
     depends_on:
@@ -121,9 +104,6 @@ services:
       "
     restart: "no"
 
-  # Catches every message the application sends and shows them at
-  # http://127.0.0.1:8025. Nothing leaves the machine, so a verification link
-  # can be clicked in development without owning the address it was sent to.
   mailpit:
     <<: *hardening
     image: axllent/mailpit:latest
@@ -173,7 +153,6 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
-      # Actuator answers on the management port, which is deliberately not published.
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP"]
       interval: 10s
       timeout: 5s

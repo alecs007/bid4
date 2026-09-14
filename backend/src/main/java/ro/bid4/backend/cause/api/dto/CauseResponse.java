@@ -12,18 +12,6 @@ import ro.bid4.backend.cause.domain.PayoutMethod;
 import ro.bid4.backend.cause.domain.VerificationStatus;
 import ro.bid4.backend.identity.api.dto.PublicUserResponse;
 
-/**
- * Field-for-field the CauseDetail interface in frontend/src/lib/types/cause.ts.
- *
- * <p>The nested blocks below mirror the TypeScript nesting rather than the flat columns behind
- * them, because the shape the frontend reads is the contract and the table is an implementation
- * detail of storing it.
- *
- * <p>Two things are deliberately not what the column holds. The IBAN and the payout reference are
- * masked to their last four characters — a supporter has no business reading where the money lands,
- * and neither does a script that gets a page of causes. And the contact details of a beneficiary
- * travel only to staff and to the organiser, for the same reason.
- */
 public record CauseResponse(
     UUID id,
     String name,
@@ -55,8 +43,6 @@ public record CauseResponse(
     Instant approvedAt,
     PublicUserResponse organizer,
     int activeAuctionCount) {
-
-  /** The paperwork an operator checked, and a supporter may check after them. */
   public record ValidationResponse(
       String legalName,
       String registrationNumber,

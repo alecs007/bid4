@@ -28,20 +28,12 @@ import ro.bid4.backend.identity.domain.UserRole;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.security.jwt.JwtService;
 
-/**
- * Causes as the public sees them, and as their organiser does.
- *
- * <p>The interesting assertions here are about what does <em>not</em> travel. A cause page is read
- * by strangers, and it carries the details of a private individual and the account the money lands
- * in — neither of which is any of a visitor's business.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class CauseEndpointsTest {
-
   private static final long LEU = 100;
   private static final String IBAN = "RO49AAAA1B31007593840000";
 
@@ -116,7 +108,6 @@ class CauseEndpointsTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.payout.iban").value("••••0000"))
         .andExpect(jsonPath("$.validation.payoutAccountRef").value("••••0000"))
-        // Nor the beneficiary's contact details, which belong to a private person.
         .andExpect(jsonPath("$.beneficiary.contactEmail").value(""))
         .andExpect(jsonPath("$.beneficiary.contactPhone").value(""))
         .andExpect(jsonPath("$.validation.contactEmail").value(""));
@@ -152,8 +143,6 @@ class CauseEndpointsTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isEmpty());
   }
-
-  /* --- fixtures ------------------------------------------------------------- */
 
   private UserAccount user(String displayName, UserRole role) {
     String suffix = UUID.randomUUID().toString().substring(0, 8);

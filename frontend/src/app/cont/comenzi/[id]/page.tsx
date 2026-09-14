@@ -10,13 +10,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/**
- * One sale, in full.
- *
- * <p>Reachable from the conversation and from the list, by either party. The list answers "which
- * of my orders is this"; this page answers everything else, and is what somebody opens when they
- * need to prove something rather than when they want to know what happens next.
- */
 export default async function OrderPage({
   params,
 }: PageProps<"/cont/comenzi/[id]">) {

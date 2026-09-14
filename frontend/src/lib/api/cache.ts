@@ -1,8 +1,3 @@
-/**
- * Imports nothing, so the API layer that fills it and the mock store that
- * invalidates it can both depend on it without forming an import cycle.
- */
-
 interface Entry<T> {
   at: number;
   value: T;
@@ -28,7 +23,6 @@ export function invalidateCache(key: string): void {
   entries.delete(key);
 }
 
-/** Keys are declared here so a typo cannot silently create a second cache. */
 export const CACHE_KEYS = {
   platformStats: "stats:platform",
 } as const;

@@ -25,19 +25,11 @@ import { http } from "./http";
 
 export interface PublicProfile {
   user: PublicUser;
-  /** Denormalised counters the profile header shows. */
   activeAuctionCount: number;
   completedSaleCount: number;
   causeCount: number;
 }
 
-/**
- * GET /users?q= — members whose name or handle matches, for the search page.
- *
- * Name and handle only. Searching an email address would make this a way of asking whether
- * somebody has an account here, which is not a stranger's question to put; the server enforces
- * the same rule and caps how many come back.
- */
 export async function searchUsers(term: string): Promise<PublicUser[]> {
   const trimmed = term.trim();
   if (!trimmed) return [];
@@ -60,7 +52,6 @@ export async function searchUsers(term: string): Promise<PublicUser[]> {
     .sort((a, b) => a.displayName.localeCompare(b.displayName, "ro"));
 }
 
-/** GET /users/{username} — the public profile page. */
 export async function getPublicProfile(
   username: string,
 ): Promise<PublicProfile> {
@@ -90,7 +81,6 @@ export async function getPublicProfile(
   };
 }
 
-/** PATCH /users/me */
 export async function updateProfile(
   userId: ID,
   changes: Partial<
@@ -118,7 +108,6 @@ export async function updateProfile(
   return user;
 }
 
-/** GET /users/me/delivery-methods */
 export async function listDeliveryMethods(
   userId: ID,
 ): Promise<DeliveryMethod[]> {
@@ -132,7 +121,6 @@ export async function listDeliveryMethods(
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
 
-/** POST /users/me/delivery-methods */
 export async function addDeliveryMethod(
   userId: ID,
   method: Omit<DeliveryMethod, "id" | "userId">,
@@ -179,7 +167,6 @@ export async function addDeliveryMethod(
   return created;
 }
 
-/** PUT /users/me/delivery-methods/{id}/default */
 export async function setDefaultDeliveryMethod(
   userId: ID,
   methodId: ID,
@@ -210,7 +197,6 @@ export async function setDefaultDeliveryMethod(
   return world.deliveryMethods.filter((item) => item.userId === userId);
 }
 
-/** DELETE /users/me/delivery-methods/{id} */
 export async function removeDeliveryMethod(
   userId: ID,
   methodId: ID,
@@ -232,7 +218,6 @@ export async function removeDeliveryMethod(
   const [removed] = world.deliveryMethods.splice(index, 1);
   const user = world.users.find((item) => item.id === userId);
 
-  // Promote another method so the user does not silently lose the bid gate.
   if (removed?.isDefault && user) {
     const next = world.deliveryMethods.find((item) => item.userId === userId);
     if (next) {
@@ -249,7 +234,6 @@ function assertAdmin(role: UserRole): void {
   if (role !== "ADMIN") forbidden("Doar administratorii au acces aici.");
 }
 
-/** GET /admin/users */
 export async function listUsers(
   role: UserRole,
   query = "",
@@ -273,7 +257,6 @@ export async function listUsers(
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** PUT /admin/users/{id}/role */
 export async function setUserRole(
   targetId: ID,
   newRole: UserRole,
@@ -297,7 +280,6 @@ export async function setUserRole(
   return user;
 }
 
-/** PUT /admin/users/{id}/status */
 export async function setUserStatus(
   targetId: ID,
   status: UserStatus,

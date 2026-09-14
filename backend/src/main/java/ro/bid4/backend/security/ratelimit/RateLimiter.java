@@ -14,15 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import ro.bid4.backend.common.config.Bid4Properties;
 
-/**
- * Charges a request against a token bucket held in Redis.
- *
- * <p>Redis rather than memory because the counter has to be shared: two instances behind a load
- * balancer with one bucket each is two buckets, which is no limit at all.
- */
 @Service
 public class RateLimiter {
-
   private static final Logger log = LoggerFactory.getLogger(RateLimiter.class);
 
   private final ProxyManager<byte[]> buckets;
@@ -38,9 +31,6 @@ public class RateLimiter {
     configurations.put(RateLimitPolicy.READ, configFor(properties.rateLimit().read()));
   }
 
-  /**
-   * @param identity a user id when the caller is known, otherwise their address
-   */
   public RateLimitDecision charge(RateLimitPolicy policy, String identity) {
     long limit = ruleFor(policy).capacity();
     if (!properties.rateLimit().enabled()) {
@@ -58,8 +48,6 @@ public class RateLimiter {
           ? RateLimitDecision.allowed(limit, probe.getRemainingTokens())
           : RateLimitDecision.refused(limit, secondsUntilRefill(probe));
     } catch (RuntimeException ex) {
-      // Redis is unreachable or misbehaving. Which way to fail is a policy
-      // decision, not a technical one — see RateLimitPolicy.failClosed.
       log.warn("Rate limiter unavailable for policy {}", policy, ex);
       return policy.failClosed()
           ? RateLimitDecision.refused(limit, 30)
@@ -82,9 +70,6 @@ public class RateLimiter {
             .addLimit(
                 Bandwidth.builder()
                     .capacity(rule.capacity())
-                    // Greedy: tokens trickle back across the window rather than
-                    // all at once, so a limit cannot be gamed by waiting for the
-                    // tick and firing a full burst.
                     .refillGreedy(rule.capacity(), rule.window())
                     .build())
             .build();

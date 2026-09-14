@@ -34,12 +34,10 @@ import { http } from "./http";
 export interface CauseFilters {
   q?: string;
   category?: string[];
-  /** Staff only — the public list is always restricted to APPROVED/ACTIVE. */
   status?: CauseStatus[];
   organizerId?: ID;
 }
 
-/** GET /causes */
 export async function listCauses(
   filters: CauseFilters = {},
 ): Promise<CauseDetail[]> {
@@ -53,12 +51,7 @@ export async function listCauses(
       },
     });
 
-    // TODO(backend): CauseController.list takes q, category and limit, and
-    // nothing else — organizerId rides along in the query string and is
-    // dropped. Until it is a parameter there, a caller asking for one member's
-    // causes was being handed the platform's, which is what made every public
-    // profile look like it ran three of them. Narrowed here rather than left
-    // wrong, and the mock already filters, so this is a no-op against it.
+    // TODO(backend): CauseController.list takes no organizerId, so it is filtered here.
     return filters.organizerId
       ? answer.filter((cause) => cause.organizer.id === filters.organizerId)
       : answer;
@@ -91,7 +84,6 @@ export async function listCauses(
     .sort((a, b) => b.raisedAmount - a.raisedAmount);
 }
 
-/** GET /causes/{idOrSlug} */
 export async function getCause(idOrSlug: ID): Promise<CauseDetail> {
   if (!USE_MOCK) return http<CauseDetail>(`/causes/${idOrSlug}`);
 
@@ -105,7 +97,6 @@ export async function getCause(idOrSlug: ID): Promise<CauseDetail> {
   return toCauseDetail(cause);
 }
 
-/** GET /causes/trending — homepage row. */
 export async function listTrendingCauses(): Promise<CauseDetail[]> {
   if (!USE_MOCK) return http<CauseDetail[]>("/causes/trending");
 
@@ -115,7 +106,6 @@ export async function listTrendingCauses(): Promise<CauseDetail[]> {
   return pickTrendingCauses(world.causes, world.auctions).map(toCauseDetail);
 }
 
-/** GET /users/me/causes — any status, including drafts and rejections. */
 export async function listMyCauses(userId: ID): Promise<CauseDetail[]> {
   if (!USE_MOCK) return http<CauseDetail[]>("/users/me/causes");
 
@@ -128,10 +118,6 @@ export async function listMyCauses(userId: ID): Promise<CauseDetail[]> {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/**
- * The identity paperwork restated as the flat document list the review queue
- * expects; the application itself keeps each file next to what it belongs to.
- */
 function validationDocuments(
   payload: CauseApplicationPayload,
   causeId: ID,
@@ -159,13 +145,7 @@ function validationDocuments(
     }));
 }
 
-/**
- * POST /causes — any USER may propose a cause; it still needs staff approval.
- * `submit` decides between parking a draft and entering the operator queue.
- *
- * TODO(backend): the server re-validates everything. Nothing a browser says about
- * identity may be trusted, least of all that a document was seen.
- */
+// TODO(backend): the server re-validates all of this; nothing a browser claims is trusted.
 export async function createCause(
   payload: CauseApplicationPayload,
   organizerId: ID,
@@ -263,10 +243,6 @@ export async function createCause(
   return toCauseDetail(cause);
 }
 
-/**
- * POST /causes/draft — one open draft per organiser, so this upserts rather than
- * appends.
- */
 export async function saveDraftCause(
   data: CauseApplicationDraft,
   step: number,
@@ -305,7 +281,6 @@ export async function saveDraftCause(
   return record;
 }
 
-/** GET /causes/draft — what to resume, if anything. */
 export async function getMyCauseDraft(
   organizerId: ID,
 ): Promise<CauseDraftRecord | null> {
@@ -320,7 +295,6 @@ export async function getMyCauseDraft(
   );
 }
 
-/** DELETE /causes/draft */
 export async function discardCauseDraft(organizerId: ID): Promise<void> {
   if (!USE_MOCK) {
     await http<void>("/causes/draft", { method: "DELETE" });
@@ -334,7 +308,6 @@ export async function discardCauseDraft(organizerId: ID): Promise<void> {
   commit();
 }
 
-/** POST /causes/{id}/submit — moves a draft into the approval queue. */
 export async function submitCause(
   causeId: ID,
   userId: ID,
@@ -365,7 +338,6 @@ function assertStaff(role: UserRole): void {
   }
 }
 
-/** GET /operator/causes?status=PENDING_APPROVAL */
 export async function listCauseQueue(role: UserRole): Promise<CauseDetail[]> {
   if (!USE_MOCK) return http<CauseDetail[]>("/operator/causes");
 
@@ -388,7 +360,6 @@ export async function listCauseQueue(role: UserRole): Promise<CauseDetail[]> {
     .sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
 }
 
-/** POST /operator/causes/{id}/approve */
 export async function approveCause(
   causeId: ID,
   role: UserRole,
@@ -412,7 +383,6 @@ export async function approveCause(
   return toCauseDetail(cause);
 }
 
-/** POST /operator/causes/{id}/reject */
 export async function rejectCause(
   causeId: ID,
   reason: string,
@@ -443,7 +413,6 @@ export async function rejectCause(
   return toCauseDetail(cause);
 }
 
-/** POST /admin/causes/{id}/suspend — ADMIN may override an operator decision. */
 export async function setCauseStatus(
   causeId: ID,
   status: CauseStatus,

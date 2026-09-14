@@ -6,10 +6,8 @@ import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
-/** The pair that identifies a watch. Nothing else about it is worth a surrogate key. */
 @Embeddable
 public class AuctionWatchId implements Serializable {
-
   @Column(name = "auction_id", nullable = false)
   private UUID auctionId;
 

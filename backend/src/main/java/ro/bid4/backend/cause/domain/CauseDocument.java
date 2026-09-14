@@ -14,13 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/** One piece of paperwork behind a cause's claim to be what it says it is. */
 @Getter
 @Setter
 @Entity
 @Table(name = "cause_documents")
 public class CauseDocument {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

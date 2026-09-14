@@ -16,20 +16,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import ro.bid4.backend.TestcontainersConfiguration;
 
-/**
- * The resend cooldown, on its own because it is the one behaviour the main auth tests have to
- * switch off to get anything done.
- *
- * <p>It matters: without it, one unauthenticated request per second sends a message to any address
- * someone types. The rate limiter caps the caller; this caps the mailbox.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, MailCaptureConfiguration.class})
 @TestPropertySource(
     properties = {"bid4.rate-limit.enabled=false", "bid4.verification.resend-cooldown=2m"})
 class VerificationCooldownTest {
-
   @Autowired private MockMvc mvc;
 
   @Test
@@ -37,7 +29,6 @@ class VerificationCooldownTest {
   void resendIsThrottledPerAccount() throws Exception {
     String email = "cooldown-" + UUID.randomUUID() + "@bid4.ro";
 
-    // Registering already sends one link, which starts the window.
     mvc.perform(
             post("/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)

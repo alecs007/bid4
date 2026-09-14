@@ -16,18 +16,9 @@ import ro.bid4.backend.cause.api.dto.CauseResponse;
 import ro.bid4.backend.cause.service.CauseService;
 import ro.bid4.backend.security.web.Viewers;
 
-/**
- * The signed-in reader's own corner of the catalogue.
- *
- * <p>Separate from AuctionController because these are keyed by the token rather than by a path: no
- * id is accepted for whose listings to show, which is the simplest way to guarantee nobody can ask
- * for someone else's. The one id that does appear names a listing, and it is checked against the
- * token before it opens anything.
- */
 @RestController
 @RequestMapping("/users/me")
 public class MyCatalogController {
-
   private final MyCatalogService mine;
   private final CauseService causes;
 
@@ -41,12 +32,6 @@ public class MyCatalogController {
     return mine.auctions(Viewers.from(jwt));
   }
 
-  /**
-   * Every offer on one of the caller's own listings, highest first.
-   *
-   * <p>What the seller reads before accepting one. Whose listing it is is checked against the
-   * token, so the id in the path opens nothing that is not already theirs.
-   */
   @GetMapping("/auctions/{id}/offers")
   List<BidResponse> myListingOffers(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
     return mine.offers(id, Viewers.from(jwt));

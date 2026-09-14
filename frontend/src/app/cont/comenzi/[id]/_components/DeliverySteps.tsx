@@ -4,18 +4,6 @@ import type { Order } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 import { formatDateTimeRo } from "@/lib/utils/date";
 
-/**
- * How far the sale has got, as a vertical sequence.
- *
- * <p>Vertical rather than a horizontal bar, for two reasons: each step carries a timestamp and a
- * line of detail that a horizontal strip has nowhere to put, and a sequence that stops needs room
- * to say why. A parcel is followed by reading downwards anyway, which is what every courier's own
- * tracking page does.
- *
- * <p>Four states, and they are told apart by more than colour: a completed step has a filled mark
- * and a tick, the live one a ring around it, a pending one an empty outline, and a stopped one a
- * cross. Somebody who cannot distinguish the greens still sees which is which.
- */
 export function DeliverySteps({ order }: { order: Order }) {
   const stages = journeyOf(order);
 
@@ -39,8 +27,6 @@ function Step({ stage, last }: { stage: Stage; last: boolean }) {
 
   return (
     <li className="flex gap-3">
-      {/* The mark and the line under it, as one column, so the connector runs
-          between marks rather than beside the text. */}
       <div className="flex flex-col items-center self-stretch">
         <span
           aria-hidden="true"
@@ -66,10 +52,6 @@ function Step({ stage, last }: { stage: Stage; last: boolean }) {
           )}
         </span>
 
-        {/* my-1.5 is the whole point: the line ran flush into both circles and
-            read as though it were drawn over them. Equal margins top and
-            bottom are also what makes the gap above a mark match the gap
-            below it. */}
         {!last ? (
           <span
             aria-hidden="true"
@@ -81,10 +63,6 @@ function Step({ stage, last }: { stage: Stage; last: boolean }) {
         ) : null}
       </div>
 
-      {/* One rhythm for every step, whatever it carries. The padding used to be
-          the only thing setting the pitch, so a step with a timestamp and a note
-          sat far from its neighbour and a bare one sat almost on top of it. A
-          minimum height as tall as the mark holds the short ones open. */}
       <div
         className={cn(
           "min-h-6 min-w-0 flex-1 pt-px",

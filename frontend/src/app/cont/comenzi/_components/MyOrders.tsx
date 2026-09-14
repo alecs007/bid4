@@ -23,7 +23,6 @@ import type { OrderDetail } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 import { countRo } from "@/lib/utils/plural";
 
-/** Where a sale has got to, in the answers a buyer actually wants. */
 type Bucket = "all" | "active" | "delivery" | "done";
 
 const FILTERS: { value: Bucket; label: string }[] = [
@@ -50,16 +49,6 @@ function bucketOf(order: OrderDetail): Bucket {
   }
 }
 
-/**
- * What this account has bought.
- *
- * <p>A list, and only a list. It used to borrow the row from {@code /cont/vanzari} and expand a
- * full record inside it, which made the same screen answer two different questions badly: a row
- * that unfolds into a fee breakdown, an address and a document list is neither scannable nor a
- * document. The record moved to its own page, and what is left here is the four things somebody
- * scanning their orders needs — what it was, who it was with, where it has got to, and what it
- * cost.
- */
 export function MyOrders() {
   const userId = useCurrentUserId();
 
@@ -77,7 +66,6 @@ export function MyOrders() {
   });
 
   return (
-    // A short list must not leave the footer halfway up the screen.
     <section className="flex min-h-[60vh] flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
@@ -138,18 +126,6 @@ export function MyOrders() {
   );
 }
 
-/**
- * One purchase, as a card that opens the record.
- *
- * <p>The parties come first and the item second. A card led by a large photograph of the object is
- * a shop window, and this is not a catalogue — somebody scanning their orders is looking for the
- * one with a particular person, or the one that needs something, and the photograph answers
- * neither. So the two people are the first line, the item is a quiet row under them, and the
- * thumbnail is small enough to identify it without being the subject.
- *
- * <p>The whole card is the link. A row with a "see details" button next to a clickable title gives
- * two controls for one destination, and the earlier version had exactly that.
- */
 function OrderCard({ order }: { order: OrderDetail }) {
   const status = ORDER_STATUS[order.status];
 
@@ -165,8 +141,6 @@ function OrderCard({ order }: { order: OrderDetail }) {
             buyer={order.buyer}
             className="min-w-0 flex-1 basis-64"
           />
-          {/* The same badge the sales list wears, so the two read as one system
-              rather than two that resemble each other. */}
           <StatusBadge
             meta={status}
             size="sm"
@@ -191,8 +165,6 @@ function OrderCard({ order }: { order: OrderDetail }) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] font-bold text-ink-800 group-hover:text-primary-700">
-              {/* A listing can be withdrawn after the sale, and the order is
-                  then exactly the record somebody is looking for. */}
               {order.auction?.title ?? "Anunț retras"}
             </span>
             <span className="numeric block text-[11px] text-ink-500">
@@ -206,7 +178,6 @@ function OrderCard({ order }: { order: OrderDetail }) {
   );
 }
 
-/** The card, box for box, so the list fills in rather than jumping. */
 function OrderCardSkeleton({ rows }: { rows: number }) {
   return (
     <ul className="flex flex-col gap-2.5">

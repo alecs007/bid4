@@ -7,7 +7,6 @@ import ro.bid4.backend.identity.domain.OAuthIdentity;
 import ro.bid4.backend.identity.domain.OAuthProvider;
 
 public interface OAuthIdentityRepository extends JpaRepository<OAuthIdentity, UUID> {
-
   Optional<OAuthIdentity> findByProviderAndProviderUserId(
       OAuthProvider provider, String providerUserId);
 }

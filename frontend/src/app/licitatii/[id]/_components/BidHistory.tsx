@@ -57,10 +57,6 @@ export function BidHistory({
 }) {
   const [open, setOpen] = useState(false);
 
-  // Only before there is anything to show. Falling back to the skeleton on
-  // every revalidation swapped a list of offers for a block of a different
-  // height and back again, which shoved everything below it down the page for
-  // as long as the refetch took.
   if (loading && !bids) return <SkeletonBidRows />;
 
   if (!bids || bids.length === 0) {

@@ -27,30 +27,12 @@ import ro.bid4.backend.inbox.repo.ConversationParticipantRepository;
 import ro.bid4.backend.inbox.repo.ConversationRepository;
 import ro.bid4.backend.inbox.repo.ThreadItemRepository;
 
-/**
- * Conversations for the demo accounts, so the inbox has something in it on a fresh database.
- *
- * <p>Written for Maria above all: she is the account the demo is usually read as, so she is on both
- * sides of the market here — asking about other people's listings and answering questions about her
- * own. An inbox with one thread in it shows the screen; an inbox with a seller's side and a buyer's
- * side shows what the screen is for.
- *
- * <p>The exchanges are the ones that actually happen on a marketplace: is it still available, what
- * condition is it in, can you hold it, when will you send it. One of them tries to move the deal to
- * WhatsApp, because the warning that goes with that is worth seeing before it matters.
- *
- * <p>Steps of a sale are not written here. Those belong to the order, and the order writes them —
- * seeding cards by hand would put text in a thread with no sale behind it, and the live one would
- * offer a button that nothing could answer.
- */
 @Component
 @Order(3)
 @ConditionalOnProperty(name = "bid4.dev.seed", havingValue = "true")
 public class DevInboxSeeder implements ApplicationRunner {
-
   private static final Logger log = LoggerFactory.getLogger(DevInboxSeeder.class);
 
-  /** One exchange: who starts, and what is said, alternating from there. */
   private record Exchange(boolean buyerFirst, String... lines) {}
 
   private static final List<Exchange> AS_BUYER =
@@ -111,9 +93,6 @@ public class DevInboxSeeder implements ApplicationRunner {
   @Override
   @Transactional
   public void run(ApplicationArguments args) {
-    // Listing threads only. Every account picks up a greeting from bid4 the
-    // first time it opens the inbox, and counting those would mean this seed
-    // never ran again on any database anybody had signed into.
     if (conversations.countByKind(ConversationKind.LISTING) > 0) {
       log.info("Development inbox seed skipped: conversations already exist");
       return;
@@ -133,7 +112,6 @@ public class DevInboxSeeder implements ApplicationRunner {
     log.info("Development inbox seed: {} conversations for maria@bid4.ro", written);
   }
 
-  /** Maria asking about other people's listings. */
   private int asBuyer(UUID mariaId) {
     List<Auction> theirs =
         auctions.findAll().stream()
@@ -151,7 +129,6 @@ public class DevInboxSeeder implements ApplicationRunner {
     return written;
   }
 
-  /** Other people asking about Maria's. */
   private int asSeller(UUID mariaId) {
     List<Auction> hers =
         auctions.findAll().stream()
@@ -175,12 +152,6 @@ public class DevInboxSeeder implements ApplicationRunner {
     return written;
   }
 
-  /**
-   * One thread, dated so the inbox has an order to sort by.
-   *
-   * <p>Older the further down the list, and the lines inside a minute apart, so the ordering is the
-   * one the exchange actually had rather than whatever the index returned first.
-   */
   private void write(Auction listing, UUID buyerId, UUID sellerId, Exchange exchange, int age) {
     Instant opened = Instant.now().minus(Duration.ofHours(3L + age * 9L));
 
@@ -208,8 +179,6 @@ public class DevInboxSeeder implements ApplicationRunner {
     Instant lastAt = at.minus(Duration.ofMinutes(4));
     conversation.setLastItemAt(lastAt);
 
-    // Unread for whoever did not write last, which is what an inbox looks like
-    // when somebody has been away from it.
     boolean lastFromBuyer = !fromBuyer;
     participants.save(seat(saved.getId(), buyerId, ParticipantRole.BUYER, lastFromBuyer ? 0 : 1));
     participants.save(seat(saved.getId(), sellerId, ParticipantRole.SELLER, lastFromBuyer ? 1 : 0));

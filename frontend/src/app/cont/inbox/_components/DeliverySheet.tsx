@@ -8,17 +8,6 @@ import { Sheet, Skeleton } from "@/components/ui";
 import type { DeliveryMethod } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Where the parcel goes, chosen from the addresses this account already has.
- *
- * <p>A sheet rather than a page, because the answer is one tap out of a short list and coming back
- * to the thread afterwards is the point. Nothing is typed here: the server takes an id and looks
- * the row up as the buyer's own, so a picker that let somebody enter an address would be offering a
- * field the server would refuse anyway.
- *
- * <p>Loaded when it opens rather than with the thread. Most conversations never reach this step,
- * and a list of somebody's addresses is not something to fetch on the off chance.
- */
 export function DeliverySheet({
   open,
   busy,

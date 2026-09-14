@@ -1,19 +1,6 @@
 import type { Auction, Cause, ID, Order, ThreadItem } from "@/lib/types";
 import type { MockConversation, MockNotification } from "@/lib/api/inbox";
 
-/**
- * A conversation for every sale the demo world already has, with the steps that got it there.
- *
- * <p>The point of the whole design is that the questions and the deal are one stream, and a demo
- * where every thread is empty shows none of it. Each seeded order gets the thread it would have
- * had: a question before the sale, the answer, then one card per step up to wherever that order
- * actually is.
- *
- * <p>The steps are derived from the order's status rather than listed per order, so a status added
- * to the seed grows the right thread without anybody remembering to come back here.
- */
-
-/** The journey, in order, with the status each step was written under. */
 const JOURNEY: { event: string; status: Order["status"] }[] = [
   { event: "OFFER_ACCEPTED", status: "AWAITING_CONFIRMATION" },
   { event: "DELIVERY_CHOSEN", status: "AWAITING_PAYMENT" },
@@ -24,7 +11,6 @@ const JOURNEY: { event: string; status: Order["status"] }[] = [
   { event: "RELEASED", status: "COMPLETED" },
 ];
 
-/** How far along a status is, so a thread stops where its order stopped. */
 const REACHED: Partial<Record<Order["status"], number>> = {
   AWAITING_CONFIRMATION: 1,
   AWAITING_PAYMENT: 2,
@@ -37,20 +23,16 @@ const REACHED: Partial<Record<Order["status"], number>> = {
   DELIVERED: 6,
   DISPUTE_OPEN: 6,
   COMPLETED: 7,
-  // Ended threads keep everything that got them there; the card that ends them
-  // is appended after the journey rather than being part of it.
   DISPUTE_RESOLVED: 7,
   REFUNDED: 7,
   CANCELLED: 2,
 };
 
-/** The card that closes a thread whose sale did not end in a handover. */
 const ENDING: Partial<Record<Order["status"], string>> = {
   DISPUTE_OPEN: "DISPUTE_OPENED",
   CANCELLED: "CANCELLED",
 };
 
-/** The statuses where the sale is waiting on the buyer, and so the badge should be lit. */
 const BUYER_IS_UP = new Set<Order["status"]>([
   "AWAITING_CONFIRMATION",
   "AWAITING_PAYMENT",
@@ -70,7 +52,6 @@ export function buildInbox({
 }: {
   orders: Order[];
   auctions: Auction[];
-  /** So a card can name the cause it gives to rather than calling it "cauza". */
   causes: Cause[];
 }): InboxSeed {
   const conversations: MockConversation[] = [];
@@ -82,7 +63,6 @@ export function buildInbox({
     if (!listing) return;
 
     const conversationId = `conv_seed_${index}`;
-    // Spaced so the list has an order to sort by, oldest sale furthest down.
     const opened = new Date(order.createdAt).getTime();
     let step = 0;
     const at = () =>
@@ -97,9 +77,6 @@ export function buildInbox({
       orderId: order.id,
       archived: false,
       muted: false,
-      // A step that arrived and was not read yet. Seeded only where the sale is
-      // actually waiting on the buyer, so the badge means the same thing in the
-      // demo as it does in the real thing.
       unread: BUYER_IS_UP.has(order.status) ? { [order.buyerId]: 1 } : {},
       lastItemAt: order.createdAt,
     });
@@ -131,9 +108,6 @@ export function buildInbox({
         createdAt: at(),
       });
 
-    // How the sale was arrived at, which is what the seller actually watched
-    // happen. Every other thread also shows the offer being raised, so both the
-    // single-offer and the bidding case are somewhere in the demo.
     const opening = Math.round(order.finalPrice * 0.8);
     event("OFFER_PLACED", { amount: String(opening) });
     if (index % 2 === 0) {
@@ -183,11 +157,6 @@ export function buildInbox({
     }
   });
 
-  // One thread that never became a sale: an offer sent, then withdrawn. Every
-  // other seeded conversation ends in an acceptance, so without this the demo
-  // never shows what a seller sees when a buyer changes their mind.
-  // One of the demo account's own listings, so this lands in the inbox the demo
-  // is read from rather than in a stranger's.
   const walkedAway = auctions.find(
     (item) =>
       item.sellerId === "usr_maria" &&
@@ -250,8 +219,6 @@ export function buildInbox({
     }
   }
 
-  // A handful for the other tab. Pointers, exactly as the server writes them —
-  // the sentence is built in the client from the type and these values.
   orders.slice(0, 4).forEach((order, index) => {
     const listing = auctions.find((item) => item.id === order.auctionId);
     if (!listing) return;
@@ -269,7 +236,6 @@ export function buildInbox({
   return { conversations, threadItems, notifications };
 }
 
-/** The frozen snapshot each card shows, exactly as the server writes it. */
 function payloadFor(
   event: string,
   order: Order,
@@ -285,9 +251,6 @@ function payloadFor(
       };
     case "DELIVERY_CHOSEN":
       return {
-        // The method, not the locker. See the card's own note. Off the snapshot's
-        // own type rather than guessed from whether a locker name happens to be
-        // set, which said HOME_COURIER for any locker saved without one.
         method: order.deliveryMethod?.type ?? "EASYBOX",
         shipping: String(order.shipping),
         total: String(order.totalPaid),
@@ -305,8 +268,6 @@ function payloadFor(
         cause: causes.find((item) => item.id === order.causeId)?.name ?? "",
       };
     case "DISPUTE_RESOLVED":
-      // The seeded world settles in the buyer's favour, because a refund is the
-      // outcome with a figure on both sides of it.
       return {
         outcome: "REFUND",
         total: String(order.totalPaid),

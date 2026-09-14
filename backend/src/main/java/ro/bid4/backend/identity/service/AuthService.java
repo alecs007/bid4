@@ -28,17 +28,10 @@ import ro.bid4.backend.identity.repo.RefreshTokenRepository;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.security.jwt.JwtService;
 
-/** Registration, sign-in, rotation and sign-out. */
 @Service
 public class AuthService {
-
   private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-  /**
-   * A real bcrypt hash of a value nobody knows, verified against when the address does not exist.
-   * Without it, "no such account" returns in a millisecond and "wrong password" in a quarter of a
-   * second, and that difference is a working account-enumeration oracle.
-   */
   private static final String ABSENT_USER_HASH =
       "$2a$12$C6UzMDM.H6dfI/f/IKcEe.3Yz2Bz0lE8LM7qF0GDaEcJqSJ2yWZ8W";
 
@@ -79,11 +72,6 @@ public class AuthService {
     this.properties = properties;
   }
 
-  /**
-   * Creates the account and mails a confirmation link. Deliberately returns no session: an address
-   * nobody has proved they own must not become a usable account, so the caller is sent to their
-   * inbox rather than into the application.
-   */
   @Transactional
   public UserResponse register(RegisterRequest request, String ip, String userAgent) {
     if (!request.acceptedTerms()) {
@@ -92,9 +80,6 @@ public class AuthService {
 
     String email = normaliseEmail(request.email());
     if (users.existsByEmail(email)) {
-      // This does tell a caller that an address is registered. Registration
-      // cannot avoid saying so and still be usable; the AUTH rate limit is what
-      // keeps it from becoming a way to enumerate the user table.
       throw new ApiException(ErrorCode.EMAIL_TAKEN);
     }
 
@@ -120,12 +105,6 @@ public class AuthService {
     return userMapper.toResponse(saved);
   }
 
-  /**
-   * noRollbackFor is load-bearing, not decoration. A failed sign-in throws, and a throw would
-   * otherwise roll back the two things that must survive it: the incremented failure count and the
-   * login_attempts row. Without this the counter resets on every attempt, the lockout never fires,
-   * and the audit trail records only successes.
-   */
   @Transactional(noRollbackFor = ApiException.class)
   public SessionResult login(LoginRequest request, String ip, String userAgent) {
     String email = normaliseEmail(request.email());
@@ -145,8 +124,6 @@ public class AuthService {
       throw new ApiException(ErrorCode.ACCOUNT_LOCKED);
     }
 
-    // An account created through a provider has no password. Verifying against
-    // the absent-user hash keeps the timing identical to a wrong password.
     if (!user.hasPassword()) {
       passwordEncoder.matches(request.password(), ABSENT_USER_HASH);
       record(email, user.getId(), ip, userAgent, false, "NO_PASSWORD");
@@ -159,9 +136,6 @@ public class AuthService {
       throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
     }
 
-    // Both checks come after the password for the same reason: answering
-    // "suspended" or "unconfirmed" to a wrong password would confirm the address
-    // to someone who does not have it.
     if (user.getStatus() == UserStatus.SUSPENDED) {
       record(email, user.getId(), ip, userAgent, false, "SUSPENDED");
       throw new ApiException(ErrorCode.ACCOUNT_SUSPENDED);
@@ -176,33 +150,15 @@ public class AuthService {
     user.setLockedUntil(null);
     user.setLastLoginAt(now);
     record(email, user.getId(), ip, userAgent, true, null);
-    // A password was typed, so this is the start of a new chain rather than the
-    // continuation of one — the absolute ceiling is measured from here.
     return startSession(user, ip, userAgent, now);
   }
 
-  /**
-   * Exchanges a refresh token for a new pair, and invalidates the one presented.
-   *
-   * <p>A token that was already exchanged means a copy is loose: the honest client and the thief
-   * both hold one, and there is no way to tell which just called. Every token for that user is
-   * revoked, which ends both sessions and forces a real sign-in.
-   *
-   * <p>There is deliberately no grace period for a replay, tempting as one is. A client that lost
-   * the response to its own exchange presents exactly what a thief presents — the same token,
-   * moments later, against a successor nobody has spent — so a window that forgives the one
-   * forgives the other, and buys availability with the detection this is here for. Keeping honest
-   * clients out of that position is the client's job: see the cross-tab lock in
-   * frontend/src/lib/api/http.ts, and the row lock below for callers that still overlap.
-   */
   @Transactional(noRollbackFor = ApiException.class)
   public SessionResult refresh(String presented, String ip, String userAgent) {
     if (presented == null || presented.isBlank()) {
       throw new ApiException(ErrorCode.INVALID_TOKEN);
     }
 
-    // For update: two callers presenting one token must be judged one after the
-    // other, or both read "not yet spent" and both succeed.
     RefreshToken stored =
         refreshTokens
             .findByTokenHashForUpdate(jwtService.hash(presented))
@@ -221,9 +177,6 @@ public class AuthService {
       throw new ApiException(ErrorCode.INVALID_TOKEN);
     }
     if (stored.familyExpired(now, properties.jwt().absoluteRefreshTtl())) {
-      // Only this chain, not every session the account has: the other devices
-      // have their own families and their own clocks, and ending them would
-      // punish an ordinary long-lived account for one stale tab.
       stored.setRevokedAt(now);
       throw new ApiException(ErrorCode.INVALID_TOKEN);
     }
@@ -260,10 +213,6 @@ public class AuthService {
         .orElseThrow(() -> new ApiException(ErrorCode.INVALID_TOKEN));
   }
 
-  /**
-   * Issues a pair. {@code familyStartedAt} is the caller's answer to whether this continues a chain
-   * or begins one: rotation passes what it was given, sign-in passes the moment it happened.
-   */
   private SessionResult startSession(
       UserAccount user, String ip, String userAgent, Instant familyStartedAt) {
     JwtService.AccessToken access = jwtService.issueAccessToken(user);
@@ -309,7 +258,6 @@ public class AuthService {
     return value.length() <= max ? value : value.substring(0, max);
   }
 
-  /** The session plus the refresh token, which only the controller may see. */
   public record SessionResult(
       AuthSessionResponse session, String refreshToken, UUID refreshTokenId) {}
 }

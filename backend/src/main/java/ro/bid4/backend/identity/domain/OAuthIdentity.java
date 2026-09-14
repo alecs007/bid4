@@ -17,18 +17,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * A provider account linked to a bid4 account.
- *
- * <p>Keyed on the provider's subject id rather than the address, because a provider may reassign an
- * address but never a subject. The address is kept for audit, not for lookup.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "oauth_identities")
 public class OAuthIdentity {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

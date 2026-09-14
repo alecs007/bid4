@@ -31,16 +31,7 @@ import type {
 
 import { http } from "./http";
 
-/**
- * TODO(backend): the Stripe Connect choreography is a SetupIntent when a card is
- * saved; an off-session PaymentIntent for buyerTotal on close, captured to the
- * platform account (the escrow hold); on release two Transfers, donationAmount to
- * the cause and sellerShare to the seller, bid4 keeping the buyer's tax; and a
- * full or partial Refund instead of those Transfers when a dispute goes the
- * buyer's way. None of it belongs in the frontend — these calls stay as they are.
- */
-
-/** GET /orders?role=BUYER|SELLER */
+// TODO(backend): Stripe Connect holds the escrow — a PaymentIntent on close, transfers on release.
 export async function listOrders(
   userId: ID,
   filters: OrderFilters = {},
@@ -82,7 +73,6 @@ export async function listOrders(
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** GET /orders/{id} */
 export async function getOrder(orderId: ID, viewerId: ID): Promise<OrderDetail> {
   if (!USE_MOCK) return http<OrderDetail>(`/orders/${orderId}`);
 
@@ -102,10 +92,6 @@ export async function getOrder(orderId: ID, viewerId: ID): Promise<OrderDetail> 
   return detail;
 }
 
-/**
- * POST /orders/{id}/confirm — the winner locks in delivery details. Payment is
- * charged straight after (mocked by the world clock).
- */
 export async function confirmOrder(
   payload: ConfirmOrderPayload,
   userId: ID,
@@ -134,7 +120,6 @@ export async function confirmOrder(
   order.deliveryMethod = snapshotDelivery(method);
   order.shipping = shippingPriceFor(order.deliveryMethod);
 
-  // Re-derive the whole split so shipping lands in the totals exactly once.
   const fees = computeFees({
     finalPrice: order.finalPrice,
     donationPercent: order.donationPercent,
@@ -157,7 +142,6 @@ export async function confirmOrder(
   return detail;
 }
 
-/** POST /orders/{id}/retry-payment */
 export async function retryPayment(
   orderId: ID,
   userId: ID,
@@ -186,7 +170,6 @@ export async function retryPayment(
   return detail;
 }
 
-/** POST /orders/{id}/dropped-off — seller left the parcel at the locker. */
 export async function markDroppedOff(
   orderId: ID,
   userId: ID,
@@ -219,10 +202,6 @@ export async function markDroppedOff(
   return detail;
 }
 
-/**
- * POST /orders/{id}/confirm-pickup — releases the escrow early; otherwise the
- * 72h timer does it.
- */
 export async function confirmPickup(
   orderId: ID,
   userId: ID,
@@ -257,7 +236,6 @@ export async function confirmPickup(
   return detail;
 }
 
-/** GET /operator/orders — every order, for intervention. */
 export async function listAllOrders(
   role: UserRole,
   filters: OrderFilters = {},
@@ -288,7 +266,6 @@ export async function listAllOrders(
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** POST /operator/orders/{id}/force — for when a courier webhook never arrives. */
 export async function forceOrderStatus(
   orderId: ID,
   status: Order["status"],
@@ -328,7 +305,6 @@ export async function forceOrderStatus(
   return detail;
 }
 
-/** Convenience for the buyer's dashboard: what needs my attention right now? */
 export function ordersNeedingAction(
   orders: OrderDetail[],
   userId: ID,
@@ -349,28 +325,12 @@ export function ordersNeedingAction(
   });
 }
 
-/** Hours left before the confirmation deadline auto-fires. */
 export function confirmationHoursLeft(order: Order): number | null {
   if (!order.confirmationDeadline) return null;
   const ms = Date.parse(order.confirmationDeadline) - Date.now();
   return Math.max(0, ms / 3_600_000);
 }
 
-/* --- the steps, as the thread drives them ---------------------------------- */
-
-/**
- * The five things either party can do to a sale, one function each.
- *
- * <p>Named after what the person pressing is doing rather than after the status it produces, and
- * each one answers with the whole order — the card that drew the button re-renders from the status
- * that comes back, so the thread never has to guess where the sale got to.
- *
- * <p>Every one of them is re-checked on the server against the order's own status and the caller's
- * id. Nothing here is trusted, which is what makes it safe for the thread to offer the buttons at
- * all.
- */
-
-/** PUT /orders/{id}/delivery — buyer. This is what makes the total knowable. */
 export async function chooseDelivery(
   orderId: ID,
   deliveryMethodId: ID,
@@ -385,22 +345,12 @@ export async function chooseDelivery(
   return (await confirmOrder({ orderId, deliveryMethodId }, userId)) as Order;
 }
 
-/**
- * POST /orders/{id}/payment — buyer.
- *
- * TODO(backend): a Stripe Checkout session, and this becomes a redirect out and back. The server
- * side is a stub that says the money arrived, deliberately shaped like what replaces it.
- */
+// TODO(backend): a Stripe Checkout session; this becomes a redirect out and back.
 export async function payOrder(orderId: ID, userId: ID): Promise<Order> {
   if (!USE_MOCK) {
     return http<Order>(`/orders/${orderId}/payment`, { method: "POST" });
   }
 
-  // Its own implementation rather than a call to retryPayment, which refuses
-  // anything that is not already PAYMENT_FAILED — so paying an ordinary order
-  // answered "Comanda nu are o plată eșuată." and the step could not be walked
-  // in the preview at all. Mirrors OrderService.markPaid: either status may pay,
-  // and the whole amount is held rather than split.
   await delay();
   const world = getWorld();
   const order = world.orders.find((item) => item.id === orderId);
@@ -419,7 +369,6 @@ export async function payOrder(orderId: ID, userId: ID): Promise<Order> {
   return order;
 }
 
-/** POST /orders/{id}/label — seller. */
 export async function generateLabel(orderId: ID): Promise<Order> {
   if (!USE_MOCK) {
     return http<Order>(`/orders/${orderId}/label`, { method: "POST" });
@@ -436,7 +385,6 @@ export async function generateLabel(orderId: ID): Promise<Order> {
   return order;
 }
 
-/** POST /orders/{id}/dispatch — seller. The last thing either party says about the journey. */
 export async function dispatchOrder(orderId: ID, userId: ID): Promise<Order> {
   if (!USE_MOCK) {
     return http<Order>(`/orders/${orderId}/dispatch`, { method: "POST" });
@@ -444,7 +392,6 @@ export async function dispatchOrder(orderId: ID, userId: ID): Promise<Order> {
   return (await markDroppedOff(orderId, userId)) as Order;
 }
 
-/** POST /orders/{id}/receipt — buyer. This is what releases the money. */
 export async function confirmReceipt(orderId: ID, userId: ID): Promise<Order> {
   if (!USE_MOCK) {
     return http<Order>(`/orders/${orderId}/receipt`, { method: "POST" });
@@ -452,18 +399,6 @@ export async function confirmReceipt(orderId: ID, userId: ID): Promise<Order> {
   return (await confirmPickup(orderId, userId)) as Order;
 }
 
-/**
- * POST /orders/{id}/dispute — buyer.
- *
- * <p>The other half of confirming, and the one the thread offers: the money is already held by
- * bid4, and this is what stops it moving. The deadline that would otherwise have released it on the
- * buyer's behalf is cleared with it, so a parcel somebody has objected to cannot pay itself out by
- * running out of time.
- *
- * <p>Not `disputes.ts`, which opens a case with a reason, a description and photographs for an
- * operator to judge. That is the formal route from the order page; this is the button beside
- * "confirm primirea", where the only thing being asked is whether to let the money go.
- */
 export async function reportProblem(
   orderId: ID,
   userId: ID,
@@ -501,7 +436,6 @@ export async function reportProblem(
   return detail;
 }
 
-/** Where the money is in, and not yet out: the window a buyer may hold it in. */
 const PROTECTED = new Set<OrderStatus>([
   "PAID_HELD",
   "LABEL_GENERATED",
@@ -511,14 +445,6 @@ const PROTECTED = new Set<OrderStatus>([
   "DELIVERED",
 ]);
 
-/**
- * GET /orders/{id}/agreements — what each party accepted, and when.
- *
- * <p>The mock answers from the order's own timeline rather than storing rows: the demo's world was
- * seeded before this existed, and a sale that has been paid for demonstrably had its terms accepted
- * at payment. It is a reconstruction, and it is marked as one by carrying the same version string
- * the server would have written.
- */
 export async function listAgreements(orderId: ID): Promise<OrderAgreement[]> {
   if (!USE_MOCK) return http<OrderAgreement[]>(`/orders/${orderId}/agreements`);
 
@@ -527,11 +453,6 @@ export async function listAgreements(orderId: ID): Promise<OrderAgreement[]> {
   const order = world.orders.find((item) => item.id === orderId);
   if (!order) notFound("Comanda");
 
-  // Each acceptance is tied to the act it governs, exactly as OrderService
-  // records it: the sale at the moment delivery is chosen, the payment at the
-  // moment it is made, the shipping terms when the label is issued. Keyed on
-  // the status instead, a cancelled order claimed the buyer had accepted the
-  // payment terms for a payment that never happened.
   const rows: OrderAgreement[] = [];
   if (order.deliveryMethod) {
     rows.push({
@@ -557,12 +478,6 @@ export async function listAgreements(orderId: ID): Promise<OrderAgreement[]> {
   return rows;
 }
 
-/**
- * GET /orders/{id}/tracking
- *
- * <p>The courier's scans, as their own resource. They are not part of the order response: there can
- * be many of them and most screens want none, so a page that needs the parcel's history asks for it.
- */
 export async function listTracking(orderId: ID): Promise<TrackingEvent[]> {
   if (!USE_MOCK) return http<TrackingEvent[]>(`/orders/${orderId}/tracking`);
 
@@ -573,13 +488,6 @@ export async function listTracking(orderId: ID): Promise<TrackingEvent[]> {
   return order.trackingEvents ?? [];
 }
 
-/**
- * GET /orders/{id}/documents
- *
- * <p>Lists what the sale has on paper, including documents that are promised and not yet rendered.
- * Showing an invoice before it exists is deliberate: somebody looking for one can see that there
- * will be one, which is a better answer than an empty list.
- */
 export async function listDocuments(
   orderId: ID,
   viewerId: ID,
@@ -595,9 +503,6 @@ export async function listDocuments(
   const seller = world.users.find((item) => item.id === order.sellerId);
   const rows: OrderDocument[] = [];
 
-  // The same moments the server issues them at: the proforma when the money
-  // arrives, the invoice and the payout statement when the sale completes, the
-  // label when the parcel is booked.
   if (order.paidAt) {
     rows.push({
       kind: "PROFORMA",
@@ -613,9 +518,6 @@ export async function listDocuments(
       kind: "SHIPPING_LABEL",
       issuedToName: seller?.displayName ?? "",
       amount: 0,
-      // The courier document belongs to the party who hands the parcel over.
-      // Listed for both — the buyer can see one was issued — but downloadable
-      // only by the seller, which is also what the server enforces.
       available: order.sellerId === viewerId,
       issuedAt: order.paidAt ?? order.createdAt,
     });
@@ -641,7 +543,6 @@ export async function listDocuments(
   return rows;
 }
 
-/** Kept in step with `Terms.CURRENT_VERSION` on the server. */
 const TERMS_VERSION = "2026-09-12";
 
 export { ORDER as ORDER_TIMINGS };

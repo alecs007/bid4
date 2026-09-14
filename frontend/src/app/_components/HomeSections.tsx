@@ -30,8 +30,6 @@ function RowHeader({
 }: {
   id: string;
   title: string;
-  /** Sits after the heading, decorative. Kept out of `title` so the heading
-      text stays the heading text for a screen reader and for search. */
   icon?: ReactNode;
   href: string;
 }) {
@@ -56,16 +54,9 @@ function RowHeader({
   );
 }
 
-/**
- * What the counter shows until the real total arrives, and what the odometer
- * rolls up from. The smallest sum of the same width, never a bare "0": the digits
- * are tabular, so the sentence after it never reflows.
- */
 const RAISED_PLACEHOLDER = formatMoney(lei(10_000), { compact: true });
 
 const COUNT_PLACEHOLDER = "0";
-/** Two characters holds both "8" and "12" without nudging the word after it. */
-// const COUNT_CHARS = 2;
 
 function Count({ value }: { value: number | null }) {
   if (value === null) {
@@ -73,19 +64,16 @@ function Count({ value }: { value: number | null }) {
       <span
         aria-hidden="true"
         className="numeric inline-block font-bold text-ink-300"
-        // style={{ minWidth: `${COUNT_CHARS}ch` }}
       >
         {COUNT_PLACEHOLDER}
       </span>
     );
   }
 
-  // Read, not watched: it appears as it is and only rolls if it changes.
   return (
     <AnimatedNumber
       value={value}
       format={(count) => String(count)}
-      //  minChars={COUNT_CHARS}
       animateOnMount={false}
       className="font-bold text-ink-800"
     />
@@ -147,9 +135,6 @@ export function MostWatchedRow() {
 
   return (
     <>
-      {/* The row used to lead with whatever was closing soonest. Nothing
-          closes, so it leads with what the most people are following — the same
-          place on the page, the same fire, a different question answered. */}
       <section aria-labelledby="most-watched">
         <RowHeader
           id="most-watched"
@@ -183,9 +168,6 @@ export function MostWatchedRow() {
 }
 
 export function LatestRow() {
-  // The same SWR key as the row above, so both rows are one request rather than
-  // two: the endpoint answers with both, and asking twice for the same body is
-  // the cost this page can least afford.
   const { data, loading } = useFeatured();
 
   return (

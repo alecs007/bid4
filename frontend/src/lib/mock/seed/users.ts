@@ -7,10 +7,6 @@ import type {
 import { isoAgo } from "@/lib/utils/date";
 import { avatarImage } from "../images";
 
-/**
- * Every seed account logs in with the same demo password. The four from the brief
- * are first; the rest populate bid histories so this never looks single-user.
- */
 export const DEMO_PASSWORD = "bid4demo";
 
 interface UserSeed {
@@ -30,7 +26,6 @@ interface UserSeed {
   orgRegistrationNumber?: string;
   stripeReady?: boolean;
   hasPaymentMethod?: boolean;
-  /** Highlighted in the dev role switcher and on the login screen. */
   featured?: boolean;
 }
 
@@ -102,7 +97,6 @@ const SEEDS: UserSeed[] = [
     featured: true,
   },
 
-  // Supporting cast
   {
     id: "usr_vlad",
     email: "vlad.georgescu@example.ro",
@@ -230,7 +224,6 @@ const SEEDS: UserSeed[] = [
     rating: 4.4,
     ratingCount: 6,
     totalRaisedLei: 260,
-    /** Deliberately not bid-ready: exercises the "add a card" gate. */
     stripeReady: false,
     hasPaymentMethod: false,
   },
@@ -293,7 +286,6 @@ const PHONES = [
   "0777 204 815",
 ];
 
-/** One default delivery method per user — the gate that unlocks bidding. */
 export function buildDeliveryMethods(users: User[]): DeliveryMethod[] {
   return users
     .filter((user) => user.id !== "usr_mihai")
@@ -314,7 +306,6 @@ export function buildDeliveryMethods(users: User[]): DeliveryMethod[] {
     });
 }
 
-/** A couple of users also keep a home-courier option, to exercise both flows. */
 export function buildExtraDeliveryMethods(): DeliveryMethod[] {
   return [
     {

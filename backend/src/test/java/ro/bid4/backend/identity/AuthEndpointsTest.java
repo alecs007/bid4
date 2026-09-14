@@ -22,24 +22,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import ro.bid4.backend.TestcontainersConfiguration;
 
-/**
- * The auth surface as the frontend sees it.
- *
- * <p>Rate limiting is off here so one test's requests cannot exhaust the next one's budget;
- * RateLimitTest turns it on deliberately.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, MailCaptureConfiguration.class})
 @TestPropertySource(
-    properties = {
-      "bid4.rate-limit.enabled=false",
-      // The cooldown is a real control and has its own test; here it would only
-      // stop this class from exercising what a resend actually does.
-      "bid4.verification.resend-cooldown=0s"
-    })
+    properties = {"bid4.rate-limit.enabled=false", "bid4.verification.resend-cooldown=0s"})
 class AuthEndpointsTest {
-
   private static final String PASSWORD = "parola-buna-123";
 
   @Autowired private MockMvc mvc;
@@ -71,7 +59,6 @@ class AuthEndpointsTest {
         .andExpect(status().isCreated());
   }
 
-  /** Registers, redeems the emailed link, signs in, and returns the session response. */
   private MvcResult registerVerifiedAndLogin(String email, String displayName) throws Exception {
     register(email, displayName);
     confirm(MailCaptureConfiguration.awaitTokenFor(email));
@@ -95,8 +82,6 @@ class AuthEndpointsTest {
         .andExpect(status().isNoContent());
   }
 
-  /* ---- registration ---------------------------------------------------- */
-
   @Test
   @DisplayName("register returns the user and no session at all")
   void registerReturnsUserWithoutSession() throws Exception {
@@ -112,14 +97,12 @@ class AuthEndpointsTest {
         .andExpect(jsonPath("$.displayName").value("Maria Ionescu"))
         .andExpect(jsonPath("$.username").value("maria-ionescu"))
         .andExpect(jsonPath("$.role").value("USER"))
-        // An address nobody has proved they own is not a session.
         .andExpect(jsonPath("$.token").doesNotExist())
         .andExpect(jsonPath("$.expiresAt").doesNotExist())
         .andExpect(cookie().doesNotExist("bid4.refresh"))
         .andExpect(jsonPath("$.passwordHash").doesNotExist())
         .andExpect(header().exists("X-Request-Id"));
 
-    // Awaiting the address asserts the mail went there; the value asserts it carried a link.
     assertThat(MailCaptureConfiguration.awaitTokenFor(email)).isNotBlank();
   }
 
@@ -176,8 +159,6 @@ class AuthEndpointsTest {
     assertThat(body).doesNotContain("<script>").doesNotContain("alert(1)");
     assertThat(body).contains("Ana Pop");
   }
-
-  /* ---- verification ---------------------------------------------------- */
 
   @Test
   @DisplayName("an unconfirmed address cannot sign in, even with the right password")
@@ -274,8 +255,6 @@ class AuthEndpointsTest {
         .andExpect(status().isNoContent());
   }
 
-  /* ---- sign-in --------------------------------------------------------- */
-
   @Test
   @DisplayName("a wrong password and an unknown address are indistinguishable")
   void loginFailuresLookIdentical() throws Exception {
@@ -326,8 +305,6 @@ class AuthEndpointsTest {
         .andExpect(status().isTooManyRequests())
         .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
   }
-
-  /* ---- session --------------------------------------------------------- */
 
   @Test
   @DisplayName("/auth/me needs a token")

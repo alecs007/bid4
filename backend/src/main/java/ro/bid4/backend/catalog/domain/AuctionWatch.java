@@ -9,18 +9,11 @@ import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Someone is following an auction.
- *
- * <p>This table is the truth; {@code auctions.watcher_count} is the denormalised copy that keeps a
- * page of cards from becoming a page of counts.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "auction_watchers")
 public class AuctionWatch {
-
   @EmbeddedId private AuctionWatchId id;
 
   @Column(name = "created_at", nullable = false, updatable = false)

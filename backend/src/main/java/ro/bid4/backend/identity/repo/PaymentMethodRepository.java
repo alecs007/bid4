@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ro.bid4.backend.identity.domain.PaymentMethodCard;
 
 public interface PaymentMethodRepository extends JpaRepository<PaymentMethodCard, UUID> {
-
   List<PaymentMethodCard> findByUserIdOrderByCreatedAtAsc(UUID userId);
 }

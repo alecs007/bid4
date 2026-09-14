@@ -12,13 +12,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/** One promise, by one party, at the moment they made it. */
 @Entity
 @Table(name = "order_agreements")
 @Getter
 @Setter
 public class OrderAgreement {
-
   @Id @GeneratedValue private UUID id;
 
   @Column(name = "order_id", nullable = false)
@@ -31,12 +29,6 @@ public class OrderAgreement {
   @Column(nullable = false, length = 32)
   private AgreementKind kind;
 
-  /**
-   * The version of the text shown, stored rather than referenced.
-   *
-   * <p>Looking it up later would answer "what do the terms say now", which is not the question a
-   * dispute asks.
-   */
   @Column(name = "terms_version", nullable = false, length = 32)
   private String termsVersion;
 

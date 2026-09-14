@@ -29,11 +29,7 @@ import { matchesSearch } from "@/lib/utils/search";
 
 import { http } from "./http";
 
-/**
- * TODO(backend): live price and bid count should arrive over the WebSocket channel
- * (`/ws/auctions/{id}`), with these REST calls used for the initial load only.
- */
-
+// TODO(backend): live price and bid count belong on /ws/auctions/{id}; REST is the first load.
 function paginate<T>(items: T[], page = 1, pageSize: number): Page<T> {
   const safeSize = Math.min(pageSize, PAGINATION.MAX_PAGE_SIZE);
   const total = items.length;
@@ -65,7 +61,6 @@ function sortAuctions(items: AuctionDetail[], sort: AuctionSort = "NEWEST") {
   }
 }
 
-/** GET /auctions?status=LIVE&category=...&page=1 */
 export async function listAuctions(
   filters: AuctionFilters = {},
   viewerId?: ID,
@@ -96,7 +91,6 @@ export async function listAuctions(
   const details = world.auctions
     .map((auction) => toAuctionDetail(auction, viewerId))
     .filter((item): item is AuctionDetail => item !== null)
-    // Only publicly visible states unless a specific seller's shelf is asked for.
     .filter((auction) => {
       if (filters.sellerId) return auction.sellerId === filters.sellerId;
       return PUBLIC_AUCTION_STATUSES.includes(auction.status);
@@ -134,7 +128,6 @@ export async function listAuctions(
   );
 }
 
-/** GET /auctions/{id} */
 export async function getAuction(
   id: ID,
   viewerId?: ID,
@@ -152,7 +145,6 @@ export async function getAuction(
   return detail;
 }
 
-/** GET /auctions/featured — the homepage rows. */
 export async function getFeaturedAuctions(
   viewerId?: ID,
 ): Promise<FeaturedAuctions> {
@@ -171,7 +163,6 @@ export async function getFeaturedAuctions(
   };
 }
 
-/** GET /auctions/{id}/related — "more like this", under an auction. */
 export async function listRelatedAuctions(
   auctionId: ID,
   viewerId?: ID,
@@ -194,7 +185,6 @@ export async function listRelatedAuctions(
   return pickRelated(subject, details);
 }
 
-/** GET /users/me/auctions — the seller's own listings, any status. */
 export async function listMyAuctions(userId: ID): Promise<AuctionDetail[]> {
   if (!USE_MOCK) return http<AuctionDetail[]>("/users/me/auctions");
 
@@ -208,7 +198,6 @@ export async function listMyAuctions(userId: ID): Promise<AuctionDetail[]> {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** POST /auctions */
 export async function createAuction(
   payload: CreateAuctionPayload,
   sellerId: ID,
@@ -279,16 +268,11 @@ export async function createAuction(
     weightGrams: payload.weightGrams,
     donationPercent: payload.donationPercent,
     startingPrice: payload.startingPrice,
-    // Nothing has been offered yet, so the price on the card is the ask.
     currentPrice: payload.startingPrice,
-    // Not the seller's to choose. Derived from what they are asking, so the
-    // step is always a round number and always in proportion to the price.
     bidIncrement: bidStepFor(payload.startingPrice),
     reservePrice: payload.reservePrice,
     buyNowPrice: payload.buyNowPrice,
-    // Published now. Nothing is scheduled for later, and nothing closes.
     startTime: now,
-    // New listings queue for a staff spot-check before they go live.
     status: "PENDING_REVIEW",
     bidCount: 0,
     watcherCount: 0,
@@ -303,7 +287,6 @@ export async function createAuction(
   return detail;
 }
 
-/** DELETE /auctions/{id} — seller withdraws a listing. */
 export async function cancelAuction(id: ID, userId: ID): Promise<Auction> {
   if (!USE_MOCK) return http<Auction>(`/auctions/${id}`, { method: "DELETE" });
 
@@ -315,9 +298,6 @@ export async function cancelAuction(id: ID, userId: ID): Promise<Auction> {
     forbidden("Poți retrage doar propriile anunțuri.");
   }
   if (auction.status === "CANCELLED") return auction;
-  // The bar is a buyer, not a date. Once an offer is accepted somebody is
-  // waiting on this listing — and once it is paid for there is money against
-  // it — so withdrawing it would leave an order pointing at nothing.
   if (isCommitted(auction.status)) {
     badRequest(
       auction.status === "SOLD"
@@ -326,8 +306,6 @@ export async function cancelAuction(id: ID, userId: ID): Promise<Auction> {
     );
   }
 
-  // Anyone still holding a live offer is released. Without this their bid sits
-  // at "Ești pe primul loc" against a listing that no longer exists.
   for (const bid of world.bids) {
     if (bid.auctionId === auction.id) bid.status = "LOST";
   }
@@ -337,12 +315,6 @@ export async function cancelAuction(id: ID, userId: ID): Promise<Auction> {
   return auction;
 }
 
-/**
- * POST /auctions/{id}/accept — the seller takes one of the offers.
- *
- * Any of them, not just the highest: that is the point of a listing with no clock. The listing
- * stops taking offers and is held for that buyer until they pay.
- */
 export async function acceptOffer(
   auctionId: ID,
   bidId: ID,
@@ -358,11 +330,7 @@ export async function acceptOffer(
   await delay();
   const world = getWorld();
   const auction = world.auctions.find((item) => item.id === auctionId);
-  // Not found rather than forbidden: whether somebody else's listing exists is
-  // not something this caller gets to confirm.
   if (!auction || auction.sellerId !== userId) notFound("Licitația");
-  // One acceptance at a time. The listing goes on taking offers while reserved,
-  // but switching to a better one means letting the first buyer go first.
   if (auction.status === "RESERVED") {
     badRequest(
       "Ai deja o ofertă acceptată. Anuleaz-o mai întâi, apoi poți accepta alta.",
@@ -378,15 +346,11 @@ export async function acceptOffer(
   if (!offer) notFound("Oferta");
   if (offer.status === "LOST") badRequest("Oferta a fost retrasă.");
 
-  // The other offers are left exactly as they are. The seller can still release
-  // this one, and demoting the rest now would mean resurrecting them if they do.
   offer.status = "ACCEPTED";
   auction.status = "RESERVED";
   auction.winnerId = offer.bidderId;
   auction.acceptedAt = new Date().toISOString();
   auction.acceptedAmount = offer.amount;
-  // The buyer's side of the handoff. On the server this is where the payment
-  // subsystem takes over; here the mock order carries it the rest of the way.
   openOrderForAcceptance(auction.id, offer.bidderId);
   commit();
 
@@ -395,13 +359,6 @@ export async function acceptOffer(
   return detail;
 }
 
-/**
- * DELETE /auctions/{id}/accept — the seller takes the acceptance back.
- *
- * Only while it is unpaid. The room goes back to reading the way it did before: everyone outbid,
- * and whoever holds the highest offer leading again. Recomputed rather than handed back, because
- * the offer that was accepted was not necessarily the top one.
- */
 export async function releaseOffer(
   auctionId: ID,
   userId: ID,
@@ -440,8 +397,6 @@ export async function releaseOffer(
   auction.winnerId = undefined;
   auction.acceptedAt = undefined;
   auction.acceptedAmount = undefined;
-  // The order goes with the acceptance. It was never paid — release refuses
-  // once it has been — so there is nothing to refund and nothing to keep.
   world.orders = world.orders.filter((order) => order.auctionId !== auction.id);
   commit();
 
@@ -450,7 +405,6 @@ export async function releaseOffer(
   return detail;
 }
 
-/** PUT/DELETE /auctions/{id}/watch */
 export async function toggleWatch(
   auctionId: ID,
   userId: ID,
@@ -483,7 +437,6 @@ export async function toggleWatch(
   return { watched: true };
 }
 
-/** GET /users/me/watchlist */
 export async function listWatchlist(userId: ID): Promise<AuctionDetail[]> {
   if (!USE_MOCK) return http<AuctionDetail[]>("/users/me/watchlist");
 

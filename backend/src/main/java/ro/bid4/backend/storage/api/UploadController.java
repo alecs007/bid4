@@ -18,21 +18,9 @@ import ro.bid4.backend.security.web.Viewers;
 import ro.bid4.backend.storage.api.dto.StoredFileResponse;
 import ro.bid4.backend.storage.service.UploadService;
 
-/**
- * POST /uploads/images — the frontend's uploadImages in lib/api/uploads.ts.
- *
- * <p>Its own endpoint rather than part of creating a listing, because the two fail differently. A
- * listing that cannot be created leaves the seller's form exactly as it was and they try again;
- * bytes that were sent with it and lost leave them re-choosing eight photographs. Uploading first
- * means the listing is only ever created from objects that already exist.
- *
- * <p>Authenticated, by the chain's deny-by-default rule and not by anything written here. The owner
- * is the token's subject, so nothing an uploader sends decides whose the file is.
- */
 @RestController
 @RequestMapping("/uploads")
 public class UploadController {
-
   private final UploadService uploads;
 
   public UploadController(UploadService uploads) {

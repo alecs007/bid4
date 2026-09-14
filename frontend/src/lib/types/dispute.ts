@@ -23,12 +23,10 @@ export interface Dispute {
   openedBy: ID;
   reason: DisputeReason;
   description: string;
-  /** Photos the buyer attached. Mocked URLs. */
   evidenceUrls: string[];
   status: DisputeStatus;
   operatorId?: ID;
   resolutionNote?: string;
-  /** Only for RESOLVED_PARTIAL — how much went back to the buyer. */
   refundAmount?: Bani;
   createdAt: ISODateString;
   resolvedAt?: ISODateString;

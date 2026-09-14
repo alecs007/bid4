@@ -28,13 +28,11 @@ export function LoginForm() {
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  // Nobody who is already signed in needs this page.
   useEffect(() => {
     if (status === "authenticated") router.replace(destination);
   }, [status, router, destination]);
 
-  // TODO(backend): POST /auth/forgot-password — there is no reset flow yet, so
-  // the link is left out rather than pointing nowhere.
+  // TODO(backend): POST /auth/forgot-password — there is no reset flow yet.
   const arrive = (name: string) => {
     toast.success(`Bine ai venit, ${name.split(" ")[0]}!`);
     router.replace(destination);

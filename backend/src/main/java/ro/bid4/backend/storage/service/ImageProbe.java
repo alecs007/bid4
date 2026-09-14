@@ -2,23 +2,8 @@ package ro.bid4.backend.storage.service;
 
 import java.util.Optional;
 
-/**
- * What a file actually is, read from the bytes rather than from what came with them.
- *
- * <p>The type on a multipart part and the extension on its name are both written by the caller, so
- * neither is evidence. This reads the handful of bytes each format is required to begin with, and
- * the type it returns is the only one the rest of the upload path will use — to decide whether the
- * file is allowed, to store it, and to serve it back.
- *
- * <p>The size is read the same way, from the header, without decoding the image. Decoding is how a
- * few kilobytes of file become hundreds of megabytes of heap, and doing it to find out whether the
- * file is too big to decode is the wrong order.
- */
 final class ImageProbe {
-
-  /** What the bytes turned out to be, and how large the picture in them is. */
   record Probed(String contentType, int width, int height) {
-
     long pixels() {
       return (long) width * height;
     }
@@ -67,7 +52,6 @@ final class ImageProbe {
         && b[11] == 'P';
   }
 
-  /** IHDR is fixed at byte 16 and is required to be the first chunk. */
   private static Optional<int[]> pngSize(byte[] b) {
     if (b.length < 24) {
       return Optional.empty();
@@ -75,13 +59,6 @@ final class ImageProbe {
     return Optional.of(new int[] {int32(b, 16), int32(b, 20)});
   }
 
-  /**
-   * Walks the segments to the frame header, which is the only one that carries the size.
-   *
-   * <p>A JPEG is a chain of segments of declared length, and the dimensions live in whichever
-   * start-of-frame marker the encoder used — there are a dozen, and they are all 0xC0 to 0xCF
-   * except the four that mean something else.
-   */
   private static Optional<int[]> jpegSize(byte[] b) {
     int at = 2;
     while (at + 9 < b.length) {
@@ -103,14 +80,6 @@ final class ImageProbe {
     return Optional.empty();
   }
 
-  /**
-   * Three formats under one name.
-   *
-   * <p>WEBP is a RIFF container, and what follows the header decides where the size is: a lossy
-   * frame (VP8␣) puts it after a start code, a lossless one (VP8L) packs both into fourteen bits
-   * each, and an extended file (VP8X) states the canvas up front. All three are little-endian, and
-   * the two packed forms store their sizes one less than they are.
-   */
   private static Optional<int[]> webpSize(byte[] b) {
     if (b.length < 30) {
       return Optional.empty();

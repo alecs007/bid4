@@ -46,7 +46,6 @@ import { BidBox } from "./BidBox";
 import { RelatedAuctions } from "./RelatedAuctions";
 import { BidHistory } from "./BidHistory";
 
-/** A hairline and a heading — the page is a document, not a stack of cards. */
 function Section({
   title,
   action,
@@ -71,32 +70,14 @@ function Section({
   );
 }
 
-/**
- * The one tint every mark sits on.
- *
- * <p>Slate, not green. These are costs listed side by side, and giving the shield a colour the
- * courier beside it did not have made the two read as different kinds of thing — the drawing is
- * what says which is which, and it says it perfectly well on a neutral ground.
- *
- * <p>And the lightest of them: the drawings on it are dark, and every step the ground takes towards
- * them is a step out of their way.
- */
 const MARK_TINT = "bg-ink-50";
 
-/**
- * Size and padding travel together rather than being passed in separately: a
- * caller free to choose both would eventually pick a pair whose ring does not
- * match the rest. The large badge carries a proportionally tighter ring than the
- * two small ones, which is deliberate — a ring held to the same share of an 88px
- * disc reads as far heavier than it does at 28px.
- */
 const MARK_SIZE = {
   sm: "h-7 w-7 p-[6px]",
   md: "h-10 w-10 p-2",
   lg: "h-22 w-22 p-3",
 } as const;
 
-/** A mark on its own tint: the shield, and the courier icon beside it. */
 function CostMark({
   size,
   className,
@@ -153,9 +134,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     );
   }
 
-  // A bid changes the listing, its history and the homepage rows, and none of
-  // those know about each other. Naming the prefixes here keeps that knowledge
-  // where the change happens.
   const refresh = () =>
     revalidate(
       `auction:${auctionId}`,
@@ -172,14 +150,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   });
   const deliveryEta = `în ${SHIPPING.DELIVERY_DAYS_MIN}-${SHIPPING.DELIVERY_DAYS_MAX} zile lucrătoare`;
   const watched = watchOverride ?? Boolean(auction.isWatched);
-  /**
-   * How many people have this on their list, the reader's own tap included before the server has
-   * agreed to it.
-   *
-   * <p>The same sum the cards do. Without it the icon turned at once and the number beside it sat
-   * still until the refetch landed and then jumped — which reads as the save having taken a moment
-   * to register rather than as one movement.
-   */
   const following = Math.max(
     0,
     auction.watcherCount +
@@ -190,7 +160,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     auction.cause.goalAmount,
   );
 
-  /** The icon turns on the tap; the request only confirms it, or undoes it. */
   const handleWatch = async () => {
     if (!user) {
       toast.info("Intră în cont pentru a urmări licitații.");
@@ -204,10 +173,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     try {
       const result = await toggleWatch(auction.id, user.id);
       setWatchOverride(result.watched);
-      // Deliberately no refresh. A follow changes no price, no offer and no
-      // status — the only number it moves is the one counted above — and
-      // refetching the listing and its bids for it put the whole right-hand
-      // column through a loading state on every tap.
     } catch {
       setWatchOverride(!next);
       toast.error("Licitația nu a putut fi urmărită.");
@@ -226,7 +191,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     } catch {}
   };
 
-  /** A white chip while they float over the photograph, a hover surface beside the title. */
   const actionButton =
     "inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 ring-1 ring-edge backdrop-blur-sm transition duration-200 active:scale-90 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none lg:hover:bg-ink-100";
 
@@ -244,7 +208,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       >
         <Icons.watchlist
           aria-hidden="true"
-          /* fill-transparent, not fill="none": a colour animates to a colour, `none` cannot. */
           className={cn(
             "h-5 w-5 fill-transparent transition-[fill,transform] duration-200 ease-[var(--ease-out-soft)]",
             watched && "scale-110 fill-current",
@@ -273,7 +236,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
       />
 
       <div className="grid gap-x-12 gap-y-7 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        {/* Photographs, with the title above them on a desktop */}
         <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
           <div className="order-2 lg:order-1">
             <div className="flex items-start justify-between gap-3">
@@ -314,13 +276,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <span aria-hidden="true" className="text-ink-300">
                 &middot;
               </span>
-              {/* How old the listing is belongs with the rest of what it is,
-                  not stranded in a heading further down the page. */}
               <span>Publicat {formatRelativeRo(auction.createdAt)}</span>
-              {/* Reserved is left unmarked on purpose. The listing still takes
-                  offers, and the acceptance is the seller's business and the
-                  buyer's — badging it here would announce a private decision
-                  and put a discouraging label on something still open. */}
               {auction.status !== "LIVE" && auction.status !== "RESERVED" ? (
                 <span className="rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
                   {AUCTION_STATUS[auction.status].label}
@@ -338,7 +294,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </div>
         </div>
 
-        {/* One box: clock, price, cause, bids, costs, payment */}
         <aside className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="rounded-xl bg-white ring-1 ring-edge">
             <BidBox
@@ -409,10 +364,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                     aria-hidden="true"
                     className="h-4 w-4 text-ink-400"
                   />
-                  {/* Keyed on the number, so a change replays the fade rather
-                      than swapping the digit in place. A fade and not the tick
-                      the prices use: this digit sits inside a sentence, and one
-                      that also moves pulls the line around it. */}
                   <span
                     key={following}
                     className="numeric animate-fade-in inline-block font-bold text-ink-900"
@@ -442,14 +393,9 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                     sizes="16px"
                   />
                 </CostMark>
-                {/* `min-w-fit` is what holds the promise that this never breaks
-                    over two lines: it may grow to push the figure right, but it
-                    cannot be shrunk under its own text and re-wrapped. */}
                 <span className="min-w-fit flex-1 whitespace-nowrap text-primary-800 text-sm sm:text-xs font-semibold">
                   Protecția cumpărătorului
                 </span>
-                {/* A rule rather than a price, so it takes the smaller size:
-                    that is what buys the long label its single line. */}
                 <span className="numeric shrink-0 text-xs font-bold whitespace-nowrap text-ink-900">
                   {FEES.BUYER_TAX_PERCENT}% +{" "}
                   {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
@@ -501,9 +447,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               <p className="mb-2 font-display text-sm font-bold text-ink-700">
                 Opțiuni de plată
               </p>
-              {/* The marks themselves rather than their names: a row of card
-                  logos is read at a glance and in any language, which a row of
-                  grey word chips is not. */}
               <Image
                 src="/images/payment/payment-methods.webp"
                 alt="Visa, Mastercard, Maestro, Apple Pay, Google Pay, Klarna"
@@ -518,9 +461,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             </div>
           </div>
 
-          {/* Deliberately outside the box above. That one is about this
-              listing — what it costs, who gets the money. This is about the
-              platform, and it says the same thing on every page. */}
           <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
             <CostMark size="md">
               <Illustration
@@ -548,7 +488,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </div>
         </aside>
 
-        {/* The long read */}
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">
           <Section title="Descriere" className="border-t-0 pt-0">
             <p className="leading-relaxed whitespace-pre-line text-ink-700">
@@ -590,9 +529,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </span>
             </Link>
 
-            {/* Three cards rather than one panel split by hairlines: each
-                figure carries its own mark now, and a divider between two
-                illustrations reads as a seam rather than a separation. */}
             <StatTiles className="mt-4">
               <StatTile
                 illustration="rating"
@@ -717,18 +653,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   );
 }
 
-/**
- * Where the price goes, as the two parts a buyer is paying for.
- *
- * <p>The price divides in two: the share that reaches the cause and the share that reaches the
- * seller. That is the whole of what a bid buys, so that is the whole of what is listed — the
- * platform's own cut is added on top and named underneath, and putting it in the split made the
- * price look like it was being eaten into three ways before anyone was paid.
- *
- * <p>Three rows and no more. The sheet is titled with the question this answers, so nothing here
- * repeats it, and a bar drawing the same division the percentages already state was a second way of
- * saying one thing.
- */
 function MoneySplit({
   auction,
   fees,
@@ -736,13 +660,6 @@ function MoneySplit({
   auction: AuctionDetail;
   fees: ReturnType<typeof computeFees>;
 }) {
-  /**
-   * What the amount at the top of the split actually is at this moment.
-   *
-   * <p>Sold, it is the price it went for. Still open, it is either where the bidding stands or,
-   * with nothing offered yet, the seller's ask — calling that last one a sale price would tell a
-   * reader the item had sold for it.
-   */
   const priceLabel = isCommitted(auction.status)
     ? "Prețul de vânzare"
     : auction.bidCount > 0
@@ -768,9 +685,6 @@ function MoneySplit({
         value={formatMoney(fees.sellerShare)}
       />
 
-      {/* Added to the price rather than taken out of it, so it is stated apart
-          from the split: as a row among the two above it read as a third slice
-          of the same money. */}
       <p className="mt-2 border-t border-line pt-3 text-sm leading-relaxed text-ink-500">
         La preț se adaugă taxa de protecție a cumpărătorului{" "}
         <span className="whitespace-nowrap">
@@ -784,7 +698,6 @@ function MoneySplit({
   );
 }
 
-/** One line of the sum: what it is, what it comes to, and what that is as a share. */
 function SplitLine({
   label,
   note,
@@ -802,8 +715,6 @@ function SplitLine({
     <div
       className={cn(
         "flex items-baseline justify-between gap-4 py-2",
-        // The price is the sum the two rows under it divide up, so it is set
-        // above them rather than among them.
         strong && "border-b border-line pb-2.5",
       )}
     >
@@ -835,7 +746,6 @@ function SplitLine({
   );
 }
 
-/** One promise in the protection modal: a marker, a heading, and the detail. */
 function ProtectionPoint({
   icon,
   title,

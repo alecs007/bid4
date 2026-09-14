@@ -6,13 +6,6 @@ import ro.bid4.backend.identity.domain.AccountType;
 import ro.bid4.backend.identity.domain.UserRole;
 import ro.bid4.backend.identity.domain.UserStatus;
 
-/**
- * Field-for-field the User interface in frontend/src/lib/types/user.ts.
- *
- * <p>This is the only shape of a user that ever leaves the application. passwordHash, tokenVersion,
- * failedLoginCount and lockedUntil exist on the entity and are absent here, which is the point of
- * having two types rather than serialising the entity.
- */
 public record UserResponse(
     UUID id,
     String email,
@@ -33,13 +26,6 @@ public record UserResponse(
     double rating,
     int ratingCount,
     long totalRaised) {
-
-  /**
-   * The role as a plain string.
-   *
-   * <p>For callers in the controller layer, which must not depend on a domain type — a rule
-   * ArchUnit enforces, and which exists so no request body can ever bind onto a table row.
-   */
   public String roleName() {
     return role.name();
   }

@@ -6,7 +6,6 @@ import type { ID, OrderStatus, UserRole } from "@/lib/types";
 import { CACHE_KEYS, readCache, writeCache } from "./cache";
 import { http } from "./http";
 
-/** Numbers for the homepage impact band. */
 export interface PlatformStats {
   totalRaised: Bani;
   causeCount: number;
@@ -16,13 +15,9 @@ export interface PlatformStats {
   averageDonationPercent: number;
 }
 
-/**
- * TODO(backend): serve this with a Cache-Control header and drop the local cache;
- * the shape and the call site stay the same.
- */
+// TODO(backend): serve with Cache-Control and drop this cache.
 const STATS_TTL_MS = 5 * 60_000;
 
-/** GET /stats/public */
 export async function getPlatformStats(): Promise<PlatformStats> {
   const cached = readCache<PlatformStats>(CACHE_KEYS.platformStats, STATS_TTL_MS);
   if (cached) return cached;
@@ -68,7 +63,6 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   return stats;
 }
 
-/** Everything `/cont` needs in one call. */
 export interface UserDashboardStats {
   activeBidCount: number;
   winningCount: number;
@@ -80,7 +74,6 @@ export interface UserDashboardStats {
   totalRaised: Bani;
 }
 
-/** GET /users/me/stats */
 export async function getUserStats(userId: ID): Promise<UserDashboardStats> {
   if (!USE_MOCK) return http<UserDashboardStats>("/users/me/stats");
 
@@ -130,7 +123,6 @@ export async function getUserStats(userId: ID): Promise<UserDashboardStats> {
 }
 
 export interface AdminStats {
-  /** The buyer's tax, which is all of it — the seller's share is not taxed. */
   platformRevenue: Bani;
   totalDonated: Bani;
   grossVolume: Bani;
@@ -138,11 +130,9 @@ export interface AdminStats {
   pendingCauseCount: number;
   openDisputeCount: number;
   userCount: number;
-  /** Donated per month, oldest first — feeds the reports chart. */
   monthlySeries: { month: string; donated: Bani; revenue: Bani }[];
 }
 
-/** GET /admin/stats */
 export async function getAdminStats(role: UserRole): Promise<AdminStats> {
   if (!USE_MOCK) return http<AdminStats>("/admin/stats");
 
@@ -162,7 +152,6 @@ export async function getAdminStats(role: UserRole): Promise<AdminStats> {
     {} as Record<OrderStatus, number>,
   );
 
-  // Six months back, so the chart always has a shape to show.
   const monthFormatter = new Intl.DateTimeFormat("ro-RO", { month: "short" });
   const monthlySeries = Array.from({ length: 6 }, (_, index) => {
     const date = new Date();

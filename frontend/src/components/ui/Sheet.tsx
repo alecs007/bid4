@@ -9,13 +9,6 @@ import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { SheetGrabber, useSheetDismiss } from "./sheetDismiss";
 
-/**
- * Portalled to `document.body`: the page wrapper's opacity animation makes it a
- * stacking context, so a `z-50` overlay inside it loses to the `z-40` header.
- *
- * <p>On a phone it is pulled shut, like every other dialog on the site: a bar at the top says so,
- * and the corner dismiss is only drawn at the widths where there is no sheet to pull.
- */
 export function Sheet({
   open,
   onClose,
@@ -43,10 +36,6 @@ export function Sheet({
     },
   );
 
-  // Deliberately not keyed on `onClose`: callers pass an inline arrow, so this
-  // would tear down and set up again on every render, and with it the scroll it
-  // remembered. The Escape listener, which does need the current one, is its own
-  // effect below.
   useEffect(() => {
     if (!open) return;
 
@@ -59,16 +48,11 @@ export function Sheet({
       ?.querySelector<HTMLElement>(
         "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
       )
-      // preventScroll, or the browser brings the focused control into view by
-      // scrolling the page behind the sheet.
       ?.focus({ preventScroll: true });
 
     return () => {
       document.body.style.overflow = overflow;
       previouslyFocused.current?.focus({ preventScroll: true });
-      // A phone raises its keyboard for a field inside the sheet and scrolls
-      // the page underneath to make room for it. That scroll outlives the
-      // sheet, so the reader is put back where they opened it from.
       if (Math.abs(window.scrollY - returnTo) > 1) {
         scrollPageTo(returnTo, { immediate: true });
       }
@@ -92,17 +76,9 @@ export function Sheet({
         type="button"
         aria-label="Închide"
         onClick={onClose}
-        // Fading with the pull rather than at the end of it: the sheet and what
-        // is behind it are one movement, and a backdrop that stays solid until
-        // the last frame reads as the page catching up afterwards.
         style={backdropStyle}
         className={cn(
           "absolute inset-0 cursor-default bg-ink-900/40",
-          // Dropped on the first grab, for the same reason the panel drops its
-          // own: the entrance keyframes hold their end state, and a held
-          // animation outranks an inline style — so with this still on, the
-          // opacity set by the pull was never the one being painted and the
-          // backdrop sat at full strength all the way down.
           grabbed ? "animate-none" : "animate-fade-in",
           pulling
             ? "transition-none"
@@ -117,9 +93,6 @@ export function Sheet({
         style={panelStyle}
         className={cn(
           "relative flex max-h-[88dvh] w-full flex-col rounded-t-3xl bg-white sm:max-w-md sm:rounded-3xl",
-          // The entrance keyframes hold their end state, and a held animation
-          // outranks an inline transform — so it is dropped the moment the
-          // sheet is first grabbed, by which time it has long finished.
           grabbed
             ? "animate-none"
             : "animate-[toast-in_0.28s_cubic-bezier(0.2,0.9,0.3,1.1)_both]",
@@ -129,8 +102,6 @@ export function Sheet({
           className,
         )}
       >
-        {/* The bar and the heading beside it are one handle: a sheet is pulled
-            by its top, not by a four-pixel target. */}
         <div onPointerDown={grab} className="shrink-0 touch-none sm:touch-auto">
           <SheetGrabber />
 

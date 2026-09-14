@@ -9,6 +9,4 @@ public record LoginRequest(
         @Email(message = "Adresa de email nu pare validă.")
         @Size(max = 254, message = "Adresa de email este prea lungă.")
         String email,
-    // Only presence is checked. A length rule here would tell an attacker how
-    // long the stored password is not.
     @NotBlank(message = "Introdu parola.") @Size(max = 200) String password) {}

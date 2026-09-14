@@ -1,11 +1,6 @@
 import type { Bani } from "@/lib/config";
 import type { ID, ISODateString } from "./common";
 
-/**
- * ONE end-user role. An individual and an organisation are both `USER` with
- * identical permissions; `accountType` only changes what the profile shows and
- * which fields cause validation asks for. ADMIN is a strict superset of OPERATOR.
- */
 export type UserRole = "USER" | "OPERATOR" | "ADMIN";
 
 export type AccountType = "INDIVIDUAL" | "ORGANIZATION";
@@ -16,44 +11,30 @@ export interface User {
   id: ID;
   email: string;
   displayName: string;
-  /** Slug used by the public profile route `/profil/[username]`. */
   username: string;
   role: UserRole;
   accountType: AccountType;
   status: UserStatus;
 
-  /** Only meaningful when accountType === "ORGANIZATION". */
   orgLegalName?: string;
   orgRegistrationNumber?: string;
 
   avatarUrl: string;
   bio: string;
-  /**
-   * Checked by bid4, and the only thing that earns a tag beside the name.
-   *
-   * TODO(backend): no column and no field on PublicUserResponse yet, so this is
-   * undefined against the real API and the tag simply does not appear. The
-   * account type never belonged here — being an organisation is not a check.
-   */
+  // TODO(backend): not on PublicUserResponse yet, so undefined against the real API.
   verified?: boolean;
   city?: string;
   createdAt: ISODateString;
 
-  /** Stripe Connect onboarding finished — required to receive payouts. */
   stripeReady: boolean;
-  /** A card is on file — one half of the gate that unlocks bidding. */
   hasPaymentMethod: boolean;
-  /** The other half of the gate. */
   defaultDeliveryMethodId?: ID;
 
-  /** 0–5, averaged over completed orders. */
   rating: number;
   ratingCount: number;
-  /** Denormalised: total donated through this user's sales and purchases. */
   totalRaised: Bani;
 }
 
-/** What `/profil/[username]` may show to anyone, logged in or not. */
 export type PublicUser = Pick<
   User,
   | "id"
@@ -77,15 +58,12 @@ export interface DeliveryMethod {
   id: ID;
   userId: ID;
   type: DeliveryMethodType;
-  /** User-chosen nickname, e.g. "Easybox de lângă birou". */
   label: string;
 
-  /** EASYBOX only. */
   easyboxLockerId?: string;
   lockerName?: string;
   lockerAddress?: string;
 
-  /** HOME_COURIER only. */
   homeAddress?: HomeAddress;
 
   phone: string;
@@ -103,7 +81,6 @@ export interface HomeAddress {
 
 export type CardBrand = "visa" | "mastercard" | "amex" | "other";
 
-/** Never a PAN — the real thing is a PaymentMethod id attached to the customer. */
 export interface PaymentMethodCard {
   id: ID;
   userId: ID;
@@ -117,7 +94,6 @@ export interface PaymentMethodCard {
 
 export interface AuthSession {
   user: User;
-  /** Mock token today; a real JWT after the backend swap. */
   token: string;
   expiresAt: ISODateString;
 }

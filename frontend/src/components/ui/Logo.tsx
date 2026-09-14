@@ -3,15 +3,8 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The lockup carries some empty canvas, so the box is drawn taller than it reads.
- *
- * <p>Sized against the header bar rather than on its own: at 48px tall on a phone and 56 at sm,
- * these leave the same air above and below the mark as the icon buttons beside it do.
- */
 const HEIGHTS = { sm: 26, md: 32, lg: 55 } as const;
 
-/** The file's own dimensions. Anything else stretches it, because the box is what is drawn. */
 const LOGO_RATIO = 1402 / 648;
 
 export function LogoMark({
@@ -56,15 +49,10 @@ export function Logo({
       alt="bid4"
       width={Math.round(height * LOGO_RATIO)}
       height={height}
-      // In the header on every route, so it is never a lazy load.
       loading="eager"
       fetchPriority="high"
-      // Already WebP and a few kilobytes: a round trip through the optimizer
-      // would cost more than it saves.
       unoptimized
       draggable={false}
-      // block, or the image sits on the text baseline and the bar ends up with
-      // a few more pixels under the mark than above it.
       className="block"
     />
   );
@@ -91,20 +79,10 @@ export function Logo({
   );
 }
 
-/**
- * The mark on its own, square, for the places bid4 appears as a party rather than as the site.
- *
- * <p>The inbox is the one of those: the thread from bid4 sits in a list of threads with people in
- * it, and every other row there wears a face or the thing it is about. A generic icon made the one
- * conversation that is actually *from* somebody look like the one that was not.
- *
- * <p>Transparent ground, trimmed to the drawing, so it centres on whatever tile it is given.
- */
 export function Bid4Icon({
   size = 20,
   className,
 }: {
-  /** Rendered pixels on the long side. */
   size?: number;
   className?: string;
 }) {
@@ -114,8 +92,6 @@ export function Bid4Icon({
       alt=""
       width={size}
       height={size}
-      // Wherever this appears it is beside the name it belongs to, and a mark
-      // that fades in after its label reads as a broken image.
       loading="eager"
       fetchPriority="high"
       unoptimized

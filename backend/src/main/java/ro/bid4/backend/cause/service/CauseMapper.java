@@ -25,17 +25,8 @@ import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.api.dto.PublicUserResponse;
 import ro.bid4.backend.identity.service.UserMapper;
 
-/**
- * The one place a cause row becomes a response.
- *
- * <p>The full mapping takes a list, because a cause page carries an organiser, a gallery, its
- * paperwork and a count of live listings, and fetching those per cause turns a page of cards into
- * dozens of queries.
- */
 @Component
 public class CauseMapper {
-
-  /** A cause is publicly listed and can receive donations in these two states. */
   private static final Set<AuctionStatus> RUNNING =
       Set.of(AuctionStatus.LIVE, AuctionStatus.RESERVED);
 
@@ -58,8 +49,6 @@ public class CauseMapper {
     this.users = users;
   }
 
-  /* --- the block that travels inside an auction --------------------------- */
-
   public CauseSummaryResponse toSummary(Cause cause) {
     return new CauseSummaryResponse(
         cause.getId(),
@@ -73,7 +62,6 @@ public class CauseMapper {
         cause.getStatus());
   }
 
-  /** Loads a whole page's worth of cause blocks at once. */
   public Map<UUID, CauseSummaryResponse> summariesById(Collection<UUID> ids) {
     if (ids.isEmpty()) {
       return Map.of();
@@ -82,20 +70,10 @@ public class CauseMapper {
         .collect(Collectors.toMap(Cause::getId, this::toSummary, (first, second) -> first));
   }
 
-  /* --- the cause's own page ------------------------------------------------ */
-
-  /**
-   * A row of cause cards: name, imagery, progress, and how many listings are running.
-   *
-   * <p>Does not read the paperwork. A card shows none of it, and loading the documents and the
-   * evidence for a homepage row is two round trips per request spent on data the page will not
-   * render. Those arrive with {@link #toResponse}, which is what the cause's own page calls.
-   */
   public List<CauseResponse> toCards(List<Cause> loaded, Viewer viewer) {
     return map(loaded, viewer, false);
   }
 
-  /** One cause, with everything its page shows — the paperwork included. */
   public CauseResponse toResponse(Cause cause, Viewer viewer) {
     return map(List.of(cause), viewer, true).getFirst();
   }
@@ -152,9 +130,6 @@ public class CauseMapper {
       List<CauseEvidence> causeEvidence,
       int activeAuctionCount,
       Viewer viewer) {
-
-    // The organiser and staff are the only readers entitled to the contact
-    // details of a beneficiary and to where the money lands.
     boolean privileged = viewer.staff() || viewer.is(cause.getOrganizerId());
 
     return new CauseResponse(
@@ -249,12 +224,6 @@ public class CauseMapper {
         item.getId(), item.getType(), item.getFileName(), item.getFileRef(), item.getNote());
   }
 
-  /**
-   * Last four characters, or the whole of it for someone entitled to read it.
-   *
-   * <p>An account number is shown so its owner can confirm it is the right one, never so a visitor
-   * can copy it down.
-   */
   private static String mask(String value, boolean privileged) {
     if (value == null || value.isBlank()) {
       return "";

@@ -12,9 +12,6 @@ const THUMB =
   "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white " +
   "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary-600 " +
   "[&::-moz-range-thumb]:cursor-grab " +
-  // Both browsers give a range thumb a shadow of their own, and a phone paints
-  // a grey wash over whatever was tapped on top of that — which together read
-  // as a smudge around the dot that appears only when it is being used.
   "[&::-webkit-slider-thumb]:shadow-none [&::-moz-range-thumb]:shadow-none";
 
 const BASE_INPUT =

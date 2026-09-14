@@ -21,18 +21,6 @@ import type { Notification } from "@/lib/types";
 import { formatTimeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The other tab: what bid4 has to say.
- *
- * <p>Each row is a pointer. The sentence is written here rather than stored, so the wording can
- * change without rewriting what people were told last month, and the destination is where the thing
- * actually happened — usually a thread.
- *
- * <p>Grouped by day, each on its own card. A flat run of sentences all beginning "cineva a făcut
- * ceva" is the hardest kind of list to scan: every line looks like the one above it, and the only
- * thing distinguishing them — when it happened — was at the end of each. The day is said once, at
- * the top of the cards it covers, and each card then only needs a clock time.
- */
 export function NotificationList() {
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
@@ -45,15 +33,6 @@ export function NotificationList() {
   const rows = items ?? [];
   const unread = rows.some((row) => !row.read);
 
-  // Opening the tab is reading them. A per-row "mark as read" would be a second
-  // thing to do on a list whose whole purpose is to be glanced at. Not reloaded
-  // afterwards: the rows are already on screen, and re-fetching to grey them out
-  // would move the list under somebody mid-scroll.
-  //
-  // The counts elsewhere are a different matter, and until this they were never
-  // told at all — the tab said nought while the mark in the bar went on claiming
-  // four, for as long as nothing else happened to refetch. Set to nought here on
-  // what is already known, then confirmed by the server's own answer.
   useEffect(() => {
     if (!unread) return;
     void mutate(unreadKey(user?.id), withNotificationsRead, {
@@ -75,23 +54,16 @@ export function NotificationList() {
     );
   }
 
-  // No empty state: bid4 writes one to every account the first time it opens
-  // this. See Welcome on the server.
   return (
     <CrossFade ready={!loading} placeholder={<NotificationSkeleton />}>
       <div className="flex flex-col gap-5">
         {groupByDay(rows).map((group) => (
           <section key={group.label}>
-            {/* A label, not a banner. It names the run of cards under it and
-                should be the quietest thing on the screen. */}
             <h2 className="mb-2 px-1 text-xs font-semibold text-ink-500">
               {group.label}
             </h2>
             <ul className="flex flex-col gap-2">
               {group.rows.map((row, index) => (
-                // The cascade runs down the whole list rather than restarting
-                // under each heading, so a day with one card in it does not
-                // arrive at the same moment as the first card of the next.
                 <li
                   key={row.id}
                   className="animate-fade-up"
@@ -144,8 +116,6 @@ function Row({ notification }: { notification: Notification }) {
         </span>
       </span>
 
-      {/* Unread, said with a dot rather than with a count: there is one of each
-          of these, so a number over it would only ever be a one. */}
       {notification.read ? null : (
         <span
           aria-label="Necitită"
@@ -155,10 +125,6 @@ function Row({ notification }: { notification: Notification }) {
     </>
   );
 
-  // Each one its own surface, on the same hairline every card on the site
-  // carries. No negative margins: this sits inside a pane that scrolls, so
-  // anything wider than its container is a horizontal scrollbar rather than a
-  // flourish.
   const shell =
     "flex items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-edge transition";
 
@@ -174,13 +140,6 @@ function Row({ notification }: { notification: Notification }) {
   );
 }
 
-/**
- * The mark a notification wears, by what it is about.
- *
- * <p>They were all the same bell, which made a list of them one shape repeated — and the bell said
- * only "a notification", which the reader already knew from the tab they were on. The drawing is
- * the fastest part of a row to read, so it is the part that should say which kind this is.
- */
 function markFor(type: string): {
   Mark: () => React.ReactElement;
   tint: string;
@@ -209,15 +168,8 @@ function markFor(type: string): {
   }
 }
 
-/**
- * The day a run of rows belongs to, said once above them.
- *
- * <p>The rows arrive newest first and stay in that order; this only walks them and starts a new
- * group wherever the calendar day changes.
- */
 function groupByDay(rows: Notification[]): {
   label: string;
-  /** Where this group's first row sits in the whole list, for the cascade. */
   offset: number;
   rows: Notification[];
 }[] {
@@ -233,7 +185,6 @@ function groupByDay(rows: Notification[]): {
   return groups;
 }
 
-/** "Astăzi", "Ieri", then the date itself. */
 function dayLabel(value: string): string {
   const date = new Date(value);
   const midnight = (at: Date) =>
@@ -245,7 +196,6 @@ function dayLabel(value: string): string {
   if (days <= 0) return "Astăzi";
   if (days === 1) return "Ieri";
 
-  // The year only once it stops being obvious, which is the moment it changes.
   return date.toLocaleDateString("ro-RO", {
     day: "numeric",
     month: "long",
@@ -255,12 +205,6 @@ function dayLabel(value: string): string {
   });
 }
 
-/**
- * The Romanian, built from the type and its values.
- *
- * <p>An unknown type is shown rather than hidden: a notification nobody can read is still a sign
- * that something happened, and swallowing it would hide the day a new one ships ahead of its copy.
- */
 function sentence(notification: Notification): string {
   const value = (key: string) => notification.payload[key] ?? "";
 
@@ -280,7 +224,6 @@ function sentence(notification: Notification): string {
 
 function NotificationSkeleton({
   rows = 5,
-  /** Off for the rows appended mid-scroll, which fall under a heading already drawn. */
   heading = true,
 }: {
   rows?: number;
@@ -288,8 +231,6 @@ function NotificationSkeleton({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      {/* A day label, then its cards — the shape the loaded list has, so nothing
-          moves when the rows replace these. */}
       <section>
         {heading ? <Skeleton className="mb-2 ml-1 h-4 w-20" /> : null}
         <ul className="flex flex-col gap-2">
@@ -299,10 +240,6 @@ function NotificationSkeleton({
               className="flex items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-edge"
             >
               <Skeleton className="h-9 w-9 shrink-0 rounded-xl" />
-              {/* The sentence at its own leading-snug height, and the clock time
-                  under it: one line of sentence on a desktop and two on a phone,
-                  where these wrap. A skeleton that is one line everywhere is
-                  right on one breakpoint and twenty pixels short on the other. */}
               <span className="min-w-0 flex-1">
                 <Skeleton className="h-[21px] w-3/4" />
                 <Skeleton className="mt-1 h-[21px] w-1/2 sm:hidden" />

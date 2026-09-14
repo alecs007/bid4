@@ -48,10 +48,6 @@ export default function HomePage() {
             >
               Cum funcționează?
             </h2>
-            {/* Three across only once there is room for three columns of prose.
-                At sm they were three narrow strips of text on a tablet held
-                upright; below lg each step is a full-width card instead, which
-                is what the image and the paragraph inside it were drawn for. */}
             <ol className="grid gap-6 lg:grid-cols-3">
               {STEPS.map((step) => (
                 <li

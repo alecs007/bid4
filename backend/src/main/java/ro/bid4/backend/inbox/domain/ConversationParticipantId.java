@@ -7,11 +7,9 @@ import java.util.Objects;
 import java.util.UUID;
 import lombok.Getter;
 
-/** Which thread, and whose side of it. */
 @Getter
 @Embeddable
 public class ConversationParticipantId implements Serializable {
-
   @Column(name = "conversation_id", nullable = false, updatable = false)
   private UUID conversationId;
 

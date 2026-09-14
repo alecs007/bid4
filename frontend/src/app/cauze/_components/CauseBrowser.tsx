@@ -38,18 +38,8 @@ export function CauseBrowser() {
   );
 
   const busy = navigating || loading;
-  // As many placeholders as there were cards, so swapping one set for the other
-  // does not resize the page under the reader.
   const outgoing = data?.length ?? 0;
 
-  /**
-   * The filter lives in the URL, and useSearchParams only catches up once the
-   * router has finished navigating — about half a second. Until then the key has
-   * not changed, nothing is loading, and the previous filter's results sit there
-   * looking like an answer. Marking the navigation as a transition gives an
-   * immediate `pending`, so the list can say it is working from the click rather
-   * than from whenever the address bar agrees.
-   */
   const update = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(params.toString());
     mutate(next);
@@ -71,15 +61,8 @@ export function CauseBrowser() {
 
   return (
     <>
-      {/* No search of its own any more: the one in the header searches the
-          whole site, and two boxes on the same page asking for the same thing
-          is a choice nobody wanted to make. */}
       <div className="mb-4 flex items-center gap-2">
         <h1 className="font-display flex items-center gap-2 text-2xl font-extrabold text-ink-900 sm:text-3xl">
-          {/* The same mark an organiser wears when they are verified: the same
-              check, at the same weight, on the same green. A page titled for
-              verified causes should carry the badge those causes' organisers
-              carry, not a second design of it. */}
           <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-600 text-white sm:h-6 sm:w-6">
             <Icons.check
               aria-hidden="true"
@@ -119,7 +102,6 @@ export function CauseBrowser() {
           <Skeleton className="h-5 w-40" />
         ) : (
           <p className="text-sm text-ink-500">
-            {/* Not "verificate" twice: the heading has just said that. */}
             {countRo(
               data?.length ?? 0,
               "cauză înregistrată",
@@ -129,9 +111,6 @@ export function CauseBrowser() {
         )}
       </div>
 
-      {/* A floor under the results, so a page that finds one cause does not leave
-          the footer halfway up the screen, and so swapping a tall set of rows
-          for a short one moves the page once rather than collapsing it first. */}
       <div className="min-h-[60vh]">
         {error ? (
           <ErrorState

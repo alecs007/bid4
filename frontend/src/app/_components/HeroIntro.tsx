@@ -4,13 +4,6 @@ import { ButtonLink } from "@/components/ui";
 
 import { ImpactLine } from "./HomeSections";
 
-/**
- * The homepage's first screen as it was written: the promise, the two ways in, and the mascot.
- *
- * <p>Not rendered at the moment — the page opens on `HeroBanner` instead. Kept whole rather than
- * deleted because it is the only place the site says what it is for in its own words, and putting
- * it back is a matter of swapping which one the page imports.
- */
 export function HeroIntro() {
   return (
     <section className="bg-white">

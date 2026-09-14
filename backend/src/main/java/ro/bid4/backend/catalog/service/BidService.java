@@ -29,17 +29,8 @@ import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.inbox.service.ThreadEvents;
 import ro.bid4.backend.orders.service.Terms;
 
-/**
- * Bidding, retracting, and following an auction.
- *
- * <p>A bid is a commitment to pay, so this is the one place in the catalogue where money is at
- * stake and the rules are enforced rather than suggested. Everything it checks, it checks against
- * the row it has locked — reading the price, deciding it was beaten, and writing the new one have
- * to be one indivisible step or two bidders can both be told they are winning.
- */
 @Service
 public class BidService {
-
   private static final Logger log = LoggerFactory.getLogger(BidService.class);
 
   private final AuctionRepository auctions;
@@ -64,19 +55,12 @@ public class BidService {
     this.threads = threads;
   }
 
-  /**
-   * The smallest offer that would be accepted right now.
-   *
-   * <p>The very first bid may match the starting price exactly; after that each one has to clear
-   * the increment.
-   */
   public static long minimumBid(Auction auction) {
     return auction.getBidCount() == 0
         ? auction.getStartingPrice()
         : auction.getCurrentPrice() + auction.getBidIncrement();
   }
 
-  /** POST /auctions/{id}/bids */
   @Transactional
   public PlaceBidResponse place(
       UUID auctionId, long amount, String acceptedTermsVersion, Viewer viewer) {
@@ -84,10 +68,6 @@ public class BidService {
       throw new ApiException(ErrorCode.UNAUTHENTICATED);
     }
 
-    // Before anything is read or locked. An offer is a commitment to pay, and
-    // the version has to be the one currently published rather than any version
-    // the caller happens to name — an old string would otherwise be a way to
-    // consent to terms nobody is being shown.
     if (!Terms.CURRENT_VERSION.equals(acceptedTermsVersion)) {
       throw new ApiException(
           ErrorCode.TERMS_REQUIRED,
@@ -108,21 +88,12 @@ public class BidService {
 
     requireBiddingUnlocked(viewer.id());
 
-    // A ceiling before anything else. An offer nobody could honour is not a
-    // bid, it is a way to win an auction and walk away from it, and every
-    // number downstream — the fee split, the donation — is computed from this
-    // one. The schema carries the same bound as a backstop.
     if (amount > CatalogRules.MAX_BID) {
       throw new ApiException(
           ErrorCode.BID_TOO_HIGH,
           "Oferta depășește maximul acceptat de " + formatLei(CatalogRules.MAX_BID) + ".");
     }
 
-    // The final price is settled before the increment is enforced. A seller who
-    // names a price they would simply accept has made an offer to the room, and
-    // an increment that happens to step over it must not put it out of reach:
-    // with a 50 lei increment on a 100 lei standing offer, a 120 lei final price
-    // would otherwise be unreachable in either direction.
     boolean boughtNow = auction.isBuyNowReachedBy(amount);
 
     if (!boughtNow) {
@@ -134,20 +105,12 @@ public class BidService {
       }
     }
 
-    // One offer per bidder: raising replaces the previous one rather than
-    // stacking on it, which the unique index also enforces.
     Optional<Bid> previous = bids.findByAuctionIdAndBidderId(auctionId, viewer.id());
     previous.ifPresent(bids::delete);
     bids.flush();
 
-    // Settled at the advertised price, never at whatever was typed: the number
-    // on the page is what the buyer agreed to, and charging more for a fat
-    // finger would be indefensible.
     long price = boughtNow ? auction.getBuyNowPrice() : amount;
 
-    // Everything standing drops a place — except the offer the seller has
-    // already accepted, if there is one. Demoting that would undo the acceptance
-    // while the auction row still names its bidder as the buyer.
     BidStatus demoted = boughtNow ? BidStatus.LOST : BidStatus.OUTBID;
     UUID accepted = auction.getAcceptedBidId();
     if (accepted == null) {
@@ -162,8 +125,6 @@ public class BidService {
     bid.setBidderId(viewer.id());
     bid.setAmount(price);
     bid.setStatus(boughtNow ? BidStatus.ACCEPTED : BidStatus.WINNING);
-    // Stored beside the act, with the version rather than a flag: "they agreed"
-    // is worth nothing in a dispute without "to which text, and when".
     bid.setTermsVersion(Terms.CURRENT_VERSION);
     bid.setTermsAcceptedAt(now);
     bids.save(bid);
@@ -172,9 +133,6 @@ public class BidService {
     auction.setCurrentPrice(price);
     auction.setBidCount((int) bids.countByAuctionId(auctionId));
     if (boughtNow) {
-      // Reserved rather than sold: the seller published this price and is bound
-      // by it, so no acceptance is needed — but nobody has paid yet, and SOLD is
-      // reserved for money that has actually arrived.
       auction.setStatus(AuctionStatus.RESERVED);
       auction.setWinnerId(viewer.id());
       auction.setAcceptedBidId(bid.getId());
@@ -193,8 +151,6 @@ public class BidService {
       log.info("Bid accepted on {}: {} bani by {}", auctionId, price, viewer.id());
     }
 
-    // Into the thread, so the seller watches the offer arrive where they will
-    // answer it. Raising replaces the bid but not the record: both cards stay.
     long before = previous.map(Bid::getAmount).orElse(0L);
     threads.offer(
         auctionId,
@@ -211,13 +167,6 @@ public class BidService {
     return new PlaceBidResponse(placed, view, boughtNow ? true : null);
   }
 
-  /**
-   * DELETE /auctions/{id}/bids/mine
-   *
-   * <p>Only the leader can pull back, and only while the listing is still taking offers. The one
-   * offer that is never theirs to pull is the one the seller has accepted: walking away from that
-   * is breaking a deal, not withdrawing from one.
-   */
   @Transactional
   public AuctionResponse retract(UUID auctionId, Viewer viewer) {
     if (viewer.isAnonymous()) {
@@ -228,8 +177,6 @@ public class BidService {
         auctions.findByIdForUpdate(auctionId).orElseThrow(() -> ApiException.notFound("Licitația"));
 
     if (!auction.isOpenForBids()) {
-      // Includes a listing whose seller has already accepted an offer: pulling the
-      // offer out from under an acceptance is not a retraction, it is a broken deal.
       throw new ApiException(ErrorCode.RETRACT_NOT_ALLOWED, "Anunțul nu mai acceptă modificări.");
     }
 
@@ -240,8 +187,6 @@ public class BidService {
     }
 
     Bid top = ordered.getFirst();
-    // The one offer nobody may pull: the seller has taken it, and a buyer who
-    // walks away from an accepted offer is breaking a deal, not withdrawing one.
     if (top.getId().equals(auction.getAcceptedBidId())) {
       throw new ApiException(
           ErrorCode.RETRACT_NOT_ALLOWED,
@@ -277,7 +222,6 @@ public class BidService {
     return mapper.toResponse(auction, viewer.id());
   }
 
-  /** PUT /auctions/{id}/watch — toggles, so one route covers following and unfollowing. */
   @Transactional
   public boolean toggleWatch(UUID auctionId, Viewer viewer) {
     if (viewer.isAnonymous()) {
@@ -304,13 +248,6 @@ public class BidService {
     return true;
   }
 
-  /**
-   * The gate that unlocks bidding.
-   *
-   * <p>A bid is a promise to pay for something and to receive it, so both halves have to already
-   * exist: a card on file and a delivery method chosen. Checked here rather than only in the UI,
-   * because the UI is not where the promise is made.
-   */
   private void requireBiddingUnlocked(UUID userId) {
     UserAccount account =
         users.findById(userId).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHENTICATED));

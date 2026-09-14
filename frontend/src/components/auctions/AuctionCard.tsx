@@ -42,25 +42,15 @@ export function AuctionCard({
   const [override, setOverride] = useState<boolean | null>(null);
   const watched = override ?? Boolean(auction.isWatched);
 
-  /**
-   * How many people have this on their list, counting the reader's own tap before the server has
-   * agreed to it — the icon turns immediately and a number beside it that lagged would read as the
-   * save not having landed.
-   */
   const following = Math.max(
     0,
     auction.watcherCount +
       (watched === Boolean(auction.isWatched) ? 0 : watched ? 1 : -1),
   );
 
-  // Reserved reads as open here, because it is: the listing still takes offers,
-  // and whose offer the seller took is between them and that buyer. A card that
-  // announced it would discourage exactly the better offer the seller left the
-  // listing up for.
   const live = isOfferable(auction.status);
   const cover = auction.images[0] ?? "";
 
-  /** The icon turns before the request leaves; a failed call puts it back. */
   const handleWatch = async () => {
     if (!user) {
       toast.info("Intră în cont pentru a urmări licitații.");
@@ -69,7 +59,6 @@ export function AuctionCard({
 
     const next = !watched;
     setOverride(next);
-    // Only the save is worth announcing; removing one speaks for itself.
     if (next) toast.success("Adăugat la urmărite", auction.title);
 
     try {
@@ -97,18 +86,6 @@ export function AuctionCard({
           fill
           unoptimized
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          // Faded in rather than swapped in. next/image fires this after
-          // decode(), and fires it too for an image already complete before
-          // hydration, so the attribute always lands and a photo is never left
-          // at zero. Without it a grid of cards snaps in one card at a time, in
-          // whatever order the network answers.
-          //
-          // Written out as one `transition` because the two need different
-          // speeds: the photograph should arrive in about a fifth of a second,
-          // where the hover zoom is a 500ms move. It names translate/scale/
-          // rotate as well, which is what `transition-transform` is short for
-          // in Tailwind v4 — `scale-*` sets the standalone `scale` property, so
-          // a list of just `transform` leaves the zoom to jump.
           onLoad={(event) =>
             event.currentTarget.setAttribute("data-loaded", "true")
           }
@@ -126,27 +103,15 @@ export function AuctionCard({
               : "")
           }
           className={cn(
-            // Bottom right of the picture rather than the top: the corner a
-            // thumb reaches, and clear of the title and price below it.
             "absolute right-2 bottom-2 z-10 inline-flex h-6 items-center justify-center rounded-lg bg-white/95 px-1.5 ring-1 ring-ink-900/10 backdrop-blur-sm sm:right-2.5 sm:bottom-2.5 sm:h-7 sm:px-2",
             "transition duration-200 active:scale-90",
             watched ? "text-primary-600" : "text-ink-500 hover:text-ink-900",
           )}
         >
-          {/* The reason to save it, said by the people who already did, and read
-              first. Always mounted and opened by a grid column, so the first
-              save widens the button rather than making it jump; the gap lives
-              inside the column, which is what lets it close to nothing. Spoken
-              as part of the button's own label, where a bare digit means
-              nothing on its own. */}
           <span
             aria-hidden="true"
             className={cn(
               "grid transition-[grid-template-columns,opacity] duration-200 ease-[var(--ease-out-soft)]",
-              // minmax(0,…): a bare 0fr track still floors at its content's
-              // min width, and the digit's own right padding is part of that —
-              // which left a sliver of empty space on the left of an icon that
-              // had no count to show.
               following > 0
                 ? "grid-cols-[minmax(0,1fr)] opacity-100"
                 : "grid-cols-[minmax(0,0fr)] opacity-0",
@@ -158,7 +123,6 @@ export function AuctionCard({
           </span>
           <Icons.watchlist
             aria-hidden="true"
-            /* fill-transparent, not fill="none": a colour animates to a colour, `none` cannot. */
             className={cn(
               "h-3.5 w-3.5 shrink-0 fill-transparent transition-[fill,transform] duration-200 sm:h-4 sm:w-4",
               watched && "scale-110 fill-current",
@@ -179,9 +143,6 @@ export function AuctionCard({
           </span>
         </Link>
 
-        {/* Off the photograph and onto its own line. Two pills over the picture
-            covered the thing being sold, which is the one part of a card nobody
-            can do without, and the cause still ended up truncated. */}
         <div className={CARD_IMPACT}>
           <span className={CARD_IMPACT_MARK}>
             <Image
@@ -206,11 +167,6 @@ export function AuctionCard({
           <span className={CARD_PRICE}>
             {formatMoney(auction.currentPrice, { compact: true })}
           </span>
-          {/* Where the countdown was. A listing has no deadline to show, so the
-              slot carries the one number that still says how much interest it
-              has drawn — and nothing at all when there is none, because a row of
-              cards each announcing "no offers" reads as a catalogue nobody
-              wants. */}
           {live ? (
             auction.bidCount > 0 ? (
               <span className="min-w-0 truncate text-xs font-semibold text-ink-500">
@@ -235,20 +191,12 @@ export function AuctionCard({
   );
 }
 
-/** How many cards a row shows at each of the three widths it is laid out for. */
 export interface VisibleCounts {
   base: number;
   md: number;
   lg: number;
 }
 
-/**
- * Every way a card can be shown at some widths and not others, written out.
- *
- * <p>Spelled as whole class strings because Tailwind reads the source for the classes it emits: one
- * built from a variable at runtime is a class that was never compiled. Keyed by which of the three
- * widths the card appears at.
- */
 const VISIBILITY: Record<string, string> = {
   "111": "",
   "110": "lg:hidden",
@@ -260,14 +208,6 @@ const VISIBILITY: Record<string, string> = {
   "000": "hidden",
 };
 
-/**
- * Which widths this card survives at, so no row is ever left part-empty.
- *
- * <p>A homepage row is two cards across a phone, three across a tablet and five across a desktop,
- * and a count that divides by none of those leaves a last row with a gap in it. So each width is
- * given the number that fills it, the row is handed the largest of them, and the rest are hidden.
- * Hidden rather than sliced because the width is not known until the browser has it.
- */
 function visibilityFor(index: number, counts: VisibleCounts): string {
   const key = [counts.base, counts.md, counts.lg]
     .map((count) => (index < count ? "1" : "0"))
@@ -287,7 +227,6 @@ export function AuctionGrid({
   loading?: boolean;
   skeletonCount?: number;
   columns?: 3 | 4 | 5;
-  /** Keeps every row full by hiding what would spill past it. See {@link visibilityFor}. */
   visible?: VisibleCounts;
   emptyState?: React.ReactNode;
 }) {

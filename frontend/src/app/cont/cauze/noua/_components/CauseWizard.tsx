@@ -72,7 +72,6 @@ export function CauseWizard() {
           setResumed(true);
         }
       } catch {
-        // A draft that will not load is not worth blocking a new one.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -98,8 +97,6 @@ export function CauseWizard() {
     [user],
   );
 
-  // Steps save on the way out; typing settles into a save too, so a tab closed
-  // mid-sentence does not cost the sentence.
   useEffect(() => {
     if (loading || !user) return;
     const timeout = window.setTimeout(() => {

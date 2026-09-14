@@ -61,9 +61,6 @@ export function Avatar({
             height={PX[size]}
             className="h-full w-full object-cover"
             unoptimized
-            // Eager. These are 28 to 96 pixels and always sit beside the name
-            // they belong to; lazily loaded, a face arrived after the line that
-            // names it and read as a broken picture rather than a slow one.
             loading="eager"
             draggable={false}
           />

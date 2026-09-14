@@ -10,12 +10,6 @@ export type MascotMood =
   | "idea"
   | "hello";
 
-/**
- * cheer and sad have no artwork of their own and borrow the nearest pose that
- * exists — wrong in tone, but not the broken-image icon they used to render on
- * every empty state, both route guards and the whole email-confirmation flow.
- * Point them at their own files as soon as those are drawn.
- */
 const MOOD_IMAGE_MAP: Record<MascotMood, string> = {
   happy: "/images/illustrations/mascot-happy.webp",
   cheer: "/images/illustrations/mascot-happy.webp",

@@ -38,30 +38,12 @@ import ro.bid4.backend.storage.domain.StoredFile;
 import ro.bid4.backend.storage.domain.Visibility;
 import ro.bid4.backend.storage.repo.StoredFileRepository;
 
-/**
- * The inbox.
- *
- * <p>One rule runs through all of it: a conversation id is a name, not a permission. Every method
- * that touches a thread starts by asking whether this account has a participant row in it, and
- * works from what that row says rather than from anything the request claimed. There is no path
- * that reaches an item without going through {@link #membershipIn}.
- *
- * <p>The second rule is that a thread is opened from a listing, never from a person. Whom you are
- * writing to is a consequence of what you are writing about, so there is no endpoint here that
- * takes a user id — which is what keeps the inbox from being a way to reach strangers.
- */
 @Service
 public class InboxService {
-
-  /** Enough to fill a screen and a half; the client asks for more as it scrolls. */
   private static final int THREAD_PAGE = 30;
 
   private static final int LIST_PAGE = 20;
 
-  /**
-   * A burst allowance, not a rate. Somebody typing three quick lines is normal; sixty in a minute
-   * is not a conversation, and the limiter's WRITE budget is too wide to notice the difference.
-   */
   private static final int MAX_ITEMS_PER_MINUTE = 20;
 
   private final ConversationRepository conversations;
@@ -98,15 +80,9 @@ public class InboxService {
     this.welcome = welcome;
   }
 
-  // ---------------------------------------------------------------------------------------------
-  // Reading
-  // ---------------------------------------------------------------------------------------------
-
   @Transactional
   public CursorPage<ConversationSummary> list(String cursor, boolean archived, Viewer viewer) {
     UUID me = required(viewer);
-    // Nobody's inbox is ever empty. Written on first read rather than at
-    // registration, so accounts that already exist get it too.
     if (cursor == null && !archived) {
       welcome.ensureFor(me);
     }
@@ -121,12 +97,6 @@ public class InboxService {
     boolean more = page.size() > LIST_PAGE;
     List<Conversation> listings = more ? page.subList(0, LIST_PAGE) : page;
 
-    // bid4's own thread sits at the top of the first page and nowhere else. It
-    // is the one conversation a member never started and always has, so letting
-    // it sink under whoever wrote last is how it stops being found. Pinned here
-    // rather than ordered in SQL: the page below it is a keyset over when a
-    // thread last moved, and a row exempt from that ordering cannot be paged by
-    // it. The cursor still comes from the last listing row, so it is unaffected.
     List<Conversation> visible = new ArrayList<>(listings);
     if (before == null) {
       conversations
@@ -154,7 +124,6 @@ public class InboxService {
         more ? cursorOf(listings.getLast()) : null);
   }
 
-  /** The head and the first page of items together — the page cannot draw either one alone. */
   @Transactional(readOnly = true)
   public ThreadResponse thread(UUID conversationId, Viewer viewer) {
     UUID me = required(viewer);
@@ -187,18 +156,6 @@ public class InboxService {
         participants.countUnreadThreads(me), notifications.countByUserIdAndReadAtIsNull(me));
   }
 
-  // ---------------------------------------------------------------------------------------------
-  // Writing
-  // ---------------------------------------------------------------------------------------------
-
-  /**
-   * Opens the thread about a listing, or returns the one that is already there.
-   *
-   * <p>Idempotent by design rather than by accident: asking a second question is not a second
-   * conversation, and a unique index says so. A buyer does not have to have bid — a question is how
-   * bidding starts, and requiring an offer first would mean nobody could ask what they are bidding
-   * on.
-   */
   @Transactional
   public ThreadResponse open(OpenThreadRequest request, Viewer viewer) {
     UUID me = required(viewer);
@@ -212,8 +169,6 @@ public class InboxService {
       throw new ApiException(
           ErrorCode.VALIDATION_FAILED, "Nu poți deschide o conversație la propriul anunț.");
     }
-    // A draft or a listing under review is not public yet, so its id is not
-    // something a stranger should be able to confirm the existence of either.
     if (listing.getStatus() == AuctionStatus.DRAFT
         || listing.getStatus() == AuctionStatus.PENDING_REVIEW) {
       throw new ApiException(ErrorCode.NOT_FOUND, "Anunțul nu a fost găsit.");
@@ -272,31 +227,14 @@ public class InboxService {
     participants.save(membership);
   }
 
-  // ---------------------------------------------------------------------------------------------
-  // Internals
-  // ---------------------------------------------------------------------------------------------
-
-  /**
-   * The permission check, and the only way to a thread's contents.
-   *
-   * <p>404 rather than 403 for a thread that exists and is not the caller's. A 403 confirms that
-   * the id names something real, and an id that can be probed is an id somebody will probe.
-   */
   private ConversationParticipant membershipIn(UUID conversationId, UUID userId) {
     return participants
         .findMembership(conversationId, userId)
         .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Conversația nu a fost găsită."));
   }
 
-  /**
-   * Appends one item and moves the thread to the top of both inboxes.
-   *
-   * <p>The unread count goes up for everyone but the author, in one statement, so two people
-   * writing at once cannot read-modify-write over each other.
-   */
   private ThreadItem write(
       Conversation conversation, UUID senderId, String body, List<UUID> imageRefs) {
-
     ThreadItem item =
         imageRefs.isEmpty()
             ? ThreadItem.text(conversation.getId(), senderId, body)
@@ -319,15 +257,6 @@ public class InboxService {
     return saved;
   }
 
-  /**
-   * Turns upload refs into files this account is allowed to send.
-   *
-   * <p>The same gap {@code ListingImages} closes: upload answers with an id, send accepts one, and
-   * between the two is where somebody sends an id that is not theirs. Looked up as a set that must
-   * belong to this sender and must be public imagery, so a ref belonging to another account — or to
-   * an identity document — does not come back and the message is refused rather than quietly sent
-   * with somebody else's picture in it.
-   */
   private List<UUID> claim(List<UUID> refs, UUID senderId) {
     if (refs.isEmpty()) {
       return List.of();
@@ -342,12 +271,6 @@ public class InboxService {
     return List.copyOf(ids);
   }
 
-  /**
-   * Refuses a flood before it becomes one.
-   *
-   * <p>Per thread rather than per account, because the harm is being buried in one conversation,
-   * and because a busy seller answering six buyers at once is not the thing being stopped.
-   */
   private void guardBurst(UUID conversationId, UUID senderId) {
     long recent =
         items.countByConversationIdAndSenderIdAndCreatedAtAfter(
@@ -360,7 +283,6 @@ public class InboxService {
 
   private CursorPage<ThreadItemResponse> itemsPage(
       UUID conversationId, String cursor, UUID viewerId) {
-
     Instant before = Cursors.instantOf(cursor);
     List<ThreadItem> page =
         before == null

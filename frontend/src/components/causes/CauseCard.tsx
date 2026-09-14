@@ -28,8 +28,6 @@ export function CauseCard({
       )}
       style={style}
     >
-      {/* The whole card is the target. Not the title's own overlay, the way the
-          auction card does it: the title sits inside a positioned caption. */}
       <Link
         href={`/cauze/${cause.slug}`}
         aria-label={cause.name}
@@ -43,9 +41,6 @@ export function CauseCard({
           fill
           unoptimized
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          // Same fade as the auction card: the grey box is the placeholder and
-          // the photo arrives over it. See AuctionCard for why onLoad is safe
-          // for a cached image.
           onLoad={(event) =>
             event.currentTarget.setAttribute("data-loaded", "true")
           }
@@ -116,7 +111,6 @@ export function SkeletonCauseCard() {
     <div className="rounded-3xl bg-white ring-1 ring-edge p-2">
       <Skeleton className="aspect-4/3 w-full rounded-2xl" />
       <div className="px-3 pt-4 pb-3">
-        {/* The real row is baseline-aligned and comes to 26px tall. */}
         <div className="flex h-[26px] items-center justify-between gap-3">
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-4 w-10" />

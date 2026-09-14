@@ -12,12 +12,6 @@ import {
   toLei,
 } from "./money";
 
-/**
- * Money is held in whole bani and never in a floating point type, so the tests
- * that matter are the ones that would catch it drifting: a value that survives a
- * round trip, a percentage that rounds rather than truncates, and a total that
- * still adds up after the split.
- */
 describe("bani and lei", () => {
   it("converts without losing anything on the way back", () => {
     expect(lei(1)).toBe(100);
@@ -55,7 +49,6 @@ describe("formatMoney", () => {
   it("prints two decimals by default and drops them when asked and round", () => {
     expect(formatMoney(100_000)).toBe("1.000,00 lei");
     expect(formatMoney(100_000, { compact: true })).toBe("1.000 lei");
-    // compact only drops a decimal that is actually zero
     expect(formatMoney(250, { compact: true })).toBe("2,50 lei");
   });
 
@@ -67,7 +60,6 @@ describe("formatMoney", () => {
 describe("percentOf", () => {
   it("rounds to the nearest ban rather than truncating", () => {
     expect(percentOf(1000, 50)).toBe(500);
-    // 33% of 10,01 lei is 330,33 bani; a truncation would lose the third
     expect(percentOf(1001, 33)).toBe(330);
     expect(percentOf(333, 50)).toBe(167);
   });
@@ -90,11 +82,6 @@ describe("progressPercent", () => {
   });
 });
 
-/**
- * The split, which is the arithmetic the platform is actually judged on: the
- * buyer's total, the cause's share and what reaches the seller have to add up
- * against the hammer price every time.
- */
 describe("computeFees", () => {
   const finalPrice = lei(1000);
 
@@ -104,7 +91,6 @@ describe("computeFees", () => {
       percentOf(lei(20), FEES.BUYER_TAX_PERCENT) + FEES.BUYER_TAX_FIXED,
     );
 
-    // The old clamp made a 20-lei item pay 5 lei, which is 25% under a 5% label.
     expect(cheap.buyerTax).toBeLessThan(lei(5));
   });
 
@@ -124,8 +110,6 @@ describe("computeFees", () => {
 
   it("adds up: the donation and the seller's side account for the whole price", () => {
     const fees = computeFees({ finalPrice, donationPercent: 75 });
-    // Nothing is taken out between them. bid4's cut rides on the buyer's side,
-    // so the price divides in two rather than in three.
     expect(fees.donationAmount + fees.sellerShare).toBe(finalPrice);
   });
 

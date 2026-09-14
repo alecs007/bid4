@@ -21,18 +21,8 @@ import ro.bid4.backend.identity.api.dto.PublicUserResponse;
 import ro.bid4.backend.identity.service.UserMapper;
 import ro.bid4.backend.storage.service.MediaUrls;
 
-/**
- * Auctions become responses here, and only here.
- *
- * <p>The single public entry point takes a list rather than one auction, because everything a card
- * needs beyond its own row — the seller, the cause, who is leading, whether the viewer is following
- * it — is fetched for the whole page at once. Mapping one at a time would turn a page of twelve
- * into fifty queries, and the only way to stop that happening by accident is to make the batched
- * call the easy one.
- */
 @Component
 public class AuctionMapper {
-
   private final UserMapper users;
   private final CauseMapper causes;
   private final BidRepository bids;
@@ -63,9 +53,6 @@ public class AuctionMapper {
     Map<UUID, PublicUserResponse> sellers = users.publicUsersById(sellerIds);
     Map<UUID, CauseSummaryResponse> causeSummaries = causes.summariesById(causeIds);
 
-    // Who is leading only matters for telling a viewer whether it is them, so an
-    // anonymous page does not pay for it. Same for the two lookups below: with
-    // nobody to answer about, they would fetch a row to compare against null.
     Map<UUID, UUID> leaders = new HashMap<>();
     if (viewerId != null) {
       for (BidRepository.Leader leader : bids.findLeaders(auctionIds, BidStatus.WINNING)) {
@@ -80,8 +67,6 @@ public class AuctionMapper {
     Set<UUID> bidOn =
         viewerId == null ? Set.of() : Set.copyOf(bids.findAuctionIdsBidOnBy(viewerId, auctionIds));
 
-    // What each acceptance was worth. One query for the page, and only when the
-    // page holds an acceptance at all.
     Set<UUID> acceptedBidIds = new HashSet<>();
     for (Auction auction : auctions) {
       if (auction.getAcceptedBidId() != null) {
@@ -125,7 +110,6 @@ public class AuctionMapper {
       boolean hasBid,
       Long acceptedAmount,
       UUID viewerId) {
-
     boolean viewerIsSeller = viewerId != null && viewerId.equals(auction.getSellerId());
 
     return new AuctionResponse(
@@ -142,8 +126,6 @@ public class AuctionMapper {
         auction.getStartingPrice(),
         auction.getCurrentPrice(),
         auction.getBidIncrement(),
-        // The number itself is the seller's business. Everyone else is told
-        // whether it was met, which is all the listing page ever shows.
         viewerIsSeller ? auction.getReservePrice() : null,
         auction.getBuyNowPrice(),
         auction.getStartTime(),
@@ -162,22 +144,10 @@ public class AuctionMapper {
         viewerBidStatus(viewerId, hasBid, leaderId));
   }
 
-  /**
-   * One bid, for the person who just made it.
-   *
-   * <p>Their own name is not shortened here — the pseudonymised history is for readers of someone
-   * else's auction, and hiding a bidder from themselves would only be confusing.
-   */
   public BidResponse toBidResponse(Bid bid, UUID viewerId) {
     return toBidResponse(bid, users.publicUsersById(List.of(bid.getBidderId())));
   }
 
-  /**
-   * The batched form, for callers holding more than one bid.
-   *
-   * <p>The single-bid overload above is one query; calling it in a loop is one query per row, which
-   * is how a list of twenty offers became twenty-one round trips.
-   */
   public BidResponse toBidResponse(Bid bid, Map<UUID, PublicUserResponse> bidders) {
     PublicUserResponse bidder = bidders.get(bid.getBidderId());
     return new BidResponse(

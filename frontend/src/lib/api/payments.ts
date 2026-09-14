@@ -12,17 +12,7 @@ import type { CardBrand, ID, PaymentMethodCard } from "@/lib/types";
 
 import { http } from "./http";
 
-/**
- * TODO(backend): the real flow is Stripe Connect and nothing here ever sees a card
- * number — a SetupIntent client secret confirmed in the browser with Elements, of
- * which we store only the PaymentMethod id, charged off-session when an auction
- * closes; plus a hosted onboarding URL for sellers and cause organisers.
- *
- * The mock fabricates a card from the last four digits only, precisely because
- * storing anything more would be wrong even in a demo.
- */
-
-/** GET /users/me/payment-methods */
+// TODO(backend): Stripe Connect — a SetupIntent confirmed in the browser, only the id stored.
 export async function listCards(userId: ID): Promise<PaymentMethodCard[]> {
   if (!USE_MOCK) return http<PaymentMethodCard[]>("/users/me/payment-methods");
 
@@ -33,7 +23,6 @@ export async function listCards(userId: ID): Promise<PaymentMethodCard[]> {
 }
 
 export interface AddCardInput {
-  /** Only ever the display digits — never a real PAN. */
   last4: string;
   brand: CardBrand;
   expMonth: number;
@@ -41,7 +30,6 @@ export interface AddCardInput {
   holderName: string;
 }
 
-/** POST /payments/setup-intent, then POST /users/me/payment-methods */
 export async function addCard(
   userId: ID,
   input: AddCardInput,
@@ -85,13 +73,11 @@ export async function addCard(
     });
   world.cards.push(card);
 
-  // This is what flips half of the bidding gate.
   user.hasPaymentMethod = true;
   commit();
   return card;
 }
 
-/** DELETE /users/me/payment-methods/{id} */
 export async function removeCard(userId: ID, cardId: ID): Promise<void> {
   if (!USE_MOCK) {
     await http<void>(`/users/me/payment-methods/${cardId}`, {
@@ -120,12 +106,10 @@ export async function removeCard(userId: ID, cardId: ID): Promise<void> {
 
 export interface PayoutStatus {
   stripeReady: boolean;
-  /** Where Stripe would send the user to finish onboarding. */
   onboardingUrl?: string;
   pendingRequirements: string[];
 }
 
-/** GET /payments/connect/status */
 export async function getPayoutStatus(userId: ID): Promise<PayoutStatus> {
   if (!USE_MOCK) return http<PayoutStatus>("/payments/connect/status");
 
@@ -147,7 +131,6 @@ export async function getPayoutStatus(userId: ID): Promise<PayoutStatus> {
   };
 }
 
-/** POST /payments/connect/onboarding — mocked as an instant success. */
 export async function completePayoutOnboarding(
   userId: ID,
 ): Promise<PayoutStatus> {

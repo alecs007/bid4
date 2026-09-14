@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils/cn";
 export interface SelectOption<T extends string> {
   value: T;
   label: string;
-  /** Something small shown before the label, e.g. a category illustration. */
   prefix?: ReactNode;
 }
 
@@ -35,10 +34,8 @@ export function Select<T extends string>({
   size?: "sm" | "md";
   className?: string;
   fullWidth?: boolean;
-  /** Adds a filter box above the list — for lists too long to scan. */
   searchable?: boolean;
   searchPlaceholder?: string;
-  /** Label for the entry that clears the choice, e.g. "Toate cauzele". */
   clearLabel?: string;
 }) {
   const id = useId();
@@ -48,13 +45,10 @@ export function Select<T extends string>({
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  /** Where the menu is drawn, in the viewport's own coordinates. */
   const [box, setBox] = useState<Placement | null>(null);
 
   const selected = options.find((option) => option.value === value);
 
-  // The clear entry sits on top while nothing is searched for: it answers "all of
-  // them", it is not a match for a term.
   const matches = query
     ? options.filter((option) => matchesSearch(option.label, query))
     : options;
@@ -78,11 +72,6 @@ export function Select<T extends string>({
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      // The menu is not inside the root any more — it is drawn on the body —
-      // so it has to be asked for separately. Without this, pressing an option
-      // counted as a press outside, the menu closed on the way down, and the
-      // click that followed landed on nothing: the list could be opened and
-      // read but never chosen from.
       if (rootRef.current?.contains(target)) return;
       if (menuRef.current?.contains(target)) return;
       close();
@@ -91,14 +80,6 @@ export function Select<T extends string>({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
 
-  /**
-   * Follows the trigger, for as long as the menu is open.
-   *
-   * <p>Measured against the viewport rather than laid out beside the trigger, because the menu no
-   * longer shares a parent with it. Scroll is listened for in the capture phase: the event does not
-   * bubble, and the thing that moves under it is usually an inner panel — a filter sheet, a sticky
-   * column — rather than the page.
-   */
   useEffect(() => {
     if (!open) return;
 
@@ -225,20 +206,8 @@ export function Select<T extends string>({
             <div
               ref={menuRef}
               style={box.style}
-              // Above the sheet a filter panel opens in (z-50) and above the
-              // header (z-40). Drawn on the body rather than beside the
-              // trigger, which is the only way to be sure of that: the page's
-              // own transition wrapper is a stacking context, and inside one no
-              // z-index can lift a menu over what the page draws next.
               className="animate-pop-in fixed z-[60] rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-line"
             >
-              {/* Quiet on purpose: it sits inside an already-open menu, so a filled
-              box would shout over the options it exists to narrow.
-
-              And it is not focused when the menu opens. On a phone that raised
-              the keyboard over the very list it had just opened, so the options
-              could not be seen, let alone tapped — the box is there for a list
-              too long to scan, and reaching for it is the reader's decision. */}
               {searchable ? (
                 <div className="mb-1.5 flex h-10 items-center gap-2 rounded-xl px-3 ring-1 ring-line transition focus-within:ring-ink-300">
                   <Icons.search
@@ -319,23 +288,14 @@ export function Select<T extends string>({
   );
 }
 
-/** How tall the menu is allowed to be before its list starts scrolling. */
 const MENU_MAX_PX = 320;
 
-/** The gap between the trigger and the menu, and the margin it keeps off the edges. */
 const MENU_GAP_PX = 6;
 
 interface Placement {
   style: React.CSSProperties;
 }
 
-/**
- * Under the trigger, unless there is more room over it.
- *
- * <p>A menu that opens downwards off the bottom of the screen is a menu whose last options cannot
- * be reached — on a phone that is most of them. Whichever side is chosen, the height is capped at
- * what is actually free there, so the list scrolls inside the menu instead of past the edge.
- */
 function placeMenu(trigger: DOMRect): Placement {
   const below = window.innerHeight - trigger.bottom - MENU_GAP_PX;
   const above = trigger.top - MENU_GAP_PX;
@@ -350,10 +310,6 @@ function placeMenu(trigger: DOMRect): Placement {
   return {
     style: {
       left,
-      // The width of the control it belongs to, not the width of its longest
-      // option: free to grow, a menu in a narrow filter column reached out over
-      // the results beside it. Long names are cut with an ellipsis instead,
-      // which is what the rows were already written to do.
       width: Math.min(trigger.width, window.innerWidth - MENU_GAP_PX * 2),
       maxHeight,
       ...(flip

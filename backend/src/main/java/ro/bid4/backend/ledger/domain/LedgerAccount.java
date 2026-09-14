@@ -14,19 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One place money can be.
- *
- * <p>{@link #balance} is a copy, kept in the same transaction as the entries that move it. It is
- * what a page reads; the entries are what it means. Where the two ever disagree the entries are
- * right — which is why this column can be recomputed and those rows cannot be touched.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "ledger_accounts")
 public class LedgerAccount {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -36,7 +28,6 @@ public class LedgerAccount {
   @Column(nullable = false, updatable = false)
   private AccountKind kind;
 
-  /** Null on the platform's own accounts, which are one each. */
   @Column(name = "owner_id", updatable = false)
   private UUID ownerId;
 

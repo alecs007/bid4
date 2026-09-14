@@ -25,24 +25,11 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * One line in a thread — something somebody said, or a step of the sale.
- *
- * <p>Immutable once written, which is the whole point of it. The row fixes <em>where</em> a step
- * appears and <em>what it said at the time</em>; it never decides what may be done next. That is
- * read from the order's own status when the thread is drawn, so an item whose moment has passed
- * renders as a record and only the one matching the current status carries a button. A forged or
- * replayed item can show the wrong words and cannot produce a working control.
- *
- * <p>{@link #payload} is frozen for the same reason: the amount, the locker, the AWB as they were,
- * so history does not change its mind when the order moves on.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "thread_items")
 public class ThreadItem {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -55,16 +42,11 @@ public class ThreadItem {
   @Column(nullable = false, updatable = false)
   private ThreadItemKind kind;
 
-  /** Null for SYSTEM and EVENT: the platform is not a person in the thread. */
   @Column(name = "sender_id", updatable = false)
   private UUID senderId;
 
   @Column private String body;
 
-  /**
-   * Ids of files already stored, in the order they were sent. Batched, or a page of thirty items
-   * costs thirty queries to find out that twenty-eight of them carry no picture.
-   */
   @ElementCollection(fetch = FetchType.LAZY)
   @CollectionTable(name = "thread_attachments", joinColumns = @JoinColumn(name = "item_id"))
   @OrderColumn(name = "sort_order")
@@ -72,7 +54,6 @@ public class ThreadItem {
   @BatchSize(size = 64)
   private List<UUID> attachments = new ArrayList<>();
 
-  /** The sale this step belongs to. Null on anything anybody said. */
   @Column(name = "order_id", updatable = false)
   private UUID orderId;
 
@@ -86,12 +67,6 @@ public class ThreadItem {
   @Column(columnDefinition = "jsonb")
   private Map<String, String> payload;
 
-  /**
-   * Why the text was held up as an attempt to move the deal off bid4.
-   *
-   * <p>The item is still delivered. Dropping it silently teaches people to work around the check,
-   * and the person on the other end is better served by a warning than by a gap in the thread.
-   */
   @Column(name = "flagged_reason")
   private String flaggedReason;
 
@@ -119,13 +94,6 @@ public class ThreadItem {
     return item;
   }
 
-  /**
-   * A step of a sale.
-   *
-   * <p>{@code orderStatus} is the status at the time of writing, and is what lets the client tell
-   * the one live card from the history above it — the event matching the order's current status is
-   * the step being waited on, and only that one is drawn with a button.
-   */
   public static ThreadItem event(
       UUID conversationId, UUID orderId, String eventType, String orderStatus) {
     ThreadItem item = new ThreadItem();

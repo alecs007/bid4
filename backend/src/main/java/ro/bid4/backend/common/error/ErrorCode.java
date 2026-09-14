@@ -2,13 +2,6 @@ package ro.bid4.backend.common.error;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Every failure the API can name, with the status it answers and the Romanian sentence the user
- * reads. Messages state the fact and never apologise, matching the frontend's voice.
- *
- * <p>The codes are the contract: the frontend switches on them, so INVALID_CREDENTIALS,
- * ACCOUNT_SUSPENDED, EMAIL_TAKEN and TERMS_REQUIRED must keep their spelling.
- */
 public enum ErrorCode {
   VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "Verifică datele completate."),
   MALFORMED_REQUEST(HttpStatus.BAD_REQUEST, "Cererea nu a putut fi citită."),
@@ -31,8 +24,6 @@ public enum ErrorCode {
       HttpStatus.BAD_REQUEST,
       "Contul folosit nu are o adresă de email confirmată. Încearcă altă metodă."),
 
-  // The catalogue's refusals. The frontend switches on these spellings, and they
-  // match the codes the mock layer has been raising all along.
   AUCTION_NOT_LIVE(HttpStatus.BAD_REQUEST, "Licitația nu mai acceptă oferte."),
   BID_TOO_LOW(HttpStatus.BAD_REQUEST, "Oferta este mai mică decât minimul acceptat."),
   BID_TOO_HIGH(HttpStatus.BAD_REQUEST, "Oferta depășește maximul acceptat."),

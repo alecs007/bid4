@@ -59,21 +59,12 @@ import ro.bid4.backend.orders.service.OrderService;
 import ro.bid4.backend.orders.service.ShippingPrices;
 import ro.bid4.backend.security.jwt.JwtService;
 
-/**
- * A sale, from the seller taking an offer to the money being released — and the thread it writes
- * itself into on the way.
- *
- * <p>The two halves are checked together on purpose. A step that moves the row without appearing in
- * the conversation is a step neither party can see happened, and a card that appears without the
- * row having moved is a button that does nothing.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class OrderFlowTest {
-
   private static final long LEU = 100;
 
   @Autowired private OfferService offers;
@@ -103,8 +94,6 @@ class OrderFlowTest {
     buyerLocker = locker(buyer.getId());
   }
 
-  /* --- opening ------------------------------------------------------------ */
-
   @Test
   @DisplayName("accepting an offer opens the sale and says so in the thread")
   void acceptanceOpensTheOrder() {
@@ -120,8 +109,6 @@ class OrderFlowTest {
     ThreadItemResponse card = newestEvent(listing);
     assertThat(card.kind()).isEqualTo(ThreadItemKind.EVENT);
     assertThat(card.eventType()).isEqualTo("OFFER_ACCEPTED");
-    // The status the order was in when the card was written, which is what makes
-    // it the live one until the sale moves on.
     assertThat(card.orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
     assertThat(card.payload()).containsEntry("price", String.valueOf(200 * LEU));
   }
@@ -135,8 +122,6 @@ class OrderFlowTest {
     Fees.Breakdown expected = Fees.compute(200 * LEU, listing.getDonationPercent(), 0);
     assertThat(order.getFinalPrice()).isEqualTo(expected.finalPrice());
     assertThat(order.getPlatformTax()).isEqualTo(expected.buyerTax());
-    // Nothing is taken out between the cause and the seller: bid4's cut rides
-    // on the buyer's side, so the price divides in two rather than in three.
     assertThat(order.getDonationAmount() + order.getSellerShare()).isEqualTo(order.getFinalPrice());
   }
 
@@ -149,8 +134,6 @@ class OrderFlowTest {
 
     assertThat(again.getId()).isEqualTo(first.getId());
   }
-
-  /* --- whose turn it is --------------------------------------------------- */
 
   @Test
   @DisplayName("the seller cannot choose the buyer's delivery, and cannot pay for them")
@@ -211,8 +194,6 @@ class OrderFlowTest {
         .hasMessageContaining("nu a fost găsită");
   }
 
-  /* --- the whole way through ---------------------------------------------- */
-
   @Test
   @DisplayName("a sale walks from acceptance to release, one card per step, in order")
   void theWholeJourney() {
@@ -232,7 +213,6 @@ class OrderFlowTest {
 
     orders.markDroppedOff(order.getId(), viewer(seller));
 
-    // The courier's, not a button: neither party may claim a parcel moved.
     orders.recordTracking(
         order.getId(), OrderStatus.DELIVERED, "Livrat în easybox", "București", "scan-1");
     assertThat(reload(order).getAutoReleaseAt()).isNotNull();
@@ -243,7 +223,6 @@ class OrderFlowTest {
     assertThat(finished.getReleasedAt()).isNotNull();
     assertThat(finished.getAutoReleaseAt()).isNull();
 
-    // Oldest first, which is how the thread is drawn.
     List<String> steps =
         inbox.thread(conversationId(listing), viewer(buyer)).items().stream()
             .filter(item -> item.kind() == ThreadItemKind.EVENT)
@@ -320,7 +299,6 @@ class OrderFlowTest {
 
     Order disputed = reload(order);
     assertThat(disputed.getStatus()).isEqualTo(OrderStatus.DISPUTE_OPEN);
-    // And nothing releases it on the buyer's behalf while it is open.
     assertThat(disputed.getConfirmationDeadline()).isNull();
 
     disputed.setAutoReleaseAt(Instant.now().minus(Duration.ofMinutes(1)));
@@ -351,8 +329,6 @@ class OrderFlowTest {
     orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-refund");
     orders.openDispute(order.getId(), "Deteriorat", viewer(buyer));
 
-    // Deltas, not totals: the platform accounts are shared and the other tests
-    // in this class leave their own money in them.
     long escrowBefore = balanceOf(AccountKind.PLATFORM_ESCROW);
     long sellerBefore = balanceOfUser(seller.getId());
 
@@ -360,8 +336,6 @@ class OrderFlowTest {
 
     Order refunded = reload(order);
     assertThat(refunded.getStatus()).isEqualTo(OrderStatus.REFUNDED);
-    // The whole amount leaves escrow, and nobody's balance moved: a refund is
-    // never a division.
     assertThat(escrowBefore - balanceOf(AccountKind.PLATFORM_ESCROW))
         .isEqualTo(refunded.getTotalPaid());
     assertThat(balanceOfUser(seller.getId())).isEqualTo(sellerBefore);
@@ -377,8 +351,6 @@ class OrderFlowTest {
     orders.recordTracking(order.getId(), OrderStatus.DELIVERED, "Livrat", null, "scan-release");
     orders.openDispute(order.getId(), "Întârziere", viewer(buyer));
 
-    // Deltas, not totals: the platform accounts are shared and the other tests
-    // in this class leave their own money in them.
     long escrowBefore = balanceOf(AccountKind.PLATFORM_ESCROW);
     long sellerBefore = balanceOfUser(seller.getId());
 
@@ -448,8 +420,6 @@ class OrderFlowTest {
     Auction listing = liveListing();
     Order order = accept(listing, 100 * LEU);
 
-    // Nothing agreed to yet: accepting an offer is the seller's act, and the
-    // buyer has not been shown a total.
     assertThat(orders.agreementsFor(order.getId(), viewer(buyer))).isEmpty();
 
     orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
@@ -462,12 +432,9 @@ class OrderFlowTest {
         .extracting(OrderAgreement::getKind)
         .containsExactlyInAnyOrder(
             AgreementKind.SALE, AgreementKind.PAYMENT, AgreementKind.SHIPPING);
-    // The buyer promises two of them, the seller one.
     assertThat(agreed).filteredOn(row -> row.getUserId().equals(buyer.getId())).hasSize(2);
     assertThat(agreed).allSatisfy(row -> assertThat(row.getTermsVersion()).isNotBlank());
   }
-
-  /* --- the money ---------------------------------------------------------- */
 
   @Test
   @DisplayName("paying puts the whole amount in escrow and nothing in anybody's balance")
@@ -477,8 +444,6 @@ class OrderFlowTest {
     orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
 
     long escrowBefore = ledger.platform(AccountKind.PLATFORM_ESCROW).getBalance();
-    // Deltas, not absolutes: the seller and the cause are shared by every test
-    // in this class, so what matters is that paying moved nothing into either.
     long sellerBefore = ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId());
     long causeBefore = ledger.balanceOf(AccountKind.CAUSE_AVAILABLE, approved.getId());
 
@@ -487,8 +452,6 @@ class OrderFlowTest {
 
     assertThat(ledger.platform(AccountKind.PLATFORM_ESCROW).getBalance())
         .isEqualTo(escrowBefore + paid.getTotalPaid());
-    // Not a leu of it is the seller's yet. That is what escrow means, and it is
-    // the promise the listing page makes.
     assertThat(ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId()))
         .isEqualTo(sellerBefore);
     assertThat(ledger.balanceOf(AccountKind.CAUSE_AVAILABLE, approved.getId()))
@@ -539,7 +502,6 @@ class OrderFlowTest {
 
     long sellerAfterFirst = ledger.balanceOf(AccountKind.USER_AVAILABLE, seller.getId());
 
-    // The scheduled release runs over an order a buyer has already confirmed.
     Order done = reload(order);
     done.setStatus(OrderStatus.DELIVERED);
     done.setAutoReleaseAt(Instant.now().minus(Duration.ofMinutes(1)));
@@ -550,16 +512,12 @@ class OrderFlowTest {
         .isEqualTo(sellerAfterFirst);
   }
 
-  /* --- reading them back --------------------------------------------------- */
-
   @Test
   @DisplayName("A party can list their own sales, narrowed to the side they asked for")
   void bothSidesCanListTheirOwnSales() {
     Auction listing = liveListing();
     accept(listing, 200 * LEU);
 
-    // The route did not exist at all, so both order screens asked for a list
-    // and got a 404 while the database held the sales they were asking about.
     assertThat(orders.forParty("BUYER", viewer(buyer)))
         .extracting(Order::getAuctionId)
         .contains(listing.getId());
@@ -567,12 +525,9 @@ class OrderFlowTest {
         .extracting(Order::getAuctionId)
         .contains(listing.getId());
 
-    // Narrowed by side: what a buyer owes and what a seller is owed are two
-    // different lists, and two different screens.
     assertThat(orders.forParty("SELLER", viewer(buyer))).isEmpty();
     assertThat(orders.forParty("BUYER", viewer(seller))).isEmpty();
 
-    // And with no role, both sides of everything they are party to.
     assertThat(orders.forParty(null, viewer(buyer))).isNotEmpty();
   }
 
@@ -582,8 +537,6 @@ class OrderFlowTest {
     Auction listing = liveListing();
     Order order = accept(listing, 200 * LEU);
 
-    // The response was flat while the frontend type claimed nested objects, so
-    // every order screen worked against the mock world and threw against this.
     var response = mapper.toResponse(reload(order));
     assertThat(response.auction()).isNotNull();
     assertThat(response.auction().title()).isEqualTo(listing.getTitle());
@@ -595,15 +548,6 @@ class OrderFlowTest {
     assertThat(response.cause().name()).isEqualTo(approved.getName());
   }
 
-  /**
-   * The two order routes, over HTTP, as a party.
-   *
-   * <p>Through MockMvc rather than the service, because the bug these exist for was in neither: the
-   * mapper read {@code Auction.images}, a lazy collection, after the transaction had closed, so
-   * Jackson threw LazyInitializationException halfway through writing the body. Every order screen
-   * got a 500 and rendered an empty page. A service-level assertion cannot see it — only something
-   * that serialises the response can.
-   */
   @Test
   @DisplayName("Both order routes serialise, summaries and all")
   void theOrderRoutesSerialise() throws Exception {
@@ -622,13 +566,10 @@ class OrderFlowTest {
         .andExpect(jsonPath("$.auction.images").isArray())
         .andExpect(jsonPath("$.reference").value(order.getReference()));
 
-    // The other side sees it too, and a stranger does not.
     mvc.perform(get("/orders").header(HttpHeaders.AUTHORIZATION, bearer(seller)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].reference").value(order.getReference()));
   }
-
-  /* --- fixtures ----------------------------------------------------------- */
 
   private Order accept(Auction listing, long price) {
     Bid offer = bid(listing, price);
@@ -703,7 +644,6 @@ class OrderFlowTest {
     return Viewer.of(account.getId(), false);
   }
 
-  /** Somebody from the bid4 team, which is the only kind of viewer that may settle a dispute. */
   private static Viewer staff() {
     return Viewer.of(UUID.randomUUID(), true);
   }

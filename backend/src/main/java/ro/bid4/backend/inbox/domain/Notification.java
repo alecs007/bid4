@@ -15,23 +15,11 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * A pointer, not a copy.
- *
- * <p>Almost everything worth telling somebody has already happened somewhere else — in a thread, on
- * a listing, on a cause. A notification that carried its own version of the news would be a second
- * source of truth, and the two would drift the first time the wording changed. What is stored is a
- * type, the few values its sentence needs, and where to go.
- *
- * <p>{@code deepLink} is checked to be relative in the schema. An absolute URL here is an open
- * redirect the moment anything but us writes one.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "notifications")
 public class Notification {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

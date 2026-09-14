@@ -15,17 +15,8 @@ import ro.bid4.backend.inbox.api.dto.NotificationResponse;
 import ro.bid4.backend.inbox.domain.Notification;
 import ro.bid4.backend.inbox.repo.NotificationRepository;
 
-/**
- * The other tab.
- *
- * <p>Writing one is a method rather than an endpoint. Everything that deserves a notification
- * happens because something else happened — an offer accepted, a cause approved, a parcel scanned —
- * so the code that did that thing calls {@link #notify}, and there is no route by which anybody can
- * put a line in somebody else's list.
- */
 @Service
 public class NotificationService {
-
   private static final int PAGE = 25;
 
   private final NotificationRepository notifications;
@@ -47,7 +38,6 @@ public class NotificationService {
   @Transactional
   public CursorPage<NotificationResponse> list(String cursor, Viewer viewer) {
     UUID me = required(viewer);
-    // Neither half is ever empty. See Welcome.
     if (cursor == null) {
       welcome.ensureFor(me);
     }
@@ -68,7 +58,6 @@ public class NotificationService {
             : null);
   }
 
-  /** Addressed by user as well as by id, so one account cannot mark another's as read. */
   @Transactional
   public void markRead(UUID id, Viewer viewer) {
     UUID me = required(viewer);
@@ -83,17 +72,9 @@ public class NotificationService {
     events.unreadChanged(me);
   }
 
-  /**
-   * Tells somebody something happened.
-   *
-   * <p>{@code deepLink} is where it happened, always relative — the schema refuses anything else,
-   * because an absolute URL written here would be an open redirect the first time something other
-   * than this application wrote one.
-   */
   @Transactional
   public Notification notify(
       UUID userId, String type, Map<String, String> payload, String deepLink) {
-
     Notification saved = notifications.save(Notification.of(userId, type, payload, deepLink));
     events.notified(userId, saved.getId());
     return saved;

@@ -42,10 +42,6 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
   { value: "SETTLED", label: "Finalizate" },
 ];
 
-/**
- * "Deschis" is the only honest word for a listing with no clock: it is taking offers. RESERVED
- * sits under "finalizate" with SOLD, because from a reader's side the item is spoken for.
- */
 const STATUS_MAP: Record<StatusFilter, AuctionStatus[] | undefined> = {
   ALL: undefined,
   OPEN: ["LIVE"],
@@ -79,8 +75,6 @@ function CauseHead({ cause }: { cause: CauseDetail }) {
         {frames.length > 1 ? (
           <div
             data-lenis-prevent
-            /* overflow-x-auto clips on both axes and the selected ring is drawn
-               outside its box — hence the padding and matching negative margin. */
             className="-mx-4 mt-2 flex gap-2.5 overflow-x-auto px-4 py-1 sm:-mx-1 sm:px-1"
           >
             {frames.map((frame, index) => (
@@ -190,9 +184,6 @@ export function CauseDetailView({ slug }: { slug: string }) {
     error,
   } = useApi(() => getCause(slug), `cause:${slug}`);
 
-  // Twelve at a time, then more as the reader nears the end of them. A cause
-  // that caught on has hundreds of listings against it, and asking for
-  // twenty-four of them to show four was the wrong request either way.
   const auctions = useApiPages(
     (page) =>
       listAuctions(

@@ -23,23 +23,10 @@ import type {
 import { currentMockUserId } from "./auth";
 import { http } from "./http";
 
-/**
- * The inbox.
- *
- * TODO(backend): the real endpoints are live — /inbox/conversations, /inbox/notifications,
- * /inbox/unread and the SSE stream at /inbox/stream. What is still to come is phase two, when an
- * accepted offer writes EVENT items into the same thread and the deal is driven from inside it.
- *
- * The mock keeps its own conversations in localStorage so the Vercel demo can hold a conversation
- * with itself. It reproduces the two rules the server enforces rather than only the happy path:
- * a thread is opened from a listing and never from a person, and a message that hands over a phone
- * number is delivered and marked rather than dropped.
- */
-
+// TODO(backend): phase two — an accepted offer writes EVENT items into the same thread.
 const LIST_PAGE = 20;
 const THREAD_PAGE = 30;
 
-/** GET /inbox/conversations */
 export async function listConversations(
   cursor?: string,
   archived = false,
@@ -58,8 +45,6 @@ export async function listConversations(
   if (!cursor && !archived) ensureWelcome(me);
   const world = getWorld();
 
-  // bid4's own thread first, then everything else by when it last moved. The
-  // server pins it the same way and for the same reason — see InboxService.list.
   const rows = world.conversations
     .filter((item) => item.buyerId === me || item.sellerId === me)
     .filter((item) => Boolean(item.archived) === archived)
@@ -78,7 +63,6 @@ export async function listConversations(
   };
 }
 
-/** GET /inbox/conversations/{id} */
 export async function getThread(conversationId: ID): Promise<Thread> {
   if (!USE_MOCK) return http<Thread>(`/inbox/conversations/${conversationId}`);
 
@@ -94,7 +78,6 @@ export async function getThread(conversationId: ID): Promise<Thread> {
   };
 }
 
-/** GET /inbox/conversations/{id}/items */
 export async function listItems(
   conversationId: ID,
   cursor?: string,
@@ -120,13 +103,6 @@ export async function listItems(
   };
 }
 
-/**
- * POST /inbox/conversations
- *
- * Opens the thread about a listing, or hands back the one already there — asking a second question
- * is not a second conversation. A buyer does not have to have bid: a question is how bidding
- * starts.
- */
 export async function openThread(
   listingId: ID,
   message?: string,
@@ -172,7 +148,6 @@ export async function openThread(
   return getThread(conversation.id);
 }
 
-/** POST /inbox/conversations/{id}/items */
 export async function sendMessage(
   conversationId: ID,
   input: SendMessageInput,
@@ -197,7 +172,6 @@ export async function sendMessage(
   return item;
 }
 
-/** PUT /inbox/conversations/{id}/read */
 export async function markThreadRead(conversationId: ID): Promise<void> {
   if (!USE_MOCK) {
     await http<void>(`/inbox/conversations/${conversationId}/read`, {
@@ -213,7 +187,6 @@ export async function markThreadRead(conversationId: ID): Promise<void> {
   commit();
 }
 
-/** PUT|DELETE /inbox/conversations/{id}/archive */
 export async function setArchived(
   conversationId: ID,
   archived: boolean,
@@ -231,7 +204,6 @@ export async function setArchived(
   commit();
 }
 
-/** GET /inbox/notifications */
 export async function listNotifications(
   cursor?: string,
 ): Promise<CursorPage<Notification>> {
@@ -252,7 +224,6 @@ export async function listNotifications(
   return { items: rows.map(stripOwner), nextCursor: undefined };
 }
 
-/** PUT /inbox/notifications/read */
 export async function markNotificationsRead(id?: ID): Promise<void> {
   if (!USE_MOCK) {
     await http<void>(
@@ -271,12 +242,6 @@ export async function markNotificationsRead(id?: ID): Promise<void> {
   commit();
 }
 
-/**
- * POST /inbox/stream/ticket
- *
- * Single-use, thirty seconds. EventSource cannot send an Authorization header, so the stream is
- * opened with this instead of with the access token — which has no business in a URL.
- */
 export async function streamTicket(): Promise<string | null> {
   if (USE_MOCK) return null;
   const { ticket } = await http<{ ticket: string }>("/inbox/stream/ticket", {
@@ -285,7 +250,6 @@ export async function streamTicket(): Promise<string | null> {
   return ticket;
 }
 
-/** GET /inbox/unread */
 export async function getUnreadCounts(): Promise<UnreadCounts> {
   if (!USE_MOCK) return http<UnreadCounts>("/inbox/unread");
 
@@ -306,21 +270,11 @@ export async function getUnreadCounts(): Promise<UnreadCounts> {
   };
 }
 
-/* --- the mock's own half ---------------------------------------------------- */
-
-/** Word for word what `Welcome.java` writes, so the demo says what the real thing says. */
 const WELCOME =
   "Bun venit pe bid4! În această conversație ne poți adresa orice întrebare despre platformă, " +
   "licitații sau comenzi. Echipa bid4 îți stă la dispoziție și îți va răspunde în cel mai scurt " +
   "timp.";
 
-/**
- * Neither half of the inbox is ever empty, exactly as on the server.
- *
- * <p>Written on first read rather than when the world is seeded, because a world seeded before this
- * existed still has to get it — and because it is the same shape the server uses, which is what
- * keeps the demo honest about what the real thing does.
- */
 function ensureWelcome(me: ID): void {
   const world = getWorld();
 
@@ -361,16 +315,10 @@ function ensureWelcome(me: ID): void {
   commit();
 }
 
-/**
- * The same check the server makes, and for the same reason: a conversation id names something that
- * may or may not be any of the reader's business, so it is never enough on its own.
- */
 function mine(conversationId: ID, me: ID) {
   const conversation = getWorld().conversations.find(
     (item) => item.id === conversationId,
   );
-  // Not "forbidden": a refusal that tells them the id is real is a refusal
-  // worth probing.
   if (
     !conversation ||
     (conversation.buyerId !== me && conversation.sellerId !== me)
@@ -406,8 +354,6 @@ function append(
 
   world.threadItems.push(item);
   conversation.lastItemAt = at;
-  // Nobody to count it against on a support thread, where the other side is
-  // bid4 rather than a member.
   const other =
     conversation.buyerId === senderId
       ? conversation.sellerId
@@ -450,10 +396,6 @@ function decorate(conversation: MockConversation, me: ID): Conversation {
   };
 }
 
-/**
- * The same blunt check the server runs, kept in step with it deliberately: the demo has to behave
- * like the thing it is demonstrating, and the warning banner is the point rather than the regex.
- */
 function offPlatform(body: string): FlaggedReason | undefined {
   if (!body) return undefined;
   if (/\bRO ?\d{2}(?: ?[A-Z0-9]){16,20}\b/i.test(body)) return "PAYMENT_DETAILS";
@@ -465,7 +407,6 @@ function offPlatform(body: string): FlaggedReason | undefined {
   return undefined;
 }
 
-/** The wire shape has no owner on it: the reader is the owner, or they would not have it. */
 function stripOwner(row: MockNotification): Notification {
   return {
     id: row.id,
@@ -479,24 +420,19 @@ function stripOwner(row: MockNotification): Notification {
 
 function currentMockUser(): ID {
   const id = currentMockUserId();
-  // The inbox exists only for somebody. Reading it as nobody is a bug in the
-  // caller, not an empty list.
   if (!id) notFound("Conversația");
   return id;
 }
 
-/** What the mock world stores, which carries the two sides the wire shape hides. */
 export interface MockConversation {
   id: ID;
   kind: "LISTING" | "SUPPORT";
   listingId?: ID;
   buyerId: ID;
-  /** Absent on a support thread: the other side is bid4, which is not a member. */
   sellerId?: ID;
   orderId?: ID;
   archived: boolean;
   muted: boolean;
-  /** Per participant, because "unread" is not a property of the thread. */
   unread: Record<ID, number>;
   lastItemAt: string;
 }

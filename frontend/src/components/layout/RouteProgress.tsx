@@ -3,19 +3,12 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Prefetched routes land in a few ms; only a slower hop earns a progress bar. */
 const SHOW_AFTER_MS = 160;
-/** If a navigation never lands (blocked, cancelled), stop pretending. */
 const SAFETY_MS = 8000;
-/** How long the bar sits at 100% before it fades out. */
 const FINISH_MS = 260;
 
 type Phase = "idle" | "loading" | "done";
 
-/**
- * Next's `useLinkStatus` only sees its own link, so this listens for internal link
- * clicks and back/forward instead, and closes out when the pathname changes.
- */
 export function RouteProgress() {
   const pathname = usePathname();
   const [phase, setPhase] = useState<Phase>("idle");
@@ -62,7 +55,6 @@ export function RouteProgress() {
       if (!href || href.startsWith("#")) return;
 
       const url = new URL(anchor.href, window.location.href);
-      // Same page, or off to another origin: no route change to wait for.
       if (url.origin !== window.location.origin) return;
       if (url.pathname === window.location.pathname) return;
 
@@ -80,7 +72,6 @@ export function RouteProgress() {
 
   const landed = useRef(false);
   useEffect(() => {
-    // Skip the first run: the initial render is not a navigation.
     if (!landed.current) {
       landed.current = true;
       return;
@@ -108,10 +99,6 @@ export function RouteProgress() {
   );
 }
 
-/**
- * Transitions rather than keyframes: a navigation that lands early interpolates
- * from wherever the creep had got to instead of jumping to the end.
- */
 function Bar({ done }: { done: boolean }) {
   const [grown, setGrown] = useState(false);
 

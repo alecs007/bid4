@@ -20,16 +20,8 @@ import ro.bid4.backend.inbox.domain.Notification;
 import ro.bid4.backend.inbox.domain.ThreadItem;
 import ro.bid4.backend.storage.service.MediaUrls;
 
-/**
- * Rows into what a screen can draw.
- *
- * <p>Everything here takes a whole page at once and looks its joins up in bulk. A mapper that took
- * one row would be correct and would turn a twenty-row inbox into forty-one queries, which is the
- * shape this list would fail in first.
- */
 @Service
 public class InboxMapper {
-
   private final AuctionRepository auctions;
   private final UserMapper users;
 
@@ -57,18 +49,11 @@ public class InboxMapper {
         item.getCreatedAt());
   }
 
-  /**
-   * A page of the inbox.
-   *
-   * <p>Three lookups for any number of rows: the listings, the people on the other side, and the
-   * newest item in each thread.
-   */
   public List<ConversationSummary> toSummaries(
       List<Conversation> conversations,
       Map<UUID, ConversationParticipant> membership,
       Map<UUID, ThreadItem> newestItems,
       UUID viewerId) {
-
     Map<UUID, Auction> listings = listingsFor(conversations);
     Map<UUID, PublicUserResponse> parties =
         users.publicUsersById(
@@ -86,8 +71,6 @@ public class InboxMapper {
                     membership.get(conversation.getId()),
                     newestItems.get(conversation.getId()),
                     listings.get(conversation.getListingId()),
-                    // A support thread has nobody on the other side, and an
-                    // immutable map throws rather than answering for a null key.
                     partyOrNull(parties, otherPartyId(conversation, viewerId)),
                     viewerId))
         .toList();
@@ -100,7 +83,6 @@ public class InboxMapper {
       Auction listing,
       PublicUserResponse otherParty,
       UUID viewerId) {
-
     return new ConversationSummary(
         conversation.getId(),
         conversation.getKind(),
@@ -120,7 +102,6 @@ public class InboxMapper {
         conversation.getLastItemAt());
   }
 
-  /** One person, when a page needs only the one — the thread head, not the list. */
   public PublicUserResponse publicUser(UUID userId) {
     return users.publicUsersById(List.of(userId)).get(userId);
   }
@@ -135,12 +116,6 @@ public class InboxMapper {
         notification.getCreatedAt());
   }
 
-  /**
-   * Whom the reader is talking to.
-   *
-   * <p>The list shows one name, not two: the reader is always one of the parties, and a row that
-   * made them work out which of the two names is theirs is a row nobody scans.
-   */
   private static PublicUserResponse partyOrNull(Map<UUID, PublicUserResponse> parties, UUID id) {
     return id == null ? null : parties.get(id);
   }

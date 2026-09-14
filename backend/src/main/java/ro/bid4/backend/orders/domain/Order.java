@@ -16,26 +16,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One sale, from the moment an offer is taken.
- *
- * <p>This row is the authority. A thread item says a step happened; this says what may happen now,
- * and every button either party is offered is derived from {@link #status} together with which of
- * them is asking. Nothing in a conversation can move a sale.
- *
- * <p>The money is frozen at acceptance and never recalculated. The fee schedule will change; a sale
- * that closed under the old one must not quietly restate itself under the new.
- *
- * <p>{@code version} rather than a row lock, because the transitions that matter will each end in a
- * call to a payment provider, and holding a database lock across that is how a slow third party
- * becomes a stuck table.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "orders")
 public class Order {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -81,7 +66,6 @@ public class Order {
   @Column(name = "seller_share", nullable = false, updatable = false)
   private long sellerShare;
 
-  /** Copied at confirmation, not referenced: the saved address may be edited or deleted after. */
   @Embedded private DeliverySnapshot delivery;
 
   @Column private String awb;
@@ -100,12 +84,6 @@ public class Order {
   @Column(name = "payment_failure_reason")
   private String paymentFailureReason;
 
-  /**
-   * The provider's own id for the checkout, and which provider it was.
-   *
-   * <p>A callback names its session rather than our order, so without these a payment can only be
-   * believed. Null for sales opened before a provider existed.
-   */
   @Column(name = "payment_reference")
   private String paymentReference;
 

@@ -1,6 +1,5 @@
 package ro.bid4.backend.cause.domain;
 
-/** Evidence for the story itself, as opposed to evidence of who someone is. */
 public enum CauseEvidenceType {
   MEDICAL_RECORD,
   MEDICAL_LETTER,

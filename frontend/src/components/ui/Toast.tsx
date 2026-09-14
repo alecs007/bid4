@@ -103,11 +103,9 @@ const CHIP_SOLID: Record<Tone, string> = {
   neutral: "bg-ink-700 text-white",
 };
 
-/** How long a notice stands when nothing says otherwise, and how long it takes to leave. */
 const DEFAULT_DURATION_MS = 4500;
 const LEAVE_MS = 320;
 
-/** The countdown bar, in the tone's own ink rather than the pale chip behind it. */
 const BAR_SOFT: Record<Tone, string> = {
   primary: "bg-primary-500",
   accent: "bg-accent-500",
@@ -176,29 +174,18 @@ function ToastCard({
     return () => window.clearTimeout(timeout);
   }, [leaving, id, onDismiss]);
 
-  // A title-only toast is shorter than its own icon, so only stack when there is
-  // something under the title to stack against.
   const stacked = Boolean(description || action);
 
   return (
-    // The height is the stack's business: opened by a grid row so a new notice
-    // pushes the ones above it rather than appearing under them, and closed the
-    // same way so the gap it leaves shuts behind it. The spacing lives inside
-    // the row, because a `gap` on the column would outlive the row that closed.
     <div
       className={cn(
         "grid w-full max-w-sm",
         leaving
           ? "animate-toast-close"
           : // motion-reduce keeps the base 1fr: the height is what makes the
-            // notice visible at all, and it must not depend on an animation
-            // that somebody has asked not to run.
             "animate-toast-open grid-rows-[1fr] motion-reduce:animate-none",
       )}
     >
-      {/* The clip is what closes the row, and it was cropping the shadow off
-          the card inside it. The padding is that shadow's room, and it belongs
-          in here rather than on the column so it closes along with the row. */}
       <div className="overflow-hidden">
         <div className="px-1.5 pt-2 pb-1.5">
           <div
@@ -225,9 +212,6 @@ function ToastCard({
               {icon ?? DEFAULT_ICONS[tone]}
             </span>
             <div className="min-w-0 flex-1">
-              {/* Both lines on leading-snug. The title was on the default 1.5,
-                  which put 8px of half-leading under a 16px line and read as a
-                  gap somebody had asked for. */}
               <p className="font-display leading-snug font-bold text-ink-900">
                 {title}
               </p>
@@ -261,10 +245,6 @@ function ToastCard({
               <Icons.close aria-hidden="true" className="h-4 w-4 shrink-0" />
             </button>
 
-            {/* How long it has left, and the clock itself: the bar's own end is
-              what dismisses the notice, so the two can never disagree. Holding
-              a pointer over it pauses the animation, which pauses the notice —
-              nothing is counting down in JavaScript beside it. */}
             <span
               aria-hidden="true"
               className="absolute inset-x-4 bottom-2 h-1 overflow-hidden rounded-full bg-ink-100"

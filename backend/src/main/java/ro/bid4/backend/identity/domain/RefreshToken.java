@@ -18,20 +18,11 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * One issued refresh token, stored as a SHA-256 hash.
- *
- * <p>The token itself is shown to its owner once and never persisted, so a dump of this table
- * grants nothing. Tokens rotate on every use: the old row records what it was exchanged for, which
- * turns a replay of an already-spent token into detectable theft rather than a silent second
- * session.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshToken {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -47,13 +38,6 @@ public class RefreshToken {
   @Column(name = "issued_at", nullable = false, updatable = false)
   private Instant issuedAt = Instant.now();
 
-  /**
-   * When the first token in this chain was issued, carried unchanged through every rotation.
-   *
-   * <p>expires_at moves forward on each exchange, which is what keeps an active session alive. This
-   * does not, which is what eventually ends one: past bid4.jwt.absolute-refresh-ttl measured from
-   * here, the chain is refused however recently it was used.
-   */
   @Column(name = "family_started_at", nullable = false, updatable = false)
   private Instant familyStartedAt = Instant.now();
 
@@ -69,10 +53,6 @@ public class RefreshToken {
   @Column(name = "user_agent")
   private String userAgent;
 
-  /**
-   * Postgres inet, not text. The column type is itself a validation: the database refuses anything
-   * that is not an address. SqlTypes.INET is what makes Hibernate bind the parameter as one.
-   */
   @JdbcTypeCode(SqlTypes.INET)
   @Column(name = "ip", columnDefinition = "inet")
   private String ip;
@@ -81,7 +61,6 @@ public class RefreshToken {
     return revokedAt == null && rotatedTo == null && expiresAt.isAfter(now);
   }
 
-  /** Whether the chain has outlived its absolute ceiling, however recently it was exchanged. */
   public boolean familyExpired(Instant now, Duration absoluteTtl) {
     return familyStartedAt.plus(absoluteTtl).isBefore(now);
   }

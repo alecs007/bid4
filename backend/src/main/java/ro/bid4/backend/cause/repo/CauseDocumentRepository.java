@@ -7,6 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ro.bid4.backend.cause.domain.CauseDocument;
 
 public interface CauseDocumentRepository extends JpaRepository<CauseDocument, UUID> {
-
   List<CauseDocument> findByCauseIdInOrderByUploadedAtAsc(Collection<UUID> causeIds);
 }

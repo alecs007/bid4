@@ -15,10 +15,8 @@ import ro.bid4.backend.identity.repo.EmailVerificationTokenRepository;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.security.jwt.JwtService;
 
-/** Issues and redeems the link that proves an address belongs to whoever typed it. */
 @Service
 public class EmailVerificationService {
-
   private static final int TOKEN_BYTES = 32;
 
   private final EmailVerificationTokenRepository tokens;
@@ -41,7 +39,6 @@ public class EmailVerificationService {
     this.properties = properties;
   }
 
-  /** Retires any earlier link, stores the new one as a hash, and mails the raw value. */
   @Transactional
   public void issue(UserAccount user) {
     Instant now = Instant.now();
@@ -61,13 +58,6 @@ public class EmailVerificationService {
     mailer.sendVerification(user.getEmail(), user.getDisplayName(), raw);
   }
 
-  /**
-   * Redeems a link.
-   *
-   * <p>Idempotent by design: confirming an address that is already confirmed succeeds quietly. Mail
-   * clients prefetch links, so the same token can legitimately arrive twice, and a second visit
-   * showing an error would read as a broken link.
-   */
   @Transactional
   public void confirm(String rawToken) {
     if (rawToken == null || rawToken.isBlank()) {
@@ -88,8 +78,6 @@ public class EmailVerificationService {
     if (!token.isUsable(now)) {
       throw new ApiException(ErrorCode.VERIFICATION_LINK_INVALID);
     }
-    // The address moved after the link was sent, so this link proves nothing
-    // about the address the account now carries.
     if (!token.getEmail().equals(user.getEmail())) {
       throw new ApiException(ErrorCode.VERIFICATION_LINK_INVALID);
     }
@@ -98,13 +86,6 @@ public class EmailVerificationService {
     user.setEmailVerifiedAt(now);
   }
 
-  /**
-   * Sends another link.
-   *
-   * <p>Answers the same way whether or not the address exists — asking to resend must not become a
-   * way to discover who has an account. The cooldown is what stops it becoming a way to send mail
-   * to someone else repeatedly.
-   */
   @Transactional
   public void resend(String rawEmail) {
     String email = rawEmail == null ? "" : rawEmail.trim().toLowerCase(java.util.Locale.ROOT);

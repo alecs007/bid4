@@ -7,21 +7,11 @@ import { shippingPriceFor, snapshotDelivery } from "./delivery";
 import { CACHE_KEYS, invalidateCache } from "@/lib/api/cache";
 import { createWorld, type World } from "./seed";
 
-/**
- * One module-level world, hydrated from localStorage so a placed bid survives a
- * refresh; on the server it is rebuilt per process, which is fine because every
- * mutable screen fetches through a client component.
- *
- * `syncWorld()` runs before every read and write, walking the orders forward. Listings have no
- * clock of their own to walk — one moves only when its seller acts on it.
- */
-
 let world: World | null = null;
 let lastSync = 0;
 
 interface PersistedWorld {
   version: number;
-  /** When the world was first seeded, used for the freshness check. */
   seededAt: number;
   world: World;
 }
@@ -44,7 +34,6 @@ function loadPersisted(): World | null {
     seededAt = parsed.seededAt;
     return parsed.world;
   } catch {
-    // Corrupt or unavailable storage is not worth crashing the app over.
     return null;
   }
 }
@@ -63,12 +52,10 @@ function persist(): void {
       };
       window.localStorage.setItem(MOCK.STORAGE_KEY, JSON.stringify(payload));
     } catch {
-      // Quota exceeded — the demo still works, it just will not survive reload.
     }
   }, 250);
 }
 
-/** Wipes the persisted world and reseeds. Exposed through the dev tools. */
 export function resetWorld(): void {
   world = createWorld();
   seededAt = Date.now();
@@ -92,7 +79,6 @@ export function getWorld(): World {
   return world;
 }
 
-/** Persist after any mutation. Call at the end of every mock write. */
 export function commit(): void {
   persist();
 }
@@ -161,8 +147,6 @@ export function pushEvent(
   order.status = status;
 }
 
-// The clock: everything that happens without a user pressing anything.
-
 function secondsSince(iso: string | undefined): number {
   if (!iso) return Number.POSITIVE_INFINITY;
   return (Date.now() - Date.parse(iso)) / 1000;
@@ -173,7 +157,6 @@ function lastEventAt(order: Order): string | undefined {
   return events[events.length - 1]?.at;
 }
 
-/** Releases escrow. The single place where `raisedAmount` moves. */
 function releaseFunds(current: World, order: Order): void {
   const cause = current.causes.find((item) => item.id === order.causeId);
   if (cause) {
@@ -187,7 +170,6 @@ function releaseFunds(current: World, order: Order): void {
   }
 
   order.releasedAt = new Date().toISOString();
-  // The public totals just moved.
   invalidateCache(CACHE_KEYS.platformStats);
 
   const buyerName =
@@ -223,16 +205,6 @@ function releaseFunds(current: World, order: Order): void {
   );
 }
 
-/**
- * Opens the order an acceptance implies.
- *
- * <p>Nothing settles itself any more, so this is no longer reached by a clock: the seller taking
- * an offer is what starts a purchase, and this is that seam. The listing stays RESERVED — the
- * order is what carries it from here to paid, and only then does the listing become SOLD.
- *
- * <p>Idempotent, because releasing an acceptance and taking it again must not leave two orders
- * pointing at one listing.
- */
 export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {
   const current = getWorld();
   const auction = current.auctions.find((item) => item.id === auctionId);
@@ -280,7 +252,6 @@ export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {
   });
 }
 
-/** Charges the saved card. Mock: mostly succeeds, sometimes declines. */
 function chargeOrder(current: World, order: Order): void {
   const declined = Math.random() < MOCK.PAYMENT_FAILURE_RATE;
   if (declined) {
@@ -298,7 +269,6 @@ function chargeOrder(current: World, order: Order): void {
   );
 }
 
-/** Idempotent and throttled to once a second: it only moves what is genuinely due. */
 export function syncWorld(force = false): void {
   if (!world) return;
   const now = Date.now();
@@ -307,22 +277,12 @@ export function syncWorld(force = false): void {
   const current = world;
   let changed = false;
 
-  // Listings are not walked forward. Nothing about one is a function of the
-  // time: it stays open until its seller accepts an offer or takes it down, and
-  // both of those are things a person does.
-
-  // Orders
   for (const order of current.orders) {
     const sinceLastEvent = secondsSince(lastEventAt(order));
-    /**
-     * Seeded orders are history and are left alone; only orders just acted on
-     * ride the accelerated clock. Deadline-driven transitions below are exempt.
-     */
     const isLiveSimulation = sinceLastEvent < MOCK.SIMULATION_WINDOW_SECONDS;
 
     switch (order.status) {
       case "AWAITING_CONFIRMATION": {
-        // Deadline passed: auto-confirm with the winner's default method.
         if (
           order.confirmationDeadline &&
           now >= Date.parse(order.confirmationDeadline)
@@ -369,7 +329,6 @@ export function syncWorld(force = false): void {
         break;
       }
 
-      // Once the seller drops the parcel off, the courier moves on its own.
       case "DROPPED_OFF": {
         if (isLiveSimulation && sinceLastEvent >= MOCK.COURIER_STEP_SECONDS) {
           pushEvent(
@@ -409,7 +368,6 @@ export function syncWorld(force = false): void {
       }
 
       case "DELIVERED": {
-        // Auto-release when the buyer stays silent past the window.
         if (order.autoReleaseAt && now >= Date.parse(order.autoReleaseAt)) {
           releaseFunds(current, order);
           pushEvent(
@@ -430,7 +388,6 @@ export function syncWorld(force = false): void {
   if (changed) persist();
 }
 
-/** Used by the api layer when a user action completes an order. */
 export function completeOrder(order: Order, label: string): void {
   const current = getWorld();
   releaseFunds(current, order);

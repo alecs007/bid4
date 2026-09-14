@@ -20,8 +20,7 @@ export function StepGoal({ draft, set, errors }: StepProps) {
   const setPayout = (patch: Partial<typeof draft.payout>) =>
     set((current) => ({ ...current, payout: { ...current.payout, ...patch } }));
 
-  /** TODO(backend): Stripe Connect onboarding — redirect out, return with an
-   *  account id, and read `charges_enabled` rather than trusting this flag. */
+  // TODO(backend): Stripe Connect onboarding — read charges_enabled, not this flag.
   const connect = async () => {
     setConnecting(true);
     await new Promise((resolve) => window.setTimeout(resolve, 900));
@@ -74,7 +73,6 @@ export function StepGoal({ draft, set, errors }: StepProps) {
         </p>
       ) : null}
 
-      {/* Payout */}
       <div className="flex flex-col gap-4 rounded-2xl bg-ink-50 p-4">
         <div>
           <p className="font-display text-sm font-extrabold text-ink-700">

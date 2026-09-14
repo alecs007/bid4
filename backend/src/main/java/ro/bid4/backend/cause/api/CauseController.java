@@ -17,11 +17,9 @@ import ro.bid4.backend.cause.service.CauseService;
 import ro.bid4.backend.common.web.PublicCaching;
 import ro.bid4.backend.security.web.Viewers;
 
-/** The read half of frontend/src/lib/api/causes.ts. */
 @RestController
 @RequestMapping("/causes")
 public class CauseController {
-
   private final CauseService causes;
 
   public CauseController(CauseService causes) {
@@ -37,7 +35,6 @@ public class CauseController {
     return causes.list(q, category, limit, Viewers.from(jwt));
   }
 
-  /** Before {@code /{idOrSlug}}: a literal segment wins over a variable one. */
   @GetMapping("/trending")
   ResponseEntity<List<CauseResponse>> trending(@AuthenticationPrincipal Jwt jwt) {
     return PublicCaching.perViewer(causes.trending(Viewers.from(jwt)));

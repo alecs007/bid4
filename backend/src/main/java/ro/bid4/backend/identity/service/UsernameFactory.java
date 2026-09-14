@@ -6,15 +6,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 
-/**
- * Turns a display name into the slug the public profile lives at.
- *
- * <p>The result must satisfy the users_username_shape constraint in V1: lowercase alphanumerics and
- * hyphens, 2 to 40 characters, never starting or ending with a hyphen.
- */
 @Component
 public class UsernameFactory {
-
   private static final int MAX_LENGTH = 32;
   private static final int MAX_ATTEMPTS = 50;
 
@@ -35,8 +28,6 @@ public class UsernameFactory {
       return base;
     }
 
-    // Counting up would leak how many accounts share a name and make the next
-    // one guessable, so the suffix is random.
     for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       String candidate = base + "-" + Integer.toString(random.nextInt(0x10000), 36);
       if (!users.existsByUsername(candidate)) {
@@ -46,12 +37,10 @@ public class UsernameFactory {
     throw new IllegalStateException("Could not derive a free username for " + base);
   }
 
-  /** "Ana-Maria Ionescu" becomes "ana-maria-ionescu"; diacritics fold to ASCII. */
   static String slugify(String raw) {
     String ascii =
         Normalizer.normalize(raw == null ? "" : raw, Normalizer.Form.NFD)
             .replaceAll("\\p{M}", "")
-            // ș and ț carry a comma below that NFD does not always separate.
             .replace("ș", "s")
             .replace("ț", "t")
             .replace("Ș", "S")

@@ -13,18 +13,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Support for the story a cause tells.
- *
- * <p>Separate from {@link CauseDocument}, which proves who someone is. A medical letter and an ID
- * card answer different questions and are shown to different people.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "cause_evidence")
 public class CauseEvidence {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

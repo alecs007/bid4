@@ -13,20 +13,6 @@ import { COPY } from "@/lib/labels";
 import type { AuctionDetail, BidWithBidder } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Who has offered what, for one of the seller's own listings — and which one they take.
- *
- * <p>This is the view the whole model turns on. A listing has no clock, so nothing picks a buyer
- * on the seller's behalf: they read the offers and choose, and they may choose **any** of them.
- * The highest is marked, not privileged.
- *
- * <p>Loaded when it is opened rather than with the list, because a page of twelve rows would
- * otherwise fetch twelve histories nobody asked for.
- *
- * <p>Unlike the public history on the listing page, names here are not shortened: the person
- * deciding who to sell to is not a stranger, and the API gives them what any public profile
- * already shows.
- */
 export function BiddersModal({
   auction,
   open,
@@ -36,7 +22,6 @@ export function BiddersModal({
   auction: AuctionDetail | null;
   open: boolean;
   onClose: () => void;
-  /** Present when the viewer owns the listing, which is what unlocks accepting. */
   sellerId?: string;
 }) {
   const toast = useToast();
@@ -62,8 +47,6 @@ export function BiddersModal({
 
   const settled = () => {
     reload();
-    // The listing leaves the public catalogue's live set and changes on every
-    // shelf that counted it.
     revalidate("my-sales", "auctions", "causes", "featured");
   };
 
@@ -166,8 +149,6 @@ export function BiddersModal({
                     </span>
 
                     <span className="flex shrink-0 items-center gap-2">
-                      {/* The list arrives highest first. Marked, not privileged:
-                          the seller is free to take any row on this list. */}
                       <span
                         className={cn(
                           "font-display font-bold",

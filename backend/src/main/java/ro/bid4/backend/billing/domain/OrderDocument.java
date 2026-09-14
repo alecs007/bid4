@@ -14,19 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One issued document.
- *
- * <p>Immutable once written — a database trigger refuses UPDATE outright, the same way acceptances
- * and ledger entries are protected. A document that can be edited after it has been sent is not
- * evidence of anything, and correcting one is done by issuing another.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "order_documents")
 public class OrderDocument {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -39,7 +31,6 @@ public class OrderDocument {
   @Column(nullable = false, updatable = false)
   private DocumentKind kind;
 
-  /** Null for documents that carry no series, such as a courier's label. */
   @Column(updatable = false)
   private String number;
 
@@ -49,7 +40,6 @@ public class OrderDocument {
   @Column(nullable = false, updatable = false)
   private long amount;
 
-  /** Null while the document is promised and not yet rendered. */
   @Column(name = "storage_key", updatable = false)
   private String storageKey;
 

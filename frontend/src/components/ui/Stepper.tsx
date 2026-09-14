@@ -10,7 +10,6 @@ export interface StepperStep {
   label: string;
 }
 
-/** Steps ahead are not links: a form you have not filled in is not a place you can go. */
 export function Stepper({
   steps,
   current,
@@ -19,9 +18,7 @@ export function Stepper({
   className,
 }: {
   steps: StepperStep[];
-  /** Zero-based index of the step on screen. */
   current: number;
-  /** Zero-based index of the furthest step reached, for jumping back. */
   furthest: number;
   onJump?: (index: number) => void;
   className?: string;

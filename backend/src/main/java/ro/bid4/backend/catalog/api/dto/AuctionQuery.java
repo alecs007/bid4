@@ -9,23 +9,10 @@ import ro.bid4.backend.catalog.domain.AuctionSort;
 import ro.bid4.backend.catalog.domain.AuctionStatus;
 import ro.bid4.backend.catalog.domain.ItemCondition;
 
-/**
- * The AuctionFilters interface in frontend/src/lib/types/auction.ts, bound from the query string.
- *
- * <p>Every field is optional and every one is typed. {@code status} and {@code sort} arrive as
- * enums, so an unknown value is refused at binding rather than reaching a query, and the page size
- * is capped here as well as in the service — PAGINATION.MAX_PAGE_SIZE on the frontend.
- */
 public record AuctionQuery(
     @Size(max = 120, message = "Termenul de căutare este prea lung.") String q,
     List<AuctionStatus> status,
     @Size(max = 16) List<String> category,
-    /**
-     * How worn the object is.
-     *
-     * <p>An enum rather than free text, so the set is the seller's own five choices and an unknown
-     * value is refused at binding rather than reaching a query.
-     */
     List<ItemCondition> condition,
     UUID causeId,
     UUID sellerId,
@@ -35,12 +22,10 @@ public record AuctionQuery(
     AuctionSort sort,
     @Min(1) Integer page,
     @Min(1) @Max(60) Integer pageSize) {
-
   public AuctionSort sortOrDefault() {
     return sort == null ? AuctionSort.NEWEST : sort;
   }
 
-  /** Page numbers are 1-based on the wire; Spring Data counts from 0. */
   public int zeroBasedPage() {
     return page == null ? 0 : page - 1;
   }

@@ -10,13 +10,6 @@ import {
   type AuctionSchemaInput,
 } from "@/lib/structured-data";
 
-/**
- * The listing's own title, not the word "Licitație".
- *
- * <p>Falls back to the generic copy when the catalogue cannot be read — a page
- * that renders with inherited metadata is a smaller failure than one that does
- * not render at all.
- */
 export async function generateMetadata({
   params,
 }: PageProps<"/licitatii/[id]">): Promise<Metadata> {
@@ -47,7 +40,6 @@ export async function generateMetadata({
       url: `/licitatii/${id}`,
       title: `${auction.title} | bid4`,
       description,
-      // The thing being sold, which is the only preview worth showing.
       images: image ? [{ url: image, alt: auction.title }] : undefined,
     },
     twitter: {
@@ -63,8 +55,6 @@ export default async function AuctionPage({
   params,
 }: PageProps<"/licitatii/[id]">) {
   const { id } = await params;
-  // The same read generateMetadata already made. Next dedupes a fetch with the
-  // same URL and options inside one request, so this costs nothing twice.
   const auction = await fetchForMetadata<AuctionSchemaInput>(`/auctions/${id}`);
 
   return (

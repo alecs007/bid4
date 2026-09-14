@@ -10,28 +10,9 @@ export interface RowActionItem {
   icon: ReactNode;
   onClick?: () => void;
   danger?: boolean;
-  /**
-   * Why this cannot be done right now. Present means the action is shown and
-   * disabled rather than dropped — a button that vanishes and a button that was
-   * never there look identical to a reader, and both leave them wondering
-   * whether they missed it.
-   */
-  /** Why this row cannot take the action. Set, and the action is not drawn at all. */
   unavailable?: string;
 }
 
-/**
- * The actions on a list row, on a line of their own.
- *
- * <p>All of them, in the open. They were briefly behind a menu, which kept the
- * row tidy at the cost of hiding the one thing somebody might be looking for
- * behind a button that does not say what is under it. A line of its own costs
- * the row about thirty pixels and needs no explaining.
- *
- * <p>Order is fixed, so the same action sits in the same place on every row: the
- * move this row's state suggests, then opening the item, then anything
- * destructive, last and apart.
- */
 export function RowActions({
   primary,
   view,
@@ -42,7 +23,6 @@ export function RowActions({
     icon: ReactNode;
     href?: string;
     onClick?: () => void;
-    /** Green unless the row's state is urgent, where coral says so. */
     variant?: ButtonVariant;
   };
   view: string;
@@ -51,8 +31,6 @@ export function RowActions({
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
       {primary ? (
-        // Flat: the raised edge is for the one call to action on a page, and a
-        // list where every other row carries one is a page of raised edges.
         primary.href ? (
           <ButtonLink
             href={primary.href}
@@ -87,9 +65,6 @@ export function RowActions({
         Vezi detalii
       </ButtonLink>
 
-      {/* An action nobody can take is not offered. A greyed button with its
-          reason in a tooltip explains itself only to a mouse, and on a row that
-          can never take it the control is a dead weight either way. */}
       {extra
         .filter((item) => !item.unavailable)
         .map((item) => (

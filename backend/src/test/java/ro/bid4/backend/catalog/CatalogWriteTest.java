@@ -53,19 +53,11 @@ import ro.bid4.backend.inbox.domain.ThreadItemKind;
 import ro.bid4.backend.inbox.service.InboxService;
 import ro.bid4.backend.orders.service.Terms;
 
-/**
- * The rules that decide who owns an item and for how much.
- *
- * <p>This is the part of the catalogue where money is at stake, so it is tested against the service
- * rather than through MockMvc: what matters here is the transaction, the row lock and the state
- * left behind, none of which a status code proves.
- */
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class CatalogWriteTest {
-
   private static final long LEU = 100;
 
   @Autowired private BidService bidding;
@@ -78,8 +70,6 @@ class CatalogWriteTest {
   @Autowired private PaymentMethodRepository paymentMethods;
   @Autowired private InboxService inbox;
 
-  /* --- buy now ------------------------------------------------------------ */
-
   @Test
   @DisplayName("An offer at or above the final price takes the item, and settles at that price")
   void buyNowSettlesAtTheAdvertisedPrice() {
@@ -87,17 +77,13 @@ class CatalogWriteTest {
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
 
-    // Offered well over the advertised price.
     PlaceBidResponse result =
         bidding.place(auction.getId(), 700 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     assertThat(result.boughtNow()).isTrue();
-    // Reserved, not sold: the seller is bound by the price they published, but
-    // nobody has paid yet, and SOLD is for money that has actually arrived.
     assertThat(result.auction().status()).isEqualTo(AuctionStatus.RESERVED);
     assertThat(result.auction().winnerId()).isEqualTo(buyer.getId());
     assertThat(result.auction().acceptedAt()).isNotNull();
-    // Nobody pays more than the number the page advertised.
     assertThat(result.auction().currentPrice()).isEqualTo(300 * LEU);
     assertThat(result.bid().amount()).isEqualTo(300 * LEU);
     assertThat(result.bid().status()).isEqualTo(BidStatus.ACCEPTED);
@@ -110,8 +96,6 @@ class CatalogWriteTest {
     UserAccount first = bidder();
     UserAccount second = bidder();
 
-    // Increment of 50 lei, final price only 20 lei above the standing offer:
-    // the next valid raise (150) overshoots the price that ends it (120).
     Auction auction = auction(seller, 100 * LEU, 50 * LEU, 120 * LEU);
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
 
@@ -139,8 +123,6 @@ class CatalogWriteTest {
     assertThat(history.getLast().getStatus()).isEqualTo(BidStatus.LOST);
   }
 
-  /* --- the acceptance ------------------------------------------------------ */
-
   @Test
   @DisplayName("The seller may take an offer that is not the highest one")
   void anyOfferMayBeAccepted() {
@@ -160,7 +142,6 @@ class CatalogWriteTest {
     assertThat(reserved.acceptedAt()).isNotNull();
     assertThat(reload(auction).getAcceptedBidId()).isEqualTo(lower.getId());
     assertThat(reloadBid(lower).getStatus()).isEqualTo(BidStatus.ACCEPTED);
-    // The rest are left standing, because this is still reversible.
     assertThat(reloadBid(offerOf(auction, top)).getStatus()).isEqualTo(BidStatus.WINNING);
   }
 
@@ -176,14 +157,10 @@ class CatalogWriteTest {
     Bid taken = offerOf(auction, buyer);
     offers.accept(auction.getId(), taken.getId(), viewer(seller));
 
-    // The whole reason the room stays open: the seller can still change their
-    // mind, so a better offer is worth making and worth seeing.
     bidding.place(auction.getId(), 500 * LEU, Terms.CURRENT_VERSION, viewer(latecomer));
 
     assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.RESERVED);
     assertThat(reload(auction).getCurrentPrice()).isEqualTo(500 * LEU);
-    // The acceptance is untouched by the newcomer: still ACCEPTED, still the
-    // bid the auction row points at, still naming the buyer.
     assertThat(reloadBid(taken).getStatus()).isEqualTo(BidStatus.ACCEPTED);
     assertThat(reload(auction).getAcceptedBidId()).isEqualTo(taken.getId());
     assertThat(reload(auction).getWinnerId()).isEqualTo(buyer.getId());
@@ -241,8 +218,6 @@ class CatalogWriteTest {
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     offers.accept(auction.getId(), offerOf(auction, buyer).getId(), viewer(seller));
 
-    // The price is still published, but it cannot take the item over the top of
-    // a buyer the seller has already chosen. It lands as an ordinary offer.
     var result =
         bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(latecomer));
 
@@ -268,8 +243,6 @@ class CatalogWriteTest {
     assertThat(released.winnerId()).isNull();
     assertThat(released.acceptedAt()).isNull();
     assertThat(reload(auction).getAcceptedBidId()).isNull();
-    // The accepted offer was also the top one, so releasing has to give the lead
-    // back to somebody — otherwise the listing runs on with nobody winning it.
     assertThat(reloadBid(only).getStatus()).isEqualTo(BidStatus.WINNING);
   }
 
@@ -296,7 +269,6 @@ class CatalogWriteTest {
             Instant.now().plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)),
             within(1, ChronoUnit.MINUTES));
 
-    // A refund is a different conversation, and not this route's.
     assertThatThrownBy(() -> offers.release(auction.getId(), viewer(seller)))
         .isInstanceOf(ApiException.class);
   }
@@ -331,8 +303,6 @@ class CatalogWriteTest {
     assertThatThrownBy(() -> offers.accept(mine.getId(), elsewhere.getId(), viewer(seller)))
         .isInstanceOf(ApiException.class);
   }
-
-  /* --- the ordinary rules -------------------------------------------------- */
 
   @Test
   @DisplayName("An offer below the minimum raise is refused")
@@ -405,8 +375,6 @@ class CatalogWriteTest {
     assertThat(second.auction().bidCount()).isEqualTo(1);
   }
 
-  /* --- retracting ---------------------------------------------------------- */
-
   @Test
   @DisplayName("The leader may pull back, and the price falls to the offer beneath")
   void retractingRestoresThePreviousPrice() {
@@ -452,13 +420,9 @@ class CatalogWriteTest {
     Bid offer = bids.findByAuctionIdOrderByAmountDesc(auction.getId()).getFirst();
     offers.accept(auction.getId(), offer.getId(), viewer(seller));
 
-    // Pulling the offer out from under an acceptance is not a retraction, it is
-    // a broken deal.
     assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(buyer)))
         .isInstanceOf(ApiException.class);
   }
-
-  /* --- following ----------------------------------------------------------- */
 
   @Test
   @DisplayName("Watching toggles, and the counter follows it both ways")
@@ -473,8 +437,6 @@ class CatalogWriteTest {
     assertThat(bidding.toggleWatch(auction.getId(), viewer(follower))).isFalse();
     assertThat(auctions.findById(auction.getId()).orElseThrow().getWatcherCount()).isZero();
   }
-
-  /* --- two people at once --------------------------------------------------- */
 
   @Test
   @DisplayName("Two offers arriving together cannot both win")
@@ -496,8 +458,6 @@ class CatalogWriteTest {
               bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(who));
               accepted.incrementAndGet();
             } catch (Exception ignored) {
-              // One of the two is expected to lose the race and be refused for
-              // bidding under the minimum the winner just set.
             }
           });
     }
@@ -506,16 +466,12 @@ class CatalogWriteTest {
     pool.shutdown();
     assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
 
-    // Whatever the interleaving, the invariant holds: one leader, and the
-    // stored count matches the rows that actually exist.
     List<Bid> history = bids.findByAuctionIdOrderByAmountDesc(auction.getId());
     assertThat(history.stream().filter(b -> b.getStatus() == BidStatus.WINNING)).hasSize(1);
     assertThat(auctions.findById(auction.getId()).orElseThrow().getBidCount())
         .isEqualTo(history.size());
     assertThat(accepted.get()).isPositive();
   }
-
-  /* --- what the bidder accepted -------------------------------------------- */
 
   @Test
   @DisplayName("An offer that names no accepted terms is refused")
@@ -538,7 +494,6 @@ class CatalogWriteTest {
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    // Consenting to a text nobody is being shown is not consent.
     assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, "1999-01-01", viewer(buyer)))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("accepți");
@@ -558,8 +513,6 @@ class CatalogWriteTest {
     assertThat(stored.getTermsVersion()).isEqualTo(Terms.CURRENT_VERSION);
     assertThat(stored.getTermsAcceptedAt()).isAfter(before);
   }
-
-  /* --- the offer events ----------------------------------------------------- */
 
   @Test
   @DisplayName("A first offer writes OFFER_PLACED into the thread, with its amount")
@@ -591,8 +544,6 @@ class CatalogWriteTest {
         .containsEntry("previous", String.valueOf(100 * LEU))
         .containsEntry("amount", String.valueOf(150 * LEU));
 
-    // Raising replaces the offer but not the record: both cards stay, so the
-    // seller can see the offer move rather than only where it ended up.
     assertThat(eventTypes(auction, buyer)).containsExactly("OFFER_RAISED", "OFFER_PLACED");
   }
 
@@ -610,8 +561,6 @@ class CatalogWriteTest {
     assertThat(card.eventType()).isEqualTo("OFFER_WITHDRAWN");
     assertThat(card.payload()).containsEntry("amount", String.valueOf(100 * LEU));
   }
-
-  /* --- fixtures ------------------------------------------------------------- */
 
   private Auction reload(Auction auction) {
     return auctions.findById(auction.getId()).orElseThrow();
@@ -641,7 +590,6 @@ class CatalogWriteTest {
     return user("Vanzator Test", UserRole.USER);
   }
 
-  /** A user who has cleared the card-and-delivery gate. */
   private UserAccount bidder() {
     UserAccount account = user("Ofertant Test", UserRole.USER);
 
@@ -702,7 +650,6 @@ class CatalogWriteTest {
     return auctions.save(auction);
   }
 
-  /** The cards an offer wrote, newest first, read as the bidder who wrote them. */
   private List<String> eventTypes(Auction listing, UserAccount bidder) {
     return events(listing, bidder).map(ThreadItemResponse::eventType).toList();
   }

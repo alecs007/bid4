@@ -40,18 +40,11 @@ import ro.bid4.backend.storage.domain.StoredFile;
 import ro.bid4.backend.storage.domain.Visibility;
 import ro.bid4.backend.storage.repo.StoredFileRepository;
 
-/**
- * Putting a listing up, and taking it back down.
- *
- * <p>Driven through the service rather than MockMvc: what matters is the row that ends up in the
- * table and who was allowed to write it, and a status code proves neither.
- */
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class ListingWriteTest {
-
   private static final long LEU = 100;
 
   @Autowired private ListingService listings;
@@ -70,8 +63,6 @@ class ListingWriteTest {
     approved = cause(seller.getId(), CauseStatus.ACTIVE);
   }
 
-  /* --- creating ----------------------------------------------------------- */
-
   @Test
   @DisplayName("a new listing queues for review rather than opening straight away")
   void createdListingWaitsForReview() {
@@ -80,12 +71,9 @@ class ListingWriteTest {
     Auction stored = auctions.findById(created.id()).orElseThrow();
     assertThat(stored.getStatus()).isEqualTo(AuctionStatus.PENDING_REVIEW);
     assertThat(stored.getSellerId()).isEqualTo(seller.getId());
-    // Nothing has been offered, so the price on the card is the ask.
     assertThat(stored.getCurrentPrice()).isEqualTo(stored.getStartingPrice());
     assertThat(stored.getBidCount()).isZero();
     assertThat(stored.getWinnerId()).isNull();
-    // Read off the response, not the entity: images are a lazy collection and
-    // the session that loaded the row is long closed by here.
     assertThat(created.images()).hasSize(2);
   }
 
@@ -129,8 +117,6 @@ class ListingWriteTest {
   @Test
   @DisplayName("a buy-now at or below the starting price is refused")
   void buyNowAtStartIsRefused() {
-    // Equal to the start, the first bid always ends it — a fixed-price sale
-    // wearing an auction's clothes.
     assertThatThrownBy(
             () -> listings.create(request().buyNowPrice(100 * LEU).build(), viewer(seller)))
         .isInstanceOf(ApiException.class);
@@ -139,7 +125,6 @@ class ListingWriteTest {
   @Test
   @DisplayName("the bid step is read off the asking price, not off the seller")
   void bidStepIsDerived() {
-    // 100 lei sits on the first rung of the ladder, which steps by 5.
     AuctionResponse created = listings.create(request().build(), viewer(seller));
 
     assertThat(auctions.findById(created.id()).orElseThrow().getBidIncrement())
@@ -167,8 +152,6 @@ class ListingWriteTest {
         .hasMessageContaining("categorie");
   }
 
-  /* --- withdrawing -------------------------------------------------------- */
-
   @Test
   @DisplayName("withdrawing marks the listing cancelled and releases every live offer")
   void cancelReleasesBidders() {
@@ -180,7 +163,6 @@ class ListingWriteTest {
 
     assertThat(auctions.findById(auction.getId()).orElseThrow().getStatus())
         .isEqualTo(AuctionStatus.CANCELLED);
-    // Otherwise the bid sits at "Câștigi" against a listing that is gone.
     assertThat(bids.findById(offer.getId()).orElseThrow().getStatus()).isEqualTo(BidStatus.LOST);
   }
 
@@ -273,19 +255,10 @@ class ListingWriteTest {
         .hasMessageContaining("Fotografiile");
   }
 
-  /* --- fixtures ----------------------------------------------------------- */
-
-  /** A valid listing, so each test only has to say what it is bending. */
   private Request request() {
     return new Request(approved.getId(), photos(seller.getId()));
   }
 
-  /**
-   * Two photographs already uploaded by this account.
-   *
-   * <p>A listing is created from refs to stored objects, and the refs have to be the seller's own —
-   * so the fixture has to put them there, exactly as an upload would.
-   */
   private List<String> photos(UUID ownerId) {
     return List.of(photo(ownerId), photo(ownerId)).stream().map(UUID::toString).toList();
   }
@@ -375,7 +348,6 @@ class ListingWriteTest {
     return auctions.save(auction);
   }
 
-  /** Everything an acceptance writes at once, because the table refuses any half of it. */
   private void reserve(Auction auction, UserAccount buyer, Bid offer) {
     auction.setStatus(AuctionStatus.RESERVED);
     auction.setWinnerId(buyer.getId());

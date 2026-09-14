@@ -3,25 +3,11 @@ import type { ItemCondition } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
 const SIZE = {
-  /** In a line of small print, where it has to read as punctuation. */
   xs: { row: "h-2.5 gap-[3px]", bar: "w-[3px]" },
-  /** Beside a line of text, where the words lead and this only ranks them. */
   sm: { row: "h-3.5 gap-[3px]", bar: "w-1" },
-  /** In the picker, where choosing between two adjacent states is the whole job. */
   md: { row: "h-5 gap-1", bar: "w-2" },
 } as const;
 
-/**
- * How much of an object's life is left, as five bars rather than as a place in a list.
- *
- * <p>"Stare foarte bună" and "Stare bună" are one word apart and sit next to each other in a
- * ranking; the bars are what separate them at a glance, and they rank the list without numbering
- * it. That is as useful under a listing's title as it is in the picker that set it, so the drawing
- * lives here rather than inside either.
- *
- * <p>Hidden from readers who cannot see it, because the words are right beside it. It says nothing
- * they are not already being told.
- */
 export function ConditionBars({
   condition,
   size = "md",

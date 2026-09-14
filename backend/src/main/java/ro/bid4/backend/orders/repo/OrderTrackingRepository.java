@@ -6,9 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ro.bid4.backend.orders.domain.OrderTrackingEvent;
 
 public interface OrderTrackingRepository extends JpaRepository<OrderTrackingEvent, UUID> {
-
   List<OrderTrackingEvent> findByOrderIdOrderByAtDesc(UUID orderId);
 
-  /** The courier delivering the same scan twice must move the parcel once. */
   boolean existsByExternalId(String externalId);
 }

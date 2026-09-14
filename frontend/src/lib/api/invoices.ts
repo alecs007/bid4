@@ -4,13 +4,7 @@ import type { ID, Invoice, InvoiceFilters, UserRole } from "@/lib/types";
 
 import { http } from "./http";
 
-/**
- * TODO(backend): PDFs are generated server-side (the platform fee invoice is a
- * fiscal document) and served from storage behind a signed URL. Here `pdfUrl` is
- * a mock path and the UI renders a printable HTML view instead.
- */
-
-/** GET /users/me/invoices */
+// TODO(backend): PDFs are rendered server-side and served behind a signed URL.
 export async function listInvoices(
   userId: ID,
   filters: InvoiceFilters = {},
@@ -45,7 +39,6 @@ export async function listInvoices(
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** GET /invoices/{id} */
 export async function getInvoice(
   invoiceId: ID,
   viewerId: ID,
@@ -65,7 +58,6 @@ export async function getInvoice(
   return invoice;
 }
 
-/** GET /admin/invoices — every document, for reporting. */
 export async function listAllInvoices(role: UserRole): Promise<Invoice[]> {
   if (!USE_MOCK) return http<Invoice[]>("/admin/invoices");
 

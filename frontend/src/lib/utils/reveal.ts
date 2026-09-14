@@ -1,7 +1,3 @@
-/**
- * Staggered entrance for cards replacing their skeletons. Capped, or the last
- * card of a long page would wait long enough to look broken.
- */
 const STEP_MS = 35;
 const MAX_DELAY_MS = 320;
 

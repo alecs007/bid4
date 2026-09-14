@@ -6,8 +6,6 @@ import { MyBids } from "./_components/MyBids";
 export const metadata: Metadata = {
   title: "Licitațiile mele",
   description: "Ofertele tale active, licitațiile câștigate și cele încheiate.",
-  // Nobody else's search should ever reach this, and a crawler that follows it
-  // only ever meets the sign-in redirect.
   robots: { index: false, follow: false },
 };
 

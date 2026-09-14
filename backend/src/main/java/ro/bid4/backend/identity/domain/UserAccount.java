@@ -14,21 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * A row of the users table.
- *
- * <p>Named UserAccount rather than User: Spring Security already has a User and one of the two
- * would always be the wrong import.
- *
- * <p>Nothing here is exposed over HTTP. The controller returns UserResponse, so a crafted request
- * body cannot reach role, status or totalRaised.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "users")
 public class UserAccount {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -37,10 +27,6 @@ public class UserAccount {
   @Column(nullable = false)
   private String email;
 
-  /**
-   * Null for an account that only ever signed in through a provider. It is never given a
-   * placeholder: a fabricated hash is a credential someone can eventually guess.
-   */
   @Column(name = "password_hash")
   private String passwordHash;
 
@@ -76,13 +62,6 @@ public class UserAccount {
 
   private String city;
 
-  /**
-   * Checked by bid4, and the only thing that earns a tag beside the name.
-   *
-   * <p>Staff set it; there is no self-serve route and no endpoint yet. What stood in its place was
-   * the account type, which said nothing about the person and looked exactly like a check the
-   * platform had carried out.
-   */
   @Column(nullable = false)
   private boolean verified = false;
 
@@ -98,7 +77,6 @@ public class UserAccount {
   @Column(name = "rating_count", nullable = false)
   private int ratingCount = 0;
 
-  /** Integer bani. Never a floating point type. */
   @Column(name = "total_raised", nullable = false)
   private long totalRaised = 0L;
 
@@ -117,7 +95,6 @@ public class UserAccount {
   @Column(name = "email_verified_at")
   private Instant emailVerifiedAt;
 
-  /** Bumped to invalidate every access token already issued to this user. */
   @Column(name = "token_version", nullable = false)
   private int tokenVersion = 0;
 
@@ -142,10 +119,6 @@ public class UserAccount {
     return lockedUntil != null && lockedUntil.isAfter(now);
   }
 
-  /**
-   * Identity is the assigned id and nothing else. Lombok's generated equals would compare every
-   * field, which breaks the moment an entity is mutated inside a collection.
-   */
   @Override
   public boolean equals(Object other) {
     if (this == other) {

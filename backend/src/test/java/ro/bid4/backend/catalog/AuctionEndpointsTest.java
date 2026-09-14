@@ -43,20 +43,12 @@ import ro.bid4.backend.identity.domain.UserRole;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.security.jwt.JwtService;
 
-/**
- * The catalogue as the frontend sees it.
- *
- * <p>Two things are being asserted throughout: that the body matches AuctionDetail in
- * frontend/src/lib/types/auction.ts field by field, and that what a caller may see depends on who
- * they are rather than on which route they used.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class AuctionEndpointsTest {
-
   private static final long LEU = 100;
 
   @Autowired private MockMvc mvc;
@@ -71,7 +63,6 @@ class AuctionEndpointsTest {
   private UserAccount leader;
   private UserAccount staff;
 
-  /** A seller of their own, so the acceptance tests can mutate without moving anyone's totals. */
   private UserAccount loner;
 
   private Cause medical;
@@ -162,8 +153,6 @@ class AuctionEndpointsTest {
             null,
             now.minus(Duration.ofDays(10)),
             AuctionStatus.LIVE);
-    // Put up live and then sold, because the acceptance points at a bid: a row
-    // claiming a winner it has no offer for is one the table refuses.
     Bid winning = bid(sold.getId(), leader.getId(), 900 * LEU, BidStatus.WON);
     sold.setStatus(AuctionStatus.SOLD);
     sold.setWinnerId(leader.getId());
@@ -173,7 +162,6 @@ class AuctionEndpointsTest {
     sold.setCurrentPrice(900 * LEU);
     auctions.save(sold);
 
-    // Two offers on the Canon, so the leader and the outbid are both real.
     bid(canon.getId(), rival.getId(), 250 * LEU, BidStatus.OUTBID);
     bid(canon.getId(), leader.getId(), 300 * LEU, BidStatus.WINNING);
     canon.setCurrentPrice(300 * LEU);
@@ -181,20 +169,15 @@ class AuctionEndpointsTest {
     auctions.save(canon);
   }
 
-  /* --- the shape ---------------------------------------------------------- */
-
   @Test
   @DisplayName("GET /auctions answers the paged shape, with the seller and the cause joined in")
   void listReturnsThePagedShape() throws Exception {
     mvc.perform(get("/auctions").param("causeId", medical.getId().toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.page").value(1))
-        // The rule itself, not a copy of it: this drifted once already, when
-        // the listing grid went to four across and the page size followed.
         .andExpect(jsonPath("$.pageSize").value(CatalogRules.DEFAULT_PAGE_SIZE))
         .andExpect(jsonPath("$.total").value(2))
         .andExpect(jsonPath("$.totalPages").value(1))
-        // Default sort is NEWEST, and the bicycle went up a day after the Canon.
         .andExpect(jsonPath("$.items[0].title").value("Bicicletă de oraș Pegas Practic"))
         .andExpect(jsonPath("$.items[1].title").value("Aparat foto Canon AE-1 Program"))
         .andExpect(jsonPath("$.items[1].sellerId").value(seller.getId().toString()))
@@ -217,11 +200,7 @@ class AuctionEndpointsTest {
   @Test
   @DisplayName("Fields the TypeScript types declare as required are never dropped as null")
   void requiredStringsAreAlwaysPresent() throws Exception {
-    // avatarUrl is nullable in the column and required in the type. Left as
-    // null, non_null inclusion drops it and the frontend holds a declared
-    // string that is undefined at runtime.
     UserAccount faceless = user("Fara Poza", UserRole.USER);
-    // Its own cause, so the counts the other tests assert stay put.
     Cause own = cause(faceless.getId(), "Cauza fără poză", "comunitate", 5_000 * LEU, 0);
     Auction listing =
         auction(
@@ -260,8 +239,6 @@ class AuctionEndpointsTest {
         .andExpect(jsonPath("$.seller.status").doesNotExist())
         .andExpect(jsonPath("$.seller.hasPaymentMethod").doesNotExist());
   }
-
-  /* --- who may see what --------------------------------------------------- */
 
   @Test
   @DisplayName("An unpublished listing is not found rather than forbidden")
@@ -315,7 +292,6 @@ class AuctionEndpointsTest {
     mvc.perform(get("/auctions/" + canon.getId()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.reservePrice").doesNotExist())
-        // 300 lei bid against a 400 lei reserve.
         .andExpect(jsonPath("$.reserveMet").value(false));
 
     mvc.perform(get("/auctions/" + canon.getId()).header(HttpHeaders.AUTHORIZATION, bearer(rival)))
@@ -324,8 +300,6 @@ class AuctionEndpointsTest {
     mvc.perform(get("/auctions/" + canon.getId()).header(HttpHeaders.AUTHORIZATION, bearer(seller)))
         .andExpect(jsonPath("$.reservePrice").value(400 * LEU));
   }
-
-  /* --- the viewer's own state --------------------------------------------- */
 
   @Test
   @DisplayName("Viewer fields are absent without a viewer, and answer for one")
@@ -344,8 +318,6 @@ class AuctionEndpointsTest {
     mvc.perform(get("/auctions/" + canon.getId()).header(HttpHeaders.AUTHORIZATION, bearer(staff)))
         .andExpect(jsonPath("$.viewerBidStatus").value("NONE"));
   }
-
-  /* --- filtering and sorting ---------------------------------------------- */
 
   @Test
   @DisplayName("Repeated status parameters bind as a list")
@@ -367,8 +339,6 @@ class AuctionEndpointsTest {
         .andExpect(jsonPath("$.total").value(1))
         .andExpect(jsonPath("$.items[0].id").value(bicycle.getId().toString()));
 
-    // The cause's name counts too: it is usually the reason someone is looking.
-    // Both the shelter's listings match on it, so the status narrows to the one.
     mvc.perform(get("/auctions").param("q", "adapostul").param("status", "LIVE"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").value(1))
@@ -382,9 +352,6 @@ class AuctionEndpointsTest {
   @Test
   @DisplayName("A wildcard typed into the search box is a character, not a wildcard")
   void searchWildcardsAreEscaped() throws Exception {
-    // Left unescaped these are LIKE wildcards, and '%' alone would match every
-    // row in the table — the cheapest way to turn a narrowing query into a full
-    // scan of everything.
     mvc.perform(get("/auctions").param("q", "%"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").value(0));
@@ -393,7 +360,6 @@ class AuctionEndpointsTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").value(0));
 
-    // And an escape character is just a character too.
     mvc.perform(get("/auctions").param("q", "\\")).andExpect(status().isOk());
   }
 
@@ -420,8 +386,6 @@ class AuctionEndpointsTest {
         .andExpect(jsonPath("$.pageSize").value(60));
   }
 
-  /* --- the derived rows --------------------------------------------------- */
-
   @Test
   @DisplayName("GET /auctions/featured answers both homepage rows")
   void featuredReturnsBothRows() throws Exception {
@@ -430,23 +394,15 @@ class AuctionEndpointsTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mostWatched").isArray())
             .andExpect(jsonPath("$.latest").isArray())
-            // Only what is actually running, in either row.
             .andExpect(jsonPath("$.mostWatched[?(@.status != 'LIVE')]").isEmpty())
             .andExpect(jsonPath("$.latest[?(@.status != 'LIVE')]").isEmpty())
             .andReturn()
             .getResponse()
             .getContentAsString();
 
-    // The sort is asserted as a property of the answer rather than by naming
-    // which listing should be first. `featured` reads the whole catalogue and
-    // returns only a handful of it, and every test class shares this database:
-    // name a listing and the assertion breaks the moment another class seeds one
-    // with more followers, which says nothing about whether the sort works.
     List<Integer> followers = JsonPath.read(body, "$.mostWatched[*].watcherCount");
     assertThat(followers).isSortedAccordingTo(Comparator.reverseOrder());
 
-    // The second row is chronological for the same reason: newest first, asserted
-    // as a property rather than by naming which listing should lead it.
     List<String> published = JsonPath.read(body, "$.latest[*].startTime");
     assertThat(published).isSortedAccordingTo(Comparator.reverseOrder());
   }
@@ -459,8 +415,6 @@ class AuctionEndpointsTest {
         .andExpect(jsonPath("$[0].id").value(bicycle.getId().toString()))
         .andExpect(jsonPath("$[?(@.id == '" + canon.getId() + "')]").isEmpty());
   }
-
-  /* --- the acceptance routes ------------------------------------------------ */
 
   @Test
   @DisplayName("The seller accepts an offer over HTTP, and can hand it back the same way")
@@ -477,7 +431,6 @@ class AuctionEndpointsTest {
         .andExpect(jsonPath("$.status").value("RESERVED"))
         .andExpect(jsonPath("$.winnerId").value(rival.getId().toString()))
         .andExpect(jsonPath("$.acceptedAt").exists())
-        // Unpaid, so nothing is owed yet.
         .andExpect(jsonPath("$.dispatchDeadline").doesNotExist());
 
     mvc.perform(
@@ -501,7 +454,6 @@ class AuctionEndpointsTest {
                 .content("{\"bidId\":\"" + offer.getId() + "\"}"))
         .andExpect(status().isNotFound());
 
-    // Signing in is the floor: an anonymous caller never reaches the service.
     mvc.perform(
             post("/auctions/" + listing.getId() + "/accept")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -521,10 +473,7 @@ class AuctionEndpointsTest {
                 .header(HttpHeaders.AUTHORIZATION, bearer(loner)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
-        // Highest first, so the seller reads them in the order they will judge them.
         .andExpect(jsonPath("$[0].amount").value(200 * LEU))
-        // Not the pseudonymised history: the person choosing a buyer gets the
-        // handle any public profile already shows.
         .andExpect(jsonPath("$[0].bidderUsername").value(leader.getUsername()));
 
     mvc.perform(
@@ -533,15 +482,12 @@ class AuctionEndpointsTest {
         .andExpect(status().isNotFound());
   }
 
-  /* --- the bid history ----------------------------------------------------- */
-
   @Test
   @DisplayName("The public bid history is pseudonymised and carries no handle")
   void bidHistoryIsPseudonymised() throws Exception {
     mvc.perform(get("/auctions/" + canon.getId() + "/bids"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
-        // Highest first.
         .andExpect(jsonPath("$[0].amount").value(300 * LEU))
         .andExpect(jsonPath("$[0].status").value("WINNING"))
         .andExpect(jsonPath("$[0].bidderDisplayName").value("Andrei M."))
@@ -554,8 +500,6 @@ class AuctionEndpointsTest {
   void bidHistoryFollowsTheListingsVisibility() throws Exception {
     mvc.perform(get("/auctions/" + unpublished.getId() + "/bids")).andExpect(status().isNotFound());
   }
-
-  /* --- fixtures ------------------------------------------------------------ */
 
   private UserAccount user(String displayName, UserRole role) {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -594,7 +538,6 @@ class AuctionEndpointsTest {
       Long reservePrice,
       Instant startTime,
       AuctionStatus status) {
-
     Auction auction = new Auction();
     auction.setSellerId(sellerId);
     auction.setCauseId(causeId);
@@ -610,20 +553,11 @@ class AuctionEndpointsTest {
     auction.setBidIncrement(10 * LEU);
     auction.setReservePrice(reservePrice);
     auction.setStartTime(startTime);
-    // Dated to when it went up, not to when the test ran: the default sort is
-    // newest first, so five fixtures created in the same millisecond would order
-    // themselves however the database felt like it.
     auction.setCreatedAt(startTime);
     auction.setStatus(status);
     return auctions.save(auction);
   }
 
-  /**
-   * A fresh listing under a seller nobody else counts.
-   *
-   * <p>The acceptance tests mutate what they touch, and every test class shares this database. Put
-   * one of these under `seller` and the shelf totals two tests up start moving.
-   */
   private Auction ownListing() {
     return auction(
         loner.getId(),
@@ -647,7 +581,6 @@ class AuctionEndpointsTest {
     return bids.save(bid);
   }
 
-  /** A real signed token rather than a stubbed principal, so the decoder is exercised too. */
   private String bearer(UserAccount account) {
     return "Bearer " + tokens.issueAccessToken(account).value();
   }

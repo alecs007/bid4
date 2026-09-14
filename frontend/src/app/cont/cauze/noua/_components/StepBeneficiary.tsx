@@ -55,7 +55,6 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
         poveste — și atunci nimeni nu ar mai licita.
       </Alert>
 
-      {/* Beneficiary */}
       <div className="flex flex-col gap-4">
         {isMinor ? (
           <p className="font-display text-sm font-extrabold text-ink-500">
@@ -167,7 +166,6 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
         ) : null}
       </div>
 
-      {/* Guardian */}
       {isMinor ? (
         <div className="flex flex-col gap-4 rounded-2xl bg-primary-50 p-4">
           <div>
@@ -249,7 +247,6 @@ export function StepBeneficiary({ draft, set, errors }: StepProps) {
         </div>
       ) : null}
 
-      {/* Organisation */}
       {isNgo ? (
         <div className="flex flex-col gap-4 rounded-2xl bg-ink-50 p-4">
           <p className="font-display text-sm font-extrabold text-ink-700">

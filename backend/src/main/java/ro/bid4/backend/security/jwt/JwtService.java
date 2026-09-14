@@ -16,23 +16,10 @@ import org.springframework.stereotype.Service;
 import ro.bid4.backend.common.config.Bid4Properties;
 import ro.bid4.backend.identity.domain.UserAccount;
 
-/**
- * Issues the two tokens a session is made of.
- *
- * <p>The access token is a signed JWT the client sends on every request; verification is Spring
- * Security's, via Nimbus, so no token parsing is written here. It is deliberately short-lived,
- * because it is the half a page script could read.
- *
- * <p>The refresh token is not a JWT. It is opaque random bytes that mean nothing without the row
- * they hash to, which is what makes revoking one actually revoke it.
- */
 @Service
 public class JwtService {
-
-  /** Claim carrying the user's role, mapped to an authority by the resource server. */
   public static final String CLAIM_ROLE = "role";
 
-  /** Claim carrying token_version, so a password change can invalidate issued tokens. */
   public static final String CLAIM_TOKEN_VERSION = "tv";
 
   private static final int REFRESH_TOKEN_BYTES = 32;
@@ -69,10 +56,6 @@ public class JwtService {
     return new AccessToken(token, expiresAt);
   }
 
-  /**
-   * A fresh refresh token. The caller stores {@link RefreshTokenValue#hash()} and hands {@link
-   * RefreshTokenValue#value()} to the browser exactly once.
-   */
   public RefreshTokenValue issueRefreshToken() {
     byte[] bytes = new byte[REFRESH_TOKEN_BYTES];
     random.nextBytes(bytes);
@@ -80,10 +63,6 @@ public class JwtService {
     return new RefreshTokenValue(value, hash(value));
   }
 
-  /**
-   * SHA-256, not bcrypt. The input is 256 bits of entropy we generated, so there is no dictionary
-   * to attack and no reason to pay a work factor on every refresh.
-   */
   public String hash(String token) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");

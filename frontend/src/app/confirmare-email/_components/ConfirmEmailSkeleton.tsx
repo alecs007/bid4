@@ -1,7 +1,6 @@
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Skeleton } from "@/components/ui";
 
-/** Matches the checking state box for box, so nothing moves when it resolves. */
 export function ConfirmEmailSkeleton() {
   return (
     <AuthShell

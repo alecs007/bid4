@@ -11,11 +11,6 @@ import {
   CARD_TITLE_TYPE,
 } from "@/components/auctions/cardChrome";
 
-/**
- * Skeletons mirror the real components box for box, so swapping placeholder for
- * content moves nothing. Change a layout and its skeleton changes with it.
- */
-
 export function Skeleton({ className }: { className?: string }) {
   return (
     <span
@@ -44,7 +39,6 @@ export function SkeletonText({
   );
 }
 
-/** 16px bars 10px apart plus 5px half-leading is 26px per line — what `leading-relaxed` occupies. */
 export function SkeletonParagraph({
   lines = 3,
   className,
@@ -64,15 +58,11 @@ export function SkeletonParagraph({
   );
 }
 
-/** Mirrors `<AuctionCard>`. */
 export function SkeletonAuctionCard({ className }: { className?: string }) {
   return (
     <div className={cn(CARD_SHELL, className)}>
       <Skeleton className={CARD_MEDIA} />
       <div className={CARD_BODY}>
-        {/* Sized in `em` inside the title's own type scale, so the two bars fill
-            exactly the box the real two clamped lines will occupy — at 13px on a
-            phone and at 16px from `sm`, without either size written twice. */}
         <div
           className={cn(
             CARD_TITLE_TYPE,
@@ -88,7 +78,6 @@ export function SkeletonAuctionCard({ className }: { className?: string }) {
           <Skeleton className="h-[1.1em] w-2/3 rounded-md" />
         </div>
         <div className={CARD_FOOTER}>
-          {/* The price is text-lg then text-2xl; the countdown stays text-xs. */}
           <Skeleton className="h-[18px] w-20 rounded-md sm:h-6" />
           <Skeleton className="h-4 w-14 rounded-md" />
         </div>
@@ -97,7 +86,6 @@ export function SkeletonAuctionCard({ className }: { className?: string }) {
   );
 }
 
-/** Same grid as `<AuctionGrid>`. */
 export function SkeletonGrid({
   count = 8,
   columns = 4,
@@ -145,7 +133,6 @@ export function SkeletonRows({ count = 5 }: { count?: number }) {
   );
 }
 
-/** Mirrors the rows in `<BidHistory>`. */
 export function SkeletonBidRows({ count = 3 }: { count?: number }) {
   return (
     <>
@@ -166,7 +153,6 @@ export function SkeletonBidRows({ count = 3 }: { count?: number }) {
   );
 }
 
-/** The card wrapper shared by the blocks under an auction or a cause. */
 function SkeletonCard({
   className,
   children,
@@ -193,16 +179,6 @@ function SkeletonPersonRow() {
   );
 }
 
-/**
- * The three tiles, at the height `<StatTiles>` actually occupies.
- *
- * <p>Shared rather than drawn twice: the profile and the listing's seller block show the same three
- * tiles, and two copies of this drifted apart once already — one of them was a single 64px bar for a
- * row that stands 110px tall.
- *
- * <p>The bars mirror `<StatTile>` line for line: a drawing, a `text-lg`/`sm:text-xl` figure on
- * `leading-none`, and a `text-xs` label a `mt-1` below it.
- */
 export function SkeletonStatTiles({ className }: { className?: string }) {
   return (
     <div className={cn("grid grid-cols-3 gap-2 sm:gap-3", className)}>
@@ -222,7 +198,6 @@ export function SkeletonStatTiles({ className }: { className?: string }) {
   );
 }
 
-/** Full `/licitatii/[id]` page. */
 export function SkeletonDetail() {
   return (
     <div
@@ -233,12 +208,8 @@ export function SkeletonDetail() {
       <Skeleton className="h-5 w-64" />
 
       <div className="grid gap-x-12 gap-y-7 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        {/* title above the photographs on a desktop, under them on a phone */}
         <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
           <div className="order-2 lg:order-1">
-            {/* The heading is text-2xl/leading-tight, text-3xl from sm — 30px
-                then 38px — and the two action squares stand beside it from lg,
-                which is what sets that row's height there. */}
             <div className="flex items-start justify-between gap-3">
               <Skeleton className="h-[30px] w-4/5 sm:h-[38px]" />
               <div className="hidden shrink-0 gap-1 lg:flex">
@@ -267,7 +238,6 @@ export function SkeletonDetail() {
           </div>
         </div>
 
-        {/* the one panel: clock, price, cause, bids, costs, payment */}
         <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="divide-y divide-line rounded-xl bg-white ring-1 ring-edge">
             <div className="px-5 pt-4 pb-3">
@@ -290,7 +260,6 @@ export function SkeletonDetail() {
             <div className="px-5 py-5">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="mt-2 h-8 w-32" />
-              {/* the quick amounts, the field, the button and the rules link */}
               <div className="mt-4 hidden gap-2 lg:flex">
                 {Array.from({ length: 3 }).map((_, index) => (
                   <Skeleton key={index} className="h-10 flex-1 rounded-xl" />
@@ -310,7 +279,6 @@ export function SkeletonDetail() {
             <div className="px-5 py-4.5">
               <Skeleton className="mb-3 h-4 w-40" />
               <SkeletonBidRows />
-              {/* the "vezi toate ofertele" line the loaded panel ends on */}
               <Skeleton className="mt-1.5 h-4 w-32" />
             </div>
             <div className="px-5 py-4.5">
@@ -333,8 +301,6 @@ export function SkeletonDetail() {
           </div>
         </div>
 
-        {/* description, details, seller */}
-        {/* Every heading here is a `<Section>` title: text-lg, so 28px. */}
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">
           <div>
             <Skeleton className="mb-3 h-7 w-28" />
@@ -354,8 +320,6 @@ export function SkeletonDetail() {
               ))}
             </div>
           </div>
-          {/* The seller: a 44px avatar beside a text-lg name over the chips that
-              say where they are and who they sell as, then the three tiles. */}
           <div className="border-t border-line pt-5">
             <Skeleton className="mb-3 h-7 w-28" />
             <div className="flex items-center gap-3">
@@ -453,14 +417,6 @@ export function SkeletonCauseDetail() {
   );
 }
 
-/** Full `/profil/[username]` page. */
-/**
- * Mirrors `<ProfileView>` box for box.
- *
- * <p>It had drifted: three wide `Stat` cards stacked on a phone, where the page now shows the same
- * three tiles the listing page uses, three across at every width. And no floor, so the footer rode
- * up while the profile loaded and dropped again when it arrived.
- */
 export function SkeletonProfile() {
   return (
     <div
@@ -479,11 +435,8 @@ export function SkeletonProfile() {
         </div>
       </SkeletonCard>
 
-      {/* Three across on a phone as well — the shape StatTiles renders. */}
       <SkeletonStatTiles />
 
-      {/* No tab row: it is drawn only for a profile that has both kinds, and
-          which that is cannot be known while this is on screen. */}
       <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={5} />
     </div>
   );

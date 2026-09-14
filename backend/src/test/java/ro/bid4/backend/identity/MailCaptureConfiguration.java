@@ -12,29 +12,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import ro.bid4.backend.common.config.Bid4Properties;
 import ro.bid4.backend.identity.service.VerificationMailer;
 
-/**
- * Reads the confirmation link out of the message instead of out of a mailbox.
- *
- * <p>The token is only ever stored as a hash, so a test cannot recover it from the database — which
- * is exactly the property being relied on. Standing in for the mailer is the only honest way to get
- * it, and it keeps the tests from needing an SMTP server.
- *
- * <p>One queue per address, awaited rather than read. Sending is {@code @Async}, so a single shared
- * reference is a race the caller usually wins and occasionally does not: on a loaded machine the
- * request returned before the mail thread had written, and the test read the token left by the
- * previous test — a link that was still valid, so redeeming it succeeded where the test demanded a
- * refusal. Queueing per recipient also keeps two links to the same address in the order they were
- * sent, which is what a reissue test is about.
- */
 @TestConfiguration(proxyBeanMethods = false)
 public class MailCaptureConfiguration {
-
   private static final long WAIT_SECONDS = 10;
 
   private static final ConcurrentMap<String, BlockingQueue<String>> SENT =
       new ConcurrentHashMap<>();
 
-  /** The next link sent to this address, waiting for it if the mail thread is still behind. */
   public static String awaitTokenFor(String address) {
     String token;
     try {

@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ro.bid4.backend.ledger.domain.LedgerTransaction;
 
 public interface LedgerTransactionRepository extends JpaRepository<LedgerTransaction, UUID> {
-
   Optional<LedgerTransaction> findByIdempotencyKey(String idempotencyKey);
 
   List<LedgerTransaction> findByOrderIdOrderByCreatedAtAsc(UUID orderId);

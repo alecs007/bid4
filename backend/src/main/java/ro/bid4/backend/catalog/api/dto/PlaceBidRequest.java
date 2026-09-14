@@ -4,26 +4,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * The body of POST /auctions/{id}/bids.
- *
- * <p>The amount and what the bidder accepted to offer it. The auction comes from the path and the
- * bidder from the token, so a crafted body cannot bid on someone else's behalf or move the offer to
- * another listing.
- */
 public record PlaceBidRequest(
     @NotNull(message = "Introdu suma pe care vrei să o oferi.")
         @Min(value = 100, message = "Oferta este prea mică.")
-        // Mirrors CatalogRules.MAX_BID. Refused at the edge as well as in the
-        // service, so a nonsense body is rejected before it reaches a lock.
         @Max(value = 100_000_000L, message = "Oferta depășește maximul acceptat.")
         Long amount,
-
-    /**
-     * Which version of the terms the bidder was shown and accepted.
-     *
-     * <p>Sent rather than assumed, and checked against the current version in the service: a
-     * checkbox the server does not verify is decoration, and the whole point of recording an
-     * acceptance is that it can be produced later.
-     */
     String acceptedTermsVersion) {}

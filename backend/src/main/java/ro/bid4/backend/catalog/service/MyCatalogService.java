@@ -23,16 +23,9 @@ import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.api.dto.PublicUserResponse;
 import ro.bid4.backend.identity.service.UserMapper;
 
-/**
- * What the signed-in reader has done: sold, followed, offered on.
- *
- * <p>Every method here is scoped by the token's subject. Only one takes an id at all, and it names
- * a listing rather than a person — checked against the token before a single row is read.
- */
 @Service
 @Transactional(readOnly = true)
 public class MyCatalogService {
-
   private final AuctionRepository auctions;
   private final BidRepository bids;
   private final AuctionWatchRepository watches;
@@ -52,7 +45,6 @@ public class MyCatalogService {
     this.users = users;
   }
 
-  /** GET /users/me/auctions — the seller's own shelf, any status. */
   public List<AuctionResponse> auctions(Viewer viewer) {
     if (viewer.isAnonymous()) {
       return List.of();
@@ -61,19 +53,6 @@ public class MyCatalogService {
         auctions.findBySellerIdOrderByCreatedAtDesc(viewer.id()), viewer.id());
   }
 
-  /**
-   * GET /users/me/auctions/{id}/offers — every offer on one of the seller's own listings.
-   *
-   * <p>The listing that does not close on a timer needs this: the seller reads what has been
-   * offered and picks, so they have to be able to see all of it, highest first, with a name against
-   * each one. The public history on the listing page shortens those names to "Maria I." because it
-   * is read by strangers; the person deciding who to sell to is not a stranger, and gets what any
-   * public profile already shows.
-   *
-   * <p>The id in the path names a listing, not a seller. It is checked against the token before
-   * anything is read, and a listing belonging to someone else is a 404 rather than a refusal —
-   * whether it exists is not this caller's to confirm.
-   */
   public List<BidResponse> offers(UUID auctionId, Viewer viewer) {
     if (viewer.isAnonymous()) {
       throw new ApiException(ErrorCode.UNAUTHENTICATED);
@@ -95,7 +74,6 @@ public class MyCatalogService {
     return offers.stream().map(bid -> mapper.toBidResponse(bid, bidders)).toList();
   }
 
-  /** GET /users/me/watchlist */
   public List<AuctionResponse> watchlist(Viewer viewer) {
     if (viewer.isAnonymous()) {
       return List.of();
@@ -105,9 +83,6 @@ public class MyCatalogService {
       return List.of();
     }
 
-    // findByIdIn answers in whatever order the database liked. The query above
-    // is ordered newest-followed-first, and that is the order the page shows,
-    // so it is reimposed here rather than silently lost.
     Map<UUID, Auction> byId = new HashMap<>();
     for (Auction auction : auctions.findByIdIn(watched)) {
       byId.put(auction.getId(), auction);
@@ -117,12 +92,6 @@ public class MyCatalogService {
     return mapper.toResponses(ordered, viewer.id());
   }
 
-  /**
-   * GET /users/me/bids — one row per auction, carrying the reader's best offer on it.
-   *
-   * <p>A bidder holds at most one offer per auction, so "my top bid" is simply the one there is;
-   * the grouping exists because the frontend renders a card per auction, not per bid.
-   */
   public List<MyBidResponse> bids(Viewer viewer) {
     if (viewer.isAnonymous()) {
       return List.of();
@@ -150,8 +119,6 @@ public class MyCatalogService {
     }
 
     List<AuctionResponse> views = mapper.toResponses(ordered, viewer.id());
-    // One lookup for the whole list rather than one per row: every bid here
-    // belongs to the same person, so this map has exactly one entry.
     Map<UUID, PublicUserResponse> bidders = users.publicUsersById(List.of(viewer.id()));
 
     List<MyBidResponse> summaries = new ArrayList<>(views.size());

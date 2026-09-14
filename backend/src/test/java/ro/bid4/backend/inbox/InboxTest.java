@@ -42,18 +42,11 @@ import ro.bid4.backend.storage.domain.StoredFile;
 import ro.bid4.backend.storage.domain.Visibility;
 import ro.bid4.backend.storage.repo.StoredFileRepository;
 
-/**
- * Who may read a thread, who may write in one, and what happens to the counts.
- *
- * <p>Driven through the service. Every question here is about which row ends up where and who was
- * allowed to put it there, and a status code answers none of them.
- */
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = "bid4.rate-limit.enabled=false")
 class InboxTest {
-
   private static final long LEU = 100;
 
   @Autowired private InboxService inbox;
@@ -74,8 +67,6 @@ class InboxTest {
     buyer = user("Cumparator Inbox");
     approved = cause(seller.getId());
   }
-
-  /* --- opening ------------------------------------------------------------ */
 
   @Test
   @DisplayName("anybody may ask about a listing without having bid on it")
@@ -129,8 +120,6 @@ class InboxTest {
         .hasMessageContaining("nu a fost găsit");
   }
 
-  /* --- who may read ------------------------------------------------------- */
-
   @Test
   @DisplayName("a thread is invisible to anybody who is not in it, and reads as missing")
   void strangersGetNothing() {
@@ -142,8 +131,6 @@ class InboxTest {
             .id();
     UserAccount stranger = user("Curios");
 
-    // Not 403: a refusal that distinguishes "not yours" from "not there"
-    // confirms the id names something real, and an id that can be probed will be.
     assertThatThrownBy(() -> inbox.thread(conversationId, viewer(stranger)))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("nu a fost găsită");
@@ -171,8 +158,6 @@ class InboxTest {
     assertThat(inbox.thread(conversationId, viewer(buyer)).items()).hasSize(2);
   }
 
-  /* --- counts ------------------------------------------------------------- */
-
   @Test
   @DisplayName("an unread thread counts for the other side only, and clears when it is opened")
   void unreadCountsForTheOtherSide() {
@@ -187,7 +172,6 @@ class InboxTest {
             .id();
 
     assertThat(inbox.unread(viewer(seller)).messages()).isEqualTo(sellerBefore + 1);
-    // The person who wrote it is not owed a badge for their own message.
     assertThat(inbox.unread(viewer(reader)).messages()).isZero();
 
     inbox.markRead(conversationId, viewer(seller));
@@ -206,7 +190,6 @@ class InboxTest {
             .id();
     inbox.send(conversationId, new SendMessageRequest("Ultima", null), viewer(seller));
 
-    // By id, not by position: every inbox now opens with the thread bid4 starts.
     var row =
         inbox.list(null, false, viewer(lister)).items().stream()
             .filter(item -> conversationId.equals(item.id()))
@@ -217,8 +200,6 @@ class InboxTest {
     assertThat(row.lastItem().body()).isEqualTo("Ultima");
     assertThat(row.listingTitle()).isEqualTo(listing.getTitle());
   }
-
-  /* --- what may be sent --------------------------------------------------- */
 
   @Test
   @DisplayName("a message that hands over a phone number is delivered, and marked")
@@ -236,8 +217,6 @@ class InboxTest {
             new SendMessageRequest("Sună-mă la 0722 333 444", null),
             viewer(seller));
 
-    // Delivered, because refusing it only teaches people to spell the number
-    // out, and moves the same conversation somewhere nothing can see it.
     assertThat(sent.body()).isEqualTo("Sună-mă la 0722 333 444");
     assertThat(sent.flaggedReason()).isEqualTo("PHONE_NUMBER");
   }
@@ -299,8 +278,6 @@ class InboxTest {
     assertThat(sent.imageUrls()).hasSize(1);
   }
 
-  /* --- never empty -------------------------------------------------------- */
-
   @Test
   @DisplayName("an account that has done nothing still opens onto a thread from bid4")
   void theInboxIsNeverEmpty() {
@@ -311,11 +288,7 @@ class InboxTest {
     assertThat(first.items()).hasSize(1);
     var greeting = first.items().getFirst();
     assertThat(greeting.kind()).isEqualTo(ConversationKind.SUPPORT);
-    // Unread on purpose: it is worth reading once, and a badge is what makes
-    // somebody read it.
     assertThat(greeting.unreadCount()).isPositive();
-    // One message, not two: it is a single greeting rather than a pair of
-    // announcements arriving a moment apart.
     assertThat(inbox.thread(greeting.id(), viewer(newcomer)).items())
         .allMatch(item -> item.kind() == ThreadItemKind.SYSTEM)
         .hasSize(1);
@@ -327,8 +300,6 @@ class InboxTest {
     Auction listing = liveListing();
     UserAccount reader = user("Cititor Fixat");
 
-    // Opens the inbox once, so the greeting exists and is the oldest thing in
-    // it, then writes somewhere else — which by time alone would sink it.
     inbox.list(null, false, viewer(reader));
     UUID conversationId =
         inbox
@@ -341,7 +312,6 @@ class InboxTest {
 
     assertThat(rows.getFirst().kind()).isEqualTo(ConversationKind.SUPPORT);
     assertThat(rows.get(1).id()).isEqualTo(conversationId);
-    // And exactly once: pinned on top of a page it is also excluded from.
     assertThat(rows.stream().filter(row -> row.kind() == ConversationKind.SUPPORT)).hasSize(1);
   }
 
@@ -360,16 +330,12 @@ class InboxTest {
     assertThat(notificationService.list(null, viewer(newcomer)).items()).hasSize(1);
   }
 
-  /* --- the stream's way in ------------------------------------------------ */
-
   @Test
   @DisplayName("a stream ticket names its owner once, and is gone after")
   void ticketsAreSingleUse() {
     String ticket = tickets.issue(buyer.getId());
 
     assertThat(tickets.spend(ticket)).isEqualTo(buyer.getId());
-    // Spent as it is read, so a ticket lifted out of a URL or a log is worth
-    // nothing by the time anybody could try it.
     assertThatThrownBy(() -> tickets.spend(ticket))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("expirat");
@@ -385,8 +351,6 @@ class InboxTest {
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("Autentifică-te");
   }
-
-  /* --- fixtures ----------------------------------------------------------- */
 
   private Auction liveListing() {
     Auction auction = new Auction();

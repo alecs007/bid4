@@ -37,37 +37,14 @@ import ro.bid4.backend.identity.repo.PaymentMethodRepository;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.orders.service.Terms;
 
-/**
- * Causes and listings for the four demo accounts, so /licitatii has something to show.
- *
- * <p>Runs after {@link DevDataSeeder}, under the same switch, and refuses a database that already
- * holds a cause. Everything is dated relative to startup rather than to fixed instants, so a
- * listing put up "four days ago" is four days old whenever the seed is run.
- *
- * <p>Every status the model has appears at least once, the two that carry a buyer included. Those
- * are the ones worth looking at: a listing is reserved when its seller has taken an offer and is
- * waiting to be paid, and sold once the money has arrived.
- *
- * <p>How much bidding there can be is set by the size of the demo cast. One offer per bidder per
- * auction is a unique index, and a seller may not bid on their own listing, so with four accounts
- * an auction tops out at three offers. The counters are the real number of rows rather than a
- * flattering one.
- */
 @Component
 @Order(2)
 @ConditionalOnProperty(name = "bid4.dev.seed", havingValue = "true")
 public class DevCatalogSeeder implements ApplicationRunner {
-
   private static final Logger log = LoggerFactory.getLogger(DevCatalogSeeder.class);
 
   private static final long LEU = 100;
 
-  /**
-   * An auction and how much bidding it should have when the world starts.
-   *
-   * <p>What becomes of those offers is not a field. It is read off the listing's status, so the
-   * seed cannot describe a sold listing whose bids all still say they are running.
-   */
   private record Planned(Auction auction, int offers) {}
 
   private final UserAccountRepository users;
@@ -114,9 +91,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
     UUID zambetId = zambet.get().getId();
     List<UUID> cast = List.of(mariaId, zambetId, operator.get().getId(), admin.get().getId());
 
-    // Bidding is gated on a card and a delivery method. Without both, every
-    // demo account can browse and none can bid, which makes the seeded world
-    // look broken rather than empty.
     List.of(maria.get(), zambet.get(), operator.get(), admin.get()).forEach(this::unlockBidding);
 
     Instant now = Instant.now();
@@ -177,7 +151,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
             "RO38291045",
             "Elena Vasilescu"));
 
-    // Saved first, because a listing carries the id of the cause it donates to.
     causes.saveAll(seededCauses.values());
 
     List<Planned> planned =
@@ -196,8 +169,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     40,
                     250 * LEU,
                     400 * LEU,
-                    // Reachable, so the "cumpără acum" path is one click away
-                    // in a seeded world.
                     600 * LEU,
                     now.minus(Duration.ofDays(6)),
                     AuctionStatus.LIVE),
@@ -288,9 +259,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     null,
                     null,
                     now.minus(Duration.ofDays(4)),
-                    // The shop window needs one listing caught between the
-                    // acceptance and the payment: its seller has chosen, and
-                    // chosen an offer that was not the highest.
                     AuctionStatus.RESERVED),
                 3),
             new Planned(
@@ -311,8 +279,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     now.minus(Duration.ofDays(10)),
                     AuctionStatus.SOLD),
                 3),
-            // Unpublished on purpose: the visibility rules need something that
-            // its seller can see and nobody else can.
             new Planned(
                 listing(
                     zambetId,
@@ -332,21 +298,9 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     AuctionStatus.PENDING_REVIEW),
                 0));
 
-    // The eight above are the shop window: real titles, real copy, and what the
-    // homepage rows and the cause pages are composed from. The batch below is
-    // volume — enough listings, in enough states, that filtering and paging on
-    // the account pages are exercised by the seed rather than by hand.
     List<Planned> everything = new ArrayList<>(planned);
     everything.addAll(volume(mariaId, zambetId, seededCauses.get("ana"), now));
 
-    // Three passes, in the order the real thing happens in.
-    //
-    // A bid carries the id of its auction, and an acceptance carries the id of
-    // the bid it took, so a listing the seed describes as reserved or sold
-    // cannot be inserted that way — it would name an offer that does not exist
-    // yet, and the table checks. Every row goes in open, the offers are placed
-    // on it, and the acceptance is replayed once they have ids. The flushes are
-    // what make that ordering real rather than a hope about Hibernate's.
     List<AuctionStatus> outcomes =
         everything.stream().map(entry -> entry.auction().getStatus()).toList();
     for (Planned entry : everything) {
@@ -381,21 +335,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
         offers.size());
   }
 
-  /**
-   * A run of ordinary listings, so the account pages have something to page through.
-   *
-   * <p>One seller and every status, because that is what the two lists filter on: the seller's own
-   * page needs drafts, listings in review, listings running and listings sold, and the bidder pages
-   * need one account to have bid on more auctions than fit on a page. Written out rather than
-   * randomised — a seed that differs run to run is one that cannot be described in a bug report.
-   */
-  /**
-   * Volume, so the account pages have something to filter and page over.
-   *
-   * <p>Split between two sellers rather than all given to Maria. The order seed needs open listings
-   * on both sides of the market — she buys in half of its cases and sells in the other half — and
-   * with one seller owning every one of these, the half where she buys ran out after five sales.
-   */
   private List<Planned> volume(UUID sellerId, UUID otherSellerId, Cause cause, Instant now) {
     record Item(String title, String category, ItemCondition condition, long price, int offers) {}
 
@@ -425,10 +364,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
             new Item("Vinil: colecție rock, 20 de discuri", "colectii", ItemCondition.GOOD, 540, 2),
             new Item("Tablou în ulei, peisaj de munte", "arta", ItemCondition.VERY_GOOD, 800, 1),
             new Item("Robot de bucătărie Bosch", "casa", ItemCondition.GOOD, 330, 0),
-            // The eight below exist so the order seed can reach every case it
-            // has. A sale needs a LIVE listing with a cause and consumes it, so
-            // fourteen cases plus the ones held back for accepting an offer need
-            // more open listings than the shop window alone provides.
             new Item("Drujbă electrică Bosch AKE 35", "casa", ItemCondition.GOOD, 290, 2),
             new Item("Bicicletă pentru copii, 20 inch", "sport", ItemCondition.VERY_GOOD, 240, 1),
             new Item("Set de acuarele profesionale", "arta", ItemCondition.LIKE_NEW, 180, 3),
@@ -439,14 +374,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
             new Item(
                 "Atlas geografic, ediție cartonată", "carti", ItemCondition.VERY_GOOD, 210, 2));
 
-    // Cycled rather than random, so the same index is always the same status,
-    // and every status the model still has appears at least twice.
-    //
-    // Weighted towards LIVE, because an open listing is the one the rest of the
-    // seed consumes: every sale takes one and does not give it back, and the
-    // order seed walks fourteen cases on top of the three held open so that an
-    // offer is always there to accept. The other five statuses are still here
-    // twice each, which is what the account pages need to filter over.
     AuctionStatus[] cycle = {
       AuctionStatus.LIVE,
       AuctionStatus.LIVE,
@@ -467,8 +394,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
       Item item = items.get(index);
       AuctionStatus status = cycle[index % cycle.length];
 
-      // Everything is already up. Nothing is published into the future any more,
-      // and nothing has a closing time to be spread out between.
       Instant start = now.minus(Duration.ofDays(1 + (index % 5)));
 
       generated.add(
@@ -488,21 +413,11 @@ public class DevCatalogSeeder implements ApplicationRunner {
                   null,
                   start,
                   status),
-              // Nothing that was never public has an offer on it: a draft, a
-              // listing still in review and one withdrawn before it opened have
-              // all had nobody able to bid.
               status.isPublic() && status != AuctionStatus.CANCELLED ? item.offers() : 0));
     }
     return generated;
   }
 
-  /**
-   * Gives one demo account the card and the locker that a bid requires.
-   *
-   * <p>Skips an account that already has either. At most one default delivery method per user is a
-   * partial unique index, so a second run against a database whose catalogue was cleared but whose
-   * accounts were not would otherwise fail on it — which is exactly what the index is for.
-   */
   private void unlockBidding(UserAccount account) {
     if (!deliveryMethods.findByUserIdOrderByCreatedAtAsc(account.getId()).isEmpty()
         || !paymentMethods.findByUserIdOrderByCreatedAtAsc(account.getId()).isEmpty()) {
@@ -522,8 +437,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
 
     PaymentMethodCard card = new PaymentMethodCard();
     card.setUserId(account.getId());
-    // Not a card number and not a real Stripe id — a placeholder that looks
-    // like one, so nothing downstream learns to expect a shape it will not get.
     card.setProviderMethodId("pm_dev_" + account.getId().toString().substring(0, 8));
     card.setBrand("VISA");
     card.setLast4("4242");
@@ -550,7 +463,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
       String legalName,
       String registrationNumber,
       String representative) {
-
     Cause cause = new Cause();
     cause.setOrganizerId(organizerId);
     cause.setName(name);
@@ -559,7 +471,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
     cause.setCategory(category);
     cause.setImageUrl(banner(slug));
     cause.setCoverUrl(banner(slug + "-cover"));
-    // Several photographs, in the order the organiser put them.
     cause.setGallery(List.of(photo(slug + "-1"), photo(slug + "-2"), photo(slug + "-3")));
     cause.setStory(story);
     cause.setStatus(CauseStatus.ACTIVE);
@@ -603,7 +514,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
       Long buyNowPrice,
       Instant startTime,
       AuctionStatus status) {
-
     Auction auction = new Auction();
     auction.setSellerId(sellerId);
     auction.setCauseId(cause.getId());
@@ -616,8 +526,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
     auction.setDonationPercent((short) donationPercent);
     auction.setStartingPrice(startingPrice);
     auction.setCurrentPrice(startingPrice);
-    // Not a seeded choice either: the ladder decides, exactly as it does for a
-    // listing a real seller writes.
     auction.setBidIncrement(CatalogRules.bidStepFor(startingPrice));
     auction.setReservePrice(reservePrice);
     auction.setBuyNowPrice(buyNowPrice);
@@ -627,14 +535,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
     return auction;
   }
 
-  /**
-   * Bids the ladder up from the starting price.
-   *
-   * <p>Always as an open listing reads: one leader, the rest outbid. What the seller then did about
-   * them is {@link #settle}'s business, and doing it in two passes is what lets the acceptance name
-   * a bid that exists. Exactly one WINNING row per auction is a partial unique index, which is also
-   * what the read path uses to answer who is ahead.
-   */
   private static List<Bid> place(Planned entry, List<UUID> cast, Instant now) {
     if (entry.offers() == 0) {
       return List.of();
@@ -661,8 +561,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
       bid.setStatus(BidStatus.OUTBID);
       Instant at = now.minus(Duration.ofHours(bidders.size() - (long) index));
       bid.setCreatedAt(at);
-      // As BidService would have written it. A seeded offer with no acceptance
-      // beside it would make the demo the one place a bid can exist without one.
       bid.setTermsVersion(Terms.CURRENT_VERSION);
       bid.setTermsAcceptedAt(at);
       placed.add(bid);
@@ -676,22 +574,10 @@ public class DevCatalogSeeder implements ApplicationRunner {
     return placed;
   }
 
-  /**
-   * Replays what the seller did once the offers were in, matching OfferService step for step.
-   *
-   * <p>Nothing settles itself here, because nothing settles itself anywhere any more. A reserved
-   * listing is one whose seller has taken an offer and is waiting to be paid; a sold one has been
-   * paid for and now owes a parcel.
-   *
-   * <p>The reserved listing deliberately takes an offer from the middle of the ladder. A seed where
-   * the highest offer always wins is a seed that never shows the one thing the model is for.
-   */
   private static void settle(Planned entry, AuctionStatus outcome, List<Bid> placed, Instant now) {
     Auction auction = entry.auction();
 
     if (outcome == AuctionStatus.CANCELLED) {
-      // Withdrawing releases anyone still holding an offer, exactly as
-      // ListingService does on the way out.
       placed.forEach(bid -> bid.setStatus(BidStatus.LOST));
       return;
     }
@@ -712,13 +598,10 @@ public class DevCatalogSeeder implements ApplicationRunner {
     Instant acceptedAt = now.minus(Duration.ofDays(paid ? 2 : 0)).minus(Duration.ofHours(6));
 
     if (paid) {
-      // markPaid: everything loses, then the accepted offer is lifted back out.
       placed.forEach(bid -> bid.setStatus(BidStatus.LOST));
       accepted.setStatus(BidStatus.WON);
       auction.setDispatchDeadline(acceptedAt.plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)));
     } else {
-      // accept: the other offers are left standing, because the seller can still
-      // hand this one back to the room.
       accepted.setStatus(BidStatus.ACCEPTED);
     }
 
@@ -728,38 +611,8 @@ public class DevCatalogSeeder implements ApplicationRunner {
     auction.setAcceptedAt(acceptedAt);
   }
 
-  /* --- placeholder imagery -------------------------------------------------
-   *
-   * Real photographs from a public placeholder service, addressed by a seed so
-   * a listing keeps the same picture across restarts. Emoji on a gradient made
-   * the catalogue legible but not believable — a page of coloured squares reads
-   * as a wireframe, and design decisions taken against it are decisions about a
-   * wireframe.
-   *
-   * Development only, and it does mean a seeded database now wants a network
-   * on first paint. Nothing else in the application fetches from here: a real
-   * listing carries whatever its seller uploaded.
-   */
-
   private static final String PHOTO = "https://picsum.photos/seed/%s/800/600";
 
-  /**
-   * The cover each listing actually deserves: a photograph of the thing itself, served from the
-   * frontend's own `public/images/products`.
-   *
-   * <p>A random stock picture is believable as a photograph and useless as a listing — a mountain
-   * range under "Ceas de mână Certina" tells you nothing about how a real catalogue reads, and
-   * every judgement made against it is a judgement about the wrong page. Only the first frame is
-   * pinned; the rest of the gallery stays random, because what the carousel is being exercised with
-   * past frame one is its own behaviour, not the photography.
-   *
-   * <p>Keyed by title. A listing whose title is not here falls back to the placeholder service
-   * rather than to a broken image.
-   *
-   * <p>The slugs name files the frontend also seeds against, so a few of them read like order
-   * states rather than products: the file is the photograph, and both catalogues point at the same
-   * one instead of shipping it twice.
-   */
   private static final Map<String, String> COVERS =
       Map.ofEntries(
           Map.entry("Aparat foto Canon AE-1 Program cu obiectiv 50mm f/1.8", "canon"),
@@ -785,27 +638,20 @@ public class DevCatalogSeeder implements ApplicationRunner {
           Map.entry("Geacă de piele naturală, mărimea M", "geaca-piele"),
           Map.entry("Servietă din piele, model clasic", "servieta"));
 
-  /** The three frames for one listing: its own photograph, then two fillers. */
   private static List<String> gallery(String title) {
     String slug = COVERS.get(title);
     String cover = slug != null ? "/images/products/" + slug + ".webp" : photo(title + "-1");
     return List.of(cover, photo(title + "-2"), photo(title + "-3"));
   }
 
-  /** A different seed per image, or a gallery is one picture repeated three times. */
   private static String photo(String seed) {
     return PHOTO.formatted(slugSeed(seed));
   }
 
-  /** Wide, because a cause is read as a banner rather than a card. */
   private static String banner(String seed) {
     return "https://picsum.photos/seed/%s/1200/800".formatted(slugSeed(seed));
   }
 
-  /**
-   * A stable, url-safe token for a title that may carry diacritics and spaces. The hash rather than
-   * the text, so "Aparat foto Canon AE-1" and its neighbour cannot collide into the same picture.
-   */
   private static String slugSeed(String seed) {
     return "bid4" + Integer.toHexString(seed.hashCode());
   }

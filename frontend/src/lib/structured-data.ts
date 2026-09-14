@@ -1,19 +1,9 @@
 import { AUCTION_CATEGORIES, SITE_URL } from "@/lib/config";
 import { clampDescription } from "@/lib/seo";
 
-/**
- * The schema.org descriptions of what a page is about.
- *
- * <p>Built here rather than inline so the shapes stay in one place and stay
- * honest: every field is one the API actually returns, because a schema that
- * claims a rating or a stock count the product does not have is the kind of
- * thing that gets structured data ignored altogether.
- */
-
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 const WEBSITE_ID = `${SITE_URL}/#website`;
 
-/** Who runs the site. Referenced by id from everything else, never repeated. */
 export function organizationSchema(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
@@ -27,12 +17,6 @@ export function organizationSchema(): Record<string, unknown> {
   };
 }
 
-/**
- * The site itself, and how to search it.
- *
- * <p>The search action is the catalogue's own `?q=`, so a result can offer a
- * search box that lands where the site's own search lands.
- */
 export function websiteSchema(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
@@ -53,7 +37,6 @@ export function websiteSchema(): Record<string, unknown> {
   };
 }
 
-/** schema.org has its own vocabulary for wear; ours has to map onto it. */
 const CONDITION: Record<string, string> = {
   NEW: "https://schema.org/NewCondition",
   LIKE_NEW: "https://schema.org/UsedCondition",
@@ -61,11 +44,8 @@ const CONDITION: Record<string, string> = {
   GOOD: "https://schema.org/UsedCondition",
 };
 
-/** Only a live listing can still be offered on. */
 const AVAILABILITY: Record<string, string> = {
   LIVE: "https://schema.org/InStock",
-  // Spoken for but not yet paid. Not orderable by anyone else, which is what
-  // BackOrder says more honestly than SoldOut would.
   RESERVED: "https://schema.org/BackOrder",
   SOLD: "https://schema.org/SoldOut",
   CANCELLED: "https://schema.org/Discontinued",
@@ -83,13 +63,6 @@ export interface AuctionSchemaInput {
   seller?: { displayName?: string; username?: string; accountType?: string };
 }
 
-/**
- * A listing, as a product with one offer on it.
- *
- * <p>Price is in lei because schema.org money is a decimal amount, while the
- * API and everything above it count whole bani. There is no `priceValidUntil`:
- * the offer has no expiry to name, because the listing has none.
- */
 export function auctionSchema(auction: AuctionSchemaInput): Record<string, unknown> {
   const url = `${SITE_URL}/licitatii/${auction.id}`;
   const category = AUCTION_CATEGORIES.find((item) => item.id === auction.category);
@@ -130,13 +103,6 @@ export function auctionSchema(auction: AuctionSchemaInput): Record<string, unkno
   };
 }
 
-/**
- * A cause, as the thing being funded.
- *
- * <p>Not a Product: nobody buys a cause. `NGO` is what schema.org has for an
- * organisation raising money, and where the record is a person's appeal rather
- * than a registered body the fundraiser is still described by its own page.
- */
 export function causeSchema(cause: {
   slug: string;
   name: string;
@@ -162,7 +128,6 @@ export function causeSchema(cause: {
   };
 }
 
-/** The trail a result can print under its own link. */
 export function breadcrumbSchema(
   trail: { name: string; path: string }[],
 ): Record<string, unknown> {

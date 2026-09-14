@@ -13,7 +13,6 @@ const TYPE_OPTIONS = (Object.keys(EVIDENCE_TYPE) as CauseEvidenceType[]).map(
   (type) => ({ value: type, label: EVIDENCE_TYPE[type] }),
 );
 
-/** What an operator will look for, by the kind of story being told. */
 const SUGGESTED: Partial<Record<string, CauseEvidenceType[]>> = {
   medical: ["MEDICAL_RECORD", "MEDICAL_LETTER", "TREATMENT_QUOTE"],
   copii: ["SOCIAL_REPORT", "SCHOOL_PROOF", "INCOME_PROOF"],

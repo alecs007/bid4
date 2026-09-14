@@ -22,15 +22,7 @@ import type {
 
 import { http } from "./http";
 
-/**
- * TODO(backend): every function here maps onto a Sameday Easybox call —
- *   lockers      -> GET  /geolocation/lockers
- *   generateAwb  -> POST /awb   (returns awbNumber + label PDF bytes)
- *   trackAwb     -> GET  /awb/{awb}/status
- * Once the courier issues the real PDF, serve that and keep the local renderer
- * in `lib/pdf/shippingLabel.ts` as the dev fallback.
- */
-
+// TODO(backend): these map onto Sameday Easybox — /geolocation/lockers, /awb, /awb/{awb}/status.
 const LOCKERS: EasyboxLocker[] = [
   {
     id: "BUC-142",
@@ -106,7 +98,6 @@ const LOCKERS: EasyboxLocker[] = [
   },
 ];
 
-/** GET /shipping/lockers?q=cluj */
 export async function searchLockers(query = ""): Promise<EasyboxLocker[]> {
   if (!USE_MOCK) {
     return http<EasyboxLocker[]>("/shipping/lockers", { query: { q: query } });
@@ -129,7 +120,6 @@ function addressLinesOf(delivery: DeliverySnapshot): string[] {
       Boolean,
     );
   }
-  // Flat, the way the snapshot arrives from the server.
   return [
     delivery.street ?? "",
     [delivery.city, delivery.county].filter(Boolean).join(", "),
@@ -138,7 +128,6 @@ function addressLinesOf(delivery: DeliverySnapshot): string[] {
   ].filter(Boolean);
 }
 
-/** Pure: give it an order and it produces the label, no I/O. */
 export function buildLabelData(orderId: ID): ShippingLabelData {
   const world = getWorld();
   const order = world.orders.find((item) => item.id === orderId);
@@ -190,7 +179,6 @@ export function buildLabelData(orderId: ID): ShippingLabelData {
   };
 }
 
-/** POST /shipping/awb — issues the AWB and the label. */
 export async function generateLabel(
   orderId: ID,
   userId: ID,
@@ -230,7 +218,6 @@ export async function generateLabel(
   return buildLabelData(orderId);
 }
 
-/** GET /shipping/track/{awb} */
 export async function trackAwb(awb: string): Promise<TrackingEvent[]> {
   if (!USE_MOCK) return http<TrackingEvent[]>(`/shipping/track/${awb}`);
 
@@ -241,7 +228,6 @@ export async function trackAwb(awb: string): Promise<TrackingEvent[]> {
   return order.trackingEvents ?? [];
 }
 
-/** Courier-facing states only — used by the tracking timeline component. */
 export function courierEvents(order: Order): TrackingEvent[] {
   const courierStatuses = new Set([
     "LABEL_GENERATED",

@@ -31,18 +31,6 @@ import { TrackingNumber } from "@/components/orders/TrackingNumber";
 
 import { DeliverySteps } from "./DeliverySteps";
 
-/**
- * One sale, in full, for either party.
- *
- * <p>The conversation is the story of the sale and this is the record. Everything a party might
- * have to produce later lives here: what was charged and how it divided, where the parcel went,
- * which documents exist and under what numbers, and a single chronological trail of everything
- * that happened, acceptances included.
- *
- * <p>Written for both sides off one component rather than two pages. The sale is one object and the
- * differences are narrow — which figures are yours, whether the address is yours to see — so
- * duplicating the page would mean two places to keep in step and one of them quietly going stale.
- */
 export function OrderDetail({ orderId }: { orderId: string }) {
   const userId = useCurrentUserId();
 
@@ -95,26 +83,10 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   );
 }
 
-/**
- * The cause, by name, and a word that still reads as a sentence when it has gone.
- *
- * <p>A cause can be withdrawn after a sale. The donation still happened and the order is exactly
- * the record somebody would be looking for, so the page says "cauză" rather than breaking.
- */
 function causeName(order: Sale): string {
   return order.cause?.name ?? "cauză";
 }
 
-/* --- the top of the page -------------------------------------------------- */
-
-/**
- * What this is, and who it is between.
- *
- * <p>The two parties are shown as a pair with the item between them rather than as two rows in a
- * table of fields: a sale is a relationship, and which way round it is the thing a reader wants
- * first. The reader's own side is marked, so a person who both buys and sells can tell at a glance
- * which of the two they are here.
- */
 function Header({ order }: { order: Sale }) {
   return (
     <section className="flex flex-col gap-4 rounded-3xl bg-white p-4 ring-1 ring-edge sm:p-5">
@@ -127,8 +99,6 @@ function Header({ order }: { order: Sale }) {
             Înregistrată la {formatDateTimeRo(order.createdAt)}
           </p>
         </div>
-        {/* The same badge the list wears, so a card and the page it opens are
-            plainly the same object rather than two that resemble each other. */}
         <StatusBadge
           meta={ORDER_STATUS[order.status]}
           size="sm"
@@ -183,14 +153,6 @@ function Header({ order }: { order: Sale }) {
   );
 }
 
-/* --- the panels ----------------------------------------------------------- */
-
-/**
- * One section of the record.
- *
- * <p>Sentence case, not uppercase. A record is read, and a page of shouted labels reads as a form
- * to be filled in rather than a document to be trusted.
- */
 function Panel({
   title,
   children,
@@ -240,13 +202,6 @@ function Line({
   );
 }
 
-/**
- * The money, from the side that is looking.
- *
- * <p>A buyer is told what they paid and what it divided into; a seller what reaches them. Showing a
- * seller the buyer's fee would invite them to price against it, and it is not theirs — bid4 charges
- * the buyer, over the price, and the seller pays no commission at all.
- */
 function Money({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolean }) {
   return (
     <Panel title={viewerIsBuyer ? "Suma achitată" : "Suma cuvenită"}>
@@ -289,7 +244,6 @@ function Money({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolean }
   );
 }
 
-/** Where the parcel goes, and the address only for the party it belongs to. */
 function Delivery({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolean }) {
   const method = order.deliveryMethod;
 
@@ -309,9 +263,6 @@ function Delivery({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolea
           />
           {order.courier ? <Line label="Curier" value={order.courier} /> : null}
 
-          {/* The same box as in the conversation, rather than the number on a
-              row of its own: a consignment number is something to copy and to
-              track with, and a table cell offers neither. */}
           {order.awb ? (
             <TrackingNumber
               awb={order.awb}
@@ -320,8 +271,6 @@ function Delivery({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolea
             />
           ) : null}
 
-          {/* The delivery address is the buyer's own. A seller sees how the
-              parcel travels, never where a person lives or collects. */}
           {viewerIsBuyer ? (
             <div className="mt-2 rounded-2xl bg-ink-50 p-3">
               <p className="text-[12px] font-bold text-ink-500">
@@ -338,14 +287,10 @@ function Delivery({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolea
   );
 }
 
-/** The delivery point, written out. Shown to the buyer alone. */
 function addressOf(method: NonNullable<Sale["deliveryMethod"]>): string {
   if (method.lockerName) {
     return [method.lockerName, method.lockerAddress].filter(Boolean).join(" · ");
   }
-  // Flat, the way the snapshot arrives. Falling back to the label rather than to
-  // nothing: a buyer who named it "Acasă" is still told which of their addresses
-  // this parcel went to.
   const written = [
     method.recipientName,
     method.street,
@@ -357,7 +302,6 @@ function addressOf(method: NonNullable<Sale["deliveryMethod"]>): string {
   return written.length > 0 ? written.join(", ") : method.label;
 }
 
-/** What each document is, in the words the reader needs rather than the enum's. */
 const DOCUMENTS: Record<OrderDocument["kind"], { title: string; what: string }> = {
   PROFORMA: {
     title: "Proformă",
@@ -381,13 +325,6 @@ const DOCUMENTS: Record<OrderDocument["kind"], { title: string; what: string }> 
   },
 };
 
-/**
- * The sale's paperwork.
- *
- * <p>Documents that are due but not yet issued are listed as due, with their number where one has
- * been reserved. A page that hides them answers "there is no invoice" to somebody who is looking
- * for one, which is the question this section exists to answer.
- */
 function Documents({ order, viewerId }: { order: Sale; viewerId: string }) {
   const { data: documents, loading } = useApi(
     () => listDocuments(order.id, viewerId),
@@ -451,23 +388,12 @@ function Documents({ order, viewerId }: { order: Sale; viewerId: string }) {
   );
 }
 
-/* --- the trail ------------------------------------------------------------ */
-
-/**
- * One entry in the order's history: something that happened, when, and who caused it.
- *
- * <p>An acceptance carries no flag of its own. It used to be marked with a chip reading
- * "acceptare", which on a phone stole the width the sentence needed and said in a label what the
- * sentence can say in a word — so the entry states who accepted what, and reads as a record rather
- * than as a row with metadata bolted to it.
- */
 interface Entry {
   at: string;
   what: string;
   who?: string;
 }
 
-/** What each acceptance governed, said once, in the terms the party was shown. */
 const ACCEPTANCES: Record<OrderAgreement["kind"], { what: string; by: "BUYER" | "SELLER" }> = {
   SALE: {
     what: "Condițiile vânzării, inclusiv prețul, comisionul și costul livrării",
@@ -483,28 +409,12 @@ const ACCEPTANCES: Record<OrderAgreement["kind"], { what: string; by: "BUYER" | 
   },
 };
 
-/**
- * Everything that happened, in one list.
- *
- * <p>This is what replaced a section headed "Termeni acceptați". A list of ticked boxes is not how
- * a consent is evidenced anywhere that has to stand behind one: what matters is that at a stated
- * moment a named party accepted a stated version, alongside everything else that happened to the
- * order. So the acceptances are entries in the order's own audit trail, marked as the legal ones,
- * rather than a separate panel implying they are a formality.
- *
- * <p>It is also the honest shape. An acceptance and a courier scan are the same kind of fact — an
- * event, timestamped, that nobody may edit afterwards — and the record either party is read back
- * in a dispute is the trail, not a checklist.
- */
 function History({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolean }) {
   const { data: agreements } = useApi(
     () => listAgreements(order.id),
     `order:agreements:${order.id}`,
   );
 
-  // Fetched, not read off the order. The scans are their own resource — there
-  // can be many and most screens want none — so the order response does not
-  // carry them, and reading `order.trackingEvents` here threw on every page.
   const { data: scans } = useApi(
     () => listTracking(order.id),
     `order:tracking:${order.id}`,
@@ -542,9 +452,6 @@ function History({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolean
     <Panel title="Istoricul comenzii">
       <ol className="flex flex-col divide-y divide-line">
         {entries.map((entry, index) => (
-          // Stacked on a phone, two columns from `sm` up. A fixed 7.5rem date
-          // column is a third of the width on a 375px screen, so the sentence
-          // it sits beside wrapped every two or three words.
           <li
             key={`${entry.at}-${index}`}
             className="flex flex-col gap-0.5 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-3"
@@ -575,14 +482,6 @@ function History({ order, viewerIsBuyer }: { order: Sale; viewerIsBuyer: boolean
   );
 }
 
-/* --- loading -------------------------------------------------------------- */
-
-/**
- * The loaded page, box for box.
- *
- * <p>Mirrors the two-column layout and the panel heights so the page fills in rather than jumping
- * once the order arrives.
- */
 function OrderDetailSkeleton() {
   return (
     <div className="flex flex-col gap-4">

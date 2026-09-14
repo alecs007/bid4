@@ -190,16 +190,6 @@ export function MetaChip({
   );
 }
 
-/**
- * Who somebody is selling as: "Persoană fizică" or "Organizație".
- *
- * <p>Neutral on purpose. A buyer reads this to know who is on the other side of the deal, and it is
- * a fact about the account rather than anything bid4 has checked — so it is the same grey chip the
- * city wears beside it, and never a green one with a tick, which reads as a verification.
- *
- * <p>One component rather than the label written out at each call site, so a profile and a listing
- * cannot end up describing the same seller differently.
- */
 export function AccountTypeTag({
   user,
   className,

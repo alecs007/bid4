@@ -2,18 +2,7 @@ import { AUCTION, FEATURED, RELATED } from "@/lib/config";
 import { progressPercent } from "@/lib/money";
 import type { Auction, Cause } from "@/lib/types";
 
-/**
- * The client-side twin of FeaturedRanking.java. Kept identical on purpose: the homepage renders
- * whichever half is answering, and a row that reorders itself when the mock layer is switched
- * off would be a bug nobody could reproduce.
- *
- * `popularityScore` balances three signals so a row never fills with one kind of listing: bids,
- * watchers and donation share. There was a fourth, for time left. Nothing runs out of time now.
- * The homepage no longer ranks by it — it is what tops up a short "more like this" row.
- */
-
 export function popularityScore(auction: Auction): number {
-  // Diminishing returns: the 30th bid should not outweigh everything else.
   const bidSignal = Math.log2(auction.bidCount + 1);
   const watchSignal = Math.log2(auction.watcherCount + 1);
 
@@ -24,12 +13,6 @@ export function popularityScore(auction: Auction): number {
   );
 }
 
-/**
- * Whether the listing is still taking offers.
- *
- * No longer a question about time. A listing is open while it is LIVE and closed the moment its
- * seller accepts something or takes it down.
- */
 export function isLive(auction: Auction): boolean {
   return auction.status === "LIVE";
 }
@@ -38,13 +21,6 @@ export function isHot(auction: Auction): boolean {
   return auction.bidCount >= AUCTION.HOT_BID_THRESHOLD;
 }
 
-/**
- * The listings the most people are following.
- *
- * What the homepage leads with now that nothing is about to close. Watchers rather than bids:
- * following something is a quieter signal than bidding on it and a better one for "worth a
- * look", since a bid is also a commitment and most people make far fewer of them.
- */
 export function pickMostWatched<T extends Auction>(
   auctions: T[],
   count: number = FEATURED.MOST_WATCHED_COUNT,
@@ -59,18 +35,6 @@ export function pickMostWatched<T extends Auction>(
     .slice(0, count);
 }
 
-/**
- * The listings that went up most recently.
- *
- * The second row was a popularity score, one listing per seller. It answered nearly the same
- * question as the row above it — both were "what is doing well" — and between them the newest
- * listing on the platform could appear on neither. This one asks what the other cannot: what is
- * new.
- *
- * By `startTime`, which is when a listing was published rather than when it was drafted, and with
- * no de-duplication by seller: somebody who listed three things this morning did list three things
- * this morning, and hiding two would make the row untrue to its own name.
- */
 export function pickLatest<T extends Auction>(
   auctions: T[],
   count: number = FEATURED.LATEST_COUNT,
@@ -85,7 +49,6 @@ export function pickLatest<T extends Auction>(
     .slice(0, count);
 }
 
-/** Causes with live listings, closest to a milestone: finish something, not start everything. */
 export function pickTrendingCauses(
   causes: Cause[],
   auctions: Auction[],
@@ -106,7 +69,6 @@ export function pickTrendingCauses(
     .map((cause) => {
       const liveCount = liveByCause.get(cause.id) ?? 0;
       const progress = progressPercent(cause.raisedAmount, cause.goalAmount);
-      // Momentum: some progress + live listings beats either alone.
       const score = progress * 0.6 + liveCount * 12 + cause.supporterCount * 0.05;
       return { cause, score };
     })
@@ -115,7 +77,6 @@ export function pickTrendingCauses(
     .map((entry) => entry.cause);
 }
 
-/** 1 at the same price, tapering to 0 as one is four times the other. */
 function priceProximity(a: number, b: number): number {
   if (a <= 0 || b <= 0) return 0;
   const ratio = a > b ? a / b : b / a;
@@ -144,10 +105,6 @@ export function relatedScore(
   return score;
 }
 
-/**
- * Qualifying is separate from ranking. An auction earns its place by sharing the
- * cause, the kind of object, or the seller; price only orders those.
- */
 export function pickRelated<T extends Auction>(
   subject: T,
   auctions: T[],
@@ -174,8 +131,6 @@ export function pickRelated<T extends Auction>(
 
   if (matched.length >= RELATED.MIN_COUNT) return matched;
 
-  // Too few genuine matches to fill a row: top up rather than loosen what counts
-  // as related. The real matches keep the front.
   const taken = new Set(matched.map((auction) => auction.id));
   const filler = others
     .filter((auction) => !taken.has(auction.id))

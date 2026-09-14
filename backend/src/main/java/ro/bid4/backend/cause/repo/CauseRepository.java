@@ -11,7 +11,6 @@ import ro.bid4.backend.cause.domain.CauseStatus;
 
 public interface CauseRepository
     extends JpaRepository<Cause, UUID>, JpaSpecificationExecutor<Cause> {
-
   List<Cause> findAllByIdIn(Collection<UUID> ids);
 
   Optional<Cause> findBySlug(String slug);

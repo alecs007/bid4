@@ -29,14 +29,6 @@ import {
   useToast,
 } from "@/components/ui";
 
-/**
- * Where a bidder finds out what happened.
- *
- * <p>Nothing settles on a clock, so the answer arrives when a seller chooses. "Câștigate" now
- * covers both halves of that: the offer the seller took, and the one that has since been paid
- * for.
- */
-
 type Bucket = "all" | "active" | "won" | "lost";
 
 const FILTERS: { value: Bucket; label: string }[] = [
@@ -46,13 +38,6 @@ const FILTERS: { value: Bucket; label: string }[] = [
   { value: "lost", label: "Neacceptate" },
 ];
 
-/**
- * The bidder's own standing, coloured to match what it means, and marked when it
- * is something to act on. Being outbid is the one line here that asks for a
- * decision, so it is coral and carries a warning rather than sitting in the same
- * grey as everything else — coral and not red, because nothing has gone wrong;
- * red is kept for the things that actually fail.
- */
 const OUTCOME: Record<BidStatus, { text: string; alert?: boolean }> = {
   ACTIVE: { text: "text-sky-700" },
   OUTBID: { text: "text-accent-700", alert: true },
@@ -62,7 +47,6 @@ const OUTCOME: Record<BidStatus, { text: string; alert?: boolean }> = {
   LOST: { text: "text-ink-500" },
 };
 
-/** Decided by the bid rather than the auction: it is the bidder's outcome. */
 function bucketOf(summary: MyBidSummary): Bucket {
   switch (summary.myTopBid.status) {
     case "ACCEPTED":
@@ -109,7 +93,6 @@ export function MyBids() {
   };
 
   return (
-    // A short list must not leave the footer halfway up the screen.
     <section className="flex min-h-[60vh] flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
@@ -197,7 +180,6 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
   const { auction, myTopBid } = summary;
   const settled = myTopBid.status === "WON" || myTopBid.status === "LOST";
   const live = auction.status === "LIVE";
-  // The whole question this page answers: is my offer still the one in front?
   const leading = myTopBid.amount >= auction.currentPrice;
   const retract = checkRetractEligibility(auction, myTopBid.bidderId);
 
@@ -206,14 +188,7 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
     {
       label: settled ? "Preț final" : "Preț curent",
       value: formatMoney(auction.currentPrice),
-      // Whichever number is the one to act on is the one that stands out, and
-      // the colour says which way it is going: your own offer while it is still
-      // in front, somebody else's the moment it is not.
       emphasis: live && !leading,
-      // Green when the number is in your favour: your own offer while it leads,
-      // and the closing price when the thing you won closed at it. Red while
-      // somebody else's offer is in front. Nothing either way on one you lost —
-      // that price is somebody else's good news.
       tone: live
         ? leading
           ? "positive"
@@ -230,10 +205,6 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
       auction={auction}
       badges={
         <>
-          {/* One box, and it is the listing's own state. Where the bidder stands
-              is a different kind of fact — it is about them, not the listing —
-              so it is said in words and colour rather than boxed up beside it,
-              which read as two competing labels for the same thing. */}
           <Badge
             tone={AUCTION_STATUS[auction.status].tone}
             size="sm"
@@ -269,7 +240,6 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
             live && !leading
               ? {
                   label: "Mărește oferta",
-                  // The answer to the coral line above it, in the same colour.
                   variant: "accent" as const,
                   icon: <Icons.auction aria-hidden="true" className="h-4 w-4 shrink-0" />,
                   href: `/licitatii/${auction.id}`,
@@ -285,10 +255,6 @@ function BidRow({ summary, onRetract }: { summary: MyBidSummary; onRetract: () =
                     icon: <Icons.remove aria-hidden="true" className="h-4 w-4 shrink-0" />,
                     danger: true,
                     onClick: onRetract,
-                    // Only the leading offer can go: pulling one out of the
-                    // middle would rewrite a history the other bidders have
-                    // already acted on. On every other row the action is absent
-                    // rather than greyed.
                     unavailable: retract.canRetract
                       ? undefined
                       : (retract.reason ?? "Poți retrage doar oferta aflată pe primul loc."),

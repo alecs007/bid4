@@ -9,18 +9,10 @@ import java.util.Set;
 import java.util.UUID;
 import ro.bid4.backend.catalog.domain.Auction;
 
-/**
- * The server-side twin of frontend/src/lib/featured.ts.
- *
- * <p>Kept identical on purpose: the homepage renders whichever half is answering, and a row that
- * reorders itself when the mock layer is switched off would be a bug nobody could reproduce.
- */
 final class FeaturedRanking {
-
   private FeaturedRanking() {}
 
   static double popularity(Auction auction) {
-    // Diminishing returns: the 30th bid should not outweigh everything else.
     double bidSignal = log2(auction.getBidCount() + 1);
     double watchSignal = log2(auction.getWatcherCount() + 1);
 
@@ -29,13 +21,6 @@ final class FeaturedRanking {
         + CatalogRules.WEIGHT_DONATION * (auction.getDonationPercent() / 100d);
   }
 
-  /**
-   * The listings the most people are following.
-   *
-   * <p>What the homepage leads with now that nothing is about to close. Watchers rather than bids:
-   * following something is a quieter signal than bidding on it and a better one for "worth a look",
-   * since a bid is also a commitment and most people make far fewer of them.
-   */
   static List<Auction> mostWatched(List<Auction> live, int count) {
     return live.stream()
         .sorted(
@@ -46,18 +31,6 @@ final class FeaturedRanking {
         .toList();
   }
 
-  /**
-   * The listings that went up most recently.
-   *
-   * <p>The second row was a popularity score balancing bids, watchers and donation share, one per
-   * seller. It answered nearly the same question as the row above it — both were "what is doing
-   * well" — and between them the newest listing on the platform could appear on neither. This one
-   * asks something the other cannot: what is new.
-   *
-   * <p>By {@code startTime}, which is when a listing was published rather than when it was drafted,
-   * and no de-duplication by seller: a seller who lists three things this morning did list three
-   * things this morning, and hiding two of them would make the row untrue to its own name.
-   */
   static List<Auction> latest(List<Auction> live, int count) {
     return live.stream()
         .sorted(
@@ -67,7 +40,6 @@ final class FeaturedRanking {
         .toList();
   }
 
-  /** 1 at the same price, tapering to 0 as one is four times the other. */
   private static double priceProximity(long a, long b) {
     if (a <= 0 || b <= 0) {
       return 0;
@@ -96,13 +68,6 @@ final class FeaturedRanking {
     return score;
   }
 
-  /**
-   * Qualifying is separate from ranking.
-   *
-   * <p>An auction earns its place by sharing the cause, the kind of object, or the seller; price
-   * only orders the ones that already qualified. Too few genuine matches to fill a row is topped up
-   * rather than met by loosening what counts as related, and the real matches keep the front.
-   */
   static List<Auction> related(Auction subject, List<Auction> live) {
     List<Auction> others =
         live.stream().filter(auction -> !auction.getId().equals(subject.getId())).toList();

@@ -22,18 +22,11 @@ import ro.bid4.backend.identity.api.dto.RegisterRequest;
 import ro.bid4.backend.identity.domain.AccountType;
 import ro.bid4.backend.identity.service.AuthService;
 
-/**
- * What happens when one refresh token is presented twice.
- *
- * <p>This goes through the service rather than MockMvc because the interesting case is two real
- * transactions overlapping, and MockMvc runs them on one thread.
- */
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, MailCaptureConfiguration.class})
 @TestPropertySource(
     properties = {"bid4.rate-limit.enabled=false", "bid4.verification.resend-cooldown=0s"})
 class RefreshTokenExchangeTest {
-
   private static final String PASSWORD = "parola-buna-123";
 
   @Autowired private AuthService authService;
@@ -45,18 +38,11 @@ class RefreshTokenExchangeTest {
     AuthService.SessionResult login = signIn();
     UUID userId = login.session().user().id();
 
-    // Both threads present the same token with no coordination. Before the row
-    // lock, both read "not yet spent" and both succeeded, forking the session
-    // into two live chains that reuse detection could not see.
     List<Future<Object>> results = raceOn(login.refreshToken());
 
     long succeeded = results.stream().filter(RefreshTokenExchangeTest::succeeded).count();
     assertThat(succeeded).as("one of the two exchanges must lose the race").isEqualTo(1);
 
-    // The loser is judged on what the winner wrote, so it reads as a replay and
-    // the family is cut. Harsh for a client that raced itself — which is why the
-    // browser serialises its own tabs — but it is the whole point of rotation
-    // that a token presented twice ends the session rather than forking it.
     assertThat(liveTokens(userId)).isZero();
     assertThat(reuseAuditRows(userId)).isEqualTo(1);
   }
@@ -69,9 +55,6 @@ class RefreshTokenExchangeTest {
 
     authService.refresh(login.refreshToken(), "127.0.0.1", "test");
 
-    // Deliberately unforgiving, and deliberately without a grace window: a
-    // client that lost its response presents exactly this, and no rule can tell
-    // the two apart. See AuthService.refresh.
     assertThat(catching(() -> authService.refresh(login.refreshToken(), "127.0.0.1", "test")))
         .isInstanceOf(ApiException.class);
 

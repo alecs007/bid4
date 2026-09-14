@@ -8,19 +8,8 @@ import { CategoryIcon } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import { cn } from "@/lib/utils/cn";
 
-/** How far one press of an arrow travels, as a share of what is on screen. */
 const STEP_RATIO = 0.8;
 
-/**
- * The categories, as a rail under the header.
- *
- * <p>A shortcut rather than a navigation bar: it sits on the pages where somebody is looking at
- * one thing and might want another kind of thing, and nowhere else. On /licitatii it would be a
- * second, worse copy of the filter panel already on the page.
- *
- * <p>Arrows are desktop-only and appear only when there is somewhere to go. A phone scrolls the
- * rail with a thumb, so arrows there would cover the very items they scroll to.
- */
 export function CategoryTrail({ className }: { className?: string }) {
   const railRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ left: false, right: false });
@@ -30,8 +19,6 @@ export function CategoryTrail({ className }: { className?: string }) {
     if (!rail) return;
 
     const measure = () => {
-      // A pixel of slack: sub-pixel widths otherwise leave an arrow lit at the
-      // end of the rail with nothing left to scroll to.
       const maxScroll = rail.scrollWidth - rail.clientWidth;
       setEdges({
         left: rail.scrollLeft > 1,
@@ -39,9 +26,6 @@ export function CategoryTrail({ className }: { className?: string }) {
       });
     };
 
-    // ResizeObserver fires once on observe, which is where the first
-    // measurement comes from: taking it in the effect body would be a setState
-    // during render's commit, and React asks that it not be.
     const observer = new ResizeObserver(measure);
     observer.observe(rail);
     rail.addEventListener("scroll", measure, { passive: true });
@@ -67,8 +51,6 @@ export function CategoryTrail({ className }: { className?: string }) {
         aria-label="Categorii"
         className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
       >
-        {/* data-lenis-prevent: the page runs on smooth scroll, which otherwise
-            swallows a horizontal wheel gesture aimed at this rail. */}
         <div
           ref={railRef}
           data-lenis-prevent
@@ -98,13 +80,6 @@ export function CategoryTrail({ className }: { className?: string }) {
   );
 }
 
-/**
- * One end of the rail.
- *
- * <p>Kept mounted and faded rather than unmounted, so arriving at an end does not reflow the row
- * under the cursor. Hidden from assistive tech entirely: the rail is a list of links that can be
- * tabbed through, and these only move the viewport.
- */
 function TrailArrow({
   side,
   show,

@@ -15,25 +15,8 @@ import ro.bid4.backend.inbox.repo.ConversationRepository;
 import ro.bid4.backend.inbox.repo.NotificationRepository;
 import ro.bid4.backend.inbox.repo.ThreadItemRepository;
 
-/**
- * What is in the inbox before anything has happened.
- *
- * <p>An empty inbox is the worst first impression a feature like this can make: it looks broken, it
- * explains nothing, and the one moment somebody is willing to read how a thing works is the moment
- * they open it and find nothing to read. So both halves start with something: a single message from
- * bid4 saying what this place is for, and a line in the notifications saying the same in one
- * sentence.
- *
- * <p>One message rather than two. Split in half it read as a pair of announcements, and the second
- * arrived as though something had happened since the first.
- *
- * <p>Written on first read rather than at registration, because accounts already exist and a
- * greeting only for people who sign up after today is a greeting most people never get. Idempotent
- * on a lookup, so opening the inbox twice does not say hello twice.
- */
 @Service
 public class Welcome {
-
   public static final String NOTIFICATION_TYPE = "WELCOME";
 
   private static final String GREETING =
@@ -60,7 +43,6 @@ public class Welcome {
     this.events = events;
   }
 
-  /** Makes sure this account has both. Cheap when it already does, which is almost always. */
   @Transactional
   public void ensureFor(UUID userId) {
     ensureThread(userId);
@@ -82,13 +64,6 @@ public class Welcome {
     greeting.setCreatedAt(Instant.now());
     items.save(greeting);
 
-    // The member is the only participant. An operator joins when there is
-    // something to answer, rather than every account carrying a second row for
-    // a conversation nobody has started.
-    //
-    // Unread on the row rather than through markUnreadForAll: a bulk update does
-    // not reach the instance this method is holding, and the list that follows
-    // would read the stale zero. One message, so one.
     ConversationParticipant member =
         new ConversationParticipant(saved.getId(), userId, ParticipantRole.BUYER);
     member.setUnreadCount(1);

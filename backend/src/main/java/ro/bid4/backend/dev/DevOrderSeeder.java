@@ -25,37 +25,12 @@ import ro.bid4.backend.orders.domain.OrderStatus;
 import ro.bid4.backend.orders.repo.OrderRepository;
 import ro.bid4.backend.orders.service.OrderService;
 
-/**
- * Sales for the demo accounts, one stopped at every case worth looking at.
- *
- * <p>Written by walking the real service rather than by inserting rows: every card in the thread,
- * every ledger entry, every document and every status is produced by the code that produces them in
- * production, so the demo cannot drift from the thing it demonstrates. Insert the rows by hand and
- * the first time a step changes, the seed is a museum of how it used to work.
- *
- * <p>Maria is on both sides of it. She buys in half of these and sells in the other half, because
- * the two sides of a step read differently and a demo that only ever shows one of them hides half
- * of what was built.
- *
- * <p>What it deliberately does not consume is all of her listings. Several stay open with standing
- * offers on them, so the acceptance itself — the one step that starts everything else, and the only
- * one with no order behind it yet — can be exercised from the seeded world rather than only read
- * about.
- */
 @Component
 @Order(4)
 @ConditionalOnProperty(name = "bid4.dev.seed", havingValue = "true")
 public class DevOrderSeeder implements ApplicationRunner {
-
   private static final Logger log = LoggerFactory.getLogger(DevOrderSeeder.class);
 
-  /**
-   * How far each seeded sale is walked.
-   *
-   * <p>Not {@code OrderStatus}: several of these end in the same status by different routes, and
-   * the route is the thing worth seeing. A sale refunded after a dispute and one simply cancelled
-   * are both endings, and they write different cards.
-   */
   private enum Stage {
     DELIVERY_PENDING,
     PAYMENT_PENDING,
@@ -73,7 +48,6 @@ public class DevOrderSeeder implements ApplicationRunner {
     CANCELLED_BY_SELLER
   }
 
-  /** How many of Maria's open listings are left alone, so offers remain to accept. */
   private static final int LISTINGS_KEPT_OPEN = 3;
 
   private final UserAccountRepository users;
@@ -95,13 +69,6 @@ public class DevOrderSeeder implements ApplicationRunner {
     this.sales = sales;
   }
 
-  /**
-   * Deliberately not {@code @Transactional}.
-   *
-   * <p>Every call below opens its own. Sharing one would mean a step the service refuses marks that
-   * transaction rollback-only, and the {@code catch} here would swallow the exception while the
-   * commit at the end quietly threw away every sale — which is exactly what it did.
-   */
   @Override
   public void run(ApplicationArguments args) {
     if (orders.count() > 0) {
@@ -116,7 +83,6 @@ public class DevOrderSeeder implements ApplicationRunner {
     }
     UUID mariaId = maria.get().getId();
 
-    // An operator, for the one transition only staff may make.
     Viewer staff =
         users
             .findByEmail("operator@bid4.ro")
@@ -132,9 +98,6 @@ public class DevOrderSeeder implements ApplicationRunner {
     List<Auction> buying = listings(listing -> !listing.getSellerId().equals(mariaId));
     List<Auction> selling = listings(listing -> listing.getSellerId().equals(mariaId));
 
-    // Held back, so the demo still has offers waiting on a decision. Taken off
-    // the end rather than the start: the first of her listings are the ones the
-    // shop window is composed from, and they are the better ones to walk.
     List<Auction> sellingPool =
         selling.size() > LISTINGS_KEPT_OPEN
             ? selling.subList(0, selling.size() - LISTINGS_KEPT_OPEN)
@@ -148,9 +111,6 @@ public class DevOrderSeeder implements ApplicationRunner {
       Stage stage = stages[index];
       boolean asBuyer = index % 2 == 0;
 
-      // A listing carries one open sale at a time — a partial unique index says
-      // so — and reusing one here handed a later stage the earlier stage's order
-      // and then walked it from the wrong place.
       Optional<Auction> free = firstFree(asBuyer ? buying : sellingPool, used);
       if (free.isEmpty()) {
         asBuyer = !asBuyer;
@@ -172,9 +132,6 @@ public class DevOrderSeeder implements ApplicationRunner {
         walk(listing, buyerId, stage, staff);
         written++;
       } catch (RuntimeException failure) {
-        // A seed is not worth a failed boot. One case that cannot be reached —
-        // a listing without a cause, an account without an address — should not
-        // take the others with it.
         log.warn("Development order seed: {} skipped ({})", stage, failure.getMessage());
       }
     }
@@ -198,7 +155,6 @@ public class DevOrderSeeder implements ApplicationRunner {
         .toList();
   }
 
-  /** Opens a sale and moves it along until it is where it should stop. */
   private void walk(Auction listing, UUID buyerId, Stage until, Viewer staff) {
     Viewer buyer = Viewer.of(buyerId, false);
     Viewer seller = Viewer.of(listing.getSellerId(), false);
@@ -243,9 +199,6 @@ public class DevOrderSeeder implements ApplicationRunner {
       return;
     }
 
-    // From here the courier moves it, never a button — which is why these are
-    // scans rather than calls either party could make. In production they
-    // arrive at the webhook; here they are the same service call it makes.
     sales.recordTracking(
         id, OrderStatus.DROPPED_OFF, "Colet preluat de curier", "București", "seed-" + id);
     sales.recordTracking(
@@ -290,14 +243,6 @@ public class DevOrderSeeder implements ApplicationRunner {
     sales.confirmReceipt(id, buyer);
   }
 
-  /**
-   * A payment the provider refused.
-   *
-   * <p>The one case the stub gateway cannot produce: it settles everything, so there is no route
-   * through it to a declined card. The reference is planted the way a real provider's session would
-   * have been and the transition itself goes through the service, which is what a webhook calls —
-   * so the resulting order is shaped exactly like one that really failed.
-   */
   private void failPayment(UUID orderId) {
     String reference = "seed-declined-" + orderId;
     orders

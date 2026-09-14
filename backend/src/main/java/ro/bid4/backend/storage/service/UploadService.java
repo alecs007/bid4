@@ -22,43 +22,14 @@ import ro.bid4.backend.storage.domain.StoredFile;
 import ro.bid4.backend.storage.domain.Visibility;
 import ro.bid4.backend.storage.repo.StoredFileRepository;
 
-/**
- * Takes photographs in, and answers with something a listing can be built from.
- *
- * <p>The browser has already decoded, turned, scaled and re-encoded every one of these, which is
- * what makes them small. None of that counts here. What arrives is bytes from the network, and the
- * checks below are written as though the browser half does not exist — because for anyone posting
- * to this endpoint directly, it does not.
- *
- * <p>What is checked, in order, and why each one is not enough on its own:
- *
- * <ul>
- *   <li><b>Count and size.</b> Refused before anything is read, so the cost of a bad request is
- *       bounded by the container's own multipart cap rather than by this code.
- *   <li><b>What the bytes are.</b> Read from the file's own header. The declared type and the
- *       filename are the caller's claims and neither is used for anything; the sniffed type is what
- *       decides whether the file is allowed, and it is what the object is stored and later served
- *       as. This is what keeps {@code text/html} from being stored and handed back as a document.
- *   <li><b>How large the picture is.</b> Also from the header, without decoding. A few kilobytes
- *       can unpack into hundreds of megabytes, so the ceiling has to be checked before anything
- *       would decode it — here, and again by whatever renders it later.
- *   <li><b>Where it goes.</b> The key is generated, never built from the name that came with the
- *       file. A name that decides where bytes are written decides what can be overwritten.
- * </ul>
- */
 @Service
 public class UploadService {
-
-  /** Mirrors the frontend's IMAGE.ACCEPTED_TYPES and the stored_files CHECK, minus the PDF. */
   private static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
 
-  /** The column's CHECK refuses anything larger, so this is the readable half of that rule. */
   private static final long MAX_BYTES = 8L * 1024 * 1024;
 
-  /** As many as a listing may carry, so one request cannot be used to fill the bucket. */
   private static final int MAX_FILES = 8;
 
-  /** The same ceiling the browser holds a decode to. */
   private static final long MAX_PIXELS = 40_000_000L;
 
   private final ObjectStore store;
@@ -69,12 +40,6 @@ public class UploadService {
     this.files = files;
   }
 
-  /**
-   * Stores every photograph or none of them.
-   *
-   * <p>Every file is validated before any object is written, so a set with one bad file in it does
-   * not leave the good ones behind in the bucket for a request that failed.
-   */
   @Transactional
   public List<StoredFileResponse> storeImages(List<MultipartFile> uploads, UUID ownerId) {
     if (uploads == null || uploads.isEmpty()) {
@@ -103,8 +68,6 @@ public class UploadService {
           .map(saved -> StoredFileResponse.of(saved, MediaUrls.forFile(saved.getId())))
           .toList();
     } catch (RuntimeException failure) {
-      // Whatever landed before the failure can no longer be reached, because
-      // reaching an object starts at its row and the rows are rolled back.
       written.forEach(key -> store.discard(store.publicBucket(), key));
       throw failure;
     }
@@ -126,8 +89,6 @@ public class UploadService {
     } catch (IOException failure) {
       throw new ApiException(ErrorCode.VALIDATION_FAILED, "Fotografia nu a putut fi citită.");
     }
-    // Again on the bytes themselves: getSize() is the declared length of the
-    // part, and the two are only the same when the caller is honest.
     if (bytes.length > MAX_BYTES) {
       throw new ApiException(ErrorCode.PAYLOAD_TOO_LARGE);
     }
@@ -157,14 +118,6 @@ public class UploadService {
     return row;
   }
 
-  /**
-   * Where the object goes: whose it is, when it arrived, and a fresh name.
-   *
-   * <p>Generated rather than derived from anything the caller sent. A key built from a filename is
-   * a path built from user input, and the two things that follow are traversal and overwriting
-   * somebody else's object by guessing its name. The date is only there to keep a bucket listing
-   * navigable by a human.
-   */
   private String keyFor(UUID ownerId, String contentType) {
     String extension =
         switch (contentType) {
@@ -177,12 +130,6 @@ public class UploadService {
         .formatted(today.getYear(), today.getMonthValue(), ownerId, UUID.randomUUID(), extension);
   }
 
-  /**
-   * The name, reduced to something safe to store and to hand back as a download name.
-   *
-   * <p>It never decides where anything is written — see above — so this is about what a browser
-   * does with it later, and about the column being 255 characters wide.
-   */
   private String safeName(String original) {
     String name = Optional.ofNullable(original).orElse("photo");
     String cleaned = name.replaceAll("[\\p{Cntrl}\\\\/\"\r\n]", "").trim();

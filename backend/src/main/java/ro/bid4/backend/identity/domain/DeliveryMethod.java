@@ -14,18 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Where a parcel goes: an Easybox locker or a street address.
- *
- * <p>One half of the gate that unlocks bidding. Each type carries the fields its label needs and
- * only those, which a CHECK constraint enforces rather than trusts.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "delivery_methods")
 public class DeliveryMethod {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

@@ -22,26 +22,13 @@ import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.text.SearchTerms;
 import ro.bid4.backend.common.web.Viewer;
 
-/**
- * Reading causes.
- *
- * <p>As with auctions, visibility is decided per row rather than per route: a draft or a rejected
- * application belongs to its organiser and to staff, and asking for one by slug must look the same
- * as asking for one that never existed.
- */
 @Service
 @Transactional(readOnly = true)
 public class CauseService {
-
   private static final int DEFAULT_LIST_SIZE = 60;
   private static final int MAX_LIST_SIZE = 200;
   private static final int TRENDING_COUNT = 3;
 
-  /**
-   * How many public causes the trending row ranks over.
-   *
-   * <p>Ranking happens in memory, so it needs a ceiling that does not grow with the platform.
-   */
   private static final int TRENDING_WINDOW = 200;
 
   private final CauseRepository causes;
@@ -52,15 +39,7 @@ public class CauseService {
     this.mapper = mapper;
   }
 
-  /**
-   * GET /causes
-   *
-   * <p>A plain list rather than a page, because that is what lib/api/causes.ts declares and the
-   * filter bar on /cauze consumes it directly. Bounded all the same: the ceiling is applied here
-   * rather than left to however many causes exist.
-   */
   public List<CauseResponse> list(String q, List<String> categories, Integer limit, Viewer viewer) {
-
     List<Specification<Cause>> filters = new ArrayList<>();
     filters.add((root, query, cb) -> root.get("status").in(CauseStatus.PUBLIC));
     if (categories != null && !categories.isEmpty()) {
@@ -78,13 +57,11 @@ public class CauseService {
             PageRequest.of(
                 0,
                 size,
-                // Ties broken by id, so the order is stable between calls.
                 Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.ASC, "id"))));
 
     return mapper.toCards(found.getContent(), viewer);
   }
 
-  /** GET /causes/{idOrSlug} — the page is reachable by either. */
   public CauseResponse get(String idOrSlug, Viewer viewer) {
     Cause cause =
         asUuid(idOrSlug)
@@ -98,12 +75,6 @@ public class CauseService {
     return mapper.toResponse(cause, viewer);
   }
 
-  /**
-   * GET /causes/trending — the homepage row.
-   *
-   * <p>Closest to a milestone rather than newest: finishing something beats starting everything,
-   * and a cause with momentum is the one a visitor can actually push over the line.
-   */
   public List<CauseResponse> trending(Viewer viewer) {
     Page<Cause> window =
         causes.findAll(
@@ -121,7 +92,6 @@ public class CauseService {
     return mapper.toCards(ranked, viewer);
   }
 
-  /** GET /users/me/causes — any status, including drafts and rejections. */
   public List<CauseResponse> mine(Viewer viewer) {
     if (viewer.isAnonymous()) {
       return List.of();
@@ -133,7 +103,6 @@ public class CauseService {
     return cause.getStatus().isPublic() || viewer.staff() || viewer.is(cause.getOrganizerId());
   }
 
-  /** Free text over the name, the summary and the story, folded the same way both sides fold it. */
   private static Specification<Cause> matchesText(String term) {
     List<String> words = SearchTerms.words(term);
     return (root, query, cb) -> {
@@ -161,7 +130,6 @@ public class CauseService {
     return Math.min(100d, cause.getRaisedAmount() * 100d / cause.getGoalAmount());
   }
 
-  /** Some progress plus supporters beats either alone. */
   private static double momentum(Cause cause) {
     return progressPercent(cause) * 0.6 + cause.getSupporterCount() * 0.05;
   }
@@ -170,7 +138,6 @@ public class CauseService {
     try {
       return Optional.of(UUID.fromString(value));
     } catch (IllegalArgumentException ex) {
-      // A slug, not an id. Not an error: the route accepts both.
       return Optional.empty();
     }
   }

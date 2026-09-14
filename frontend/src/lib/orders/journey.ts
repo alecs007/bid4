@@ -1,45 +1,21 @@
 import type { ISODateString, Order, OrderStatus } from "@/lib/types";
 
-/**
- * Where a stage stands.
- *
- * <p>Four states rather than two, because a sale that stopped is not the same as one that has not
- * got there yet.
- */
 export type StageState = "done" | "active" | "pending" | "stopped";
 
 export interface Stage {
   key: string;
-  /**
-   * What this step is called, in the state it is actually in.
-   *
-   * <p>Written per state rather than kept neutral. "Modalitate de livrare" is a heading, not a
-   * fact, and it says nothing about whether the delivery was chosen — but "Livrare aleasă" beside a
-   * badge reading "Livrare de ales" is a contradiction, which is what a single label produced. So a
-   * step that is done states the fact and a step that is not names the thing being waited on.
-   */
   label: string;
   state: StageState;
-  /** When it happened, for the stages the order timestamps. */
   at?: ISODateString;
-  /** One line of detail, and only where the stage has one worth reading. */
   note?: string;
 }
 
-/** A sale that has stopped moving, one way or another. */
 const ENDED: ReadonlySet<OrderStatus> = new Set([
   "COMPLETED",
   "REFUNDED",
   "CANCELLED",
 ]);
 
-/**
- * The order of the journey, and which status proves each stage is behind us.
- *
- * <p>Reading the status alone cannot work: the courier moves a parcel through three statuses and a
- * sale can stop in the middle, so "which stage are we at" and "which stages are done" are two
- * different questions.
- */
 const JOURNEY: readonly OrderStatus[] = [
   "AWAITING_CONFIRMATION",
   "AWAITING_PAYMENT",
@@ -52,7 +28,6 @@ const JOURNEY: readonly OrderStatus[] = [
   "COMPLETED",
 ];
 
-/** How far along the journey a status sits, with the off-journey ones mapped to where they froze. */
 function reached(status: OrderStatus): number {
   switch (status) {
     case "PAYMENT_FAILED":
@@ -70,35 +45,10 @@ function reached(status: OrderStatus): number {
   }
 }
 
-/**
- * The stages of one sale, in order, each with its state.
- *
- * <p>Six steps rather than the twelve the state machine has, then whatever actually ended it. A
- * buyer does not need DROPPED_OFF and IN_TRANSIT as separate lines: the statuses that exist so the
- * courier can report precisely are collapsed into the one thing they mean, which is that the parcel
- * is moving.
- *
- * <p>Two rules hold the strip together.
- *
- * <p><b>The ending is always last.</b> A dispute is inserted before it rather than appended after,
- * because a sale cannot be settled after it has finished — the strip used to read "Finalizarea
- * comenzii" and then "Sumă restituită" underneath, which is the wrong way round and says the
- * refund happened after the completion.
- *
- * <p><b>Only the step that stopped is marked stopped.</b> Everything after a failure is not also a
- * failure; it is simply something that has not happened, so it stays pending. A column of red
- * crosses says six things went wrong when one did.
- */
 export function journeyOf(order: Order): Stage[] {
   const at = reached(order.status);
   const cancelled = order.status === "CANCELLED";
 
-  /**
-   * The label for a step, given where it stands.
-   *
-   * <p>Two forms, because there are only two readings: it happened, or it is still to happen. A
-   * stopped step takes its own wording where the difference matters.
-   */
   const named = (
     at: StageState,
     settled: string,
@@ -109,7 +59,6 @@ export function journeyOf(order: Order): Stage[] {
   const state = (index: number): StageState => {
     if (index < at) return "done";
     if (index > at) return "pending";
-    // The step the sale is sitting on. Finished sales have nothing live.
     return ENDED.has(order.status) ? "done" : "active";
   };
 
@@ -126,8 +75,6 @@ export function journeyOf(order: Order): Stage[] {
         ? "pending"
         : state(1);
   const labelAt: StageState = order.awb ? "done" : cancelled ? "pending" : state(2);
-  // The courier's three statuses are one stage here, so this is done from the
-  // moment the parcel has been delivered and active for all of them.
   const transitAt: StageState = order.deliveredAt
     ? "done"
     : cancelled
@@ -197,7 +144,6 @@ export function journeyOf(order: Order): Stage[] {
     },
   ];
 
-  // A dispute sits between delivery and the ending, which is where it happened.
   if (order.status === "DISPUTE_OPEN") {
     stages.push({
       key: "dispute",
@@ -214,7 +160,6 @@ export function journeyOf(order: Order): Stage[] {
     });
   }
 
-  // And the ending, last, whatever it turned out to be.
   stages.push(
     cancelled
       ? {

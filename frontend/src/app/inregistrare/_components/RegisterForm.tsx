@@ -52,7 +52,6 @@ export function RegisterForm() {
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  /** Set once the account exists and the confirmation link is on its way. */
   const [awaitingConfirmation, setAwaitingConfirmation] = useState<
     string | null
   >(null);
@@ -122,8 +121,6 @@ export function RegisterForm() {
           : undefined,
         acceptedTerms,
       });
-      // The mock world has no post, so a mock account is usable immediately.
-      // Against the real backend the address has to be confirmed first.
       if (USE_MOCK) {
         toast.success(
           `Bine ai venit, ${user.displayName.split(" ")[0]}!`,
@@ -257,7 +254,6 @@ export function RegisterForm() {
         <Field
           label="Parolă"
           error={errors.password}
-          // hint={`Cel puțin ${ACCOUNT.MIN_PASSWORD_LENGTH} caractere.`}
         >
           <PasswordInput
             name="password"
@@ -303,10 +299,6 @@ export function RegisterForm() {
   );
 }
 
-/**
- * What replaces the form once the account exists. The address is unconfirmed,
- * so there is nowhere to send the reader except their inbox.
- */
 function ConfirmationPending({ email }: { email: string }) {
   const toast = useToast();
   const [sending, setSending] = useState(false);

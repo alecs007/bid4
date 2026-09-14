@@ -11,7 +11,6 @@ import { DEMO_PASSWORD } from "@/lib/mock/seed";
 import { ACCOUNT_TYPE, USER_ROLE } from "@/lib/labels";
 import type { User } from "@/lib/types";
 
-/** The seeded accounts, one tap each. Only where the mock world is what is being browsed. */
 export function SeedAccounts({
   onSignedIn,
 }: {

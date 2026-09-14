@@ -12,8 +12,6 @@ import ro.bid4.backend.orders.domain.Order;
 import ro.bid4.backend.orders.domain.OrderStatus;
 
 public interface OrderRepository extends JpaRepository<Order, UUID> {
-
-  /** The sale a listing is in the middle of, if it is in one. */
   @Query(
       """
       select o from Order o
@@ -24,15 +22,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
       """)
   Optional<Order> findOpenForAuction(@Param("auctionId") UUID auctionId);
 
-  /**
-   * The sale a parcel belongs to.
-   *
-   * <p>A courier's callback names the consignment, not the order: it has never heard of our ids.
-   * One AWB belongs to one sale because a sale books at most one parcel.
-   */
   Optional<Order> findByAwb(String awb);
 
-  /** The sale a payment provider's callback is about. */
   Optional<Order> findByPaymentReference(String paymentReference);
 
   @Query(
@@ -45,14 +36,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
   boolean existsByReference(String reference);
 
-  /**
-   * Orders whose money is due to release itself.
-   *
-   * <p>Read by a scheduled job rather than by a request: nobody presses "release", and a buyer who
-   * says nothing must not leave a seller unpaid forever.
-   */
   List<Order> findByStatusAndAutoReleaseAtBefore(OrderStatus status, Instant before);
 
-  /** Sales whose buyer never said where to send it, past the window they had to. */
   List<Order> findByStatusAndConfirmationDeadlineBefore(OrderStatus status, Instant before);
 }

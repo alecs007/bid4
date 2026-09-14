@@ -1,51 +1,20 @@
 import Image from "next/image";
 
-/**
- * What the banner says, in the two shapes it was drawn in.
- *
- * <p>`alt` is what a reader who cannot see it is told it says. The phone file is the same banner
- * composed for the taller crop rather than the same picture at another size, which is why there are
- * two of them and not one source set.
- */
 const BANNER = {
   src: "/images/hero/banner-1.webp",
   mobile: "/images/hero/banner-1-mobile.webp",
   alt: "Cumperi sau vinzi, faci un bine. Cauze verificate și o donație la fiecare licitație.",
 };
 
-/**
- * The banner the homepage opens on.
- *
- * <p>One banner, shown plainly. There is only the one drawn so far, and a slider carrying a single
- * panel is a set of controls that lead back to where they started: arrows that change nothing and a
- * countdown that counts to itself. `HeroSlider` is what this becomes again once there is a second
- * banner to turn to — it is kept whole beside this file, and putting it back is a matter of
- * swapping which one the page imports.
- *
- * <p>Nothing here runs in the browser, so the page's first screen costs no JavaScript at all.
- */
 export function HeroBanner() {
   return (
     <section className="bg-white">
       <div className="mx-auto w-full max-w-7xl px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
-        {/* Square on a phone and 4:1 from `sm`. Each is the shape its own file
-            was drawn to: a quarter of 375px is a strip too shallow to read, and
-            the height a phone gives up for this only pays for itself because
-            the banner composed for it stacks what the wide one sets side by
-            side. */}
-        {/* A green line around it. The banner's own ground is a hair off the
-            white it sits on, which on its own leaves it floating with no edge;
-            this gives it one, in the colour the rest of the site is picked out
-            in — faint enough that it reads as the edge of the banner rather
-            than as a border drawn round it, and well under the full-strength
-            green, which is what a selected or focused thing wears. */}
         <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-ink-100 ring-1 ring-primary-500/15 sm:aspect-[4/1] sm:rounded-3xl">
           <Image
             src={BANNER.src}
             alt={BANNER.alt}
             fill
-            // Already sized and encoded for this slot, so it is served as made
-            // rather than re-compressed on top at q75.
             unoptimized
             sizes="(min-width: 1280px) 1216px, 100vw"
             priority

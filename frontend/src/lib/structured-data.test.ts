@@ -9,12 +9,6 @@ import {
   websiteSchema,
 } from "./structured-data";
 
-/**
- * Structured data is read by a machine that never complains: a wrong field is
- * not an error, it is a rich result that quietly never appears. So the tests
- * are about the things that fail silently — a relative image URL, a price in
- * bani where lei were meant, a field invented for a value we do not have.
- */
 const listing = {
   id: "a1",
   title: "Aparat foto Canon AE-1",
@@ -40,7 +34,6 @@ describe("auctionSchema", () => {
       expect(image.startsWith("http")).toBe(true);
     }
     expect(images[0]).toBe(`${SITE_URL}/images/products/canon.webp`);
-    // one that was already absolute is left alone rather than doubled
     expect(images[1]).toBe("https://cdn.example.com/2.jpg");
   });
 
@@ -49,7 +42,6 @@ describe("auctionSchema", () => {
       (auctionSchema({ ...listing, status }).offers as Record<string, unknown>)
         .availability;
     expect(availability("LIVE")).toBe("https://schema.org/InStock");
-    // Spoken for but unpaid: not orderable by anyone else, and not yet sold.
     expect(availability("RESERVED")).toBe("https://schema.org/BackOrder");
     expect(availability("SOLD")).toBe("https://schema.org/SoldOut");
     expect(availability("CANCELLED")).toBe("https://schema.org/Discontinued");
@@ -71,7 +63,6 @@ describe("auctionSchema", () => {
     expect(bare.image).toBeUndefined();
     expect(bare.itemCondition).toBeUndefined();
     expect((bare.offers as Record<string, unknown>).price).toBeUndefined();
-    // and stays serialisable, which is all a crawler ever sees
     expect(() => JSON.stringify(bare)).not.toThrow();
   });
 

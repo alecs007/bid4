@@ -3,23 +3,12 @@ import { jsPDF } from "jspdf";
 import type { ShippingLabelData } from "@/lib/types";
 import { formatDateTimeRo } from "@/lib/utils/date";
 
-/**
- * The PDF twin of <ShippingLabel />, in millimetres on a 100 x 150 mm thermal
- * label. Change one and change the other.
- *
- * TODO(backend): once Sameday Easybox is wired up the courier issues the real
- * label PDF and this becomes a development fallback.
- */
-
+// TODO(backend): the courier issues the real label PDF; this stays as the dev fallback.
 const W = 100;
 const H = 150;
 const M = 6; // left/right margin
 const RIGHT = W - M;
 
-/**
- * jsPDF's built-in fonts are WinAnsi-encoded and have no glyphs for ă î â ș ț, so
- * transliterate rather than embed a ~300 KB TTF into the bundle.
- */
 function pdfText(value: string): string {
   return value
     .replace(/[ăâĂÂ]/g, (c) => (c === c.toUpperCase() ? "A" : "a"))
@@ -69,12 +58,10 @@ function solid(doc: jsPDF, y: number, width = 0.6): void {
   doc.line(0, y, W, y);
 }
 
-/** The bid4 mark, drawn as vectors so it stays crisp at any print size. */
 function drawLogo(doc: jsPDF, x: number, y: number, size: number): void {
   doc.setFillColor(88, 204, 2);
   doc.roundedRect(x, y, size, size, size * 0.28, size * 0.28, "F");
 
-  // A heart from two discs and a triangle.
   const cx = x + size / 2;
   const r = size * 0.19;
   doc.setFillColor(255, 255, 255);
@@ -95,7 +82,6 @@ export function buildLabelFileName(data: ShippingLabelData): string {
   return `eticheta-${data.orderReference}-${data.awb}.pdf`;
 }
 
-/** `qrDataUrl` is a PNG data URL from the <ShippingLabel> canvas, via `toDataURL`. */
 export function renderShippingLabel(
   data: ShippingLabelData,
   qrDataUrl: string,
@@ -106,7 +92,6 @@ export function renderShippingLabel(
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, "F");
 
-  // Header
   drawLogo(doc, M, 4.5, 8);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
@@ -123,7 +108,6 @@ export function renderShippingLabel(
   doc.setTextColor(0);
   solid(doc, 15, 0.8);
 
-  // Destination headline
   const isEasybox = data.deliveryType === "EASYBOX";
   ctx.y = 20;
   caption(ctx, isEasybox ? "Easybox destinatie" : "Livrare la adresa");
@@ -139,7 +123,6 @@ export function renderShippingLabel(
   }
   dashed(doc, 37);
 
-  // Recipient + QR
   ctx.y = 42;
   caption(ctx, "Destinatar");
   ctx.y = 46.5;
@@ -158,7 +141,6 @@ export function renderShippingLabel(
   doc.text("SCANEAZA LA LOCKER", RIGHT - 13.5, 70, { align: "center" });
   doc.setTextColor(0);
 
-  // AWB band
   doc.setFillColor(243, 243, 241);
   doc.rect(0, 73, W, 15, "F");
   ctx.y = 78.5;
@@ -172,7 +154,6 @@ export function renderShippingLabel(
   doc.text(pdfText(data.awb), W / 2, 85.5, { align: "center" });
   solid(doc, 88, 0.8);
 
-  // Sender
   ctx.y = 94;
   caption(ctx, "Expeditor");
   ctx.y = 98.5;
@@ -185,7 +166,6 @@ export function renderShippingLabel(
   body(ctx, data.sender.phone, M, 7.5, "normal", "courier");
   dashed(doc, 116);
 
-  // Parcel details
   const columns = [M, M + 32, M + 62];
   const details: [string, string][] = [
     ["Comanda", data.orderReference],
@@ -200,7 +180,6 @@ export function renderShippingLabel(
   );
   dashed(doc, 129);
 
-  // Contents
   ctx.y = 134;
   caption(ctx, "Continut");
   ctx.y = 138;
@@ -209,7 +188,6 @@ export function renderShippingLabel(
   const titleLines = doc.splitTextToSize(pdfText(data.itemTitle), RIGHT - M);
   doc.text(titleLines.slice(0, 2), M, ctx.y);
 
-  // Impact footer
   solid(doc, 141, 0.8);
   if (data.donationNote) {
     doc.setFont("helvetica", "bold");
@@ -225,7 +203,6 @@ export function renderShippingLabel(
   return doc;
 }
 
-/** Renders and hands the file to the browser. */
 export function downloadShippingLabel(
   data: ShippingLabelData,
   qrDataUrl: string,

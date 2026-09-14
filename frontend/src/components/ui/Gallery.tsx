@@ -8,18 +8,10 @@ import { cn } from "@/lib/utils/cn";
 
 import { Lightbox } from "./Lightbox";
 
-/** How many thumbnails the desktop rail shows before it needs its arrows. */
 const RAIL_VISIBLE = 4;
 
-/** How long the track must sit still before the seam is crossed. */
 const SETTLE_MS = 140;
 
-/**
- * Moves the track without animating it. Snapping is switched off across the
- * write because a mandatory snap container re-snaps after a layout change, and
- * that re-snap beat this write when the track first gained width — parking it on
- * the clone before the first image while the dots said the first.
- */
 function jump(track: HTMLDivElement, left: number) {
   track.style.scrollSnapType = "none";
   track.style.scrollBehavior = "auto";
@@ -35,7 +27,6 @@ export function Gallery({
 }: {
   images: string[];
   alt: string;
-  /** Floated over the photograph on a phone, where there is no room beside it. */
   actions?: React.ReactNode;
 }) {
   const [active, setActive] = useState(0);
@@ -46,22 +37,10 @@ export function Gallery({
   const count = images.length;
   const current = images[active] ?? images[0] ?? "";
 
-  /**
-   * The phone track loops by carrying a copy of the last image before the first
-   * and a copy of the first after the last. Swiping past either end lands on a
-   * clone showing the same picture as its twin, and the scroll position is then
-   * moved to that twin with the animation off — identical pixels, so the seam is
-   * invisible and a swipe can carry on in one direction forever.
-   *
-   * <p>It stays a native scroller rather than a transformed track, because that
-   * is what gives a phone its own momentum, rubber-banding and pointer handling.
-   */
   const looped = count > 1;
   const slides = looped ? [images[count - 1], ...images, images[0]] : images;
-  /** Where image `i` sits in the track above. */
   const slot = useCallback((i: number) => (looped ? i + 1 : i), [looped]);
 
-  /** Read inside callbacks that outlive the render they were made in. */
   const activeRef = useRef(0);
   useEffect(() => {
     activeRef.current = active;
@@ -77,10 +56,6 @@ export function Gallery({
         if (next >= start + RAIL_VISIBLE) return next - RAIL_VISIBLE + 1;
         return start;
       });
-      // Driven from here rather than from an effect on `active`. As an effect it
-      // also ran for the changes the scroller itself reported, so a swipe was
-      // answered with a scrollTo back to where the finger already was — the two
-      // pulled against each other for the length of the gesture.
       const track = trackRef.current;
       if (track?.clientWidth) {
         track.scrollTo({ left: slot(next) * track.clientWidth, behavior: "smooth" });
@@ -89,9 +64,6 @@ export function Gallery({
     [count, slot],
   );
 
-  // Reports which picture is on screen. It does no scrolling of its own: moving
-  // the scroller from inside its own scroll event is what made the swipe judder,
-  // because the jump landed in the middle of the browser's momentum.
   const onScroll = () => {
     const track = trackRef.current;
     if (!track) return;
@@ -104,20 +76,6 @@ export function Gallery({
     setActive(real);
   };
 
-  /**
-   * Moves off a clone. Only ever while the track is stationary, or the jump
-   * fights the browser's momentum.
-   *
-   * <p>Two moments qualify, and both are needed. A quiet period after the last
-   * scroll event covers the reader who stops. The start of the next gesture
-   * covers the one who does not: landing on the trailing clone leaves the
-   * scroller at the far end of the track, where a swipe moves nothing but still
-   * fires scroll events — which restart the quiet period. Every attempt to swipe
-   * on postpones the very correction that would let it work, so the gallery
-   * fights back for as long as the reader keeps trying. Crossing on pointerdown
-   * instead lands it before that swipe is read, and the swipe carries on into
-   * the next photograph.
-   */
   useEffect(() => {
     const track = trackRef.current;
     if (!track || !looped) return;
@@ -129,7 +87,6 @@ export function Gallery({
       if (!width) return;
       const exact = track.scrollLeft / width;
       const position = Math.round(exact);
-      // Mid-flight, or resting between two slides: not ours to touch.
       if (Math.abs(exact - position) > 0.01) return;
       if (position !== 0 && position !== count + 1) return;
       jump(track, (position === 0 ? count : 1) * width);
@@ -149,15 +106,6 @@ export function Gallery({
     };
   }, [looped, count]);
 
-  /**
-   * Parks the track on the slide it is meant to be showing, without animating.
-   *
-   * <p>Driven by a resize observer rather than run once on mount, because the
-   * track is `lg:hidden`: on a desktop first paint it has no width, so a mount-
-   * time scroll would be a scroll to zero — the clone before the first image
-   * rather than the image. This fires when it gains width, and again on a
-   * rotation, where the old offset would leave it parked between two slides.
-   */
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
@@ -262,9 +210,6 @@ export function Gallery({
             </span>
           </button>
 
-          {/* Always there rather than on hover: arrows that appear when the
-              pointer arrives are arrows nobody knows are there until they
-              happen to sweep across the picture. */}
           {count > 1 ? (
             <>
               <StageArrow direction="prev" onClick={() => show(active - 1)} />
@@ -273,7 +218,6 @@ export function Gallery({
           ) : null}
           </div>
 
-          {/* phone: one image per screen, swiped */}
           <div className="relative lg:hidden">
             {actions ? (
               <div className="absolute top-3 right-3 z-10 flex gap-1.5">
@@ -287,8 +231,6 @@ export function Gallery({
               className="frame-empty no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-2xl"
             >
               {slides.map((image, position) => {
-                // Clones stand outside the numbering: the copy at either end is
-                // the same picture as its twin and must not be announced twice.
                 const real = looped
                   ? (position - 1 + count) % count
                   : position;
@@ -357,7 +299,6 @@ export function Gallery({
   );
 }
 
-/** Prev/next over the large image, above the click-to-zoom overlay. */
 function StageArrow({
   direction,
   onClick,

@@ -1,61 +1,26 @@
-/**
- * Every fee, cap, timing and threshold belongs here — nothing in the app may
- * hard-code one. `/admin/setari` renders this object.
- *
- * TODO(backend): replace the literals with a cached fetch of
- * `GET /config/platform`, which returns exactly this shape.
- */
-
-/** Integer minor units of RON. 1 leu = 100 bani. Money is NEVER a float. */
+// TODO(backend): replace the literals with a cached GET /config/platform.
 export type Bani = number;
 
 export const LEU: Bani = 100;
 
-/** The single switch that swaps the mock layer for the real backend. */
 export const USE_MOCK: boolean = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
 
-/** Spring Boot dev server default. */
 export const API_BASE: string =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
-/**
- * Where the site answers from, used to make every canonical and every social
- * card an absolute URL.
- *
- * <p>Relative metadata is legal and useless: a crawler resolving a preview image
- * has no page to resolve it against, and a canonical that is not absolute cannot
- * say which of two hosts is the real one. The localhost default keeps a clean
- * clone working; set it per deployment.
- */
 export const SITE_URL: string = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
 ).replace(/\/$/, "");
 
-/**
- * The role switcher and the seed-account quick login.
- *
- * <p>On whenever the app is running against the mock world, not only in development: a deployment
- * with no backend behind it is a demo, and the accounts it invites people to sign in as are the
- * seeded ones. The real deployment sets `NEXT_PUBLIC_USE_MOCK=false`, which turns both off again.
- */
 export const SHOW_DEV_TOOLS: boolean =
   process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS !== "false" &&
   (USE_MOCK || process.env.NODE_ENV !== "production");
 
 export const FEES = {
-  /**
-   * Buyer-side protection fee: a percentage of the hammer price plus a fixed
-   * amount, quoted on the listing as "5% + 2 lei".
-   *
-   * <p>It was a percentage clamped to [5, 50] lei, which made a 20-lei item pay
-   * 5 lei, or 25% under a 5% label. The fixed part covers what every order costs
-   * regardless of price, so the percentage can stay honest at both ends.
-   */
   BUYER_TAX_PERCENT: 5,
   BUYER_TAX_FIXED: 2.5 * LEU,
 } as const;
 
-/** Flat, mocked shipping prices per delivery type. */
 export const SHIPPING_PRICES = {
   EASYBOX: 1499 as Bani,
   HOME_COURIER: 2299 as Bani,
@@ -68,14 +33,10 @@ export const ACCOUNT = {
 } as const;
 
 export const CAUSE = {
-  /**
-   * What a cause may raise while staff are still checking it.
-   * TODO(backend): enforced server-side when releasing escrow, not here.
-   */
+  // TODO(backend): enforced server-side when escrow is released, not here.
   UNVERIFIED_CAP: 5_000 * LEU,
   MIN_GOAL: 500 * LEU,
   MAX_GOAL: 500_000 * LEU,
-  /** A cause with no evidence cannot be approved, so it cannot be submitted. */
   MIN_DOCUMENTS: 1,
   MAX_DOCUMENTS: 12,
   MAX_GALLERY_IMAGES: 6,
@@ -83,22 +44,12 @@ export const CAUSE = {
   SHORT_DESCRIPTION_MAX: 160,
   STORY_MIN: 200,
   STORY_MAX: 4_000,
-  /** What the organiser is promised on the success screen. */
   REVIEW_HOURS: 48,
   MIN_BENEFICIARY_AGE: 0,
   MAX_MINOR_AGE: 17,
 } as const;
 
-/**
- * What the browser does to a photograph before it is uploaded, and the ceilings it is held to.
- *
- * <p>The twin of `ro.bid4.backend.storage.ImageRules`: the same formats, the same size, the same
- * pixel ceiling. Both halves check, because the browser's copy is a courtesy — it keeps a seller
- * from waiting on an upload that was always going to be refused — and only the server's is a
- * control.
- */
 export const IMAGE = {
-  /** Mirrors the `stored_files_content_type_allowed` constraint, minus the PDF. */
   ACCEPTED_TYPES: [
     "image/jpeg",
     "image/png",
@@ -106,24 +57,11 @@ export const IMAGE = {
   ] as readonly string[],
   MAX_INPUT_MB: 12,
   MAX_INPUT_BYTES: 12 * 1024 * 1024,
-  /**
-   * The long edge after processing. Wide enough to hold up opened full-screen on a dense display,
-   * and far below what a phone camera writes.
-   */
   MAX_EDGE_PX: 1600,
   QUALITY: 0.82,
-  /**
-   * How many pixels a file may decode to, whatever its size on disk. A few kilobytes can unpack
-   * into hundreds of megabytes of canvas, and that is the whole trick behind a decompression bomb.
-   */
   MAX_PIXELS: 40_000_000,
-  /** What the server will take in one request, matching `spring.servlet.multipart`. */
   MAX_UPLOAD_BYTES: 8 * 1024 * 1024,
 
-  /**
-   * The demo build has nowhere to put a photograph but the browser's own storage, so it keeps a
-   * smaller copy and stops before filling it. A real upload uses the sizes above.
-   */
   DEMO_MAX_EDGE_PX: 1200,
   DEMO_QUALITY: 0.72,
   DEMO_BUDGET_BYTES: 1_500_000,
@@ -133,18 +71,7 @@ export const AUCTION = {
   MIN_STARTING_PRICE: 1 * LEU,
   MAX_STARTING_PRICE: 100_000 * LEU,
 
-  /**
-   * The ladder the bid step is read off, in bani: a listing at or below the first bound steps
-   * by the first amount, and so on up. Mirrors CatalogRules.BID_STEP_LADDER on the server.
-   *
-   * The seller does not choose it. A step they picked was either so small that outbidding
-   * somebody cost nothing, or so large that the second offer was out of reach — and either
-   * way it was one more decision in the way of publishing.
-   */
   BID_STEP_LADDER: [
-    // The bottom two rungs exist because the ladder without them asked a 1-leu
-    // listing for a 5-leu raise: the second offer was six times the first, which
-    // is the very thing a derived step is supposed to prevent.
     [10 * LEU, LEU / 2],
     [50 * LEU, 2.5 * LEU],
     [100 * LEU, 5 * LEU],
@@ -153,32 +80,10 @@ export const AUCTION = {
     [5_000 * LEU, 50 * LEU],
     [10_000 * LEU, 100 * LEU],
   ] as const,
-  /** What every listing above the top of the ladder steps by. */
   BID_STEP_ABOVE_LADDER: 250 * LEU,
 
-  /** How long a seller has to hand the parcel over, counted from payment. */
   DISPATCH_DAYS: 7,
 
-  /**
-   * The three parcels a seller picks between, instead of typing a weight.
-   *
-   * <p>Nobody knows what their jacket weighs in grams, and the number was only ever there to land
-   * in a courier band. So the seller picks the band directly, and `weightGrams` is the top of it —
-   * the price quoted is then the one the courier charges rather than an optimistic guess.
-   *
-   * <p>Each `examples` line names one object the whole parcel is the size of, rather than listing
-   * what could go in it: the three bands are the easybox compartments, and a compartment is a
-   * volume. "Cât o cutie de pantofi" is a thing the seller can hold up against what is in front of
-   * them; "pantofi, o geacă, un aparat mic" asks them to guess which list theirs belongs to.
-   *
-   * <p>`illustration` names a file under `public/images/illustrations`. Left null the picker draws
-   * the parcel icon instead, so the three are usable before the artwork exists and need no code
-   * change when it arrives. Every file is drawn on a square canvas, so all three fill the same slot
-   * and the row keeps its spacing whatever shape the parcel inside is. `illustrationScale` is the
-   * one nudge on top: a parcel drawn much wider than it is tall fills the slot side to side and
-   * still sits short in it, so it is allowed to spill a little past the slot — which changes how
-   * large it looks without changing where anything sits.
-   */
   PARCEL_TYPES: [
     {
       id: "small",
@@ -206,10 +111,8 @@ export const AUCTION = {
     },
   ],
 
-  /** A listing with no photo does not sell, and the first one is the card. */
   MIN_IMAGES: 1,
   MAX_IMAGES: 8,
-  /** Mirrors the column widths: varchar(120) and varchar(4000). */
   MAX_TITLE_LENGTH: 120,
   MIN_TITLE_LENGTH: 8,
   MAX_DESCRIPTION_LENGTH: 4000,
@@ -217,16 +120,9 @@ export const AUCTION = {
   MIN_WEIGHT_GRAMS: 1,
   MAX_WEIGHT_GRAMS: 15_000,
 
-  /** An auction is "hot" from this many bids up. */
   HOT_BID_THRESHOLD: 8,
 } as const;
 
-/**
- * The step for a listing that starts at this price — the twin of CatalogRules.bidStepFor.
- *
- * Derived rather than stored, so a listing created before the ladder changed still steps by
- * whatever the ladder says today, and there is one place to change it.
- */
 export function bidStepFor(startingPrice: Bani): Bani {
   for (const [bound, step] of AUCTION.BID_STEP_LADDER) {
     if (startingPrice <= bound) return step;
@@ -237,95 +133,46 @@ export function bidStepFor(startingPrice: Bani): Bani {
 export const DONATION = {
   MIN_PERCENT: 5,
   MAX_PERCENT: 100,
-  /** Offered as one-tap choices in the listing form. */
   PRESET_PERCENTS: [10, 25, 50, 75, 100] as const,
   DEFAULT_PERCENT: 25,
-  /** At or above this share the listing earns the "Erou" badge. */
   HERO_PERCENT: 75,
 } as const;
 
-/**
- * Which version of the terms is currently published.
- *
- * <p>Must match Terms.CURRENT_VERSION in the backend: an offer that names any other version is
- * refused, because consenting to a text nobody is being shown is not consent. Bump both when the
- * wording changes in substance — acceptances already recorded keep naming the version their party
- * was actually given.
- */
 export const TERMS = {
   VERSION: "2026-09-12",
 } as const;
 
 export const ORDER = {
-  /**
-   * How long the buyer has to choose delivery before the sale lapses.
-   *
-   * <p>Three days, which is OrderService.CONFIRMATION_WINDOW. This said 24 while the clock that
-   * actually cancels an order gave 72, so the listing page promised a deadline the backend did not
-   * keep.
-   */
   CONFIRMATION_HOURS: 72,
-  /** Funds auto-release this long after DELIVERED if the buyer stays silent. */
   AUTO_RELEASE_HOURS: 72,
-  /** Seller must drop the parcel off within this window. */
   DROP_OFF_DAYS: 3,
-  /** How long a buyer may still open a dispute after delivery. */
   DISPUTE_WINDOW_HOURS: 72,
-  /** Retries of the off-session charge before the order is cancelled. */
   PAYMENT_RETRY_ATTEMPTS: 3,
 } as const;
 
 export const SHIPPING = {
   COURIER_NAME: "Sameday",
-  /** Working days from hand-off to delivery, quoted on the listing. */
   DELIVERY_DAYS_MIN: 1,
   DELIVERY_DAYS_MAX: 2,
   SERVICE_NAME: "Sameday Easybox",
-  /** Mock AWB format: 24 digits, like the real Sameday ones. */
   AWB_PREFIX: "2SD",
   TRACKING_URL_BASE: "https://sameday.ro/track",
-  /** Default parcel weight when a seller does not supply one. */
   DEFAULT_WEIGHT_GRAMS: 500,
   MAX_WEIGHT_GRAMS: 15_000,
 } as const;
 
 export const MOCK = {
-  /** Simulated network latency window, in ms. */
   MIN_LATENCY_MS: 220,
   MAX_LATENCY_MS: 700,
-  /** Probability that a read fails, so error states get exercised. */
   READ_FAILURE_RATE: 0,
-  /** Probability that a mocked card charge is declined. */
   PAYMENT_FAILURE_RATE: 0.12,
 
-  /** Accelerated clock: an order walks its whole timeline in a couple of minutes. */
   AUTO_PAYMENT_DELAY_SECONDS: 8,
   AUTO_LABEL_DELAY_SECONDS: 6,
   COURIER_STEP_SECONDS: 40,
-  /**
-   * Only orders touched within this window keep moving. Seeded history stays
-   * where it was put, so the dashboards show every order state.
-   */
   SIMULATION_WINDOW_SECONDS: 1800,
-  /** localStorage key + schema version. Bump to invalidate a stale world. */
   STORAGE_KEY: "bid4.world",
-  // 7: conversations, thread items and notifications joined the world, so a
-  // world seeded before them has an inbox that is empty rather than wrong —
-  // which is the worse of the two, because nothing about it looks broken.
-  // 10: the cards are written per side and need more of the payload to do it —
-  // the cause on release, which side cancelled, how a dispute was settled.
-  // 11: the demo account is a party to every seeded case, including the
-  // cancelled one and the resolved dispute, which used to belong to two other
-  // accounts and so could not be opened at all.
-  // 12: a cancelled sale is no longer seeded as paid, which the state machine
-  // cannot produce, and the history reads formally.
-  // 13: the order history no longer says a comanda was "deschisă" or a
-  // delivery "stabilită".
   SCHEMA_VERSION: 13,
-  /**
-   * Seeded auctions are dated from when the world was created, so an old world
-   * ends up with everything closed. Past this age it is reseeded.
-   */
   MAX_WORLD_AGE_HOURS: 8,
 } as const;
 
@@ -352,7 +199,6 @@ export const AUCTION_CATEGORIES = [
   { id: "bijuterii", label: "Bijuterii" },
 ] as const;
 
-/** Every județ plus the capital, for beneficiary addresses. */
 export const ROMANIAN_COUNTIES = [
   "Alba",
   "Arad",
@@ -402,26 +248,9 @@ export type CauseCategoryId = (typeof CAUSE_CATEGORIES)[number]["id"];
 export type AuctionCategoryId = (typeof AUCTION_CATEGORIES)[number]["id"];
 
 export const FEATURED = {
-  /**
-   * Weights of the popularity score: bids, watchers, donation share.
-   *
-   * There was a fourth, for how close a listing was to closing. Nothing closes any more. The
-   * homepage no longer ranks by this either — it is what tops up a short "more like this" row.
-   */
   WEIGHT_BIDS: 3,
   WEIGHT_WATCHERS: 1,
   WEIGHT_DONATION: 2,
-  /**
-   * How many cards each homepage row is given, and how many it shows at each width.
-   *
-   * <p>A row is two cards across a phone, three across a tablet and five across a desktop. Each
-   * width therefore wants a different number if no row is to end part-empty, so the row is given
-   * the largest of the three and the page hides the rest — the count is the fetch, the shown counts
-   * are the layout.
-   *
-   * <p>The first row is one full desktop row; the second is two. Both divide cleanly at every width:
-   * 6 is 3×2 and 2×3, 8 is 4×2, 9 is 3×3, 10 is 2×5.
-   */
   MOST_WATCHED_COUNT: 6,
   MOST_WATCHED_SHOWN: { base: 6, md: 6, lg: 5 },
   LATEST_COUNT: 10,
@@ -429,34 +258,17 @@ export const FEATURED = {
   TRENDING_CAUSES_COUNT: 3,
 } as const;
 
-/** "More like this": the cause outweighs the object, because it usually is the reason. */
 export const RELATED = {
   WEIGHT_SAME_CAUSE: 10,
   WEIGHT_SAME_CATEGORY: 5,
   WEIGHT_SAME_SELLER: 2,
-  /** Awarded in full at an identical price, tapering to nothing at 4x. */
   WEIGHT_PRICE_PROXIMITY: 2,
   COUNT: 10,
-  /** Below this the row is not worth swiping, so it is topped up. */
   MIN_COUNT: 6,
 } as const;
 
 export const PAGINATION = {
-  /**
-   * A page of results: sixteen.
-   *
-   * <p>Four rows of four on a desktop, eight rows of two on a phone, and no ragged last row at
-   * either. Twelve divided by four but not by the five a narrower grid uses, and it left the
-   * browsing page a row shorter than the screen had room for.
-   */
   DEFAULT_PAGE_SIZE: 16,
   MAX_PAGE_SIZE: 60,
-  /**
-   * How long the placeholders stand once the page has reached the top, before the new results
-   * are revealed.
-   *
-   * <p>A beat, not a delay. Without it a cached page swaps in the same frame the scroll lands and
-   * the whole change happens at once, which reads as a flicker rather than as a new page.
-   */
   REVEAL_HOLD_MS: 140,
 } as const;

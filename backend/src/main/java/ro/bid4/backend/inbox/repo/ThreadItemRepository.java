@@ -10,21 +10,6 @@ import org.springframework.data.repository.query.Param;
 import ro.bid4.backend.inbox.domain.ThreadItem;
 
 public interface ThreadItemRepository extends JpaRepository<ThreadItem, UUID> {
-
-  /**
-   * The newest items in a thread.
-   *
-   * <p>Keyset paging, for the reason every list in this application uses it: a thread is written to
-   * while it is being read, so an offset both drifts under the reader and costs more the further
-   * back they scroll. Ordered the way the index runs, so a page is a range scan and nothing is
-   * sorted.
-   *
-   * <p>Two methods rather than one with a nullable cursor. A parameter that appears only inside
-   * {@code :cursor is null} has no type Postgres can infer from its use, and the driver is refused
-   * with "could not determine data type" — but the split earns its keep anyway, because the first
-   * page is the common one and has no business carrying a comparison against a cursor that is not
-   * there.
-   */
   @Query(
       """
       select i from ThreadItem i
@@ -47,13 +32,6 @@ public interface ThreadItemRepository extends JpaRepository<ThreadItem, UUID> {
       @Param("beforeId") UUID beforeId,
       Limit limit);
 
-  /**
-   * The newest item in each of a page of threads, for the inbox list.
-   *
-   * <p>Native, because {@code DISTINCT ON} is the one thing Postgres does here that JPQL cannot
-   * express — it walks the index backwards and stops at the first row per thread. The alternative
-   * shapes are a window function over every item ever written, or one query per row.
-   */
   @Query(
       value =
           """
@@ -68,12 +46,5 @@ public interface ThreadItemRepository extends JpaRepository<ThreadItem, UUID> {
   long countByConversationIdAndSenderIdAndCreatedAtAfter(
       UUID conversationId, UUID senderId, Instant after);
 
-  /**
-   * Whether this step of this sale has already been written.
-   *
-   * <p>Asked before the insert rather than learned from the unique index. Catching the violation
-   * would be tidier to read and would poison the transaction it was caught in — Spring marks it
-   * rollback-only, and the caller, who only wanted the card to exist, fails at commit.
-   */
   boolean existsByOrderIdAndEventType(UUID orderId, String eventType);
 }

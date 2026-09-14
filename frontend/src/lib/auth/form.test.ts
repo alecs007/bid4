@@ -2,15 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { EMAIL_PATTERN, safeRedirect, withRedirect } from "./form";
 
-/**
- * The guard on `?redirect=`.
- *
- * <p>Every case here is written as "where does the browser actually end up",
- * because that is the only question that matters and the one a prefix check
- * answers wrongly. `/\evil.com` is the case that mattered: it starts with a
- * single slash, so it reads as a path, and browsers fold the backslash into a
- * second slash and leave the site.
- */
 describe("safeRedirect", () => {
   const lands = (value: string | null | undefined) =>
     new URL(safeRedirect(value), "https://bid4.ro").href;

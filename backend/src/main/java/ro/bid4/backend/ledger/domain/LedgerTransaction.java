@@ -14,19 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One movement of money, whose entries add to zero.
- *
- * <p>{@code idempotencyKey} is the whole of the retry story. A payment webhook delivered twice, a
- * release job that ran again after a crash, a button pressed on two tabs — each carries the same
- * key, and the second one collides on a unique index rather than moving the money again.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "ledger_transactions")
 public class LedgerTransaction {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

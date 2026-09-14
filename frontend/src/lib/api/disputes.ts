@@ -23,14 +23,7 @@ import type {
 
 import { http } from "./http";
 
-/**
- * Disputes freeze the escrow release until an operator decides.
- *
- * TODO(backend): resolving one triggers the Stripe side effect — a full/partial
- * Refund, or the two Transfers a normal release would have made.
- */
-
-/** POST /orders/{id}/disputes */
+// TODO(backend): resolving one triggers the Stripe refund, or the transfers a release makes.
 export async function openDispute(
   payload: OpenDisputePayload,
   userId: ID,
@@ -71,7 +64,6 @@ export async function openDispute(
   };
 
   world.disputes.push(dispute);
-  // Freezes the auto-release timer: the world clock skips DISPUTE_OPEN orders.
   pushEvent(
     order,
     "DISPUTE_OPEN",
@@ -84,7 +76,6 @@ export async function openDispute(
   return detail;
 }
 
-/** GET /operator/disputes */
 export async function listDisputes(role: UserRole): Promise<DisputeDetail[]> {
   if (!USE_MOCK) return http<DisputeDetail[]>("/operator/disputes");
 
@@ -108,7 +99,6 @@ export async function listDisputes(role: UserRole): Promise<DisputeDetail[]> {
     );
 }
 
-/** GET /orders/{id}/disputes */
 export async function getDisputeForOrder(
   orderId: ID,
 ): Promise<DisputeDetail | null> {
@@ -122,7 +112,6 @@ export async function getDisputeForOrder(
   return dispute ? toDisputeDetail(dispute) : null;
 }
 
-/** POST /operator/disputes/{id}/claim — take it off the unassigned pile. */
 export async function claimDispute(
   disputeId: ID,
   operatorId: ID,
@@ -149,7 +138,6 @@ export async function claimDispute(
   return detail;
 }
 
-/** POST /operator/disputes/{id}/resolve */
 export async function resolveDispute(
   payload: ResolveDisputePayload,
   operatorId: ID,

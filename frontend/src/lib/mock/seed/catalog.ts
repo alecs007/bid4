@@ -4,13 +4,6 @@ import type { Auction, AuctionStatus, Bid, ItemCondition } from "@/lib/types";
 import { isoAgo } from "@/lib/utils/date";
 import { auctionGallery } from "../images";
 
-/**
- * `age` places a listing relative to now, so the seeded world has a mix of fresh arrivals and
- * things that have been up a while — without hard-coded dates that go stale.
- *
- * It used to be `timing`, and it named a deadline. Nothing has one: a listing runs until its
- * seller settles it, so the only thing a date says about one is how long it has been up.
- */
 type Age =
   | "TODAY"
   | "THIS_WEEK"
@@ -33,16 +26,12 @@ interface ListingSeed {
   buyNowLei?: number;
   age: Age;
   status: AuctionStatus;
-  /** How many offers to synthesise. Ignored for drafts and listings under review. */
   bids?: number;
-  /** The buyer, for a listing that has been reserved or sold. */
   winnerId?: string;
-  /** Marks the listings the order seed attaches to. */
   orderKey?: string;
 }
 
 const LISTINGS: ListingSeed[] = [
-  // Live, inside the anti-snipe window
   {
     key: "tricou-retro",
     title: "Tricou retro Steaua București, ediție aniversară",
@@ -60,7 +49,6 @@ const LISTINGS: ListingSeed[] = [
     bids: 13,
   },
 
-  // Live, ending very soon
   {
     key: "canon",
     title: "Aparat foto Canon AE-1 Program cu obiectiv 50mm f/1.8",
@@ -95,7 +83,6 @@ const LISTINGS: ListingSeed[] = [
     bids: 9,
   },
 
-  // Live, ending today
   {
     key: "bicicleta",
     title: "Bicicletă de oraș Pegas Clasic, cadru 54",
@@ -146,7 +133,6 @@ const LISTINGS: ListingSeed[] = [
     bids: 16,
   },
 
-  // Live, a few days
   {
     key: "lego",
     title: "LEGO Technic 42096 Porsche 911 RSR, complet",
@@ -261,7 +247,6 @@ const LISTINGS: ListingSeed[] = [
     bids: 10,
   },
 
-  // Scheduled
   {
     key: "chitara",
     title: "Chitară clasică Yamaha C40, cu husă",
@@ -275,8 +260,6 @@ const LISTINGS: ListingSeed[] = [
     donationPercent: 60,
     startLei: 180,
     age: "LAST_WEEK",
-    // The middle of the ladder, not the top: the seller took an offer that was
-    // not the highest, which is the whole point of a listing with no clock.
     status: "RESERVED",
     bids: 4,
     winnerId: "usr_bogdan",
@@ -300,7 +283,6 @@ const LISTINGS: ListingSeed[] = [
     winnerId: "usr_vlad",
   },
 
-  // Seller-side lifecycle
   {
     key: "draft-telefon",
     title: "Telefon Samsung Galaxy S21, 128 GB",
@@ -378,7 +360,6 @@ const LISTINGS: ListingSeed[] = [
     bids: 0,
   },
 
-  // Sold: one per order status
   {
     key: "sold-confirmare",
     title: "Boxă portabilă JBL Flip 5, waterproof",
@@ -619,7 +600,6 @@ const LISTINGS: ListingSeed[] = [
   },
 ];
 
-/** Bidders drawn on in rotation when synthesising a bid history. */
 const BIDDER_POOL = [
   "usr_maria",
   "usr_ioana",
@@ -631,7 +611,6 @@ const BIDDER_POOL = [
   "usr_paspas",
 ];
 
-/** When the listing went up. Everything is already published — nothing waits for a start. */
 function startedAt(age: Age): string {
   switch (age) {
     case "TODAY":
@@ -650,7 +629,6 @@ function startedAt(age: Age): string {
 export interface CatalogSeed {
   auctions: Auction[];
   bids: Bid[];
-  /** orderKey -> auctionId, so the order seed can find its auction. */
   orderTargets: Map<string, string>;
 }
 
@@ -663,19 +641,14 @@ export function buildCatalog(): CatalogSeed {
     const auctionId = `auc_${seed.key}`;
     const start = startedAt(seed.age);
     const startingPrice = lei(seed.startLei);
-    // Not a seeded choice: the ladder decides, exactly as it does for a listing
-    // a real seller writes.
     const increment = bidStepFor(startingPrice);
 
-    // Bid history
     const bidCount = seed.bids ?? 0;
     let currentPrice = startingPrice;
     const auctionBids: Bid[] = [];
 
     let step = 0;
     for (let index = 0; index < bidCount; index += 1) {
-      // Bidders sometimes jump more than the minimum, like real people do.
-      // Cumulative, or the jump collides with the next bid's amount.
       step += index % 4 === 3 ? 2 : 1;
       const amount = startingPrice + increment * step;
       const bidderId =
@@ -683,8 +656,6 @@ export function buildCatalog(): CatalogSeed {
           ? seed.winnerId
           : BIDDER_POOL[(listingIndex + index) % BIDDER_POOL.length]!;
 
-      // Spread the history from the listing's start towards now, densest at the
-      // recent end — offers arrive faster once something has been noticed.
       const minutesAgo = Math.round((bidCount - index) * 190);
 
       auctionBids.push({
@@ -698,14 +669,10 @@ export function buildCatalog(): CatalogSeed {
       currentPrice = amount;
     }
 
-    // One offer per bidder: the pool repeats on long histories, so keep only
-    // each bidder's latest and let the count follow it.
     const latest = new Map<string, Bid>();
     auctionBids.forEach((bid) => latest.set(bid.bidderId, bid));
     const keptBids = auctionBids.filter((bid) => latest.get(bid.bidderId) === bid);
 
-    // What became of those offers is read off the listing's status, so the seed
-    // cannot describe a sold listing whose bids all still say they are running.
     let acceptedBid: Bid | undefined;
     if (keptBids.length > 0) {
       switch (seed.status) {
@@ -713,9 +680,6 @@ export function buildCatalog(): CatalogSeed {
           keptBids[keptBids.length - 1]!.status = "WINNING";
           break;
         case "RESERVED":
-          // Deliberately not the top offer where there is a choice. A seed where
-          // the highest always wins never shows what the model is for, and the
-          // rest are left standing because the seller can still release this one.
           acceptedBid = keptBids[Math.floor((keptBids.length - 1) / 2)]!;
           acceptedBid.status = "ACCEPTED";
           if (keptBids[keptBids.length - 1] !== acceptedBid) {
@@ -737,7 +701,6 @@ export function buildCatalog(): CatalogSeed {
     }
     bids.push(...keptBids);
 
-    // Auction
     const reservePrice = seed.reserveLei ? lei(seed.reserveLei) : undefined;
     const committed = seed.status === "RESERVED" || seed.status === "SOLD";
     const acceptedAt = committed ? isoAgo(seed.status === "SOLD" ? 2 : 1, "days") : undefined;
@@ -760,7 +723,6 @@ export function buildCatalog(): CatalogSeed {
       buyNowPrice: seed.buyNowLei ? lei(seed.buyNowLei) : undefined,
       startTime: start,
       acceptedAt,
-      // The dispatch clock starts at payment, so it belongs only to a paid sale.
       dispatchDeadline:
         seed.status === "SOLD" && acceptedAt
           ? new Date(

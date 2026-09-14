@@ -27,18 +27,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-/**
- * A canary, not a feature test.
- *
- * <p>Bucket4j declares Lettuce 6.1.8 at provided scope while Boot 4.1 supplies 7.5.2 — a major
- * version ahead. Nothing catches that at compile time, so this exercises the real code path against
- * a real Redis. If a future Boot or Bucket4j upgrade breaks binary compatibility, this fails in CI
- * rather than silently letting every request through in production.
- */
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class Bucket4jRedisCompatibilityTest {
-
   @Container
   static final RedisContainer REDIS = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
 
@@ -91,8 +82,6 @@ class Bucket4jRedisCompatibilityTest {
 
     ConsumptionProbe sixth = bucket.tryConsumeAndReturnRemaining(1);
     assertFalse(sixth.isConsumed(), "the sixth request must be throttled");
-    // This is what Retry-After is built from, and the reason to take the library
-    // rather than hand-roll the arithmetic.
     assertTrue(sixth.getNanosToWaitForRefill() > 0, "a throttled probe must say when to retry");
   }
 

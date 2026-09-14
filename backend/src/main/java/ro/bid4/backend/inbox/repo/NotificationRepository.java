@@ -11,8 +11,6 @@ import org.springframework.data.repository.query.Param;
 import ro.bid4.backend.inbox.domain.Notification;
 
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
-
-  /** Split in two rather than taking a nullable cursor — see {@code ThreadItemRepository}. */
   @Query(
       "select n from Notification n where n.userId = :userId order by n.createdAt desc, n.id desc")
   List<Notification> firstPage(@Param("userId") UUID userId, Limit limit);
@@ -34,7 +32,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
   boolean existsByUserIdAndType(UUID userId, String type);
 
-  /** Addressed by user as well as by id, so one account cannot mark another's as read. */
   @Modifying(flushAutomatically = true)
   @Query(
       """

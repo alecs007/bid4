@@ -2,25 +2,12 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 
-/** Below this a dialog is a sheet with a bar to pull; above it there is nothing to pull. */
 const SHEET_BELOW_PX = 640;
 
-/** How far down the sheet has to be thrown before letting go dismisses it. */
 const DISMISS_AFTER_PX = 140;
 
-/** How long it takes to leave, once thrown. */
 const LEAVE_MS = 200;
 
-/**
- * Pull-to-dismiss, shared by every dialog that becomes a sheet on a phone.
- *
- * <p>The pull is followed on the window rather than through `setPointerCapture`, which throws when
- * the pointer has already gone and leaves a sheet stuck halfway down the screen.
- *
- * <p>The state is reset whenever the dialog opens, because these components stay mounted between
- * openings — a sheet thrown away once would otherwise come back already translated off-screen,
- * which reads as it refusing to open at all.
- */
 export function useSheetDismiss({
   open,
   onClose,
@@ -31,10 +18,8 @@ export function useSheetDismiss({
   panelRef: RefObject<HTMLDivElement | null>;
 }) {
   const [pulled, setPulled] = useState(0);
-  /** Measured when the sheet is grabbed, so the backdrop can fade in step with it. */
   const [height, setHeight] = useState(0);
   const [pulling, setPulling] = useState(false);
-  /** Latched, because re-adding the entrance class on release would replay it. */
   const [grabbed, setGrabbed] = useState(false);
   const from = useRef(0);
   const leaving = useRef<number | null>(null);
@@ -49,8 +34,6 @@ export function useSheetDismiss({
     }
   }
 
-  // A dialog reopened inside the two hundred milliseconds its last dismissal
-  // takes would be shut again by that dismissal's own timer.
   useEffect(() => {
     if (!open || leaving.current === null) return;
     window.clearTimeout(leaving.current);
@@ -84,8 +67,6 @@ export function useSheetDismiss({
       setPulling(false);
       const panel = panelRef.current?.getBoundingClientRect().height ?? 0;
       if (travelled(event) > Math.min(DISMISS_AFTER_PX, panel * 0.25)) {
-        // Sent the rest of the way out before it unmounts, so it leaves the
-        // way it was thrown rather than blinking off under the finger.
         setPulled(panel);
         leaving.current = window.setTimeout(onClose, LEAVE_MS);
       } else {
@@ -107,9 +88,7 @@ export function useSheetDismiss({
     grab,
     grabbed,
     pulling,
-    /** Inline transform for the panel, or nothing while it is at rest. */
     panelStyle: pulled ? { transform: `translateY(${pulled}px)` } : undefined,
-    /** The backdrop goes with the sheet rather than after it. */
     backdropStyle:
       pulled && height
         ? { opacity: Math.max(0, 1 - pulled / height) }
@@ -117,7 +96,6 @@ export function useSheetDismiss({
   };
 }
 
-/** The bar that says a sheet can be pulled. Drawn only where there is a sheet to pull. */
 export function SheetGrabber() {
   return (
     <div

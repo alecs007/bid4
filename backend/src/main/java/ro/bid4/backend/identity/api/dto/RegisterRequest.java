@@ -6,12 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import ro.bid4.backend.identity.domain.AccountType;
 
-/**
- * The RegisterPayload interface in frontend/src/lib/types/user.ts.
- *
- * <p>Limits mirror ACCOUNT in frontend/src/lib/config.ts, so a value the form accepts is a value
- * the server accepts and the two never disagree about what is valid.
- */
 public record RegisterRequest(
     @NotBlank(message = "Introdu adresa de email.")
         @Email(message = "Adresa de email nu pare validă.")
@@ -26,6 +20,4 @@ public record RegisterRequest(
     @NotNull(message = "Alege tipul de cont.") AccountType accountType,
     @Size(max = 160, message = "Denumirea legală este prea lungă.") String orgLegalName,
     @Size(max = 32, message = "Codul de înregistrare este prea lung.") String orgRegistrationNumber,
-    // Checked in AuthService rather than here, so the refusal carries the
-    // TERMS_REQUIRED code the frontend already switches on.
     boolean acceptedTerms) {}

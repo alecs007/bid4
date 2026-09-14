@@ -7,17 +7,9 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
 import { revealDelay } from "@/lib/utils/reveal";
 
-/**
- * The width the auctions grid gives a card at the same breakpoint — two across,
- * then four from `lg` — so a card is the same size wherever it is read. The
- * rail's content box is the width of that grid and carries the same gaps, so
- * the two arithmetics agree; a fixed width here did not, and left the rail's
- * cards visibly smaller than the home page's from `sm` up.
- */
 const CARD =
   "w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-4rem)/5)]";
 
-/** Left out entirely when nothing matches, rather than padded with whatever is live. */
 export function RelatedAuctions({
   auctionId,
   causeName,

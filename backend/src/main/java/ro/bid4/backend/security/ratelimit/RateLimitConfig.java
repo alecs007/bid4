@@ -12,14 +12,6 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 
 @Configuration
 public class RateLimitConfig {
-
-  /**
-   * Reuses the Lettuce client Boot already configured from {@code spring.data.redis.*}, rather than
-   * opening a second one with its own copy of the host, password and timeouts to drift.
-   *
-   * <p>Buckets expire once they would have refilled to full: an address seen once should not occupy
-   * a key forever.
-   */
   @Bean
   ProxyManager<byte[]> rateLimitBuckets(RedisConnectionFactory connectionFactory) {
     if (!(connectionFactory instanceof LettuceConnectionFactory lettuce)) {

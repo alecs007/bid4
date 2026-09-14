@@ -15,22 +15,8 @@ import ro.bid4.backend.inbox.repo.ConversationParticipantRepository;
 import ro.bid4.backend.inbox.repo.ConversationRepository;
 import ro.bid4.backend.inbox.repo.ThreadItemRepository;
 
-/**
- * How the rest of the application writes into a thread.
- *
- * <p>The dependency runs one way on purpose: orders knows about the inbox, and the inbox knows
- * nothing about orders. What arrives here is a string naming a step and a map of values to show, so
- * a second thing that wants to narrate itself into a conversation — a dispute, an operator, a cause
- * decision — needs no change on this side.
- *
- * <p>Posting a step is idempotent. A unique index holds one event of each kind per order, so a
- * transition that is retried after a failed transaction cannot leave the thread with two copies of
- * "banii sunt în siguranță" — and the question is asked before the insert rather than answered by
- * the collision, because a violation caught inside somebody else's transaction poisons it.
- */
 @Service
 public class ThreadEvents {
-
   private final ConversationRepository conversations;
   private final ConversationParticipantRepository participants;
   private final ThreadItemRepository items;
@@ -47,12 +33,6 @@ public class ThreadEvents {
     this.events = events;
   }
 
-  /**
-   * The thread about this listing between these two, opened if it is not already.
-   *
-   * <p>A sale does not start a new conversation. If the buyer asked a question a week ago, the
-   * acceptance appears under it.
-   */
   @Transactional
   public Conversation ensureThread(UUID listingId, UUID buyerId, UUID sellerId) {
     return conversations
@@ -60,7 +40,6 @@ public class ThreadEvents {
         .orElseGet(() -> create(listingId, buyerId, sellerId));
   }
 
-  /** Ties a thread to the sale it is now about. */
   @Transactional
   public void attachOrder(UUID conversationId, UUID orderId) {
     conversations
@@ -68,13 +47,6 @@ public class ThreadEvents {
         .ifPresent(conversation -> conversation.setOrderId(orderId));
   }
 
-  /**
-   * Writes one step of a sale into the thread.
-   *
-   * <p>{@code orderStatus} is the status at the time of writing and never changes afterwards. It is
-   * how the client tells the one live card from the history above it: the event whose status equals
-   * the order's current one is the step being waited on, and only that one is drawn with a button.
-   */
   @Transactional(propagation = Propagation.REQUIRED)
   public void post(
       UUID conversationId,
@@ -83,11 +55,6 @@ public class ThreadEvents {
       String orderStatus,
       String body,
       Map<String, String> payload) {
-
-    // Asked, not caught. The unique index is still the thing that makes this
-    // true under a race, but reaching it inside somebody else's transaction
-    // would mark that transaction rollback-only — and the caller only wanted
-    // the card to exist, which by then it does.
     if (items.existsByOrderIdAndEventType(orderId, eventType)) {
       return;
     }
@@ -102,17 +69,6 @@ public class ThreadEvents {
     notifyParticipants(conversationId, saved.getId());
   }
 
-  /**
-   * Writes something that happened before there was a sale: an offer sent, raised, withdrawn.
-   *
-   * <p>No order, and deliberately not idempotent. The unique index that holds one card per step
-   * exists because a step of a sale happens once and may be retried; an offer is the opposite —
-   * raising it twice is two events, and the thread is the record of both. Postgres treats null
-   * order ids as distinct, so the index does not stand in the way.
-   *
-   * <p>The thread is opened if it is not already there, so a seller's first sight of a buyer can be
-   * the offer itself rather than a message.
-   */
   @Transactional
   public void offer(
       UUID listingId,
@@ -121,7 +77,6 @@ public class ThreadEvents {
       String eventType,
       String body,
       Map<String, String> payload) {
-
     UUID conversationId = ensureThread(listingId, buyerId, sellerId).getId();
 
     ThreadItem item = ThreadItem.event(conversationId, null, eventType, null);
@@ -130,13 +85,10 @@ public class ThreadEvents {
 
     ThreadItem saved = items.save(item);
     conversations.touch(conversationId, saved.getCreatedAt());
-    // The other side only. An offer is the bidder's own doing, and a badge on
-    // their own inbox for it is a notification about themselves.
     participants.markUnreadForOthers(conversationId, buyerId);
     notifyParticipants(conversationId, saved.getId());
   }
 
-  /** A plain line from the platform, for anything that is not a step of a sale. */
   @Transactional
   public void system(UUID conversationId, String body) {
     ThreadItem saved = items.save(ThreadItem.system(conversationId, body));

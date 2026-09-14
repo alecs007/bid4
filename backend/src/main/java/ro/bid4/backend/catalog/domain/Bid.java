@@ -14,18 +14,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One offer on one auction.
- *
- * <p>A bidder holds at most one row per auction: raising replaces the previous offer rather than
- * stacking on it, which a unique index enforces.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "bids")
 public class Bid {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -37,7 +30,6 @@ public class Bid {
   @Column(name = "bidder_id", nullable = false)
   private UUID bidderId;
 
-  /** Integer bani. */
   @Column(nullable = false)
   private long amount;
 
@@ -48,12 +40,6 @@ public class Bid {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt = Instant.now();
 
-  /**
-   * Which terms the bidder accepted before this offer went in, and when.
-   *
-   * <p>Null only on offers placed before the consent gate existed — see V12. The service refuses a
-   * new offer that does not name the current version, so nothing written from here on is null.
-   */
   @Column(name = "terms_version", updatable = false)
   private String termsVersion;
 

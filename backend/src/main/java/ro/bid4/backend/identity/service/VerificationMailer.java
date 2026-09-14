@@ -11,19 +11,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import ro.bid4.backend.common.config.Bid4Properties;
 
-/**
- * Sends the one message this application currently writes.
- *
- * <p>Plain text, not HTML: a confirmation link needs no markup, and a plain message cannot carry a
- * tracking pixel or a remote image. It also survives every client unchanged.
- *
- * <p>Sent asynchronously. A slow or unreachable mail server must not hold a registration request
- * open — the account already exists by then, and a failure here is recoverable by asking for
- * another link.
- */
 @Component
 public class VerificationMailer {
-
   private static final Logger log = LoggerFactory.getLogger(VerificationMailer.class);
 
   private final JavaMailSender sender;
@@ -63,8 +52,6 @@ public class VerificationMailer {
     try {
       sender.send(message);
     } catch (MailException ex) {
-      // The token is already stored, so the address can ask for another link.
-      // Logged without the token: an address is not a secret, a token is.
       log.error("Could not send the verification message to {}", toAddress, ex);
     }
   }

@@ -25,10 +25,8 @@ import { useApi, useApiPages, useWindowedList } from "@/lib/hooks/useApi";
 import { OFFERABLE_AUCTION_STATUSES } from "@/lib/types";
 import { countRo } from "@/lib/utils/plural";
 
-/** Mirrors the @Size bound the API puts on a search term. */
 const MAX_TERM_LENGTH = 120;
 
-/** How much of each tab arrives at a time, and how much more each reach adds. */
 const STEP = PAGINATION.DEFAULT_PAGE_SIZE;
 
 type Tab = "licitatii" | "cauze" | "membri";
@@ -39,30 +37,13 @@ function isTab(value: string | null): value is Tab {
   return TABS.includes(value as Tab);
 }
 
-/**
- * One term, three answers.
- *
- * <p>All three run at once rather than on demand, because the counts on the tabs are the point:
- * they are what tells somebody their thing is under "Membri" and saves them typing it again. Three
- * requests for one search is the price of that, and each asks for a page, not a catalogue.
- *
- * <p>The three hooks stay mounted whichever tab is open, so switching tabs is a render and not a
- * fetch — and a tab comes back with as much of it loaded as the reader had scrolled to.
- */
 export function SearchResults() {
   const params = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
 
-  // Trimmed to what the API accepts: a pasted paragraph should narrow the
-  // results, not blank the page with a 400.
   const term = (params.get("q") ?? "").slice(0, MAX_TERM_LENGTH).trim();
 
-  // The URL decides which tab is open; the state exists only so a click lands
-  // instantly instead of waiting on the router. Adjusted during render rather
-  // than in an effect, which is what React asks for when state has to follow
-  // something outside it — without this the initial value stuck, and a second
-  // search on the same route kept whichever tab was open for the first.
   const urlTab: Tab = isTab(params.get("tab"))
     ? (params.get("tab") as Tab)
     : "licitatii";
@@ -73,8 +54,6 @@ export function SearchResults() {
     setTab(urlTab);
   }
 
-  // The only one of the three the API pages for us, and the one that needs it:
-  // a common word matches half the catalogue.
   const auctions = useApiPages(
     (page) =>
       listAuctions(
@@ -100,17 +79,11 @@ export function SearchResults() {
     enabled: Boolean(term),
   });
 
-  // Neither /causes nor /users takes a page, so those two are windowed over
-  // what arrived rather than over what was asked for. It saves no request, but
-  // it does stop fifty cards and fifty photographs being built for somebody who
-  // will look at six.
   const shownCauses = useWindowedList(causes.data, term, STEP);
   const shownMembers = useWindowedList(members.data, term, STEP);
 
   const choose = (next: Tab) => {
     setTab(next);
-    // The tab rides in the URL so a result set can be linked to, but it is
-    // local state first: switching tabs must not refetch what is already here.
     const query = new URLSearchParams(params.toString());
     query.set("tab", next);
     router.replace(`/cautare?${query.toString()}`, { scroll: false });
@@ -125,14 +98,6 @@ export function SearchResults() {
     );
   }
 
-  // The count rides inside the label rather than in the control's own `count`
-  // slot, so the badge exists from the first paint and the row never changes
-  // width when the three requests land. A tab bar that grows under the cursor
-  // is the one shift on this page a reader would actually feel.
-  //
-  // Every count is the whole answer, not what has been fetched of it: the
-  // auction number comes off the page's `total`, the other two off the full
-  // list behind the window.
   const options = [
     {
       value: "licitatii" as const,
@@ -149,8 +114,6 @@ export function SearchResults() {
   ];
 
   return (
-    // A floor under the results, so a tab with two hits does not pull the footer
-    // halfway up the screen and one tab does not jump as it replaces another.
     <div className="flex min-h-[70vh] flex-col gap-5">
       <div>
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
@@ -158,8 +121,6 @@ export function SearchResults() {
         </h1>
       </div>
 
-      {/* Bubbles rather than one grey rail: this row spans the page, and the
-          rail behind it read as a band drawn across the results. */}
       <SegmentedControl
         ariaLabel="Tipul rezultatelor"
         variant="bubbles"
@@ -168,10 +129,6 @@ export function SearchResults() {
         onChange={choose}
       />
 
-      {/* Keyed on the tab and the term so the rise replays on a switch and on a
-          new search, rather than results silently swapping in place. The
-          photographs inside fade in on their own as they decode, so a switch
-          reads as one movement instead of a grid assembling itself. */}
       <div key={`${tab}:${term}`} className="animate-fade-up">
         {tab === "licitatii" ? (
           <Panel
@@ -208,8 +165,6 @@ export function SearchResults() {
             error={causes.error}
             reload={causes.reload}
             emptyTitle="Nicio cauză găsită"
-            // The cause grid's own skeleton. SkeletonGrid draws auction cards:
-            // portrait, where a cause card is 4/3 and a third taller.
             skeleton={<CauseGrid causes={[]} loading skeletonCount={6} />}
           >
             {(items) => (
@@ -272,13 +227,6 @@ export function SearchResults() {
   );
 }
 
-/**
- * The member rows, which are rows and not cards.
- *
- * <p>Their own shape rather than the card grid's: a member is an avatar and two lines in a 68px
- * box, and standing twelve auction-card skeletons in for them promised something five times as
- * tall as what arrived.
- */
 function MemberSkeleton() {
   return (
     <div
@@ -287,7 +235,6 @@ function MemberSkeleton() {
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
     >
       {Array.from({ length: 6 }).map((_, index) => (
-        // p-3 around a 44px avatar is the row's own 68px, without writing 68.
         <div
           key={index}
           className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-edge"
@@ -303,21 +250,10 @@ function MemberSkeleton() {
   );
 }
 
-/**
- * A tab's label and its count, with the badge's box reserved before the number is known.
- *
- * <p>Not the control's own `count` prop, because that renders nothing until there is a number,
- * and the row jumping wider a beat after the page settles is exactly the shift this page should
- * not have.
- */
 function TabLabel({ text, count }: { text: string; count?: number }) {
   return (
     <span className="inline-flex items-center gap-2">
       {text}
-      {/* h-5 and min-w-5 rather than padding: empty, the box had nothing to give
-          it a line and collapsed to a 19x4 sliver, which read as a dash under a
-          rounded-full that never got to be round. Fixed, it is the same 20px
-          circle before the number as after it. */}
       <span
         aria-hidden={count === undefined}
         className="numeric inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-black/10 px-1.5 text-xs font-extrabold"
@@ -328,12 +264,6 @@ function TabLabel({ text, count }: { text: string; count?: number }) {
   );
 }
 
-/**
- * The three states every tab has, in one place.
- *
- * <p>Each tab loads on its own and can fail on its own, so each needs its own skeleton, its own
- * retry and its own empty line. Writing that out three times is how two of them drift.
- */
 function Panel<T>({
   items,
   error,
@@ -342,7 +272,6 @@ function Panel<T>({
   skeleton,
   children,
 }: {
-  /** null while the first page is still in flight; empty is an answer, not a wait. */
   items: T[] | null;
   error: string | null;
   reload: () => void;

@@ -19,19 +19,6 @@ export function errorMessage(error: unknown): string {
   return "A apărut o problemă. Încearcă din nou în câteva momente.";
 }
 
-/**
- * Reads through SWR, keyed by a string the caller builds — something like
- * `` `auctions:${JSON.stringify(filters)}` ``.
- *
- * <p>The key is the cache entry, so two components asking the same question share
- * one request and one answer. That is the whole reason this is SWR rather than an
- * effect: the auction page renders the listing, the bid box and the history from
- * overlapping data, and three copies of the same fetch is what a hand-rolled hook
- * gives you for free.
- *
- * The shape it returns is deliberately unchanged — `data`, `error`, `loading`,
- * `reload` — so no call site had to learn a new one.
- */
 export function useApi<T>(
   loader: () => Promise<T>,
   key: string,
@@ -40,15 +27,7 @@ export function useApi<T>(
   const { enabled = true } = options;
 
   const { data, error, isLoading, mutate } = useSWR<T>(
-    // A null key is how SWR is told not to fetch at all.
     enabled ? key : null,
-    // Passed straight through, closure and all. It used to be held in a ref that
-    // this hook refreshed in an effect, on the theory that a loader rebuilt each
-    // render would refetch each render — which is not how SWR decides: the key
-    // is. What the ref actually did was lag. SWR refreshes its own copy of the
-    // fetcher in a layout effect, before this one ran, so a key change fetched
-    // with the previous render's loader and returned the previous filter's
-    // results. Changing a filter twice looked like it fixed itself.
     loader,
   );
 
@@ -59,8 +38,6 @@ export function useApi<T>(
   return {
     data: data ?? null,
     error: error ? errorMessage(error) : null,
-    // The previous answer stays on screen while the next one loads, so a
-    // skeleton belongs behind `loading && !data` rather than `loading`.
     loading: enabled && isLoading,
     reload,
   };
@@ -68,30 +45,15 @@ export function useApi<T>(
 
 export interface PagedState<T> {
   items: T[];
-  /** How many there are in total, known from the first page and not from what has arrived. */
   total: number | null;
   error: string | null;
-  /** The first page is still in flight, so there is nothing to show yet. */
   loading: boolean;
-  /** A further page is in flight, under results that are already on screen. */
   loadingMore: boolean;
   hasMore: boolean;
   loadMore: () => void;
   reload: () => void;
 }
 
-/**
- * The same read as {@link useApi}, one page at a time.
- *
- * <p>For lists long enough that asking for all of them is the wrong request: the caller renders
- * what has arrived and calls `loadMore` when the reader nears the end. `total` comes off the first
- * page, so a count can be shown in full while only a fraction has been fetched.
- *
- * <p>`loadMore` is deliberately inert while a page is already in flight or the last one has
- * landed. An intersection observer fires far more often than a list needs to grow — every scroll
- * that keeps the sentinel in view is another call — and without this guard each of them would be
- * a request.
- */
 export function useApiPages<T>(
   loader: (page: number) => Promise<Page<T>>,
   key: string,
@@ -103,14 +65,10 @@ export function useApiPages<T>(
     useSWRInfinite<Page<T>>(
       (index, previous) => {
         if (!enabled) return null;
-        // Stop asking once the server has said this is the last page, rather
-        // than fetching an empty one to find out.
         if (previous && previous.page >= previous.totalPages) return null;
         return `${key}#${index + 1}`;
       },
       (pageKey: string) => loader(Number(pageKey.slice(pageKey.lastIndexOf("#") + 1))),
-      // The first page is not re-fetched every time a later one is asked for.
-      // Without this, growing a list of five pages costs six requests.
       { revalidateFirstPage: false },
     );
 
@@ -140,17 +98,6 @@ export function useApiPages<T>(
   };
 }
 
-/**
- * A list the API only answers in full, revealed a step at a time.
- *
- * <p>`/causes` and `/users` take no page parameter, so there is nothing to ask for a second time.
- * Windowing what arrived saves no request; it saves fifty cards and fifty photographs being built
- * for somebody who will look at six, and it lets those lists behave like the paged ones.
- *
- * <p>The count resets when `resetKey` does — the term, the profile, whatever makes it a different
- * list. Adjusted during render against a remembered key rather than in an effect, which is what
- * React asks for when state has to follow something outside it.
- */
 export function useWindowedList<T>(
   all: T[] | null,
   resetKey: string,
@@ -175,14 +122,6 @@ export function useWindowedList<T>(
   };
 }
 
-/**
- * Drops every cached answer whose key starts with one of these prefixes.
- *
- * <p>Placing a bid changes the listing, the history, the homepage rows and the
- * bidder's own page, and none of those know about each other. Naming the prefixes
- * at the call site keeps that knowledge where the change happens instead of
- * spreading a subscription through the tree.
- */
 export function useRevalidate(): (...prefixes: string[]) => void {
   const { mutate } = useSWRConfig();
 
@@ -198,7 +137,6 @@ export function useRevalidate(): (...prefixes: string[]) => void {
   );
 }
 
-/** Pair with a toast for the success case — the app-wide convention for actions. */
 export function useAction<TArgs extends unknown[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,
 ): {

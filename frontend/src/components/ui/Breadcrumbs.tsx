@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils/cn";
 
 export interface Crumb {
   label: string;
-  /** Omit on the last crumb — the page you are already on. */
   href?: string;
 }
 

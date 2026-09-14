@@ -11,16 +11,10 @@ import ro.bid4.backend.identity.domain.EmailVerificationToken;
 
 public interface EmailVerificationTokenRepository
     extends JpaRepository<EmailVerificationToken, UUID> {
-
   Optional<EmailVerificationToken> findByTokenHash(String tokenHash);
 
-  /** The most recent token for a user, which is what the resend cooldown is measured from. */
   Optional<EmailVerificationToken> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
 
-  /**
-   * Issuing a new link retires every earlier one, so a mailbox never accumulates several working
-   * tokens for the same account.
-   */
   @Modifying
   @Query(
       "update EmailVerificationToken t set t.consumedAt = :now "

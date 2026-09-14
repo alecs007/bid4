@@ -21,17 +21,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import ro.bid4.backend.TestcontainersConfiguration;
 
-/**
- * The ceiling on how long a chain of refresh tokens may go on being exchanged.
- *
- * <p>Rotation moves expires_at forward every time, so per-token expiry can never end a session that
- * is still being used — including one being used by somebody it does not belong to.
- * family_started_at is what does, and the thing worth pinning is that rotation carries it rather
- * than resetting it.
- *
- * <p>The age is forced by back-dating the row rather than by sleeping, so this runs against the
- * real ninety-day setting instead of a miniature one invented for the test.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, MailCaptureConfiguration.class})
@@ -39,13 +28,9 @@ import ro.bid4.backend.TestcontainersConfiguration;
     properties = {
       "bid4.rate-limit.enabled=false",
       "bid4.verification.resend-cooldown=0s",
-      // Stated rather than inherited: the back-dating below has to be past the
-      // ceiling, and a test that silently stops testing anything when someone
-      // raises the default is worse than no test.
       "bid4.jwt.absolute-refresh-ttl=90d"
     })
 class RefreshTokenLifetimeTest {
-
   private static final String PASSWORD = "parola-buna-123";
 
   @Autowired private MockMvc mvc;
@@ -58,8 +43,6 @@ class RefreshTokenLifetimeTest {
     MvcResult login = registerVerifiedAndLogin(email, "Vechime Test");
     UUID userId = UUID.fromString(userIdOf(login));
 
-    // One ordinary rotation, well inside the window. The token this returns is
-    // brand new; only the chain behind it is old.
     Cookie rotated =
         mvc.perform(post("/auth/refresh").cookie(login.getResponse().getCookie("bid4.refresh")))
             .andExpect(status().isOk())
@@ -74,8 +57,6 @@ class RefreshTokenLifetimeTest {
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
 
-    // Refused and revoked, not merely refused: a token the server has decided
-    // is finished must not be worth presenting a second time.
     assertThat(liveTokenCount(userId)).isZero();
   }
 
@@ -103,15 +84,12 @@ class RefreshTokenLifetimeTest {
   @Test
   @DisplayName("a refused refresh clears the cookies instead of leaving them behind")
   void refusalClearsBothCookies() throws Exception {
-    // The state after a token dies: the page cannot clear bid4.session itself,
-    // and one left behind keeps the middleware redirecting away from sign-in.
     mvc.perform(post("/auth/refresh").cookie(new Cookie("bid4.refresh", "nu-a-fost-emis")))
         .andExpect(status().isUnauthorized())
         .andExpect(cookie().maxAge("bid4.refresh", 0))
         .andExpect(cookie().maxAge("bid4.session", 0));
   }
 
-  /** Ages the user's chains past the ninety-day ceiling. Returns how many rows were touched. */
   private int ageFamilyPastTheCeiling(UUID userId) {
     return jdbc.update(
         "update refresh_tokens set family_started_at = family_started_at - interval '100 days'"

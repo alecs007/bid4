@@ -11,66 +11,21 @@ import { cn } from "@/lib/utils/cn";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
-/** How far a mouse travels before a press on a photograph becomes a drag rather than a click. */
 const DRAG_AFTER_PX = 8;
 
-/**
- * How long a finger rests on a photograph before it is picked up.
- *
- * <p>Long enough that a swipe across the row never becomes a reorder, short enough that holding a
- * card does not feel broken. Anything under about 200ms starts catching swipes.
- */
 const HOLD_MS = 280;
 
-/** How far a finger may wander during the hold before it counts as a swipe instead. */
 const HOLD_SLOP_PX = 10;
 
-/** One card's width. Fixed, because the row scrolls rather than wrapping. */
 const CARD =
   "relative aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-2xl sm:w-28";
 
-/**
- * The same height a card ends up at, given to the empty state.
- *
- * <p>96px and 112px wide at 3:4 are 128px and 149.33px tall. Written out rather than derived,
- * because the empty state has no aspect ratio to derive it from — and if the two disagree the whole
- * form jumps the moment the first photograph lands, which is exactly the kind of shift a seller
- * reads as the page breaking.
- */
 const CARD_HEIGHT = "h-32 sm:h-[9.3333rem]";
 
-/** Smaller copies where the only place to put them is the browser's own storage. */
 const SETTINGS = USE_MOCK
   ? { maxEdge: IMAGE.DEMO_MAX_EDGE_PX, quality: IMAGE.DEMO_QUALITY }
   : { maxEdge: IMAGE.MAX_EDGE_PX, quality: IMAGE.QUALITY };
 
-/**
- * One wide target until there is something to show, then the photographs themselves.
- *
- * <p>The empty state is one button and nothing else: a plus and what it does. It takes a drop as
- * readily as a click. What the formats are sits under the control rather than inside it — it is
- * worth knowing and it is not worth a second line inside a target.
- *
- * <p>Order is the whole interface once they arrive. The first is the cover, and it is made the
- * cover by being dragged to the front — a "fă copertă" button on every card was a second way to
- * say what the position already says. The drag is followed on the window rather than through
- * `setPointerCapture`, which throws when the pointer has already gone and leaves a card stuck to
- * the finger.
- *
- * <p><b>The row scrolls, so the two gestures had to be separated.</b> It used to wrap into a grid
- * with `touch-none` on every card, which meant a finger could only ever reorder — fine for a grid
- * that fits, impossible for a row you also have to scroll. So a mouse drags immediately, as it
- * always did, and a finger must rest on a card for {@link HOLD_MS} first. Until it does, the
- * browser owns the gesture and the row scrolls normally; once the card is picked up, a non-passive
- * `touchmove` takes it back. That order matters — the hold is what guarantees the browser has not
- * already begun scrolling by the time we cancel it, because a scroll in progress cannot be taken
- * over.
- *
- * <p>What each card shows is not the file that was chosen. Every photograph is decoded, turned the
- * way it was taken, scaled down and encoded again the moment it lands here, and the preview is
- * those bytes — so what a seller approves is what is uploaded, and a picture that will not survive
- * the trip is refused while they are still looking at the form rather than after they submit it.
- */
 export function PhotoPicker({
   value,
   onChange,
@@ -81,26 +36,19 @@ export function PhotoPicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const [refused, setRefused] = useState<string | null>(null);
-  /** How many are still being decoded, drawn as cards so the row keeps its shape. */
   const [working, setWorking] = useState(0);
   const [fileOver, setFileOver] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
-  /** The card a finger is resting on, before the hold has turned it into a drag. */
   const [holding, setHolding] = useState<number | null>(null);
   const from = useRef({ x: 0, y: 0 });
   const holdTimer = useRef<number | null>(null);
-  /** True once the press has travelled far enough to be a drag and not a click. */
   const loose = useRef(false);
 
-  // What is currently held, kept where the loop below can see it across its
-  // awaits — `value` there is whatever it was when the drop happened.
   const held = useRef<ProcessedImage[]>([]);
   useEffect(() => {
     held.current = value;
   });
 
-  // And given back when the form goes. Each one is bytes the tab holds on to
-  // until the object URL behind it is revoked.
   useEffect(() => () => held.current.forEach((photo) => photo.release()), []);
 
   const add = async (files: FileList | null) => {
@@ -112,14 +60,9 @@ export function PhotoPicker({
     setRefused(null);
     setWorking((count) => count + picked.length);
 
-    // One at a time. A phone photograph decodes into tens of megabytes of
-    // canvas, and eight of them at once is how a browser tab runs out of memory
-    // on the device most likely to be doing this.
     for (const file of picked) {
       try {
         const photo = await processImage(file, SETTINGS);
-        // Read through the ref rather than the closure: this loop spans several
-        // awaits, and `value` is whatever it was when the drop happened.
         onChange([...held.current, photo]);
       } catch (error) {
         setRefused(
@@ -140,14 +83,6 @@ export function PhotoPicker({
     onChange(value.filter((_, position) => position !== index));
   };
 
-  /**
-   * The end of the row, after every addition.
-   *
-   * <p>A photograph lands at the end, and on a phone the end is off screen by the third one — so
-   * without this a seller taps "adaugă", something happens somewhere to the right, and the row
-   * looks unchanged. Scrolling to the far edge brings the add card back into view, or the last
-   * photograph once there is no add card left to show.
-   */
   useEffect(() => {
     const row = rowRef.current;
     if (!row || value.length === 0) return;
@@ -162,9 +97,6 @@ export function PhotoPicker({
     setHolding(null);
   };
 
-  // The waiting half of a touch press. Nothing is prevented here, so while this
-  // is running the row scrolls exactly as it would with no drag logic at all —
-  // and the first sign of a swipe cancels the hold rather than fighting it.
   useEffect(() => {
     if (holding === null) return;
 
@@ -179,7 +111,6 @@ export function PhotoPicker({
     window.addEventListener("pointermove", wander, { passive: true });
     window.addEventListener("pointerup", cancelHold);
     window.addEventListener("pointercancel", cancelHold);
-    // A scroll starting means the browser took the gesture, which settles it.
     window.addEventListener("scroll", cancelHold, {
       passive: true,
       capture: true,
@@ -195,7 +126,6 @@ export function PhotoPicker({
   useEffect(() => {
     if (dragged === null) return;
 
-    /** The card the pointer is over, by the index each one carries. */
     const cardUnder = (x: number, y: number): number | null => {
       const element = document.elementFromPoint(x, y)?.closest("[data-photo]");
       if (!element) return null;
@@ -213,9 +143,6 @@ export function PhotoPicker({
         loose.current = true;
       }
 
-      // Carried past the edge, the row follows. Driven by the pointer rather
-      // than by a timer, which is enough here: a drag is a moving finger, and
-      // eight cards are never more than a couple of screens wide.
       const row = rowRef.current;
       if (row) {
         const box = row.getBoundingClientRect();
@@ -234,9 +161,6 @@ export function PhotoPicker({
       setDragged(to);
     };
 
-    // Non-passive, and the only reason the card can be dragged along a row that
-    // also scrolls. The hold has already happened, so the browser has not begun
-    // a scroll and this still cancels one.
     const swallow = (event: TouchEvent) => event.preventDefault();
 
     const drop = () => {
@@ -274,47 +198,11 @@ export function PhotoPicker({
     <div className="flex flex-col gap-2">
       <div
         ref={rowRef}
-        // One row, always, and the same box whether it holds one wide button or
-        // eight photographs — which is what keeps the swap between the two from
-        // moving anything. It scrolls rather than wrapping, so the first
-        // photograph stays where the seller left it instead of hopping onto
-        // another line every time one is added or removed.
-        //
-        // No scroll-snap. Mandatory snapping would pull scrollLeft back to the
-        // nearest card every time a drag nudges the row past an edge, which is
-        // the one place in this component that moves it by hand.
         className={cn(
           "-mx-1.5 -my-1.5 flex gap-2 overflow-x-auto overscroll-x-contain p-1.5",
-          // A ring is painted outside the border box, and `overflow-x: auto`
-          // computes `overflow-y` to auto as well — so with no padding the
-          // cover's ring came back clipped top and bottom, and a stray vertical
-          // bar appeared with it. The negative margins hand the padding back,
-          // so the row occupies exactly what it did before.
-          //
-          // And no bar of its own, at any width. A horizontal bar is in the
-          // flow and appears only once the row overflows, so it moved the form
-          // 10px the moment a third photograph arrived — measured, and not
-          // fixable with `scrollbar-gutter`, which reserves the vertical gutter
-          // only. Nothing is lost: a finger drags the row, and a wheel over an
-          // element that scrolls in one axis scrolls it in that axis.
           "no-scrollbar",
         )}
       >
-        {/* Two things, not one. The dashed box is the drop target and says as
-            much by being dashed; the control inside it is an ordinary bordered
-            button, because that is what it is. One element trying to be both
-            read as a dashed button, which is neither.
-
-            The box takes the drop and the button takes the click, so neither
-            handles the other's job and nothing fires twice.
-
-            Both borders are the same weight. At 2px dashed against 1px solid
-            the box shouted and the button whispered, and the two read as
-            belonging to different screens. 1.5px is where they meet.
-
-            Ink, not green. A green button inside a dashed box was tried and
-            read as a second brand mark on a form that already has one; the
-            green is kept for the hover, where it says the control answers. */}
         {empty ? (
           <div
             onDragOver={overFiles}
@@ -323,8 +211,6 @@ export function PhotoPicker({
             className={cn(
               "flex w-full shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-dashed transition-colors",
               CARD_HEIGHT,
-              // Only the border answers a dragged file. A fill would tint the
-              // whole panel, and the panel is not the thing being offered.
               fileOver ? "border-primary-500" : "border-ink-300",
             )}
           >
@@ -347,25 +233,17 @@ export function PhotoPicker({
           <div
             key={photo.previewUrl}
             data-photo={index}
-            // No `touch-none`: the browser owns the gesture until a hold says
-            // otherwise, which is what lets this row scroll under a finger.
-            // The callout is off so a long press opens no "save image" menu
-            // over the card it is picking up.
             className={cn(
               CARD,
               "group bg-ink-100 ring-1 transition select-none [-webkit-touch-callout:none]",
               index === 0 ? "ring-primary-500" : "ring-edge",
               dragged === index && "cursor-grabbing opacity-60",
               dragged !== index && "cursor-grab",
-              // A card being held, before it is picked up: enough to show the
-              // press landed, not enough to look like it has moved.
               holding === index && "scale-95",
             )}
             onPointerDown={(event) => {
               if (event.pointerType === "mouse") {
                 if (event.button !== 0) return;
-                // Stops the browser starting its own image drag, which a
-                // touch press must not do — see below.
                 event.preventDefault();
                 from.current = { x: event.clientX, y: event.clientY };
                 loose.current = false;
@@ -373,9 +251,6 @@ export function PhotoPicker({
                 return;
               }
 
-              // Nothing is prevented for a finger. preventDefault here would
-              // suppress the scroll this row depends on, and the press may
-              // still turn out to be a swipe.
               from.current = { x: event.clientX, y: event.clientY };
               setHolding(index);
               holdTimer.current = window.setTimeout(() => {
@@ -406,8 +281,6 @@ export function PhotoPicker({
           </div>
         ))}
 
-        {/* A card each for the ones still being prepared, so the row grows as
-              they are chosen instead of after the last one is ready. */}
         {Array.from({ length: working }, (_, index) => (
           <div
             key={`working-${index}`}
@@ -415,10 +288,6 @@ export function PhotoPicker({
           />
         ))}
 
-        {/* Always the last thing in the row, after the photographs and after
-              any still being prepared. It carries no `data-photo`, so a card
-              dragged to the far end cannot land beyond it — `cardUnder` finds
-              nothing there and the reorder is simply ignored. */}
         {full || empty ? null : (
           <button
             type="button"
@@ -450,10 +319,6 @@ export function PhotoPicker({
         className="sr-only"
       />
 
-      {/* Always rendered, and faded rather than added: its height is reserved in
-          both states, so the line appearing with the first photograph does not
-          push the rest of the form down. Centred, because it is about the row
-          as a whole and not about the photograph it sits beneath. */}
       <p
         aria-hidden={empty}
         className={cn(

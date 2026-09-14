@@ -76,10 +76,6 @@ const fileShape = {
 
 const fileRef = z.object(fileShape);
 
-/**
- * A missing file is a missing object, so the message belongs on the object: a
- * refinement never runs on a key that was never filled in.
- */
 const requiredFile = (message: string) => z.object(fileShape, { error: message });
 
 const required = (message: string) => z.string().trim().min(1, message);
@@ -93,7 +89,6 @@ const fullName = (message: string) =>
       error: "Completează numele și prenumele.",
     });
 
-/** Romanian mobile or landline, written however people actually write it. */
 const phone = z
   .string()
   .trim()
@@ -135,7 +130,6 @@ function beneficiaryStep(type: BeneficiaryType) {
     return z.object({
       beneficiary: z.object({
         ...base,
-        // Kept a string: coercing "" to a number would call an empty box zero.
         age: z
           .string()
           .trim()
@@ -301,7 +295,6 @@ function consentsStep(type: BeneficiaryType) {
 
 export type StepErrors = Record<string, string>;
 
-/** Keyed by the field's path in the draft — `beneficiary.fullName`. */
 function collect(issues: z.core.$ZodIssue[]): StepErrors {
   const errors: StepErrors = {};
   for (const issue of issues) {
@@ -341,7 +334,6 @@ export function validateStep(
   return result.success ? {} : collect(result.error.issues);
 }
 
-/** Every step but the summary, for the last check before submitting. */
 export function validateAll(draft: CauseApplicationDraft): StepErrors {
   return STEPS.slice(0, -1).reduce<StepErrors>(
     (all, _step, index) => ({ ...all, ...validateStep(index, draft) }),

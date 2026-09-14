@@ -30,12 +30,6 @@ const NAV = [
   { href: "/cauze", label: "Cauze" },
 ];
 
-/**
- * The account menu, grouped the way the account is used rather than
- * alphabetically: what I am buying, then what I am selling, then what I support,
- * then the account itself. Each carries the icon it is known by elsewhere in the
- * app, so the menu is scanned rather than read.
- */
 const ACCOUNT_LINKS: {
   href: string;
   label: string;
@@ -51,9 +45,6 @@ const ACCOUNT_LINKS: {
     group: true,
   },
   { href: "/cont/comenzi", label: "Comenzile mele", icon: "parcel" },
-  // The mark is the one the save toggle already wears on every card and on the
-  // listing itself, so the row and the button that fills it are recognisably
-  // the same thing.
   { href: "/cont/urmarite", label: "Licitații urmărite", icon: "watchlist" },
 
   { href: "/cont/portofel", label: "Portofel", icon: "wallet", group: true },
@@ -63,11 +54,9 @@ const ACCOUNT_LINKS: {
 ];
 
 function MenuToggle({ open }: { open: boolean }) {
-  // 2px bars in a 20px box: the same weight as the lucide icons beside them.
   const bar =
     "h-[2px] rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1.1)]";
 
-  // Bars 4px apart puts the outer two 6px either side — how far they travel to cross.
   return (
     <span
       aria-hidden="true"
@@ -87,10 +76,6 @@ function MenuToggle({ open }: { open: boolean }) {
   );
 }
 
-/**
- * Both panels stay mounted so they animate out as well as in. `visibility` is in
- * the transition on purpose: it takes a closed panel's links out of the tab order.
- */
 function Panel({
   open,
   tone = "plain",
@@ -98,27 +83,15 @@ function Panel({
   children,
 }: {
   open: boolean;
-  /** "muted" tints the sheet so white boxes inside it read as raised. */
   tone?: "plain" | "muted";
-  /** Runs to the bottom of the screen and scrolls inside itself. */
   fill?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        // top-12/14 rather than top-full: the header now carries the category
-        // rail as well, and top-full would drop the panel below it. Pinned to
-        // the bar's own height, the panel opens over the rail, which can then
-        // stay mounted instead of vanishing and shifting the page. These two
-        // numbers are the bar's height and have to move with it.
         "absolute inset-x-0 top-12 origin-top shadow-sm transition-[opacity,translate,visibility] duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] sm:top-14 lg:hidden",
         tone === "muted" ? "bg-ink-50" : "bg-white",
-        // A height rather than bottom-0: this is absolute inside the header,
-        // which is its containing block, so the bottom of the screen is not a
-        // edge it can reach for. The header is pinned to the top of the
-        // viewport whenever this can open, so its own height is all there is
-        // to take off.
         fill && "h-[calc(100dvh-3rem)] sm:h-[calc(100dvh-3.5rem)]",
         open
           ? "visible translate-y-0 opacity-100"
@@ -126,7 +99,6 @@ function Panel({
       )}
     >
       <div
-        // Lenis owns the page's scroll and would otherwise swallow this one.
         data-lenis-prevent
         className={cn(
           "px-4 pt-3 pb-4 sm:px-6",
@@ -139,17 +111,6 @@ function Panel({
   );
 }
 
-/**
- * One destination in the mobile menu.
- *
- * <p>A label and a mark, and no explanatory line: "Vezi licitațiile" does not need one, and a
- * second line under every row turns a short menu into a wall. The one entry that is a pitch
- * rather than a place is built separately, so it can look like a pitch.
- *
- * <p>No outline. Three ringed boxes under a card and a tinted band read as a fourth and fifth
- * panel rather than as the menu's own list — the mark carries the row now, and the row is only
- * drawn when it is pointed at.
- */
 function PanelRow({
   href,
   icon,
@@ -189,7 +150,6 @@ function HeaderSearch({
 }: {
   value: string;
   onChange: (value: string) => void;
-  /** Takes the caret when the panel it lives in opens. */
   focused?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -197,18 +157,12 @@ function HeaderSearch({
   useEffect(() => {
     if (!focused) return;
 
-    // The panel leaves `visibility: hidden` in the same commit, and a browser will
-    // not focus an element it still computes as hidden. Ask until it takes.
     let tries = 0;
     let timer = 0;
 
     const attempt = () => {
       const input = ref.current;
       if (!input) return;
-      // preventScroll, because this panel is absolutely positioned inside a
-      // sticky header: in the document's own coordinates it sits at the very
-      // top, so a plain focus() asks the browser to scroll there to reveal it
-      // and the page jumps away from wherever the reader actually was.
       input.focus({ preventScroll: true });
       if (document.activeElement !== input && tries++ < 10) {
         timer = window.setTimeout(attempt, 30);
@@ -280,41 +234,13 @@ export function CategoryTiles({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-/**
- * A control that opens and closes with the session, rather than appearing out of nothing.
- *
- * <p>Signing in trades a sign-in icon for a "Vinde acum" button, and the two are different widths.
- * Mounted and unmounted, that swap was two jumps: one control vanished and another appeared in the
- * same frame, and everything beside them moved twice. Held in a column that animates from no width
- * to its content's width, each one grows into the room the other gives up, and the row settles once.
- *
- * <p>Which side is open is decided in CSS from `data-session` on the document element, not from
- * React state, because at boot React has nothing true to say: the session is a round trip away and
- * the header used to hold a placeholder until it answered. The attribute is a guess written before
- * the first paint and corrected when the answer arrives — a right guess costs nothing, a wrong one
- * costs the same animated swap that signing in already costs. See `lib/auth/session-hint`.
- *
- * <p>Opened by a max-width rather than by a collapsing grid track. The track idiom reads better and
- * needs no measurement, but a browser will not interpolate `grid-template-columns` for a track sized
- * in `fr` inside a box whose own width is not definite — it snaps, which is the jump this exists to
- * remove. A max-width interpolates anywhere, so each caller states a cap a little wider than the
- * control it holds; the control keeps its own width, and the cap only ever clips it on the way in
- * and out.
- *
- * <p>Closed, it is `visibility: hidden`, which takes it out of the page for anything that reads or
- * tabs through it and still lets the width animate — a link nobody can see is one a keyboard should
- * not land on. `inert` would say the same thing, but only React could set it, and this no longer
- * waits for React.
- */
 function AuthSwap({
   when,
   openWidth,
   className,
   children,
 }: {
-  /** The session this control belongs to. */
   when: "in" | "out";
-  /** A max-width comfortably past the control's own width. */
   openWidth: string;
   className?: string;
   children: React.ReactNode;
@@ -323,14 +249,6 @@ function AuthSwap({
     <span
       style={{ "--auth-swap": openWidth } as React.CSSProperties}
       className={cn(
-        // A span, because one of these holds the account trigger's label and a
-        // div inside a button is not content a button may have.
-        //
-        // flex, not block: the avatar is inline-level, so a block would sit it
-        // on a text baseline and keep the descender space under it — a box 7.5px
-        // taller than the picture, which centres 3.75px above everything beside
-        // it. Flex items have no baseline to sit on. *:shrink-0 so a closing
-        // swap clips its content rather than squeezing it.
         "invisible flex max-w-0 items-center overflow-hidden opacity-0 transition-[max-width,opacity,visibility] duration-200 ease-[var(--ease-out-soft)] *:shrink-0",
         when === "in"
           ? "signed-in:visible signed-in:max-w-(--auth-swap) signed-in:opacity-100"
@@ -343,13 +261,6 @@ function AuthSwap({
   );
 }
 
-/**
- * One of the bar's counted marks.
- *
- * <p>The number is threads with something waiting, not items waiting — three is a number somebody
- * can act on. Over nine it says so rather than saying how many: two digits over a 20px mark is
- * unreadable, and by then the exact figure has stopped mattering.
- */
 function InboxMark({
   href,
   icon,
@@ -373,14 +284,6 @@ function InboxMark({
       className={cn(iconButton(active, "h-9 w-9"), "relative")}
     >
       <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-      {/* In the button's corner, not over its middle and not outside its edge.
-          The swap around this mark clips what leaves it — that is what makes the
-          width animate — so a badge hung off the corner comes back cut in half.
-
-          Inset by 4px rather than 2: the white ring is drawn outside the badge,
-          so at 2px it landed exactly on the button's edge and the mark read as
-          wider on the side that carried a number. At 4px the ring stays inside,
-          and a counted mark occupies what an uncounted one does. */}
       <UnreadBadge
         aria-hidden="true"
         count={count}
@@ -428,14 +331,6 @@ export function SiteHeader() {
         current.path === pathname && current.which === which ? null : which,
     }));
 
-  /**
-   * What is still open on each list, shown beside it.
-   *
-   * <p>Fetched only while the menu is, and under the same cache keys the
-   * account pages use — so opening the menu after visiting one of them costs
-   * nothing, and opening it first means the page it leads to is already loaded.
-   * Comenzi has no count because it has no endpoint yet.
-   */
   const menuOpen = openPanel === "account";
   const mine = { enabled: menuOpen && Boolean(user) };
   const { data: mySales } = useApi(
@@ -449,11 +344,7 @@ export function SiteHeader() {
     mine,
   );
 
-  // Only what is still running: a list of everything the account ever did is a
-  // number that never goes down and so never means anything.
   const counts: Record<string, number | undefined> = {
-    // Reserved counts: the seller has chosen and now owes the buyer a delivery,
-    // which is exactly the kind of thing a badge should keep in front of them.
     "/cont/vanzari": mySales?.filter(
       (item) => item.status === "LIVE" || item.status === "RESERVED",
     ).length,
@@ -462,13 +353,6 @@ export function SiteHeader() {
     ).length,
   };
 
-  /**
-   * The badge. Read whenever somebody is signed in rather than only when the
-   * menu is open, because it is the point of the mark: a thread waiting has to
-   * be visible from any page, not discovered by opening the thing it counts.
-   */
-  // Opened here because the header is the one component on every page, and the
-  // badge it draws is the first thing the stream exists to keep honest.
   useInboxStream();
 
   const { data: unreadCounts } = useApi(
@@ -499,8 +383,6 @@ export function SiteHeader() {
     };
   }, [openPanel, pathname]);
 
-  // The page behind the panel holds still. The scrollbar's width is paid back to
-  // <body>, or the header jumps sideways as it disappears.
   const panelIsOpen = openPanel === "nav" || openPanel === "search";
   useEffect(() => {
     if (!panelIsOpen) return;
@@ -523,8 +405,6 @@ export function SiteHeader() {
   const search = (event: React.FormEvent) => {
     event.preventDefault();
     const trimmed = query.trim();
-    // Everything, not just the catalogue: somebody typing a name is looking for
-    // a member, and sending them to a listing filter answered the wrong question.
     router.push(
       trimmed ? `/cautare?q=${encodeURIComponent(trimmed)}` : "/cautare",
     );
@@ -534,15 +414,6 @@ export function SiteHeader() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  /**
-   * Where the category rail belongs: the home page, and any single listing or
-   * cause. Those are the pages where somebody is looking at one thing and might
-   * want a different kind of thing.
-   *
-   * Deliberately not on /licitatii or /cauze, whose own filters already do this
-   * better, and not on the account pages, where it would hang a shop window
-   * across somebody's admin.
-   */
   const showTrail =
     pathname === "/" ||
     /^\/licitatii\/[^/]+$/.test(pathname) ||
@@ -566,9 +437,6 @@ export function SiteHeader() {
         <Logo size="sm" className="shrink-0 mb-1 sm:mb-2" />
 
         <nav aria-label="Navigare principală" className="ml-3 hidden lg:flex">
-          {/* Licitații used to open a panel of categories. The rail under the
-              header carries those now, and a menu that repeats what is already
-              on screen is one more thing to dismiss. */}
           {NAV.map((item) => (
             <Link
               key={item.href}
@@ -617,17 +485,9 @@ export function SiteHeader() {
             )}
           </button>
 
-          {/* The way in, for a phone with nobody signed in. The account trigger
-              beside it is a wide pill that only appears from lg, so without
-              this a signed-out visitor had nothing in the bar to press but the
-              menu — and signing in is the one thing they are most likely to
-              want. */}
           <AuthSwap
             when="out"
             openWidth="2.5rem"
-            // Closed, it still sits between two of the row's gaps. Every swap in
-            // this row eats its own, or the icons either side of a shut one end
-            // up further apart than the rest.
             className="signed-in:-ml-1 lg:hidden"
           >
             <Link
@@ -635,9 +495,6 @@ export function SiteHeader() {
               aria-label="Intră în cont"
               className={cn(
                 iconButton(isActive("/autentificare"), "h-9 w-9"),
-                // Round, where the bar's other icons are rounded squares: this
-                // one stands for a person, and it is the same shape the avatar
-                // that replaces it takes once they are signed in.
                 "rounded-full",
               )}
             >
@@ -648,15 +505,9 @@ export function SiteHeader() {
             </Link>
           </AuthSwap>
 
-          {/* Two marks on a desktop and one on a phone. There is room up here
-              for the two halves to be separate destinations, each carrying its
-              own number — and no room at all for that on a phone, where the
-              single letter opens onto a switch that carries both. */}
           <AuthSwap
             when="in"
             openWidth="2.5rem"
-            // Closed, it still sits between two of the row's gaps and leaves
-            // 4px of nothing behind. The negative margin eats its own.
             className="signed-out:-ml-1 lg:hidden"
           >
             <InboxMark
@@ -698,22 +549,7 @@ export function SiteHeader() {
             />
           </AuthSwap>
 
-          {/* The help centre is reached from the menu and the footer. It had a
-              mark up here too and it was the one control in the bar nobody was
-              looking for. */}
-
-          {/* signed-in:ml-2, and only when open. The row's gap is even, but the
-              white between two controls is not: an icon carries 8px of its own
-              inside its box and this button carries a hard edge, so 4px beside
-              it reads as half the space that the same 4px reads as between two
-              marks. Eight more evens the two out. Closed it has no margin, or a
-              zero-width last child would hold the row off its right edge. */}
           <AuthSwap when="in" openWidth="10rem" className="signed-in:ml-2">
-            {/* Flat: --btn-depth off. The 3D edge is for buttons on a
-                page, and among the bar's other controls a raised one
-                reads as a stray card.
-                h-8 on a phone: at the icons' own 36px, a two-word label in a
-                48px bar reads as a slab rather than a control. */}
             <ButtonLink
               href="/cont/vanzari/nou"
               size="sm"
@@ -722,11 +558,6 @@ export function SiteHeader() {
               Vinde acum
             </ButtonLink>
           </AuthSwap>
-          {/* flex, or the inline-level button rides 2px above the other controls. */}
-          {/* -ml-1 eats the row's gap when the trigger is just an avatar:
-              with it, the space between the sell button and the picture is the
-              gap plus the pill's padding, and the picture sits nearer the
-              chevron than the button it stands beside. */}
           <div
             className="relative hidden signed-in:-ml-1 lg:flex"
             ref={accountRef}
@@ -738,21 +569,12 @@ export function SiteHeader() {
               aria-haspopup="menu"
               aria-label="Contul meu"
               className={cn(
-                // h-9 whoever is looking, so signing in changes the trigger's
-                // width and never its height. No gap: the two halves below
-                // carry their own, because a gap either side of a collapsed
-                // one is 8px of nothing.
-                // signed-in:pl-2 pays back the 2px the avatar's ring clearance
-                // adds, so the picture sits the same distance from both edges.
                 "inline-flex h-9 items-center rounded-2xl px-2.5 font-display text-[15px] font-bold whitespace-nowrap transition signed-in:pl-2",
                 openPanel === "account"
                   ? "bg-ink-75 text-ink-900"
                   : "text-ink-700 hover:bg-ink-50 hover:text-ink-900",
               )}
             >
-              {/* The avatar is xs because sm is 36px and would fill the pill
-                  edge to edge. Its 28px is held from the first frame, so the
-                  picture arrives into a slot rather than pushing one open. */}
               <AuthSwap when="in" openWidth="2.75rem">
                 {user ? (
                   <Avatar
@@ -760,15 +582,11 @@ export function SiteHeader() {
                     src={user.avatarUrl}
                     accountType={user.accountType}
                     size="xs"
-                    // ml-0.5 clears the avatar's own white ring, which is drawn
-                    // outside its box and would be shaved by the clip.
                     className="mr-2.5 ml-0.5"
                   />
                 ) : status === "loading" ? (
                   <Skeleton className="mr-2.5 ml-0.5 h-7 w-7 rounded-full" />
                 ) : (
-                  // Nobody is coming. The slot is closed by now; an empty box
-                  // spares a shimmer that would run behind it for the visit.
                   <span className="mr-2.5 ml-0.5 block h-7 w-7" />
                 )}
               </AuthSwap>
@@ -794,9 +612,6 @@ export function SiteHeader() {
               <div
                 role="menu"
                 className={cn(
-                  // z-50: the category rail and the page below both paint
-                  // after this in document order, and the menu has to
-                  // clear them both.
                   "absolute top-full right-0 z-50 mt-2 animate-pop-in rounded-2xl bg-white shadow-sm ring-1 ring-line",
                   user ? "w-72 p-1.5" : "w-80 p-4",
                 )}
@@ -817,10 +632,6 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Inside the header, so it sticks with it and shares its stacking
-          context rather than chasing it with a second sticky. It stays mounted
-          while a mobile panel is open — the panel is drawn over it — because
-          unmounting it moved the whole page up by its height. */}
       {showTrail ? <CategoryTrail /> : null}
 
       <button
@@ -846,13 +657,6 @@ export function SiteHeader() {
 
       <Panel open={openPanel === "nav"} fill>
         <nav aria-label="Navigare" className="flex flex-col gap-2">
-          {/* The account comes first: on a phone there is no corner to hang a
-              dropdown off, so it lives inline.
-
-              The tint belongs to the band, not the box. Negative margins pull it
-              out to the sheet's edges so it reads as a section of its own, with
-              the account sitting on it as a white card. Everything below stays on
-              the sheet's white. */}
           <div className="-mx-4 -mt-3 bg-ink-50 px-4 py-3 sm:-mx-6 sm:px-6">
             <div className="rounded-2xl bg-white p-3">
               <AccountMenu
@@ -867,8 +671,6 @@ export function SiteHeader() {
             </div>
           </div>
 
-          {/* The one thing on this menu that is an invitation rather than a
-              destination, so it is shaped like one and nothing else is. */}
           <Link
             href="/cont/cauze/noua"
             onClick={close}
@@ -885,9 +687,6 @@ export function SiteHeader() {
                 className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5"
               />
             </span>
-            {/* Bottom-right, behind the text. Swap the source for the artwork
-                you want; the box is sized so a taller one crops rather than
-                pushing the button around. */}
             <Illustration
               src="mascot-heart"
               alt=""
@@ -909,9 +708,6 @@ export function SiteHeader() {
             label="Vezi licitațiile"
             onNavigate={close}
           />
-          {/* Below the two destinations and above nothing else, so it is the
-              last thing read on the way out of the menu — where somebody who
-              has not found what they came for is looking. Signed in or not. */}
           <PanelRow
             href="/ajutor"
             icon={<Icons.help className="h-5 w-5 shrink-0" />}

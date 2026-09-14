@@ -16,9 +16,6 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    // A floor under a short page: the card is all there is on these routes, and
-    // on a tall screen it sat up under the header with the footer pulled in
-    // behind it. Skeleton and form both come through here, so both get it.
     <div className="mx-auto flex min-h-[70vh] w-full max-w-lg flex-col items-center justify-center gap-5">
       <div className="w-full flex flex-col gap-5 items-center rounded-3xl bg-white ring-1 ring-edge p-6 sm:p-8">
         <Mascot mood={mood} size={96} />
@@ -36,7 +33,6 @@ export function AuthShell({
   );
 }
 
-/** Matches the real card box for box: label + control per field, then the CTA. */
 export function AuthFieldsSkeleton({ fields }: { fields: number }) {
   return (
     <div className="flex flex-col gap-4">

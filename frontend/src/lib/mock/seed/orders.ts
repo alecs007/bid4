@@ -14,16 +14,8 @@ import { ORDER_FLOW } from "@/lib/types";
 import { isoAgo, isoIn } from "@/lib/utils/date";
 import { snapshotDelivery } from "../delivery";
 
-/**
- * One order per status, so every screen has something real to render. Timing is
- * "hours ago" counted back from the current status, so a DELIVERED order
- * genuinely looks older than a PAID_HELD one.
- */
-
-/** Whose account the demo is opened as. Every seeded case has them on one side. */
 const DEMO_ACCOUNT = "usr_maria";
 
-/** How far into the past each status started, in hours. */
 const AGE_HOURS: Record<OrderStatus, number> = {
   AWAITING_CONFIRMATION: 6,
   AWAITING_PAYMENT: 20,
@@ -41,13 +33,6 @@ const AGE_HOURS: Record<OrderStatus, number> = {
   CANCELLED: 340,
 };
 
-/**
- * What each step reads as in the order history.
- *
- * <p>Formal, and in the third person: these lines are the audit trail of a transaction, read by
- * both parties and quoted back in a dispute, so none of them addresses one side as "tu". Kept in
- * the same register as the cards in the conversation and the badges on the list.
- */
 const EVENT_COPY: Record<OrderStatus, string> = {
   AWAITING_CONFIRMATION: "Comandă înregistrată. Se așteaptă alegerea livrării.",
   AWAITING_PAYMENT: "Modalitate de livrare aleasă. Se așteaptă plata.",
@@ -65,7 +50,6 @@ const EVENT_COPY: Record<OrderStatus, string> = {
   CANCELLED: "Comandă anulată.",
 };
 
-/** Deterministic 16-digit AWB in Sameday's shape. */
 function makeAwb(seed: number): string {
   const digits = String(1_000_000_000_000 + seed * 7_919_311).slice(0, 13);
   return `${SHIPPING.AWB_PREFIX}${digits}`;
@@ -78,7 +62,6 @@ function buildTimeline(
   city: string,
 ): TrackingEvent[] {
   const flowIndex = ORDER_FLOW.indexOf(status);
-  // Everything that happened before the current status, then the status itself.
   const reached: OrderStatus[] =
     flowIndex >= 0
       ? ORDER_FLOW.slice(0, flowIndex + 1)
@@ -152,13 +135,7 @@ export function buildOrders({
     const auction = auctions.find((item) => item.id === auctionId);
     if (!auction || !auction.winnerId) return;
 
-    // The demo is read as Maria, so she is on one side of every case. Without
-    // this, the winner is whoever the catalogue happened to name and a third of
-    // the cases — cancelled, a resolved dispute — belonged to two other
-    // accounts and were invisible to the only session anybody opens.
     const buyerId = auction.sellerId === DEMO_ACCOUNT ? auction.winnerId : DEMO_ACCOUNT;
-    // Kept in step, or the listing page would name a different winner than the
-    // order it produced.
     auction.winnerId = buyerId;
     const delivery =
       deliveryMethods.find(
@@ -182,9 +159,6 @@ export function buildOrders({
     const paid =
       status !== "AWAITING_CONFIRMATION" &&
       status !== "AWAITING_PAYMENT" &&
-      // Cancelling is only possible while the escrow is empty, so a cancelled
-      // sale has never been paid. With this missing, the record showed a held
-      // payment and "nu a fost încasată nicio sumă" on the same screen.
       status !== "PAYMENT_FAILED" &&
       status !== "CANCELLED";
     const labelled = ORDER_FLOW.indexOf(status) >= ORDER_FLOW.indexOf("LABEL_GENERATED");
@@ -254,7 +228,6 @@ export function buildOrders({
 
     orders.push(order);
 
-    // Invoices
     if (paid) {
       invoiceNumber += 1;
       invoices.push({
@@ -301,7 +274,6 @@ export function buildOrders({
       });
     }
 
-    // Disputes
     if (status === "DISPUTE_OPEN") {
       disputes.push({
         id: `dsp_${order.id}`,

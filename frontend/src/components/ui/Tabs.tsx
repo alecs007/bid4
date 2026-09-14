@@ -25,11 +25,6 @@ export function SegmentedControl<T extends string>({
   value: T;
   onChange: (value: T) => void;
   size?: "sm" | "md";
-  /**
-   * "track" groups the options inside one grey rail — right when they are a small switch beside
-   * a heading. "bubbles" drops the rail and lets each option stand on its own, for a row wide
-   * enough that the rail would read as a grey band across the page.
-   */
   variant?: "track" | "bubbles";
   className?: string;
   ariaLabel: string;

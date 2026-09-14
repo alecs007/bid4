@@ -12,22 +12,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One side of one movement.
- *
- * <p>Signed: positive is into the account, negative is out of it, and the entries of a transaction
- * add to zero — checked by a deferred constraint trigger, because they are necessarily unbalanced
- * while they are still being written.
- *
- * <p>Immutable. A trigger refuses updates and deletes outright: a mistake is corrected by writing
- * its reverse, exactly as it would be on paper.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "ledger_entries")
 public class LedgerEntry {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
@@ -39,7 +28,6 @@ public class LedgerEntry {
   @Column(name = "account_id", nullable = false, updatable = false)
   private UUID accountId;
 
-  /** Bani. Never zero — a movement of nothing is not a movement. */
   @Column(nullable = false, updatable = false)
   private long amount;
 

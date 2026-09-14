@@ -1,8 +1,3 @@
-/**
- * Every user-visible enum value in Romanian, with its tone. Adding a status to a
- * union without adding it here is a compile error, which is the point.
- */
-
 import type {
   AccountType,
   AuctionStatus,
@@ -33,7 +28,6 @@ export type Tone =
 export interface StatusMeta {
   label: string;
   tone: Tone;
-  /** Optional one-line explanation shown in tooltips and timelines. */
   hint?: string;
 }
 
@@ -58,17 +52,6 @@ export const AUCTION_STATUS: Record<AuctionStatus, StatusMeta> = {
   CANCELLED: { label: "Retras", tone: "neutral" },
 };
 
-/**
- * Where a sale stands, as a badge.
- *
- * <p>Formal throughout, and consistent with the wording of the steps in the conversation: the same
- * moment must not be a "dispută" here and a "sesizare" there. Each label names the state of the
- * order rather than what somebody is waiting for, because a badge is read next to a name and a
- * date, not as a sentence.
- *
- * <p>None of them names a courier or a locker. DROPPED_OFF used to read "Predat la Easybox", which
- * is simply wrong for the half of orders delivered by courier to an address.
- */
 export const ORDER_STATUS: Record<OrderStatus, StatusMeta> = {
   AWAITING_CONFIRMATION: {
     label: "Livrare de ales",
@@ -135,11 +118,6 @@ export const CAUSE_STATUS: Record<CauseStatus, StatusMeta> = {
   SUSPENDED: { label: "Suspendată", tone: "warning" },
 };
 
-/**
- * Written from the bidder's side, because that is who reads them: "Ai fost
- * depășit" says what happened to you, where "Depășit" leaves you working out
- * what was depășit and by whom.
- */
 export const BID_STATUS: Record<BidStatus, StatusMeta> = {
   ACTIVE: { label: "Ofertă plasată", tone: "sky" },
   OUTBID: {
@@ -198,12 +176,6 @@ export const ITEM_CONDITION: Record<ItemCondition, string> = {
   USED: "Folosit",
 };
 
-/**
- * Where each state sits in the ranking, best first.
- *
- * <p>Beside the labels rather than inside the form that sets them: the listing page draws the same
- * five bars under a title, and two copies of this order are two chances for them to disagree.
- */
 export const ITEM_CONDITION_LEVEL: Record<ItemCondition, number> = {
   NEW: 5,
   LIKE_NEW: 4,

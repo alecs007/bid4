@@ -6,20 +6,11 @@ import { Icons } from "@/components/icons";
 import { SHIPPING } from "@/lib/config";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The courier's mark, or nothing.
- *
- * <p>Hides itself if the file is not there rather than leaving a broken image in the middle of a
- * button. The button reads correctly without it, so the logo is decoration on top of a label that
- * already says where the link goes.
- */
 function CourierMark({ className }: { className?: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
 
   return (
-    // Not next/image: this is a fixed-size mark from /public with no layout to
-    // reserve, and the optimiser would give it a second URL to no purpose.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/images/couriers/sameday.webp"
@@ -33,21 +24,6 @@ function CourierMark({ className }: { className?: string }) {
   );
 }
 
-/**
- * The consignment number, said in full.
- *
- * <p>A control labelled "AWB 2SD100…" assumes the reader knows what an AWB is, and most do not:
- * three letters and a long number is not self-explanatory, and a button whose only label is the
- * value it copies tells nobody what pressing it would be for.
- *
- * <p>So the box names the number, puts the copy control immediately beside it — where a thing you
- * copy belongs, rather than underneath — and offers the courier's own tracking page as the one
- * thing anybody actually wants to do with it.
- *
- * <p>Weighted by who is reading. The buyer follows the parcel with it, so they get the tracking
- * button. The seller has the number printed on the label they are about to hand over and does not
- * track their own parcel, so theirs is quieter and says what it is for.
- */
 export function TrackingNumber({
   awb,
   viewerIsBuyer,
@@ -71,11 +47,6 @@ export function TrackingNumber({
         Număr de urmărire a coletului (AWB)
       </p>
 
-      {/* The control sits against the number, not across the box from it. With
-          the number stretching to fill the row the button ended up at the far
-          right, which reads as a separate action rather than as something you
-          do to the value beside it. No label either: a copy glyph next to a
-          value needs no word, and the word was wider than the icon. */}
       <div className="flex items-center gap-1">
         <span className="numeric min-w-0 truncate text-[14px] font-extrabold text-ink-900">
           {awb}

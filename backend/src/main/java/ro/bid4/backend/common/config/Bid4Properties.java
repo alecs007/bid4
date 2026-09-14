@@ -10,12 +10,6 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * Every tunable the application has, in one typed tree.
- *
- * <p>Validated at startup, so a missing secret or a nonsensical window fails the boot with a
- * readable message instead of surfacing as a security hole under load.
- */
 @Validated
 @ConfigurationProperties(prefix = "bid4")
 public record Bid4Properties(
@@ -27,15 +21,6 @@ public record Bid4Properties(
     @Valid @NotNull Mail mail,
     @Valid @NotNull Verification verification,
     @Valid @NotNull RateLimit rateLimit) {
-
-  /**
-   * @param refreshTokenTtl how long one refresh token lives, reset on every rotation.
-   * @param absoluteRefreshTtl how long the chain lives, measured from the first token in it and
-   *     never reset. Without it a session used once a month never ends, and a stolen token its
-   *     holder keeps spending stays valid forever.
-   * @param refreshTokenRetention how long an expired row is kept before the sweeper deletes it. Its
-   *     only remaining use is forensic — the token itself cannot be revived.
-   */
   public record Jwt(
       @NotBlank String secret,
       @NotBlank String issuer,
@@ -43,8 +28,6 @@ public record Bid4Properties(
       @NotNull Duration refreshTokenTtl,
       @NotNull Duration absoluteRefreshTtl,
       @NotNull Duration refreshTokenRetention) {
-
-    /** A record prints all of its components, and one of these signs every token. */
     @Override
     public String toString() {
       return "Jwt[secret=<redacted>, issuer="
@@ -60,15 +43,6 @@ public record Bid4Properties(
           + "]";
     }
 
-    /**
-     * HS256 needs at least 256 bits of key, and a short one is worse than none.
-     *
-     * <p>Forty-four characters, not thirty-two: that is what 32 random bytes come to in base64, and
-     * the README's {@code openssl rand -base64 48} clears it comfortably. Thirty-two characters is
-     * exactly the floor rather than above it, and length is not entropy in any case — a run of the
-     * same letter passes this. The generation command is the real control; this only catches a
-     * secret nobody thought about.
-     */
     public Jwt {
       if (secret != null && secret.length() < 44) {
         throw new IllegalStateException(
@@ -79,14 +53,6 @@ public record Bid4Properties(
 
   public record Cors(@NotEmpty List<String> allowedOrigins) {}
 
-  /**
-   * Whether session cookies must carry Secure regardless of what the request looked like.
-   *
-   * <p>True everywhere but development. Behind a proxy that terminates TLS the application sees
-   * plain HTTP, and inferring the flag from that would ship a thirty-day refresh token without
-   * Secure — after which the browser sends it over any plaintext request to the domain. Stating it
-   * means a misconfigured proxy cannot quietly downgrade the cookie.
-   */
   public record Cookies(boolean requireSecure) {}
 
   public record Storage(
@@ -110,7 +76,6 @@ public record Bid4Properties(
       @Valid @NotNull Rule refresh,
       @Valid @NotNull Rule write,
       @Valid @NotNull Rule read) {
-
     public record Rule(@Min(1) long capacity, @NotNull Duration window) {}
   }
 }

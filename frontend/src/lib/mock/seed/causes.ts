@@ -10,7 +10,6 @@ import type {
 import { isoAgo } from "@/lib/utils/date";
 import { causeCover, causeGallery, causeImage } from "../images";
 
-/** One cause per status, so the operator queue has every case to handle. */
 interface CauseSeed {
   id: string;
   name: string;
@@ -32,7 +31,6 @@ interface CauseSeed {
   website?: string;
   iban: string;
   rejectionReason?: string;
-  /** Most seeded causes are run by organisations; a few are not. */
   beneficiaryType?: BeneficiaryType;
   county?: string;
   city?: string;
@@ -274,7 +272,6 @@ const SEEDS: CauseSeed[] = [
     iban: "RO88CCCC1B31007593842222",
   },
 
-  // Waiting on the operator queue
   {
     id: "cau_rmn",
     name: "Aparat RMN pentru Spitalul Județean",
@@ -321,7 +318,6 @@ const SEEDS: CauseSeed[] = [
     iban: "RO66GGGG1B31007593846666",
   },
 
-  // Rejected, draft, suspended
   {
     id: "cau_programare",
     name: "Cursuri de programare pentru liceeni",
@@ -390,7 +386,6 @@ const SEEDS: CauseSeed[] = [
   },
 ];
 
-/** Causes that are public and may receive listings. */
 export const ACTIVE_CAUSE_IDS = SEEDS.filter(
   (seed) => seed.status === "ACTIVE" || seed.status === "APPROVED",
 ).map((seed) => seed.id);

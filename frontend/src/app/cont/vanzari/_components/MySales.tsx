@@ -28,13 +28,6 @@ import {
 } from "@/components/ui";
 import { useToast } from "@/components/ui";
 
-/**
- * Statuses a seller can still withdraw.
- *
- * <p>Only decides whether the action is worth offering. The API refuses on its
- * own terms, so a listing that settled a second ago is refused there rather than
- * trusted here.
- */
 const WITHDRAWABLE = new Set<AuctionStatus>(["DRAFT", "PENDING_REVIEW", "LIVE"]);
 
 type Bucket = "all" | "review" | "live" | "reserved" | "closed";
@@ -61,14 +54,6 @@ function bucketOf(auction: AuctionDetail): Bucket {
   }
 }
 
-/**
- * The figures worth showing, which depend on where the listing is.
- *
- * <p>Nothing has been offered on a listing still in review, so "current price"
- * there is the asking price wearing a misleading label. Once it is running the
- * pair that matters is what it opened at against what it has reached; once it is
- * over, what it finished at.
- */
 function statsFor(auction: AuctionDetail, onSeeBidders: () => void): RowStat[] {
   const start: RowStat = { label: "Preț de pornire", value: formatMoney(auction.startingPrice) };
 
@@ -83,12 +68,8 @@ function statsFor(auction: AuctionDetail, onSeeBidders: () => void): RowStat[] {
         {
           label:
             auction.status === "SOLD" ? "Preț final" : "Ofertă acceptată",
-          // What was agreed, not what has been offered since: a reserved
-          // listing goes on taking offers, so the two numbers part company.
           value: formatMoney(auction.acceptedAmount ?? auction.currentPrice),
           emphasis: true,
-          // Green like the running figure it grew out of: it is the number that
-          // went the seller's way, and it is what the donation comes out of.
           tone: "positive",
         },
       ];
@@ -99,23 +80,15 @@ function statsFor(auction: AuctionDetail, onSeeBidders: () => void): RowStat[] {
   }
 }
 
-/** Drops the figures that have nothing to say for this listing. */
 function present(stat: RowStat | null): stat is RowStat {
   return stat !== null;
 }
 
-/**
- * What the bidding has reached, in green because it is the number going the
- * seller's way, with how many offers made it and a way to see whose.
- */
 function highest(
   auction: AuctionDetail,
   onSeeBidders: () => void,
   label: string,
 ): RowStat | null {
-  // Nothing at all rather than "Fără oferte": an empty figure is a column of
-  // absence down the page, and the asking price beside it already says what
-  // there is to know.
   if (!auction.bidCount) {
     return null;
   }
@@ -136,7 +109,6 @@ function highest(
   };
 }
 
-/** The one date that still says something about where the listing stands. */
 function footnoteFor(auction: AuctionDetail): string {
   switch (auction.status) {
     case "PENDING_REVIEW":
@@ -149,7 +121,6 @@ function footnoteFor(auction: AuctionDetail): string {
         ? `Acceptată la ${formatDateTimeRo(auction.acceptedAt)}`
         : "Așteaptă plata";
     case "SOLD":
-      // The only deadline left anywhere, and it is the seller's own.
       return auction.dispatchDeadline
         ? `Expediază până la ${formatDateTimeRo(auction.dispatchDeadline)}`
         : "Plătită";
@@ -189,12 +160,10 @@ export function MySales() {
     if (!done) return;
     setPendingWithdrawal(null);
     toast.success("Anunț retras", `„${done.title}” nu mai este public.`);
-    // It also leaves the public catalogue and any cause page that counted it.
     revalidate("my-sales", "auctions", "causes");
   };
 
   return (
-    // A short list must not leave the footer halfway up the screen.
     <section className="flex min-h-[60vh] flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
@@ -238,8 +207,6 @@ export function MySales() {
           </p>
           <ul
             key={`${view.filter}:${view.page}`}
-            // The same reveal the catalogue uses when rows take a skeleton's
-            // place, so both lists change over at the same speed.
             className="animate-reveal flex flex-col gap-2.5"
           >
             {view.shown.map((auction) => (

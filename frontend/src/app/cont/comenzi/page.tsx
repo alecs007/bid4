@@ -10,14 +10,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/**
- * Everything the conversation deliberately leaves out.
- *
- * <p>The thread is the story of a sale, written for whoever is reading it. This is the record:
- * the full address, the whole fee breakdown, every document, the courier's history, and what each
- * party agreed to and when. Somebody comes here when they need to prove something, not when they
- * want to know what happened next.
- */
 export default function OrdersPage() {
   return (
     <PageTransition>

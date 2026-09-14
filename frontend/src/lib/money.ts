@@ -1,25 +1,13 @@
-/**
- * Every amount is an INTEGER number of bani. Floats never touch money: they turn
- * into a 1-ban mismatch between the buyer's total and the seller payout. The
- * backend serialises the same way, so DTOs map across without a conversion.
- */
-
 import { FEES, LEU, type Bani } from "@/lib/config";
 
-/** `lei(12.5)` → 1250 bani. Rounds half-up at the ban. */
 export function lei(amount: number): Bani {
   return Math.round(amount * LEU);
 }
 
-/** 1250 bani → 12.5. Only for charts/inputs, never for arithmetic. */
 export function toLei(amount: Bani): number {
   return amount / LEU;
 }
 
-/**
- * Accepts "1.250,50", "1250,50", "1250.50", "1 250,50 lei". Returns null when the
- * text is not a usable amount, so callers can show a field error.
- */
 export function parseLeiInput(raw: string): Bani | null {
   const cleaned = raw
     .replace(/lei|ron/gi, "")
@@ -32,11 +20,8 @@ export function parseLeiInput(raw: string): Bani | null {
   let normalised: string;
 
   if (lastComma > lastDot) {
-    // Romanian: dots group thousands, comma is the decimal separator.
     normalised = cleaned.replace(/\./g, "").replace(",", ".");
   } else if (lastDot > lastComma) {
-    // "25.000" is how ro-RO prints twenty-five thousand: dots in pure
-    // three-digit groups group, anything else is a decimal point.
     normalised = /^\d{1,3}(\.\d{3})+$/.test(cleaned)
       ? cleaned.replace(/\./g, "")
       : cleaned.replace(/,/g, "");
@@ -60,15 +45,11 @@ const roWholeFormatter = new Intl.NumberFormat("ro-RO", {
 });
 
 export interface FormatMoneyOptions {
-  /** Drop ",00" on round amounts — nicer in dense card UI. Default false. */
   compact?: boolean;
-  /** Omit the " lei" suffix (when a column header already says it). */
   omitCurrency?: boolean;
-  /** Force a leading "+" / "−" (used in the money-split breakdown). */
   signed?: boolean;
 }
 
-/** 125_000 → "1.250,00 lei" */
 export function formatMoney(
   amount: Bani,
   options: FormatMoneyOptions = {},
@@ -85,7 +66,6 @@ export function formatMoney(
   return `${sign}${body}${omitCurrency ? "" : " lei"}`;
 }
 
-/** Short form for big impact numbers: 1_234_500 bani → "12,3 mii lei". */
 export function formatMoneyShort(amount: Bani): string {
   const value = toLei(amount);
   if (value >= 1_000_000) {
@@ -107,7 +87,6 @@ export function formatPercent(percent: number): string {
   )}%`;
 }
 
-/** Exact percentage of an integer amount, rounded half-up to the ban. */
 export function percentOf(amount: Bani, percent: number): Bani {
   return Math.round((amount * percent) / 100);
 }
@@ -116,46 +95,30 @@ export function sumMoney(...amounts: Bani[]): Bani {
   return amounts.reduce((total, amount) => total + amount, 0);
 }
 
-/** Progress toward a goal, clamped to 0–100 and safe when goal is 0. */
 export function progressPercent(raised: Bani, goal: Bani): number {
   if (goal <= 0) return 0;
   return Math.min(100, Math.max(0, (raised / goal) * 100));
 }
 
 export interface FeeBreakdown {
-  /** Hammer price — what the winning bid was. */
   finalPrice: Bani;
-  /** Buyer-side protection fee: a percentage of the price plus a fixed amount. */
   buyerTax: Bani;
-  /** Delivery cost, paid by the buyer on top. */
   shipping: Bani;
-  /** What the buyer is actually charged. */
   buyerTotal: Bani;
 
   donationPercent: number;
-  /** Goes to the cause on release. */
   donationAmount: Bani;
-  /**
-   * finalPrice − donationAmount, and what the seller receives on release.
-   *
-   * There is no second number here. bid4's cut is the buyer's tax, charged on top of the price;
-   * the seller's share of the price is theirs. A fee deducted here would have meant the amount
-   * shown on the listing was not the amount that arrived.
-   */
   sellerShare: Bani;
 
-  /** The buyer's tax, which is the whole of it. */
   platformRevenue: Bani;
 }
 
 export interface ComputeFeesInput {
   finalPrice: Bani;
   donationPercent: number;
-  /** Defaults to 0 — the auction page previews fees before delivery is known. */
   shipping?: Bani;
 }
 
-/** Identical to the backend's FeeService. */
 export function computeFees({
   finalPrice,
   donationPercent,

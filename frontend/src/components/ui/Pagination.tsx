@@ -122,26 +122,8 @@ export function Pagination({
   );
 }
 
-/**
- * How much of the page below the fold counts as "nearly there".
- *
- * <p>Generous on purpose. A card in these grids is around 500px tall, so this is two rows of
- * warning: by the time the last loaded row reaches the screen the next page is usually already in,
- * and the list grows without ever showing its own bottom. Small margins are what make an infinite
- * list feel like it stops and starts.
- */
 const LEAD_PX = 1200;
 
-/**
- * The bottom of a list that has more to give.
- *
- * <p>Everything scroll-loaded on the site goes through this, so the lists all wait the same
- * distance from the end and stop the same way.
- *
- * <p>The observer is disconnected while a page is in flight and once there is nothing left to ask
- * for. One left watching re-fires on every scroll that keeps it in view, and each of those would
- * be a request; this way there is at most one outstanding, ever.
- */
 export function LoadMore({
   hasMore,
   loading = false,
@@ -152,20 +134,11 @@ export function LoadMore({
   orientation = "vertical",
 }: {
   hasMore: boolean;
-  /** A page is already on its way. */
   loading?: boolean;
   onReach: () => void;
-  /** Drawn in place of the results that are coming, so the list does not jump when they land. */
   waiting?: React.ReactNode;
   className?: string;
-  /**
-   * The scroller to watch, when it is not the page.
-   *
-   * <p>A rail scrolls sideways inside itself, and its end never enters the viewport however far
-   * the reader pushes it — so an observer left rooted at the page would never fire.
-   */
   root?: React.RefObject<HTMLElement | null>;
-  /** Which way the lead distance is measured. */
   orientation?: "vertical" | "horizontal";
 }) {
   if (!hasMore && !loading) return null;

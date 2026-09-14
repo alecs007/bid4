@@ -10,8 +10,6 @@ import ro.bid4.backend.catalog.domain.AuctionWatch;
 import ro.bid4.backend.catalog.domain.AuctionWatchId;
 
 public interface AuctionWatchRepository extends JpaRepository<AuctionWatch, AuctionWatchId> {
-
-  /** Which of these auctions the viewer follows, in one lookup rather than one per card. */
   @Query(
       """
       select w.id.auctionId from AuctionWatch w
@@ -20,7 +18,6 @@ public interface AuctionWatchRepository extends JpaRepository<AuctionWatch, Auct
   List<UUID> findWatchedAuctionIds(
       @Param("userId") UUID userId, @Param("auctionIds") Collection<UUID> auctionIds);
 
-  /** Everything the reader follows, newest first. */
   @Query(
       """
       select w.id.auctionId from AuctionWatch w

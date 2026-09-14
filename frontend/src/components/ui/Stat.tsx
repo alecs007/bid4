@@ -56,23 +56,11 @@ export function Stat({
   );
 }
 
-/**
- * One figure in a row of three, under a drawing.
- *
- * <p>The listing page's seller panel and the public profile show the same kind of thing about the
- * same person, and were showing it two different ways: three tiles there, three full-width `Stat`
- * cards here, stacked on a phone. This is the tile, in one place, so they cannot drift again.
- *
- * <p>The drawings carry their own colour and their own soft shadow, so they sit straight on the
- * card: a tinted disc behind one is a second background under a mark that already has one, and it
- * flattens the artwork rather than lifting it.
- */
 export function StatTile({
   illustration,
   value,
   label,
 }: {
-  /** File under `public/images/illustrations`, without the extension. */
   illustration: string;
   value: ReactNode;
   label: ReactNode;
@@ -94,12 +82,6 @@ export function StatTile({
   );
 }
 
-/**
- * Three of them, which is the only shape they are used in.
- *
- * <p>Three across at every width, phones included. Stacked, they push everything below a profile
- * off the screen and read as three separate announcements rather than one summary.
- */
 export function StatTiles({
   children,
   className,

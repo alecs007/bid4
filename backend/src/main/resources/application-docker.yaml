@@ -1,5 +1,3 @@
-# Inside compose the infrastructure answers to its service name rather than to
-# localhost. Everything else is inherited from application.yaml.
 spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -12,9 +10,6 @@ bid4:
     endpoint: http://minio:9000
 
 logging:
-  # One JSON object per line, with the MDC — and therefore the request id — in
-  # every one. A log aggregator can index this; the human-readable console
-  # format used locally cannot be queried.
   structured:
     format:
       console: ecs

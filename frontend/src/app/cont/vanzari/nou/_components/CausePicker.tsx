@@ -21,16 +21,6 @@ import { formatMoney, progressPercent } from "@/lib/money";
 import type { CauseDetail } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Which cause the money goes to, chosen by looking rather than by reading a list of names.
- *
- * <p>A dropdown was the wrong control. Every other field here is a fact the seller already knows;
- * this is a choice they may make on the spot, and a name alone gives them nothing to make it on.
- *
- * <p>Round portraits in a row, the way a person is shown everywhere else on the site — no cards,
- * no outlines, nothing boxed. The selection is a ring on the portrait itself, which is the thing
- * being chosen, so there is no chrome to draw and none to keep aligned.
- */
 export function CausePicker({
   value,
   onChange,
@@ -47,8 +37,6 @@ export function CausePicker({
     "causes-for-listing",
   );
 
-  // Filtered in memory: the whole list is one small request and already in hand,
-  // so typing costs nothing and never blanks the rail.
   const matching = useMemo(() => {
     const needle = term.trim().toLowerCase();
     return (data ?? []).filter((cause) => {
@@ -66,8 +54,6 @@ export function CausePicker({
     PAGINATION.DEFAULT_PAGE_SIZE,
   );
 
-  // Only categories with something behind them: a filter that leads to an empty
-  // rail is a control nobody should be able to press.
   const populated = useMemo(() => {
     const present = new Set((data ?? []).map((cause) => cause.category));
     return CAUSE_CATEGORIES.filter((entry) => present.has(entry.id));
@@ -75,10 +61,6 @@ export function CausePicker({
 
   const chosen = (data ?? []).find((cause) => cause.id === value);
 
-  // The panel outlives the selection by the length of its close, so it has
-  // something to show on the way out instead of collapsing empty. Adjusted
-  // during render rather than in an effect, which is what React asks for when
-  // state has to follow a prop.
   const [shownCause, setShownCause] = useState<CauseDetail | null>(null);
   if (chosen && chosen.id !== shownCause?.id) setShownCause(chosen);
 
@@ -94,9 +76,6 @@ export function CausePicker({
         }
       />
 
-      {/* Text-only filters, sitting on the panel rather than in outlined pills.
-          Nine bordered chips above a row of portraits was two competing frames
-          around the one thing being chosen. */}
       <div className="no-scrollbar flex gap-1 overflow-x-auto py-1">
         <Filter
           active={category === ""}
@@ -105,7 +84,6 @@ export function CausePicker({
         />
         {loading && !data
           ? // The same box as a real one, so the row keeps its height when the
-            // categories land in it.
             ["Sănătate", "Educație", "Animale"].map((label) => (
               <span
                 key={label}
@@ -140,16 +118,10 @@ export function CausePicker({
         data-lenis-prevent
         role="radiogroup"
         aria-label="Cauza susținută"
-        // p-1 with no negative margin to take it back: the selected ring sits
-        // 4px outside its portrait and an overflow container clips anything
-        // leaving its padding box, but pulling the row wider than its parent is
-        // what put a horizontal scrollbar inside the modal.
         className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto p-1"
       >
         {loading && !data
           ? Array.from({ length: 5 }).map((_, index) => (
-              // Box for box with `CauseChoice`: a 56px portrait, the 6px
-              // the flex column puts under it, and two lines of an 11px name.
               <div
                 key={index}
                 className="flex w-[72px] shrink-0 flex-col items-center gap-1.5"
@@ -184,15 +156,6 @@ export function CausePicker({
         </p>
       ) : null}
 
-      {/* The portraits carry a picture and a name, which is all a row of them can
-          hold. Everything worth knowing about the one actually chosen appears
-          here instead, where there is room for it and only for one.
-
-          Opened by a grid row rather than mounted: the panel is a third of the
-          field's height, and dropping it in finished shoved everything below it
-          down a step while it was still fading. Growing into place moves the
-          page by the same amount over the same time the panel takes to arrive,
-          which reads as one thing happening instead of two. */}
       <div
         aria-hidden={!chosen}
         inert={!chosen}
@@ -216,17 +179,6 @@ export function CausePicker({
   );
 }
 
-/**
- * The cause that was picked, on one line under the row.
- *
- * <p>It used to be a card with the description and a link out to the cause's page, and it was a
- * third of the modal — enough that choosing a cause pushed the percentage below the fold. What is
- * worth saying here is which one is chosen and how far along it is; the rest is a page away.
- *
- * <p>No entrance of its own: the wrapper animates, and switching from one cause to another swaps
- * the text in place. Replaying a fade on every change made the answer flinch each time the reader
- * moved along the row.
- */
 function ChosenCause({ cause }: { cause: CauseDetail }) {
   const percent = Math.round(
     progressPercent(cause.raisedAmount, cause.goalAmount),
@@ -257,8 +209,6 @@ function ChosenCause({ cause }: { cause: CauseDetail }) {
           />
         </div>
 
-        {/* The percentage is already the bar above it, drawn to scale. Saying
-            it again in figures is the same fact twice. */}
         <p className="numeric mt-1 text-[11px] text-ink-500">
           <strong className="text-ink-800">
             {formatMoney(cause.raisedAmount)}
@@ -299,16 +249,6 @@ function Filter({
   );
 }
 
-/**
- * One cause: a portrait, its name, and how far along it is.
- *
- * <p>Round, because that is how a person is shown everywhere else here, and because a circle in a
- * row of circles needs no border to be read as one of a set. The ring appears only on the chosen
- * one, so the row is quiet until a decision is made.
- *
- * <p>The figures are written out. "12,4k" saves eleven pixels and costs the reader a translation,
- * on the one number the whole choice is about.
- */
 function CauseChoice({
   cause,
   selected,

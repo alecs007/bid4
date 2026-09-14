@@ -12,19 +12,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * A card on file, as far as this application is allowed to know it.
- *
- * <p>No column here can hold a card number. What is stored is what Stripe safely exposes about a
- * saved PaymentMethod, plus its opaque id — the brand, the last four digits and the expiry, which
- * is exactly enough for someone to recognise which card they meant.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "payment_methods")
 public class PaymentMethodCard {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

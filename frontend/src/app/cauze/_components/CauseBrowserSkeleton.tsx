@@ -3,23 +3,13 @@ import { Skeleton } from "@/components/ui";
 import { Icons } from "@/components/icons";
 import { CAUSE_CATEGORIES } from "@/lib/config";
 
-/** Keeps the placeholder count, and so the page height, level with the real thing. */
 const PUBLIC_CAUSE_COUNT = 10;
 
-/**
- * Shared by `loading.tsx` and the page's Suspense fallback so the two are never
- * different. The category chips carry their real labels with visibility off,
- * which reproduces the row's exact widths and wrapping.
- */
 export function CauseBrowserSkeleton() {
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
         <h1 className="font-display flex items-center gap-2 text-2xl font-extrabold text-ink-900 sm:text-3xl">
-          {/* The same mark an organiser wears when they are verified: the same
-              check, at the same weight, on the same green. A page titled for
-              verified causes should carry the badge those causes' organisers
-              carry, not a second design of it. */}
           <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-600 text-white sm:h-6 sm:w-6">
             <Icons.check
               aria-hidden="true"

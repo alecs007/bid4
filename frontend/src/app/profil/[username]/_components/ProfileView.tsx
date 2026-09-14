@@ -29,7 +29,6 @@ import { formatMemberSince } from "@/lib/utils/date";
 
 type Tab = "listings" | "causes";
 
-/** An individual and an organisation have the same powers, so the same profile. */
 export function ProfileView({ username }: { username: string }) {
   const [tab, setTab] = useState<Tab>("listings");
 
@@ -41,8 +40,6 @@ export function ProfileView({ username }: { username: string }) {
 
   const sellerId = profile?.user.id;
 
-  // Paged, like the catalogue and the search page: a seller with two hundred
-  // listings should cost the same first screen as a seller with four.
   const auctions = useApiPages(
     (page) =>
       listAuctions({
@@ -60,7 +57,6 @@ export function ProfileView({ username }: { username: string }) {
     { enabled: Boolean(sellerId) },
   );
 
-  // /causes has no page to ask for, so this one is windowed over what arrived.
   const shownCauses = useWindowedList(
     causes,
     sellerId ?? "",
@@ -81,19 +77,11 @@ export function ProfileView({ username }: { username: string }) {
   const { user } = profile;
   const isOrganization = user.accountType === "ORGANIZATION";
 
-  // What this account actually has, once both answers are in. A tab row is a
-  // question — "which of these two?" — and there is no question to ask when
-  // only one of them exists, or neither. Both lists are asked for up front, so
-  // the row appears at most once and never flickers between them.
   const listingsLoading = auctions.loading;
   const hasListings = auctions.items.length > 0;
   const hasCauses = (causes?.length ?? 0) > 0;
   const bothKinds = hasListings && hasCauses;
   const settled = !listingsLoading && !causesLoading;
-  // With only one kind there is nothing to switch to, so the panel shown is
-  // whichever one exists rather than whichever the tab last said. Until both
-  // answers are in, the tab's own choice stands — deciding early puts the cause
-  // panel up while the listings are still arriving.
   const showing: Tab = !settled
     ? tab
     : bothKinds
@@ -103,8 +91,6 @@ export function ProfileView({ username }: { username: string }) {
         : "causes";
 
   return (
-    // A floor under the page, the same one the search results stand on, so a
-    // profile with two listings does not pull the footer halfway up the screen.
     <div className="animate-reveal flex min-h-[70vh] flex-col gap-6 sm:gap-8">
       <Breadcrumbs
         items={[{ label: "Acasă", href: "/" }, { label: user.displayName }]}
@@ -127,7 +113,6 @@ export function ProfileView({ username }: { username: string }) {
             <AccountTypeTag user={user} />
           </div>
 
-          {/* Only when it says something the display name does not. */}
           {isOrganization &&
           user.orgLegalName &&
           user.orgLegalName !== user.displayName ? (
@@ -155,9 +140,6 @@ export function ProfileView({ username }: { username: string }) {
         </div>
       </header>
 
-      {/* The same three tiles the listing page puts under a seller's name, so
-          the two places that summarise a person summarise them the same way —
-          three across on a phone as well, rather than a stack of three cards. */}
       <StatTiles>
         <StatTile
           illustration="amount-donated"
@@ -176,8 +158,6 @@ export function ProfileView({ username }: { username: string }) {
         />
       </StatTiles>
 
-      {/* Nothing at all for an account with neither: an empty state under an
-          empty tab row is two pieces of furniture around an absence. */}
       {settled && !hasListings && !hasCauses ? null : (
         <section>
           {bothKinds ? (
@@ -198,10 +178,6 @@ export function ProfileView({ username }: { username: string }) {
               ]}
             />
           ) : (
-            // With nothing to switch to, the tab row is gone and the panel under
-            // it was left unnamed — a grid of cards with no word saying whether
-            // they are this member's listings or the causes they run. The label
-            // says the same thing the tab would have, count and all.
             <SectionLabel className="mb-4">
               {showing === "listings"
                 ? `Anunțuri (${auctions.total ?? auctions.items.length})`

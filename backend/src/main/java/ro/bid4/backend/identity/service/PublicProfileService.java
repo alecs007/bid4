@@ -24,12 +24,9 @@ import ro.bid4.backend.identity.domain.UserAccount;
 import ro.bid4.backend.identity.domain.UserStatus;
 import ro.bid4.backend.identity.repo.UserAccountRepository;
 
-/** The public half of someone's account, by the handle their profile URL is built from. */
 @Service
 @Transactional(readOnly = true)
 public class PublicProfileService {
-
-  /** A search is a search. Without a ceiling this is a downloadable directory. */
   private static final int MAX_SEARCH_RESULTS = 50;
 
   private static final Set<AuctionStatus> RUNNING =
@@ -51,17 +48,6 @@ public class PublicProfileService {
     this.mapper = mapper;
   }
 
-  /**
-   * Members whose name or handle matches, for the search page.
-   *
-   * <p>Those two columns and no others. Searching an email address would turn this into a way of
-   * asking the platform whether somebody has an account, which is not a stranger's question to put.
-   * Suspended accounts are left out for the same reason {@link #byUsername} refuses them: there is
-   * no public page to send anyone to.
-   *
-   * <p>Capped rather than unbounded. A search is a search; without a ceiling, a one-letter term
-   * turns a public endpoint into a downloadable member directory.
-   */
   public List<PublicUserResponse> search(String term) {
     List<String> words = SearchTerms.words(term);
     if (words.isEmpty()) {
@@ -89,7 +75,6 @@ public class PublicProfileService {
         .getContent();
   }
 
-  /** Folded the same way the column is, so the two agree about diacritics. */
   private static Expression<String> folded(CriteriaBuilder cb, Expression<?> column) {
     return cb.lower(cb.function("unaccent", String.class, column));
   }
@@ -100,8 +85,6 @@ public class PublicProfileService {
             .findByUsername(username.toLowerCase(Locale.ROOT))
             .orElseThrow(() -> ApiException.notFound("Profilul"));
 
-    // A suspended account has no public page. Not found rather than forbidden:
-    // whether someone was suspended is nobody else's business.
     if (account.getStatus() == UserStatus.SUSPENDED) {
       throw ApiException.notFound("Profilul");
     }

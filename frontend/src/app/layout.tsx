@@ -8,7 +8,6 @@ import { SwrProvider } from "@/lib/hooks/SwrProvider";
 import { SITE_URL } from "@/lib/config";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { organizationSchema, websiteSchema } from "@/lib/structured-data";
-// import { DevRoleSwitcher } from "@/components/auth/DevRoleSwitcher";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
@@ -26,17 +25,6 @@ const baloo = Baloo_2({
   display: "swap",
 });
 
-/**
- * What every page inherits.
- *
- * <p>`metadataBase` is what turns a relative image or canonical into the
- * absolute URL a crawler needs; without it Next drops them and the social card
- * silently resolves to nothing.
- *
- * <p>Titles read "page | bid4". The pipe rather than a middle dot because it is
- * what search results and browser tabs are read in, and a dot at small sizes is
- * easy to lose against a diacritic.
- */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -57,16 +45,6 @@ export const metadata: Metadata = {
   creator: "bid4",
   publisher: "bid4",
   alternates: { canonical: "/" },
-  /**
-   * Declared rather than written as <link> tags: Next emits these into the head
-   * itself, and a hand-written tag beside a generated one is how a page ends up
-   * asking for two different icons.
-   *
-   * <p>Both a PNG and an SVG, in that order, because the SVG is the one that
-   * stays sharp on a high-density tab strip and the PNG is what answers when it
-   * is not understood. The .ico is for the browsers that still look for one
-   * before reading the head at all.
-   */
   icons: {
     icon: [
       { url: "/icon/favicon-96x96.png", type: "image/png", sizes: "96x96" },
@@ -76,8 +54,6 @@ export const metadata: Metadata = {
     apple: [{ url: "/icon/apple-touch-icon.png", sizes: "180x180" }],
   },
   manifest: "/site.webmanifest",
-  // The name under the icon when somebody adds the site to a home screen. iOS
-  // reads this one rather than the manifest's short_name.
   appleWebApp: { title: "Bid4" },
   openGraph: {
     type: "website",
@@ -109,7 +85,6 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      // A listing's own picture is the useful preview; let it be shown in full.
       "max-image-preview": "large",
       "max-snippet": -1,
       "max-video-preview": -1,
@@ -124,21 +99,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // suppressHydrationWarning: the script below writes data-session onto this
-    // element before React reaches it, so the markup React hydrates always
-    // carries one attribute the server never sent.
     <html
       lang="ro"
       suppressHydrationWarning
       className={`${nunito.variable} ${baloo.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-canvas text-ink-900">
-        {/* Before the header is parsed, so it draws the controls of whoever was
-            here last instead of a placeholder that changes size. */}
         <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
-        {/* Who runs the site and how to search it. Everything else that
-            describes a page refers back to these by id rather than repeating
-            them. */}
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
         <SwrProvider>
@@ -157,7 +124,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 {children}
               </div>
               <SiteFooter />
-              {/* <DevRoleSwitcher /> */}
             </ToastProvider>
           </AuthProvider>
         </SwrProvider>

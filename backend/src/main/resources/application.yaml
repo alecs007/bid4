@@ -3,13 +3,6 @@ spring:
     name: bid4-backend
 
   config:
-    # The repo-root .env is already KEY=VALUE, which is properties syntax, so
-    # running from an IDE picks up the same secrets compose uses.
-    #
-    # Both paths are tried because the working directory differs by launcher:
-    # IntelliJ runs from the repository root, `mvnw spring-boot:run` from
-    # backend/. Optional, so a container — where the environment supplies these
-    # instead — skips both without complaint.
     import:
       - optional:file:./.env[.properties]
       - optional:file:../.env[.properties]
@@ -27,7 +20,6 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # Flyway owns the schema. Hibernate may only check that it agrees.
       ddl-auto: validate
     properties:
       hibernate:
@@ -47,19 +39,12 @@ spring:
 
   data:
     redis:
-      # Redis is a rate-limit bucket store and nothing else here. Left on, Spring
-      # Data scans every JPA repository looking for Redis ones and logs a warning
-      # per repository explaining how to make it one — fourteen lines of advice
-      # about a feature this application does not use.
       repositories:
         enabled: false
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       timeout: 2s
-      # No connection pool on purpose: Lettuce is thread-safe and multiplexes
-      # every command over one connection, so a pool would add commons-pool2 and
-      # overhead for nothing.
       lettuce:
         shutdown-timeout: 200ms
 
@@ -74,24 +59,16 @@ spring:
           auth: ${MAIL_AUTH:false}
           starttls:
             enable: ${MAIL_STARTTLS:false}
-        # A hung mail server must not hold a request thread open.
         transport:
           protocol: smtp
 
   jackson:
-    # Optional fields in the TypeScript types are absent rather than null.
     default-property-inclusion: non_null
     datatype:
       datetime:
-        # Instants as ISO-8601 strings, not epoch numbers: Date.parse on the
-        # other side expects a string. Jackson 3 already defaults this way; it
-        # is stated so an upgrade cannot quietly change the wire format.
         write-dates-as-timestamps: false
     factory:
       constraints:
-        # Parser ceilings. A small body can still be expensive to parse — deep
-        # nesting and enormous strings are the cheap way to burn CPU on an
-        # endpoint that has not even authenticated yet.
         read:
           max-document-length: 1048576
           max-nesting-depth: 32
@@ -106,29 +83,13 @@ spring:
 
   threads:
     virtual:
-      # Off deliberately. A virtual thread pins its carrier inside synchronized,
-      # and the Postgres driver synchronizes heavily, so this needs a benchmark
-      # before it is worth turning on.
       enabled: false
 
 server:
   port: 8080
   shutdown: graceful
-  # Behind a proxy that terminates TLS the application otherwise sees plain HTTP,
-  # and every decision keyed on that — the Secure flag on the refresh cookie, the
-  # scheme in a redirect — is made on the wrong information.
-  #
-  # `native` rather than `framework`, because these headers are written by
-  # whoever sent the request. Boot's `framework` strategy rewrites the client
-  # address from X-Forwarded-For unconditionally, so anyone could hand the rate
-  # limiter a new address per request and guess passwords for as long as they
-  # liked. Tomcat's valve only listens to a peer that matches internal-proxies,
-  # which is the difference between a proxy speaking for a client and a client
-  # speaking for itself.
   forward-headers-strategy: native
   error:
-    # An error response says what went wrong in our own words, never in the
-    # framework's: stack traces and binding details are a map of the internals.
     include-message: never
     include-binding-errors: never
     include-stacktrace: never
@@ -136,9 +97,6 @@ server:
   max-http-request-header-size: 16KB
   tomcat:
     remoteip:
-      # The peers allowed to speak for someone else: loopback and the private
-      # ranges a load balancer sits in. Narrow this to the balancer's own address
-      # if the deployment ever shares its network with anything untrusted.
       internal-proxies: '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|0:0:0:0:0:0:0:1|::1'
     threads:
       max: 200
@@ -151,14 +109,9 @@ server:
 
 management:
   server:
-    # Actuator on its own port, which compose does not publish. Health and
-    # metrics are then unreachable from outside the host by construction rather
-    # than by remembering to secure a path.
     port: 8081
   endpoints:
     access:
-      # A ceiling, not a default: no endpoint can be raised past read-only by a
-      # later property, an env var or a careless profile.
       default: none
       max-permitted: read-only
     web:
@@ -187,25 +140,15 @@ management:
 
 bid4:
   jwt:
-    # HMAC-SHA256. The application refuses to start if this is short or absent.
     secret: ${BID4_JWT_SECRET:}
     issuer: bid4
     access-token-ttl: 15m
-    # One token's life, reset on every exchange — this is what keeps an active
-    # session from asking for a password every month.
     refresh-token-ttl: 30d
-    # The chain's life, measured from its first token and never reset. It is the
-    # only thing that eventually forces a real sign-in, and the only ceiling on
-    # a stolen token whose holder keeps spending it.
     absolute-refresh-ttl: 90d
-    # How long an expired row is kept before the nightly sweep removes it. The
-    # token cannot be revived; what is left is the trail of when and from where.
     refresh-token-retention: 30d
   cors:
     allowed-origins: ${BID4_CORS_ORIGINS:http://localhost:3000}
   cookies:
-    # Overridden to false only by the dev profile, where there is no TLS and the
-    # browser would refuse a Secure cookie over plain http.
     require-secure: true
   storage:
     endpoint: http://${MINIO_HOST:localhost}:${MINIO_PORT:9000}
@@ -213,34 +156,22 @@ bid4:
     secret-key: ${MINIO_ROOT_PASSWORD:}
     public-bucket: ${MINIO_BUCKET_PUBLIC:bid4-public}
     private-bucket: ${MINIO_BUCKET_PRIVATE:bid4-private}
-    # Imagery is linked from pages that stay open; identity documents are not.
     public-url-ttl: 12h
     private-url-ttl: 5m
   security:
-    # Brute force: the durable per-account half. Redis counts per IP in parallel.
     max-failed-logins: 5
     lockout-duration: 15m
   mail:
     from: ${MAIL_FROM:bid4 <noreply@bid4.ro>}
-    # Where a verification link points. The backend never renders HTML, so the
-    # link lands on the web app, which then calls the API.
     web-base-url: ${BID4_WEB_BASE_URL:http://localhost:3000}
   verification:
     token-ttl: 24h
-    # A new link invalidates the previous one, so a mailbox cannot accumulate
-    # working tokens.
     resend-cooldown: 2m
   rate-limit:
     enabled: true
-    # Requests per window, per caller. Anonymous callers are keyed by IP,
-    # authenticated ones by user id, so one shared office address cannot
-    # exhaust everyone else's budget.
     auth:
       capacity: 10
       window: 15m
-    # Generous and fail-open: a refresh token cannot be guessed, and refusing the
-    # exchange logs people out rather than protecting them. Still bounded, so a
-    # loop cannot hammer it.
     refresh:
       capacity: 60
       window: 5m

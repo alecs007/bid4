@@ -5,15 +5,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Always visible rather than on hover: a hint nobody can see on a touchscreen is
- * none.
- *
- * <p>Hover is bound to mice only. A tap synthesises `mouseenter` before it sends
- * `click`, so with a plain hover handler the first tap opened the hint and the
- * click that followed toggled it straight back shut — it took two taps to see
- * anything, and looked like the dot was broken.
- */
 export function InfoHint({
   label,
   children,

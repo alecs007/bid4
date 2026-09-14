@@ -87,9 +87,6 @@ export function ParcelIcon({ className, ...props }: IconProps) {
 
 export const Icons = {
   auction: LuHandCoins,
-  // The same glyph as `cause`, and deliberately: giving and the thing given to
-  // are one idea here, and two drawings for it only asked the reader which was
-  // which.
   donation: LuHeartHandshake,
   cause: LuHeartHandshake,
   parcel: ParcelIcon,
@@ -116,7 +113,6 @@ export const Icons = {
   info: LuInfo,
   help: LuCircleHelp,
   notification: LuBell,
-  /** A letter, not a tray: what arrives here is a message from a person. */
   inbox: LuMail,
 
   add: LuPlus,
@@ -142,7 +138,6 @@ export const Icons = {
 
   settings: LuSettings,
   account: LuUser,
-  /** The signed-out stand-in for an avatar: rounded already, so it needs no ring. */
   accountRound: LuUserRound,
   menu: LuMenu,
   roleSwitch: LuUserCog,

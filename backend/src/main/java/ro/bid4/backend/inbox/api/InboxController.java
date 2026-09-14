@@ -31,17 +31,9 @@ import ro.bid4.backend.inbox.service.NotificationService;
 import ro.bid4.backend.inbox.service.StreamTickets;
 import ro.bid4.backend.security.web.Viewers;
 
-/**
- * The inbox, over HTTP.
- *
- * <p>Nothing here answers an anonymous caller, and nothing here takes a user id. A thread is opened
- * from a listing and reached by its own id, and the service decides whether the caller has any
- * business with it — this class only carries the token through.
- */
 @RestController
 @RequestMapping("/inbox")
 public class InboxController {
-
   private final InboxService inbox;
   private final NotificationService notifications;
   private final InboxEvents events;
@@ -58,8 +50,6 @@ public class InboxController {
     this.tickets = tickets;
   }
 
-  // -- Mesaje ------------------------------------------------------------------------------------
-
   @GetMapping("/conversations")
   CursorPage<ConversationSummary> conversations(
       @RequestParam(required = false) String cursor,
@@ -68,13 +58,6 @@ public class InboxController {
     return inbox.list(cursor, archived, Viewers.from(jwt));
   }
 
-  /**
-   * Opens the thread about a listing, or hands back the one already there.
-   *
-   * <p>200 either way rather than 201 on the first call: the caller asked for the conversation
-   * about a listing, and whether this request happened to be the one that created the row is not
-   * something they should have to branch on.
-   */
   @PostMapping("/conversations")
   ThreadResponse open(
       @Valid @RequestBody OpenThreadRequest request, @AuthenticationPrincipal Jwt jwt) {
@@ -86,7 +69,6 @@ public class InboxController {
     return inbox.thread(id, Viewers.from(jwt));
   }
 
-  /** Older items, for a thread being scrolled back through. */
   @GetMapping("/conversations/{id}/items")
   CursorPage<ThreadItemResponse> items(
       @PathVariable UUID id,
@@ -134,8 +116,6 @@ public class InboxController {
     return ResponseEntity.noContent().build();
   }
 
-  // -- Notificări --------------------------------------------------------------------------------
-
   @GetMapping("/notifications")
   CursorPage<NotificationResponse> notifications(
       @RequestParam(required = false) String cursor, @AuthenticationPrincipal Jwt jwt) {
@@ -154,38 +134,21 @@ public class InboxController {
     return ResponseEntity.noContent().build();
   }
 
-  // -- The badge, and the nudge ------------------------------------------------------------------
-
   @GetMapping("/unread")
   UnreadCounts unread(@AuthenticationPrincipal Jwt jwt) {
     return inbox.unread(Viewers.from(jwt));
   }
 
-  /**
-   * Trades the bearer token for something a stream can carry.
-   *
-   * <p>Authenticated the ordinary way. What comes back is single-use and lasts thirty seconds — see
-   * {@code StreamTickets} for why the access token itself does not go in a query string.
-   */
   @PostMapping("/stream/ticket")
   StreamTicketResponse streamTicket(@AuthenticationPrincipal Jwt jwt) {
     Viewer viewer = Viewers.from(jwt);
     return new StreamTicketResponse(tickets.issue(viewer.id()));
   }
 
-  /**
-   * One long-lived response per tab, carrying nothing but "go and look".
-   *
-   * <p>Open to the filter chain and closed by the ticket, because {@code EventSource} sends no
-   * Authorization header. The ticket is spent here and nowhere after: the connection belongs to
-   * whoever opened it for as long as it lasts, and every event it carries is a pointer to a fetch
-   * that will authorise itself properly. Nothing readable travels down this pipe.
-   */
   @GetMapping("/stream")
   SseEmitter stream(@RequestParam String ticket) {
     return events.subscribe(tickets.spend(ticket));
   }
 
-  /** Deliberately its own type: a bare string body is a shape nothing can be added to. */
   public record StreamTicketResponse(String ticket) {}
 }

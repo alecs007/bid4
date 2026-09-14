@@ -13,23 +13,15 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Every attempt to sign in, successful or not.
- *
- * <p>Redis throttles in real time; this is the durable record. It is what answers "was this account
- * targeted, from where, and for how long", which a counter that resets cannot.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "login_attempts")
 public class LoginAttempt {
-
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  /** Not a foreign key: the interesting rows target addresses that do not exist. */
   @Column(name = "email_attempted", nullable = false)
   private String emailAttempted;
 

@@ -15,19 +15,11 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * One emailed confirmation link, stored as a SHA-256 hash.
- *
- * <p>The link is shown to its owner once, in their inbox, and is never recoverable from here — so a
- * dump of this table cannot verify anyone. {@code email} pins the token to the address it was
- * issued for: if the account changes address before the link is used, the token no longer matches.
- */
 @Getter
 @Setter
 @Entity
 @Table(name = "email_verification_tokens")
 public class EmailVerificationToken {
-
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)

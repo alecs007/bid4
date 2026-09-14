@@ -10,23 +10,8 @@ import { formatMoney, percentOf } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * The frame, shared with the skeleton below so the two cannot drift. A
- * placeholder that is a different height from the thing it stands in for makes
- * the page jump when the data lands, which is the one job it had.
- */
 export const ROW = "rounded-3xl bg-white ring-1 ring-edge p-3 sm:p-4";
 
-/**
- * Columns, declared, rather than fixed widths that hold their size and end up on
- * top of each other. The item takes what is left — `minmax(0,1fr)` is what lets
- * it shrink instead of pushing the cause block into the buttons — and the two
- * blocks on the right are sized by their content.
- *
- * <p>Only from `lg`. Between the phone and that there is not enough width for
- * four columns without the title becoming a word and a half, so everything
- * stacks instead.
- */
 export const GRID =
   "lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-5 lg:gap-y-0";
 
@@ -35,13 +20,9 @@ export const THUMB = "aspect-square w-20 shrink-0 rounded-2xl sm:w-24";
 export interface RowStat {
   label: string;
   value: string;
-  /** The figure that matters most in this row, given its state. */
   emphasis?: boolean;
-  /** Green when the number is in your favour, red when it is not. */
   tone?: "positive" | "negative";
-  /** A word on why this number is what it is, e.g. that it is your own offer. */
   note?: string;
-  /** Something to do with this figure, rendered beside it. */
   action?: ReactNode;
 }
 
@@ -66,8 +47,6 @@ export function AuctionRow({
         <div className="flex items-start gap-3 sm:gap-4 lg:contents">
           <Link
             href={`/licitatii/${auction.id}`}
-            // Decorative twice over: the title beside it is the same link, and
-            // the photo says nothing a screen reader needs repeated.
             tabIndex={-1}
             aria-hidden="true"
             className={cn(THUMB, "relative overflow-hidden bg-ink-100")}
@@ -85,7 +64,6 @@ export function AuctionRow({
             ) : null}
           </Link>
 
-          {/* min-w-0 is what lets the title truncate rather than stretch the row. */}
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             {badges ? <div className="flex flex-wrap items-center gap-1.5">{badges}</div> : null}
             <Link
@@ -99,9 +77,6 @@ export function AuctionRow({
           </div>
         </div>
 
-        {/* The figures and the cause sit together on the right, because they are
-            the two things being compared: what this costs, and what it gives.
-            Below `lg` they each take a row of their own. */}
         {stats?.length ? (
           <div className="mt-3 lg:mt-0">
             <Stats stats={stats} />
@@ -112,22 +87,11 @@ export function AuctionRow({
         </div>
       </div>
 
-      {/* Actions on a line of their own, at every width. Beside the item they
-          crowd the title; hidden behind a menu they are a guess. */}
       {actions ? <div className="mt-3 border-t border-line pt-2.5">{actions}</div> : null}
     </li>
   );
 }
 
-/**
- * The figures, labelled.
- *
- * <p>Which ones appear is the caller's business, because it depends on what the
- * row is for and what state it is in: an unreviewed listing has only an asking
- * price, a running one has an asking price and what it has reached, and a
- * bidder cares about their own offer against the current one. A number with no
- * label above it is a number somebody has to guess at.
- */
 export function Stats({ stats }: { stats: RowStat[] }) {
   return (
     <dl className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
@@ -166,17 +130,6 @@ export function Stats({ stats }: { stats: RowStat[] }) {
   );
 }
 
-/**
- * What this listing is actually for.
- *
- * <p>The donation is the reason the platform exists, and a bare percentage is a
- * number about nothing: this carries the cause's picture, its name, and what the
- * current price would hand over. The figure moves with the bidding.
- *
- * <p>Plain rather than a green panel. On a list where every row has one, a block
- * of colour per row is stripes, and the layout stops reading as a list — the
- * amount alone is coloured, which is the part worth the emphasis.
- */
 function CauseBlock({ auction }: { auction: AuctionDetail }) {
   const share = percentOf(auction.currentPrice, auction.donationPercent);
 
@@ -215,11 +168,6 @@ function CauseBlock({ auction }: { auction: AuctionDetail }) {
   );
 }
 
-/**
- * The same row with its content removed. Built from the same class constants, so
- * the placeholder is the height of the row it replaces by construction rather
- * than by somebody remembering to keep two numbers in step.
- */
 export function AuctionRowSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <ul className="flex flex-col gap-2.5" aria-hidden="true">
