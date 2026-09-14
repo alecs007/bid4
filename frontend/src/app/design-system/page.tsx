@@ -26,6 +26,7 @@ import {
   Stat,
   StatInline,
   StatusBadge,
+  UnreadBadge,
 } from "@/components/ui";
 import {
   AUCTION_STATUS,
@@ -326,6 +327,38 @@ export default function DesignSystemPage() {
                   ))}
                   {Object.entries(USER_ROLE).map(([key, meta]) => (
                     <StatusBadge key={key} meta={meta} variant="solid" size="sm" />
+                  ))}
+                </div>
+              </Card>
+              <Card>
+                <CardHeader
+                  title="Necitite"
+                  subtitle="Un disc pentru o cifră, o pastilă abia de la două."
+                />
+                {/* Here so the centring can be checked without a session: every
+                    other place a count appears is behind one. */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {[1, 7, 12, 99, 128].map((count) => (
+                    <UnreadBadge
+                      key={count}
+                      count={count}
+                      tone="bg-primary-600 text-white"
+                    />
+                  ))}
+                  {[1, 7, 12].map((count) => (
+                    <span
+                      key={`xs-${count}`}
+                      className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-ink-50 text-ink-700"
+                    >
+                      <Icons.inbox aria-hidden="true" className="h-5 w-5" />
+                      <UnreadBadge
+                        count={count}
+                        size="xs"
+                        max={9}
+                        tone="bg-danger-600 text-white ring-2 ring-white"
+                        className="absolute top-1 right-1"
+                      />
+                    </span>
                   ))}
                 </div>
               </Card>

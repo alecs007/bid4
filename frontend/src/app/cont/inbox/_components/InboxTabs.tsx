@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { UnreadBadge } from "@/components/ui";
 import { getUnreadCounts } from "@/lib/api/inbox";
 import { useApi } from "@/lib/hooks/useApi";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -61,18 +62,13 @@ export function InboxTabs({ className }: { className?: string }) {
             )}
           >
             {tab.label}
-            {count > 0 ? (
-              <span
-                className={cn(
-                  "numeric inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold",
-                  active
-                    ? "bg-primary-600 text-white"
-                    : "bg-ink-100 text-ink-700",
-                )}
-              >
-                {count > 99 ? "99+" : count}
-              </span>
-            ) : null}
+            <UnreadBadge
+              count={count}
+              max={99}
+              tone={
+                active ? "bg-primary-600 text-white" : "bg-ink-100 text-ink-700"
+              }
+            />
 
             {/* On the strip's own bottom edge, so it reads as part of the rule
                 rather than as a line floating above it. */}

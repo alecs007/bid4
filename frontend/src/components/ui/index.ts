@@ -37,6 +37,8 @@ export { SearchField } from "./SearchField";
 export { Select } from "./Select";
 export type { SelectOption } from "./Select";
 
+export { UnreadBadge } from "./UnreadBadge";
+export type { UnreadBadgeSize } from "./UnreadBadge";
 export { ProgressBar, GoalProgress } from "./Progress";
 export { Avatar, AvatarStack } from "./Avatar";
 export type { AvatarSize } from "./Avatar";

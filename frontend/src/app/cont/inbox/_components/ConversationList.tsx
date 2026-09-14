@@ -14,6 +14,7 @@ import {
   LoadMore,
   rowDelay,
   Skeleton,
+  UnreadBadge,
 } from "@/components/ui";
 import { listConversations } from "@/lib/api/inbox";
 import { lastOpenThread, useInboxRevision } from "@/lib/api/inbox-sync";
@@ -222,15 +223,11 @@ function Row({
             </span>
           </span>
           {unread ? (
-            <span
+            <UnreadBadge
               aria-label={`${conversation.unreadCount} necitite`}
-              // A disc, not a lozenge: h-5 with a matching min-w-5 and the text
-              // centred in it, so one digit sits in a circle and only a third
-              // digit is allowed to stretch it.
-              className="numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary-600 px-1 text-[11px] leading-none font-extrabold text-white"
-            >
-              {conversation.unreadCount}
-            </span>
+              count={conversation.unreadCount}
+              tone="bg-primary-600 text-white"
+            />
           ) : null}
         </span>
       </span>

@@ -13,6 +13,7 @@ import {
   Illustration,
   Logo,
   Skeleton,
+  UnreadBadge,
 } from "@/components/ui";
 import { AUCTION_CATEGORIES } from "@/lib/config";
 import { listMyAuctions } from "@/lib/api/auctions";
@@ -372,23 +373,22 @@ function InboxMark({
       className={cn(iconButton(active, "h-9 w-9"), "relative")}
     >
       <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-      {count > 0 ? (
-        // In the button's corner, not over its middle and not outside its edge.
-        // The swap around this mark clips what leaves it — that is what makes
-        // the width animate — so a badge hung off the corner comes back cut in
-        // half.
-        //
-        // Inset by 4px rather than 2: the white ring is drawn outside the
-        // badge, so at 2px it landed exactly on the button's edge and the mark
-        // read as wider on the side that carried a number. At 4px the ring
-        // stays inside, and a counted mark occupies what an uncounted one does.
-        <span
-          aria-hidden="true"
-          className="numeric absolute top-1 right-1 inline-flex h-3 min-w-3 items-center justify-center rounded-full bg-danger-600 px-0.5 text-[9px] leading-none font-extrabold text-white ring-2 ring-white"
-        >
-          {count > 9 ? "9+" : count}
-        </span>
-      ) : null}
+      {/* In the button's corner, not over its middle and not outside its edge.
+          The swap around this mark clips what leaves it — that is what makes the
+          width animate — so a badge hung off the corner comes back cut in half.
+
+          Inset by 4px rather than 2: the white ring is drawn outside the badge,
+          so at 2px it landed exactly on the button's edge and the mark read as
+          wider on the side that carried a number. At 4px the ring stays inside,
+          and a counted mark occupies what an uncounted one does. */}
+      <UnreadBadge
+        aria-hidden="true"
+        count={count}
+        size="xs"
+        max={9}
+        tone="bg-danger-600 text-white ring-2 ring-white"
+        className="absolute top-1 right-1"
+      />
     </Link>
   );
 }
