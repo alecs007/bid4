@@ -41,11 +41,11 @@ const TOPICS: {
       },
       {
         q: "Îmi pot retrage oferta?",
-        a: "Da, atât timp cât vânzătorul nu a acceptat-o încă. O retragi din pagina licitației, fără să dai socoteală nimănui.",
+        a: "Da, cât timp vânzătorul nu a acceptat-o. O modifici sau o retragi din conversația anunțului ori din pagina licitației.",
       },
       {
         q: "Am câștigat. Ce urmează?",
-        a: "Plătești în contul de garanție, vânzătorul expediază, iar tu confirmi că ai primit coletul. Abia atunci pleacă banii mai departe.",
+        a: "Alegi livrarea și plătești direct din conversația cu vânzătorul. Suma este păstrată de bid4 până la finalizarea comenzii, apoi este eliberată vânzătorului și cauzei.",
       },
     ],
   },

@@ -1,6 +1,5 @@
 package ro.bid4.backend.catalog.service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.bid4.backend.catalog.api.dto.AuctionResponse;
 import ro.bid4.backend.catalog.domain.Auction;
-import ro.bid4.backend.catalog.domain.AuctionStatus;
 import ro.bid4.backend.catalog.domain.Bid;
 import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
@@ -27,25 +25,26 @@ public class OfferService {
   private final BidRepository bids;
   private final AuctionMapper mapper;
   private final OrderService orders;
+  private final Standings standings;
 
   public OfferService(
-      AuctionRepository auctions, BidRepository bids, AuctionMapper mapper, OrderService orders) {
+      AuctionRepository auctions,
+      BidRepository bids,
+      AuctionMapper mapper,
+      OrderService orders,
+      Standings standings) {
     this.auctions = auctions;
     this.bids = bids;
     this.mapper = mapper;
     this.orders = orders;
+    this.standings = standings;
   }
 
   @Transactional
   public AuctionResponse accept(UUID auctionId, UUID bidId, Viewer seller) {
     Auction auction = lockOwned(auctionId, seller);
 
-    if (auction.getStatus() == AuctionStatus.RESERVED) {
-      throw new ApiException(
-          ErrorCode.CONFLICT,
-          "Ai deja o ofertă acceptată. Anuleaz-o mai întâi, apoi poți accepta alta.");
-    }
-    if (auction.getStatus() != AuctionStatus.LIVE) {
+    if (!auction.isOpenForBids()) {
       throw new ApiException(ErrorCode.CONFLICT, "Anunțul nu mai acceptă oferte.");
     }
 
@@ -54,78 +53,27 @@ public class OfferService {
             .filter(bid -> bid.getAuctionId().equals(auctionId))
             .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Oferta nu există."));
 
-    if (offer.getStatus() == BidStatus.LOST) {
-      throw new ApiException(ErrorCode.CONFLICT, "Oferta a fost retrasă.");
+    if (offer.getStatus() == BidStatus.LOST || offer.getStatus() == BidStatus.WON) {
+      throw new ApiException(ErrorCode.CONFLICT, "Oferta nu mai este activă.");
     }
 
-    Instant now = Instant.now();
-    auction.setStatus(AuctionStatus.RESERVED);
-    auction.setWinnerId(offer.getBidderId());
-    auction.setAcceptedBidId(offer.getId());
-    auction.setAcceptedAt(now);
-    auction.setUpdatedAt(now);
-
-    bids.markStatus(offer.getId(), BidStatus.ACCEPTED);
+    if (offer.getStatus() != BidStatus.ACCEPTED) {
+      offer.setStatus(BidStatus.ACCEPTED);
+      bids.saveAndFlush(offer);
+      standings.rebalance(auction);
+      auction.setUpdatedAt(Instant.now());
+      auctions.save(auction);
+    }
 
     orders.open(auction, offer.getBidderId(), offer.getAmount());
 
     log.info(
-        "Auction {} reserved for {} at {} bani", auctionId, offer.getBidderId(), offer.getAmount());
-    return mapper.toResponse(auctions.save(auction), seller.id());
-  }
-
-  @Transactional
-  public AuctionResponse release(UUID auctionId, Viewer seller) {
-    Auction auction = lockOwned(auctionId, seller);
-
-    if (auction.getStatus() == AuctionStatus.SOLD) {
-      throw new ApiException(ErrorCode.CONFLICT, "Comanda este deja plătită.");
-    }
-    if (auction.getStatus() != AuctionStatus.RESERVED) {
-      throw new ApiException(ErrorCode.CONFLICT, "Anunțul nu are o ofertă acceptată.");
-    }
-
-    Instant now = Instant.now();
-
-    auction.setStatus(AuctionStatus.LIVE);
-    auction.setWinnerId(null);
-    auction.setAcceptedBidId(null);
-    auction.setAcceptedAt(null);
-    auction.setUpdatedAt(now);
-
-    bids.demoteAllFor(auctionId, BidStatus.OUTBID);
-    bids.findFirstByAuctionIdOrderByAmountDescCreatedAtAsc(auctionId)
-        .ifPresent(top -> bids.markStatus(top.getId(), BidStatus.WINNING));
-
-    log.info("Auction {} released back to the room by its seller", auctionId);
-    return mapper.toResponse(auctions.save(auction), seller.id());
-  }
-
-  @Transactional
-  public Auction markPaid(UUID auctionId) {
-    Auction auction =
-        auctions
-            .findByIdForUpdate(auctionId)
-            .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Anunțul nu există."));
-
-    if (auction.getStatus() != AuctionStatus.RESERVED) {
-      throw new ApiException(ErrorCode.CONFLICT, "Anunțul nu așteaptă o plată.");
-    }
-
-    Instant now = Instant.now();
-    UUID acceptedBidId = auction.getAcceptedBidId();
-
-    bids.demoteAllFor(auctionId, BidStatus.LOST);
-    if (acceptedBidId != null) {
-      bids.markStatus(acceptedBidId, BidStatus.WON);
-    }
-
-    auction.setStatus(AuctionStatus.SOLD);
-    auction.setDispatchDeadline(now.plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)));
-    auction.setUpdatedAt(now);
-
-    log.info("Auction {} paid; dispatch due by {}", auctionId, auction.getDispatchDeadline());
-    return auctions.save(auction);
+        "Offer {} on {} accepted for {} at {} bani",
+        offer.getId(),
+        auctionId,
+        offer.getBidderId(),
+        offer.getAmount());
+    return mapper.toResponse(auction, seller.id());
   }
 
   private Auction lockOwned(UUID auctionId, Viewer seller) {

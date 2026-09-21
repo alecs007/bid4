@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { AuctionGrid } from "@/components/auctions/AuctionCard";
 import { CauseGrid } from "@/components/causes/CauseCard";
-import { Icons } from "@/components/icons";
 import {
   Avatar,
   Breadcrumbs,
@@ -15,6 +14,7 @@ import {
   SegmentedControl,
   SkeletonGrid,
   SkeletonProfile,
+  StarRating,
   StatTile,
   StatTiles,
   AccountTypeTag,
@@ -26,6 +26,7 @@ import { PAGINATION } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 import { useApi, useApiPages, useWindowedList } from "@/lib/hooks/useApi";
 import { formatMemberSince } from "@/lib/utils/date";
+import { countRo } from "@/lib/utils/plural";
 
 type Tab = "listings" | "causes";
 
@@ -96,67 +97,73 @@ export function ProfileView({ username }: { username: string }) {
         items={[{ label: "Acasă", href: "/" }, { label: user.displayName }]}
       />
 
-      <header className="flex flex-col gap-5 rounded-3xl bg-white ring-1 ring-edge p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-        <Avatar
-          name={user.displayName}
-          src={user.avatarUrl}
-          accountType={user.accountType}
-          size="xl"
-          className="shrink-0"
-        />
+      <header className="flex flex-col gap-5 rounded-3xl bg-white p-5 ring-1 ring-edge sm:p-6 lg:flex-row lg:items-center lg:gap-8">
+        <div className="flex min-w-0 flex-1 flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
+          <Avatar
+            name={user.displayName}
+            src={user.avatarUrl}
+            accountType={user.accountType}
+            size="xl"
+            className="shrink-0"
+          />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
-              {user.displayName}
-            </h1>
-            <AccountTypeTag user={user} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
+                {user.displayName}
+              </h1>
+              <AccountTypeTag user={user} />
+            </div>
+
+            {isOrganization &&
+            user.orgLegalName &&
+            user.orgLegalName !== user.displayName ? (
+              <p className="mt-1 text-ink-600">{user.orgLegalName}</p>
+            ) : null}
+
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
+              {user.ratingCount > 0 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <StarRating value={user.rating} />
+                  <span className="numeric font-bold text-ink-800">
+                    {user.rating.toFixed(1).replace(".", ",")}
+                  </span>
+                  din {countRo(user.ratingCount, "evaluare", "evaluări")}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <StarRating value={0} />
+                  Nicio evaluare încă
+                </span>
+              )}
+              {user.city ? <span>{user.city}</span> : null}
+              <span>Membru din {formatMemberSince(user.createdAt)}</span>
+            </p>
+
+            {user.bio ? (
+              <p className="mt-3 max-w-2xl text-ink-700">{user.bio}</p>
+            ) : null}
           </div>
-
-          {isOrganization &&
-          user.orgLegalName &&
-          user.orgLegalName !== user.displayName ? (
-            <p className="mt-1 text-ink-600">{user.orgLegalName}</p>
-          ) : null}
-
-          <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
-            <span className="inline-flex items-center gap-1.5">
-              <Icons.rating
-                aria-hidden="true"
-                className="h-4 w-4 text-sun-500"
-              />
-              <span className="numeric font-bold text-ink-800">
-                {user.rating.toFixed(1).replace(".", ",")}
-              </span>
-              din {user.ratingCount} evaluări
-            </span>
-            {user.city ? <span>{user.city}</span> : null}
-            <span>Membru din {formatMemberSince(user.createdAt)}</span>
-          </p>
-
-          {user.bio ? (
-            <p className="mt-3 max-w-2xl text-ink-700">{user.bio}</p>
-          ) : null}
         </div>
-      </header>
 
-      <StatTiles>
-        <StatTile
-          illustration="amount-donated"
-          value={formatMoney(user.totalRaised, { compact: true })}
-          label="donații"
-        />
-        <StatTile
-          illustration="active-auctions"
-          value={String(profile.activeAuctionCount)}
-          label="licitații active"
-        />
-        <StatTile
-          illustration="completed-sales"
-          value={String(profile.completedSaleCount)}
-          label="vânzări încheiate"
-        />
-      </StatTiles>
+        <StatTiles className="w-full shrink-0 lg:w-[22rem]">
+          <StatTile
+            illustration="amount-donated"
+            value={formatMoney(user.totalRaised, { compact: true })}
+            label="donații"
+          />
+          <StatTile
+            illustration="active-auctions"
+            value={String(profile.activeAuctionCount)}
+            label="licitații active"
+          />
+          <StatTile
+            illustration="completed-sales"
+            value={String(profile.completedSaleCount)}
+            label="vânzări încheiate"
+          />
+        </StatTiles>
+      </header>
 
       {settled && !hasListings && !hasCauses ? null : (
         <section>

@@ -104,11 +104,6 @@ public class AuctionController {
     return offers.accept(id, request.bidId(), Viewers.from(jwt));
   }
 
-  @DeleteMapping("/{id}/accept")
-  AuctionResponse releaseOffer(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-    return offers.release(id, Viewers.from(jwt));
-  }
-
   @DeleteMapping("/{id}/bids/mine")
   RetractResponse retractBid(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
     return new RetractResponse(bidding.retract(id, Viewers.from(jwt)));

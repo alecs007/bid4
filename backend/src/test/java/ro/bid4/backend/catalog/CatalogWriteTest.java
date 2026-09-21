@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -23,6 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import ro.bid4.backend.TestcontainersConfiguration;
+import ro.bid4.backend.catalog.api.dto.AuctionResponse;
 import ro.bid4.backend.catalog.api.dto.PlaceBidResponse;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.catalog.domain.AuctionStatus;
@@ -51,6 +53,10 @@ import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.inbox.api.dto.ThreadItemResponse;
 import ro.bid4.backend.inbox.domain.ThreadItemKind;
 import ro.bid4.backend.inbox.service.InboxService;
+import ro.bid4.backend.orders.domain.Order;
+import ro.bid4.backend.orders.domain.OrderStatus;
+import ro.bid4.backend.orders.repo.OrderRepository;
+import ro.bid4.backend.orders.service.OrderService;
 import ro.bid4.backend.orders.service.Terms;
 
 @SpringBootTest
@@ -69,10 +75,12 @@ class CatalogWriteTest {
   @Autowired private DeliveryMethodRepository deliveryMethods;
   @Autowired private PaymentMethodRepository paymentMethods;
   @Autowired private InboxService inbox;
+  @Autowired private OrderService sales;
+  @Autowired private OrderRepository orderRows;
 
   @Test
-  @DisplayName("An offer at or above the final price takes the item, and settles at that price")
-  void buyNowSettlesAtTheAdvertisedPrice() {
+  @DisplayName("An offer at the buy-now price is accepted at once, and the listing stays open")
+  void buyNowAcceptsTheOffer() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
@@ -81,12 +89,10 @@ class CatalogWriteTest {
         bidding.place(auction.getId(), 700 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     assertThat(result.boughtNow()).isTrue();
-    assertThat(result.auction().status()).isEqualTo(AuctionStatus.RESERVED);
-    assertThat(result.auction().winnerId()).isEqualTo(buyer.getId());
-    assertThat(result.auction().acceptedAt()).isNotNull();
-    assertThat(result.auction().currentPrice()).isEqualTo(300 * LEU);
+    assertThat(result.auction().status()).isEqualTo(AuctionStatus.LIVE);
     assertThat(result.bid().amount()).isEqualTo(300 * LEU);
     assertThat(result.bid().status()).isEqualTo(BidStatus.ACCEPTED);
+    assertThat(orderFor(auction, buyer).getStatus()).isEqualTo(OrderStatus.AWAITING_CONFIRMATION);
   }
 
   @Test
@@ -107,25 +113,8 @@ class CatalogWriteTest {
   }
 
   @Test
-  @DisplayName("Everyone else's offer is marked lost when the item is taken outright")
-  void buyNowLosesTheStandingOffers() {
-    UserAccount seller = seller();
-    UserAccount loser = bidder();
-    UserAccount winner = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
-
-    bidding.place(auction.getId(), 110 * LEU, Terms.CURRENT_VERSION, viewer(loser));
-    bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(winner));
-
-    List<Bid> history = bids.findByAuctionIdOrderByAmountDesc(auction.getId());
-    assertThat(history).hasSize(2);
-    assertThat(history.getFirst().getStatus()).isEqualTo(BidStatus.ACCEPTED);
-    assertThat(history.getLast().getStatus()).isEqualTo(BidStatus.LOST);
-  }
-
-  @Test
-  @DisplayName("The seller may take an offer that is not the highest one")
-  void anyOfferMayBeAccepted() {
+  @DisplayName("Accepting leaves the other offers standing")
+  void acceptingLeavesTheOthersStanding() {
     UserAccount seller = seller();
     UserAccount modest = bidder();
     UserAccount top = bidder();
@@ -135,66 +124,36 @@ class CatalogWriteTest {
     bidding.place(auction.getId(), 200 * LEU, Terms.CURRENT_VERSION, viewer(top));
 
     Bid lower = offerOf(auction, modest);
-    var reserved = offers.accept(auction.getId(), lower.getId(), viewer(seller));
+    var after = offers.accept(auction.getId(), lower.getId(), viewer(seller));
 
-    assertThat(reserved.status()).isEqualTo(AuctionStatus.RESERVED);
-    assertThat(reserved.winnerId()).isEqualTo(modest.getId());
-    assertThat(reserved.acceptedAt()).isNotNull();
-    assertThat(reload(auction).getAcceptedBidId()).isEqualTo(lower.getId());
+    assertThat(after.status()).isEqualTo(AuctionStatus.LIVE);
+    assertThat(after.winnerId()).isNull();
     assertThat(reloadBid(lower).getStatus()).isEqualTo(BidStatus.ACCEPTED);
     assertThat(reloadBid(offerOf(auction, top)).getStatus()).isEqualTo(BidStatus.WINNING);
+    assertThat(orderFor(auction, modest).getFinalPrice()).isEqualTo(100 * LEU);
   }
 
   @Test
-  @DisplayName("A reserved listing goes on taking offers, and the acceptance survives them")
-  void reservedKeepsTakingOffers() {
-    UserAccount seller = seller();
-    UserAccount buyer = bidder();
-    UserAccount latecomer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
-
-    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
-    Bid taken = offerOf(auction, buyer);
-    offers.accept(auction.getId(), taken.getId(), viewer(seller));
-
-    bidding.place(auction.getId(), 500 * LEU, Terms.CURRENT_VERSION, viewer(latecomer));
-
-    assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.RESERVED);
-    assertThat(reload(auction).getCurrentPrice()).isEqualTo(500 * LEU);
-    assertThat(reloadBid(taken).getStatus()).isEqualTo(BidStatus.ACCEPTED);
-    assertThat(reload(auction).getAcceptedBidId()).isEqualTo(taken.getId());
-    assertThat(reload(auction).getWinnerId()).isEqualTo(buyer.getId());
-    assertThat(reloadBid(offerOf(auction, latecomer)).getStatus()).isEqualTo(BidStatus.WINNING);
-  }
-
-  @Test
-  @DisplayName("Taking a second offer means releasing the first one first")
-  void switchingBuyersGoesThroughRelease() {
+  @DisplayName("Several offers can be accepted at once, each with its own order")
+  void severalOffersCanBeAccepted() {
     UserAccount seller = seller();
     UserAccount first = bidder();
-    UserAccount better = bidder();
+    UserAccount second = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
+    bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
     offers.accept(auction.getId(), offerOf(auction, first).getId(), viewer(seller));
-    bidding.place(auction.getId(), 500 * LEU, Terms.CURRENT_VERSION, viewer(better));
+    offers.accept(auction.getId(), offerOf(auction, second).getId(), viewer(seller));
+    offers.accept(auction.getId(), offerOf(auction, second).getId(), viewer(seller));
 
-    Bid betterOffer = offerOf(auction, better);
-    assertThatThrownBy(() -> offers.accept(auction.getId(), betterOffer.getId(), viewer(seller)))
-        .isInstanceOf(ApiException.class)
-        .hasMessageContaining("Anuleaz-o");
-
-    offers.release(auction.getId(), viewer(seller));
-    var reserved = offers.accept(auction.getId(), betterOffer.getId(), viewer(seller));
-
-    assertThat(reserved.status()).isEqualTo(AuctionStatus.RESERVED);
-    assertThat(reserved.winnerId()).isEqualTo(better.getId());
-    assertThat(reserved.acceptedAmount()).isEqualTo(500 * LEU);
+    assertThat(orderRows.findUnpaidForAuction(auction.getId())).hasSize(2);
+    assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.LIVE);
   }
 
   @Test
-  @DisplayName("An accepted offer is not the bidder's to retract")
-  void acceptedOffersCannotBeRetracted() {
+  @DisplayName("An accepted offer is not the bidder's to retract or to change")
+  void acceptedOffersAreFixed() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
@@ -205,72 +164,103 @@ class CatalogWriteTest {
     assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(buyer)))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("acceptată");
+    assertThatThrownBy(
+            () -> bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(buyer)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("acceptată");
   }
 
   @Test
-  @DisplayName("Buy-now is off the table once an offer has been accepted")
-  void buyNowIsUnavailableWhileReserved() {
+  @DisplayName("The first payment sells the item and closes every other accepted offer")
+  void theFirstPaymentSells() {
+    UserAccount seller = seller();
+    UserAccount slow = bidder();
+    UserAccount quick = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(slow));
+    bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(quick));
+    offers.accept(auction.getId(), offerOf(auction, slow).getId(), viewer(seller));
+    offers.accept(auction.getId(), offerOf(auction, quick).getId(), viewer(seller));
+
+    Order slowOrder = readyToPay(auction, slow);
+    Order quickOrder = readyToPay(auction, quick);
+    sales.markPaid(quickOrder.getId(), viewer(quick));
+
+    Auction sold = reload(auction);
+    assertThat(sold.getStatus()).isEqualTo(AuctionStatus.SOLD);
+    assertThat(sold.getWinnerId()).isEqualTo(quick.getId());
+    assertThat(sold.getDispatchDeadline())
+        .isCloseTo(
+            Instant.now().plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)),
+            within(1, ChronoUnit.MINUTES));
+    assertThat(reloadBid(offerOf(auction, quick)).getStatus()).isEqualTo(BidStatus.WON);
+    assertThat(reloadBid(offerOf(auction, slow)).getStatus()).isEqualTo(BidStatus.LOST);
+    assertThat(orderRows.findById(slowOrder.getId()).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.CANCELLED);
+
+    assertThatThrownBy(() -> sales.markPaid(slowOrder.getId(), viewer(slow)))
+        .isInstanceOf(ApiException.class);
+    assertThat(sales.settle(slowOrder).getStatus()).isEqualTo(OrderStatus.CANCELLED);
+  }
+
+  @Test
+  @DisplayName("Two payments arriving together sell the item once")
+  void concurrentPaymentsSellOnce() throws Exception {
+    UserAccount seller = seller();
+    UserAccount left = bidder();
+    UserAccount right = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(left));
+    bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(right));
+    offers.accept(auction.getId(), offerOf(auction, left).getId(), viewer(seller));
+    offers.accept(auction.getId(), offerOf(auction, right).getId(), viewer(seller));
+    Map<UserAccount, Order> ready =
+        Map.of(left, readyToPay(auction, left), right, readyToPay(auction, right));
+
+    CountDownLatch go = new CountDownLatch(1);
+    AtomicInteger paid = new AtomicInteger();
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    ready.forEach(
+        (who, order) ->
+            pool.submit(
+                () -> {
+                  try {
+                    go.await();
+                    sales.markPaid(order.getId(), viewer(who));
+                    paid.incrementAndGet();
+                  } catch (Exception ignored) {
+                  }
+                }));
+
+    go.countDown();
+    pool.shutdown();
+    assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+    assertThat(paid.get()).isEqualTo(1);
+    assertThat(
+            ready.values().stream()
+                .map(order -> orderRows.findById(order.getId()).orElseThrow().getStatus())
+                .filter(status -> status == OrderStatus.PAID_HELD))
+        .hasSize(1);
+    assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.SOLD);
+  }
+
+  @Test
+  @DisplayName("A cancelled order puts the buyer's offer back among the others")
+  void cancellingReopensTheOffer() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    UserAccount latecomer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     offers.accept(auction.getId(), offerOf(auction, buyer).getId(), viewer(seller));
 
-    var result =
-        bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(latecomer));
+    sales.cancel(orderFor(auction, buyer).getId(), null, viewer(buyer));
 
-    assertThat(result.boughtNow()).isNull();
-    assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.RESERVED);
-    assertThat(reload(auction).getWinnerId()).isEqualTo(buyer.getId());
-  }
-
-  @Test
-  @DisplayName("Releasing hands the listing back and leaves a leader behind")
-  void releaseRestoresTheLeader() {
-    UserAccount seller = seller();
-    UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
-
-    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
-    Bid only = offerOf(auction, buyer);
-    offers.accept(auction.getId(), only.getId(), viewer(seller));
-
-    var released = offers.release(auction.getId(), viewer(seller));
-
-    assertThat(released.status()).isEqualTo(AuctionStatus.LIVE);
-    assertThat(released.winnerId()).isNull();
-    assertThat(released.acceptedAt()).isNull();
-    assertThat(reload(auction).getAcceptedBidId()).isNull();
-    assertThat(reloadBid(only).getStatus()).isEqualTo(BidStatus.WINNING);
-  }
-
-  @Test
-  @DisplayName("Payment is what makes it a sale, and what starts the dispatch clock")
-  void paymentSettlesTheListing() {
-    UserAccount seller = seller();
-    UserAccount buyer = bidder();
-    UserAccount loser = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
-
-    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(loser));
-    bidding.place(auction.getId(), 200 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
-    Bid taken = offerOf(auction, buyer);
-    offers.accept(auction.getId(), taken.getId(), viewer(seller));
-
-    Auction paid = offers.markPaid(auction.getId());
-
-    assertThat(paid.getStatus()).isEqualTo(AuctionStatus.SOLD);
-    assertThat(reloadBid(taken).getStatus()).isEqualTo(BidStatus.WON);
-    assertThat(reloadBid(offerOf(auction, loser)).getStatus()).isEqualTo(BidStatus.LOST);
-    assertThat(paid.getDispatchDeadline())
-        .isCloseTo(
-            Instant.now().plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)),
-            within(1, ChronoUnit.MINUTES));
-
-    assertThatThrownBy(() -> offers.release(auction.getId(), viewer(seller)))
-        .isInstanceOf(ApiException.class);
+    assertThat(reloadBid(offerOf(auction, buyer)).getStatus()).isEqualTo(BidStatus.WINNING);
+    assertThat(reload(auction).getStatus()).isEqualTo(AuctionStatus.LIVE);
   }
 
   @Test
@@ -346,18 +336,17 @@ class CatalogWriteTest {
   }
 
   @Test
-  @DisplayName("Without a card and a delivery method there is no bidding")
-  void theGateIsEnforcedOnTheServer() {
+  @DisplayName("An offer needs no saved card and no delivery method")
+  void anOfferNeedsNothingSavedInAdvance() {
     UserAccount seller = seller();
     UserAccount unequipped = user("Fara Card", UserRole.USER);
     Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
 
-    assertThatThrownBy(
-            () ->
-                bidding.place(
-                    auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(unequipped)))
-        .isInstanceOf(ApiException.class)
-        .hasMessageContaining("card");
+    PlaceBidResponse placed =
+        bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(unequipped));
+
+    assertThat(placed.auction().bidCount()).isEqualTo(1);
+    assertThat(placed.auction().viewerBidAmount()).isEqualTo(100 * LEU);
   }
 
   @Test
@@ -395,8 +384,8 @@ class CatalogWriteTest {
   }
 
   @Test
-  @DisplayName("Someone who is not leading cannot retract")
-  void onlyTheLeaderMayRetract() {
+  @DisplayName("An offer beneath the lead can be withdrawn, and the price stays with the leader")
+  void anOfferBeneathTheLeadCanBeWithdrawn() {
     UserAccount seller = seller();
     UserAccount first = bidder();
     UserAccount second = bidder();
@@ -405,8 +394,24 @@ class CatalogWriteTest {
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
 
-    assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(first)))
-        .isInstanceOf(ApiException.class);
+    AuctionResponse after = bidding.retract(auction.getId(), viewer(first));
+
+    assertThat(after.currentPrice()).isEqualTo(150 * LEU);
+    assertThat(after.bidCount()).isEqualTo(1);
+    assertThat(bids.findByAuctionIdAndBidderId(auction.getId(), first.getId())).isEmpty();
+    assertThat(bids.findByAuctionIdAndBidderId(auction.getId(), second.getId())).isPresent();
+  }
+
+  @Test
+  @DisplayName("Someone with no offer has nothing to withdraw")
+  void withdrawingNeedsAnOffer() {
+    UserAccount seller = seller();
+    UserAccount stranger = bidder();
+    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+
+    assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(stranger)))
+        .isInstanceOf(ApiException.class)
+        .hasMessageContaining("Nu ai o ofertă activă");
   }
 
   @Test
@@ -560,6 +565,16 @@ class CatalogWriteTest {
     ThreadItemResponse card = newestEvent(auction, buyer);
     assertThat(card.eventType()).isEqualTo("OFFER_WITHDRAWN");
     assertThat(card.payload()).containsEntry("amount", String.valueOf(100 * LEU));
+  }
+
+  private Order orderFor(Auction auction, UserAccount buyer) {
+    return orderRows.findOpenForAuctionAndBuyer(auction.getId(), buyer.getId()).orElseThrow();
+  }
+
+  private Order readyToPay(Auction auction, UserAccount buyer) {
+    Order order = orderFor(auction, buyer);
+    UUID locker = deliveryMethods.findByUserIdOrderByCreatedAtAsc(buyer.getId()).getFirst().getId();
+    return sales.chooseDelivery(order.getId(), locker, viewer(buyer));
   }
 
   private Auction reload(Auction auction) {

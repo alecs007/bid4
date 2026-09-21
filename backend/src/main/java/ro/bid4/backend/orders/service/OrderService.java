@@ -10,12 +10,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.bid4.backend.billing.domain.DocumentKind;
 import ro.bid4.backend.billing.service.DocumentService;
 import ro.bid4.backend.catalog.domain.Auction;
+import ro.bid4.backend.catalog.domain.AuctionStatus;
+import ro.bid4.backend.catalog.domain.Bid;
+import ro.bid4.backend.catalog.repo.AuctionRepository;
+import ro.bid4.backend.catalog.service.CatalogRules;
+import ro.bid4.backend.catalog.service.Standings;
 import ro.bid4.backend.cause.repo.CauseRepository;
 import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.error.ErrorCode;
@@ -46,6 +53,8 @@ import ro.bid4.backend.shipping.service.Shipment;
 
 @Service
 public class OrderService {
+  private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
   private static final Duration CONFIRMATION_WINDOW = Duration.ofDays(3);
 
   private static final Duration AUTO_RELEASE_WINDOW = Duration.ofDays(3);
@@ -62,6 +71,8 @@ public class OrderService {
   private final CourierGateway courier;
   private final PaymentGateway payments;
   private final DocumentService files;
+  private final AuctionRepository auctions;
+  private final Standings standings;
 
   public OrderService(
       CauseRepository causes,
@@ -73,7 +84,9 @@ public class OrderService {
       OrderLedger books,
       CourierGateway courier,
       PaymentGateway payments,
-      DocumentService files) {
+      DocumentService files,
+      AuctionRepository auctions,
+      Standings standings) {
     this.causes = causes;
     this.agreements = agreements;
     this.orders = orders;
@@ -84,6 +97,8 @@ public class OrderService {
     this.courier = courier;
     this.payments = payments;
     this.files = files;
+    this.auctions = auctions;
+    this.standings = standings;
   }
 
   private void agree(Order order, UUID userId, AgreementKind kind) {
@@ -106,7 +121,7 @@ public class OrderService {
   @Transactional
   public Order open(Auction listing, UUID buyerId, long acceptedPrice) {
     return orders
-        .findOpenForAuction(listing.getId())
+        .findOpenForAuctionAndBuyer(listing.getId(), buyerId)
         .orElseGet(() -> create(listing, buyerId, acceptedPrice));
   }
 
@@ -188,6 +203,7 @@ public class OrderService {
     Order order = load(orderId);
     requireBuyer(order, viewer);
     requireStatus(order, OrderStatus.AWAITING_PAYMENT, OrderStatus.PAYMENT_FAILED);
+    requireStillForSale(lockListing(order));
 
     CheckoutSession session =
         payments.open(
@@ -212,11 +228,30 @@ public class OrderService {
   public record Settlement(Order order, String redirectUrl) {}
 
   @Transactional
-  public Order settle(Order order) {
+  public Order settle(Order settled) {
+    Auction listing = lockListing(settled);
+    Order order = load(settled.getId());
     if (order.getStatus() == OrderStatus.PAID_HELD) {
       return order;
     }
+    if (order.getStatus() == OrderStatus.CANCELLED) {
+      log.warn(
+          "Payment {} arrived for cancelled order {}; it must be voided",
+          order.getPaymentReference(),
+          order.getId());
+      return order;
+    }
     requireStatus(order, OrderStatus.AWAITING_PAYMENT, OrderStatus.PAYMENT_FAILED);
+
+    if (!listing.isOpenForBids()) {
+      log.warn(
+          "Payment {} for order {} arrived after listing {} closed; it must be voided",
+          order.getPaymentReference(),
+          order.getId(),
+          listing.getId());
+      withdraw(order);
+      return order;
+    }
 
     order.setStatus(OrderStatus.PAID_HELD);
     order.setPaidAt(Instant.now());
@@ -234,7 +269,66 @@ public class OrderService {
         OrderEvent.PAYMENT_HELD,
         "Plata a fost înregistrată și suma este păstrată de bid4.",
         Map.of("total", String.valueOf(order.getTotalPaid())));
+
+    closeSale(listing, order);
     return order;
+  }
+
+  private void closeSale(Auction listing, Order paid) {
+    Instant now = Instant.now();
+    standings.close(listing, paid.getBuyerId());
+    listing.setStatus(AuctionStatus.SOLD);
+    listing.setWinnerId(paid.getBuyerId());
+    listing.setAcceptedBidId(
+        standings.bidOf(listing.getId(), paid.getBuyerId()).map(Bid::getId).orElse(null));
+    listing.setAcceptedAt(now);
+    listing.setCurrentPrice(paid.getFinalPrice());
+    listing.setDispatchDeadline(now.plus(Duration.ofDays(CatalogRules.DISPATCH_DAYS)));
+    listing.setUpdatedAt(now);
+    auctions.save(listing);
+
+    for (Order other : orders.findUnpaidForAuction(listing.getId())) {
+      if (!other.getId().equals(paid.getId())) {
+        withdraw(other);
+      }
+    }
+    log.info(
+        "Listing {} sold to {} through order {}", listing.getId(), paid.getBuyerId(), paid.getId());
+  }
+
+  private void withdraw(Order order) {
+    order.setStatus(OrderStatus.CANCELLED);
+    order.setConfirmationDeadline(null);
+    orders.save(order);
+    post(
+        conversationOf(order),
+        order,
+        OrderEvent.CANCELLED,
+        "Produsul a fost vândut altui cumpărător.",
+        Map.of("by", "SALE"));
+  }
+
+  private Auction lockListing(Order order) {
+    return auctions
+        .findByIdForUpdate(order.getAuctionId())
+        .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Anunțul nu există."));
+  }
+
+  private static void requireStillForSale(Auction listing) {
+    if (!listing.isOpenForBids()) {
+      throw new ApiException(ErrorCode.CONFLICT, "Produsul a fost deja vândut.");
+    }
+  }
+
+  private void reopenOffer(Order order) {
+    auctions
+        .findByIdForUpdate(order.getAuctionId())
+        .filter(Auction::isOpenForBids)
+        .ifPresent(
+            listing -> {
+              standings.reopen(listing, order.getBuyerId());
+              auctions.save(listing);
+            });
   }
 
   @Transactional
@@ -309,6 +403,7 @@ public class OrderService {
     order.setStatus(OrderStatus.CANCELLED);
     order.setConfirmationDeadline(null);
     orders.save(order);
+    reopenOffer(order);
 
     String by =
         viewer.is(order.getBuyerId())
@@ -332,6 +427,7 @@ public class OrderService {
       order.setStatus(OrderStatus.CANCELLED);
       order.setConfirmationDeadline(null);
       orders.save(order);
+      reopenOffer(order);
       post(
           conversationOf(order),
           order,

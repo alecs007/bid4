@@ -403,6 +403,7 @@ const STEPS: Record<string, Step> = {
     accent: "danger",
     line: (c) => {
       const by = c.value("by");
+      if (by === "SALE") return "Produsul a fost vândut altui cumpărător.";
       const who =
         by === "SYSTEM"
           ? "Comanda a fost anulată automat, prin depășirea termenului."
@@ -417,7 +418,9 @@ const STEPS: Record<string, Step> = {
                 : "Ai anulat comanda.";
       return sentence(
         who,
-        c.value("reason") && `Motiv invocat: ${quoted(c.value("reason")!)}.`,
+        by !== "SYSTEM" &&
+          c.value("reason") &&
+          `Motiv invocat: ${quoted(c.value("reason")!)}.`,
       );
     },
   },

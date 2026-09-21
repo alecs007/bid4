@@ -680,7 +680,7 @@ export function SiteHeader() {
               Strânge fonduri pentru cei care au nevoie
             </p>
 
-            <span className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary-600/90 text-white px-3 py-2 font-display text-sm font-bold transition">
+            <span className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary-600 text-white px-3 py-2 font-display text-sm font-bold transition">
               Propune o cauză
               <Icons.forward
                 aria-hidden="true"

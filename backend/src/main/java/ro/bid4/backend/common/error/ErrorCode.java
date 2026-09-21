@@ -27,7 +27,6 @@ public enum ErrorCode {
   AUCTION_NOT_LIVE(HttpStatus.BAD_REQUEST, "Licitația nu mai acceptă oferte."),
   BID_TOO_LOW(HttpStatus.BAD_REQUEST, "Oferta este mai mică decât minimul acceptat."),
   BID_TOO_HIGH(HttpStatus.BAD_REQUEST, "Oferta depășește maximul acceptat."),
-  BID_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "Nu poți licita încă."),
   RETRACT_NOT_ALLOWED(
       HttpStatus.BAD_REQUEST, "Poți retrage doar propria ofertă aflată pe primul loc."),
   CAUSE_NOT_APPROVED(HttpStatus.BAD_REQUEST, "Poți lista doar pentru cauze aprobate."),

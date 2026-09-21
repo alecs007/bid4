@@ -2,69 +2,32 @@
 
 import { useState } from "react";
 
-import { Avatar, Sheet, SkeletonBidRows } from "@/components/ui";
-import { formatMoney } from "@/lib/money";
-import type { BidWithBidder } from "@/lib/types";
-import { formatRelativeRo } from "@/lib/utils/date";
-import { cn } from "@/lib/utils/cn";
+import {
+  BiddersModal,
+  OfferRow,
+  useAcceptOffer,
+} from "@/app/cont/_components/BiddersModal";
+import { Button, Sheet, SkeletonBidRows } from "@/components/ui";
+import type { AuctionDetail, BidWithBidder } from "@/lib/types";
+import { isOfferable } from "@/lib/types";
 
 const INLINE_COUNT = 3;
 
-function BidRow({
-  bid,
-  leading,
-  className,
-}: {
-  bid: BidWithBidder;
-  leading?: boolean;
-  className?: string;
-}) {
-  return (
-    <li className={cn("flex items-center gap-2.5 py-2", className)}>
-      <Avatar
-        name={bid.bidderDisplayName}
-        src={bid.bidderAvatarUrl}
-        size="xs"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-ink-900">
-          {bid.bidderDisplayName}
-        </p>
-        <p className="text-xs text-ink-500">
-          {formatRelativeRo(bid.createdAt)}
-        </p>
-      </div>
-      <span
-        className={cn(
-          "numeric font-display font-extrabold",
-          leading ? "text-primary-700" : "text-ink-700",
-        )}
-      >
-        {formatMoney(bid.amount, { compact: true })}
-      </span>
-    </li>
-  );
-}
+const EMPTY = "Încă nu există oferte.";
 
 export function BidHistory({
   bids,
   loading,
-  startingPrice,
 }: {
   bids: BidWithBidder[] | null;
   loading: boolean;
-  startingPrice: number;
 }) {
   const [open, setOpen] = useState(false);
 
   if (loading && !bids) return <SkeletonBidRows />;
 
   if (!bids || bids.length === 0) {
-    return (
-      <p className="text-sm text-ink-500">
-        Nicio ofertă încă. Pornește de la {formatMoney(startingPrice)}.
-      </p>
-    );
+    return <p className="text-sm text-ink-500">{EMPTY}</p>;
   }
 
   const inline = bids.slice(0, INLINE_COUNT);
@@ -74,31 +37,106 @@ export function BidHistory({
     <>
       <ul className="divide-y divide-line">
         {inline.map((bid, index) => (
-          <BidRow key={bid.id} bid={bid} leading={index === 0} />
+          <OfferRow
+            key={bid.id}
+            bid={bid}
+            highlight={index === 0}
+            canAct={false}
+            pending={false}
+            busy={false}
+            onAccept={() => undefined}
+          />
         ))}
       </ul>
 
       {rest > 0 ? (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
+          fullWidth
+          className="mt-3"
           onClick={() => setOpen(true)}
-          className="mt-1.5 text-sm font-bold text-primary-700 hover:text-primary-800"
         >
           Vezi toate ofertele ({bids.length})
-        </button>
+        </Button>
       ) : null}
 
       <Sheet
         open={open}
         onClose={() => setOpen(false)}
-        title={`${bids.length} licitații`}
+        title="Ofertele primite"
       >
         <ul className="divide-y divide-line">
           {bids.map((bid, index) => (
-            <BidRow key={bid.id} bid={bid} leading={index === 0} />
+            <OfferRow
+            key={bid.id}
+            bid={bid}
+            highlight={index === 0}
+            canAct={false}
+            pending={false}
+            busy={false}
+            onAccept={() => undefined}
+          />
           ))}
         </ul>
       </Sheet>
+    </>
+  );
+}
+
+export function SellerOffers({
+  auction,
+  bids,
+  loading,
+  sellerId,
+}: {
+  auction: AuctionDetail;
+  bids: BidWithBidder[] | null;
+  loading: boolean;
+  sellerId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { accept, pendingId } = useAcceptOffer(auction.id, sellerId);
+
+  if (loading && !bids) return <SkeletonBidRows />;
+  if (!bids || bids.length === 0) {
+    return <p className="text-sm text-ink-500">{EMPTY}</p>;
+  }
+
+  const canAct = isOfferable(auction.status);
+
+  return (
+    <>
+      <ul className="divide-y divide-line">
+        {bids.slice(0, INLINE_COUNT).map((bid, index) => (
+          <OfferRow
+            key={bid.id}
+            bid={bid}
+            highlight={index === 0}
+            canAct={canAct}
+            pending={pendingId === bid.id}
+            busy={pendingId !== null}
+            onAccept={() => void accept(bid)}
+          />
+        ))}
+      </ul>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        fullWidth
+        className="mt-3"
+        onClick={() => setOpen(true)}
+      >
+        Vezi toate ofertele ({bids.length})
+      </Button>
+
+      <BiddersModal
+        auction={open ? auction : null}
+        open={open}
+        onClose={() => setOpen(false)}
+        sellerId={sellerId}
+      />
     </>
   );
 }

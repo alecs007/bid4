@@ -8,7 +8,6 @@ import {
   Button,
   ButtonLink,
   Checkbox,
-  Confetti,
   FeeBreakdown,
   Legal,
   Modal,
@@ -16,34 +15,42 @@ import {
   useToast,
 } from "@/components/ui";
 import {
-  checkBidEligibility,
   checkRetractEligibility,
   minimumBid,
   placeBid,
   retractBid,
 } from "@/lib/api/bids";
 import { AUCTION, ORDER, TERMS, type Bani } from "@/lib/config";
+import { openThread } from "@/lib/api/inbox";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { computeFees, formatMoney, parseLeiInput } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
-import { isOfferable } from "@/lib/types";
+import { isCommitted, isOfferable } from "@/lib/types";
 import { errorMessage } from "@/lib/hooks/useApi";
 import { cn } from "@/lib/utils/cn";
+
+import {
+  AcceptedPanel,
+  BuyerPanel,
+  ConversationButton,
+  Notice,
+  OutcomePanel,
+  SellerPanel,
+  stanceOf,
+} from "./ViewerPanels";
 
 function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const { user } = useAuth();
   const toast = useToast();
+  const router = useRouter();
 
   const minimum = minimumBid(auction);
   const [amount, setAmount] = useState(String(minimum / 100));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [celebrate, setCelebrate] = useState(0);
   const [consenting, setConsenting] = useState<number | null>(null);
 
-  const eligibility = checkBidEligibility(user);
   const retract = checkRetractEligibility(auction, user?.id);
-  const isSeller = user?.id === auction.sellerId;
   const isLeading = auction.viewerBidStatus === "WINNING";
 
   const request = () => {
@@ -79,17 +86,18 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
         },
         user.id,
       );
-      setCelebrate((value) => value + 1);
       if (result.boughtNow) {
         toast.success(
-          "Anunțul este al tău",
-          `Reținut la ${formatMoney(result.auction.currentPrice)}. Urmează plata.`,
+          "Oferta ta a fost acceptată",
+          "Plătește din conversație pentru a cumpăra produsul.",
         );
       } else {
-        toast.success("Ești pe primul loc", formatMoney(consenting));
+        toast.success("Oferta a fost transmisă", formatMoney(consenting));
       }
       setConsenting(null);
       onChanged();
+      const thread = await openThread(auction.id);
+      router.push(`/cont/inbox/${thread.conversation.id}`);
       return true;
     } catch (caught) {
       toast.error("Oferta nu a fost acceptată", errorMessage(caught));
@@ -120,10 +128,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
     setAmount,
     pending,
     error,
-    celebrate,
-    eligibility,
     retract,
-    isSeller,
     isLeading,
     consenting,
     request,
@@ -192,7 +197,11 @@ function AmountForm({
         })}
       </div>
       <Button type="submit" size="lg" fullWidth>
-        {bidding.isLeading ? "Mărește oferta" : "Licitează"}
+        {bidding.isLeading || auction.viewerBidStatus === "OUTBID"
+          ? "Mărește oferta"
+          : auction.status === "RESERVED"
+            ? "Trimite oferta de rezervă"
+            : "Licitează"}
       </Button>
 
       {auction.buyNowPrice ? (
@@ -261,7 +270,7 @@ function OfferConsent({
       title={takesItOutright ? "Confirmă cumpărarea" : "Confirmă oferta"}
       description={
         takesItOutright
-          ? "Prețul este cel publicat de vânzător, iar anunțul îți este reținut imediat."
+          ? "Prețul este cel publicat de vânzător, iar oferta ta este acceptată imediat."
           : "Verifică ce se întâmplă dacă vânzătorul acceptă această ofertă."
       }
     >
@@ -281,7 +290,7 @@ function OfferConsent({
           <p>
             {takesItOutright ? (
               <>
-                La acest preț anunțul îți este reținut pe loc, fără să mai fie
+                La acest preț oferta ta este acceptată imediat, fără să mai fie
                 nevoie de acordul vânzătorului.
               </>
             ) : (
@@ -317,16 +326,16 @@ function OfferConsent({
 
         <RuleSection
           icon={<Icons.escrow aria-hidden="true" className="h-5 w-5" />}
-          title="Banii sunt păstrați de bid4"
+          title="Plata se face după acceptare"
         >
           <p>
-            Cardul nu este debitat acum. Suma este administrată de bid4 pe toată
-            durata livrării, iar{" "}
+            Nu plătești nimic acum. Dacă oferta este acceptată, alegi livrarea
+            și plătești din conversația cu vânzătorul. Suma este păstrată de
+            bid4 până la finalizarea comenzii, iar{" "}
             <strong className="numeric font-bold text-ink-900">
               {formatMoney(breakdown.donationAmount)}
             </strong>{" "}
-            ajung la {auction.cause.name} abia după ce confirmi că ai primit
-            coletul.
+            ajung la {auction.cause.name}.
           </p>
         </RuleSection>
 
@@ -362,149 +371,45 @@ function OfferConsent({
   );
 }
 
-function Result({
-  auction,
-  viewerId,
-  winnerName,
-}: {
-  auction: AuctionDetail;
-  viewerId?: string;
-  winnerName?: string;
-}) {
-  const committed = auction.status === "RESERVED" || auction.status === "SOLD";
-  const reserved = auction.status === "RESERVED";
-  const viewerWon = committed && auction.winnerId === viewerId;
-  const settledPrice = auction.acceptedAmount ?? auction.currentPrice;
-  const donation = Math.round((settledPrice * auction.donationPercent) / 100);
-
-  if (!committed) {
-    return (
-      <div className="p-4">
-        <p className="flex items-center gap-2 font-display text-lg font-extrabold text-ink-900">
-          <Icons.close aria-hidden="true" className="h-5 w-5 text-ink-400" />
-          Anunțul a fost retras
-        </p>
-        <p className="mt-1.5 text-ink-600">
-          Vânzătorul l-a scos de pe platformă. Ofertele făcute nu mai sunt
-          valabile.
-        </p>
-        <ButtonLink href="/licitatii" variant="secondary" className="mt-4">
-          Vezi alte anunțuri
-        </ButtonLink>
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn("p-4", viewerWon && "bg-primary-50")}>
-      <p
-        className={cn(
-          "flex items-center gap-2 text-sm font-bold",
-          reserved ? "text-sky-700" : "text-success-700",
-        )}
-      >
-        <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
-        {viewerWon
-          ? reserved
-            ? "Oferta ta a fost acceptată"
-            : "Ai câștigat!"
-          : reserved
-            ? "Ofertă acceptată"
-            : "Vândut"}
-      </p>
-      <p className="mt-2 text-sm text-ink-500">Preț final</p>
-      <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
-        {formatMoney(settledPrice)}
-      </p>
-      <dl className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-[15px]">
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-ink-500">Cumpărător</dt>
-          <dd className="font-bold text-ink-900">
-            {viewerWon ? "Tu" : (winnerName ?? "Un ofertant")}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-ink-500">Donație către cauză</dt>
-          <dd className="numeric font-bold text-primary-700">
-            {formatMoney(donation)}
-          </dd>
-        </div>
-      </dl>
-
-      {reserved ? (
-        <p className="mt-3 text-sm text-ink-500">
-          {viewerWon
-            ? "Finalizează plata ca vânzătorul să poată trimite coletul."
-            : "Cumpărătorul are de făcut plata."}
-        </p>
-      ) : null}
-
-      {viewerWon ? (
-        <ButtonLink href="/cont/comenzi" size="lg" fullWidth className="mt-4">
-          {reserved ? "Finalizează comanda" : "Vezi comanda"}
-        </ButtonLink>
-      ) : (
-        <ButtonLink
-          href="/licitatii"
-          variant="secondary"
-          fullWidth
-          className="mt-4"
-        >
-          Vezi alte anunțuri
-        </ButtonLink>
-      )}
-    </div>
-  );
-}
-
 export function BidBox({
   auction,
   onChanged,
-  winnerName,
 }: {
   auction: AuctionDetail;
   onChanged: () => void;
-  winnerName?: string;
 }) {
   const bidding = useBidding(auction, onChanged);
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const offerable = isOfferable(auction.status);
+  const reserved = auction.status === "RESERVED";
 
   const {
     user,
     minimum,
-    celebrate,
-    eligibility,
     retract,
-    isSeller,
     isLeading,
     pending,
     undo,
   } = bidding;
 
-  const blocker = !offerable ? (
-    <p className="text-ink-600">Anunțul nu mai acceptă oferte.</p>
-  ) : isSeller ? (
-    <p className="text-ink-600">Acesta este anunțul tău.</p>
-  ) : !user ? (
+  const stance = stanceOf(auction, user?.id);
+
+  const blocker = !user ? (
     <ButtonLink href="/autentificare" size="lg" fullWidth>
-      Licitează acum
+      {reserved ? "Trimite o ofertă de rezervă" : "Licitează acum"}
     </ButtonLink>
-  ) : !eligibility.canBid ? (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm text-ink-600">{eligibility.reason}</p>
-      <ButtonLink href="/cont/setari" size="lg" fullWidth>
-        {!eligibility.hasCard ? "Adaugă un card" : "Alege livrarea"}
-      </ButtonLink>
-    </div>
   ) : null;
 
   const priceBlock = (
     <div>
       <p className="text-sm text-ink-500">
-        {auction.bidCount > 0 ? "Oferta curentă" : "Preț de pornire"}
+        {reserved
+          ? "Cea mai mare ofertă"
+          : auction.bidCount > 0
+            ? "Oferta curentă"
+            : "Preț de pornire"}
       </p>
       <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
         {formatMoney(auction.currentPrice, { compact: true })}
@@ -512,12 +417,24 @@ export function BidBox({
     </div>
   );
 
+  const notice = reserved ? (
+    <Notice tone="sky" className="mt-4">
+      Vânzătorul a acceptat o ofertă. Produsul este încă disponibil.
+    </Notice>
+  ) : stance === "outbid" ? (
+    <Notice tone="sun" className="mt-4">
+      Oferta ta a fost depășită.
+    </Notice>
+  ) : null;
+
   const leadingPanel = isLeading ? (
     <div className="mt-4 flex flex-col gap-3">
-      <p className="flex items-center gap-2 font-bold text-primary-800">
-        <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
-        Ești cel mai bun ofertant
-      </p>
+      {reserved ? null : (
+        <p className="flex items-center gap-2 font-bold text-primary-800">
+          <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
+          Ești cel mai bun ofertant
+        </p>
+      )}
       <div className="flex gap-2">
         <Button size="lg" className="flex-1" onClick={() => setSheetOpen(true)}>
           Mărește oferta
@@ -538,21 +455,29 @@ export function BidBox({
       {!retract.canRetract && retract.reason ? (
         <p className="text-sm text-ink-500">{retract.reason}</p>
       ) : null}
+      <ConversationButton
+        auction={auction}
+        label="Mergi la conversație"
+        variant="secondary"
+      />
     </div>
   ) : null;
 
-  if (!offerable) {
-    return (
-      <Result auction={auction} viewerId={user?.id} winnerName={winnerName} />
-    );
+  if (stance === "seller") return <SellerPanel auction={auction} />;
+  if (stance === "accepted" && offerable) {
+    return <AcceptedPanel auction={auction} />;
   }
+  if (stance === "buyer" && isCommitted(auction.status)) {
+    return <BuyerPanel auction={auction} />;
+  }
+  if (!offerable) return <OutcomePanel auction={auction} stance={stance} />;
 
   return (
     <>
-      {celebrate > 0 ? <Confetti trigger={celebrate} count={30} /> : null}
 
       <div className="px-5 py-5">
         {priceBlock}
+        {notice}
 
         {isLeading ? (
           <div className="hidden lg:block">{leadingPanel}</div>
@@ -572,7 +497,7 @@ export function BidBox({
         </button>
       </div>
 
-      {offerable && !isSeller ? (
+      {offerable ? (
         <div
           data-bottom-bar
           className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden"
@@ -580,13 +505,15 @@ export function BidBox({
           <div className="mx-auto max-w-7xl">
             {isLeading ? (
               <>
-                <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-primary-800">
-                  <Icons.success
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0"
-                  />
-                  Ești cel mai bun ofertant
-                </p>
+                {reserved ? null : (
+                  <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-primary-800">
+                    <Icons.success
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    Ești cel mai bun ofertant
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Button
                     size="lg"
@@ -626,7 +553,11 @@ export function BidBox({
                     setSheetOpen(true);
                   }}
                 >
-                  Licitează acum
+                  {reserved
+                    ? "Ofertă de rezervă"
+                    : stance === "outbid"
+                      ? "Mărește oferta"
+                      : "Licitează acum"}
                 </Button>
               </div>
             )}
@@ -678,11 +609,11 @@ export function BidBox({
               orice moment.
             </p>
             <p className="mt-2.5">
-              Vânzătorul este cel care alege oferta câștigătoare și{" "}
+              Vânzătorul poate accepta mai multe oferte.{" "}
               <strong className="font-bold text-ink-900">
-                poate alege orice ofertă primită, nu doar pe cea mai mare
+                Produsul este vândut primului cumpărător care plătește
               </strong>
-              . Suma nu este singurul criteriu.
+              , iar celelalte comenzi se anulează.
             </p>
           </RuleSection>
 
@@ -691,15 +622,17 @@ export function BidBox({
             title="Plata"
           >
             <p>
-              Cardul nu este debitat în momentul în care faci o ofertă. Dacă
-              vânzătorul alege altă ofertă, nu plătești nimic.
+              Nu plătești nimic în momentul în care faci o ofertă. Toată
+              discuția cu vânzătorul are loc în conversația anunțului, unde îți
+              poți modifica sau retrage oferta.
             </p>
             <p className="mt-2.5">
               Dacă oferta ta este acceptată, ai{" "}
               <strong className="font-bold text-ink-900">
-                {ORDER.CONFIRMATION_HOURS} de ore pentru a confirma comanda
-              </strong>{" "}
-              și pentru a finaliza plata.
+                {ORDER.CONFIRMATION_HOURS} de ore pentru a alege livrarea și a
+                plăti
+              </strong>
+              , direct din conversație.
             </p>
           </RuleSection>
 
@@ -716,8 +649,8 @@ export function BidBox({
             </p>
             <p className="mt-2.5">
               Banii sunt păstrați de bid4 pe toată durata livrării și sunt
-              eliberați către vânzător și către cauză abia după ce confirmi că
-              ai primit produsul.
+              eliberați către vânzător și către cauză după finalizarea
+              comenzii.
             </p>
           </RuleSection>
         </div>
@@ -752,8 +685,8 @@ export function BidBox({
               aria-hidden="true"
               className="mt-0.5 h-3.5 w-3.5 shrink-0"
             />
-            Dacă vei câștiga, cardul salvat este debitat automat, iar banii
-            rămân la bid4 până confirmi că ai primit coletul.
+            Nu plătești nimic acum. Plata se face din conversație, doar dacă
+            vânzătorul acceptă oferta.
           </p>
         </div>
       </Sheet>

@@ -122,10 +122,7 @@ export function RegisterForm() {
         acceptedTerms,
       });
       if (USE_MOCK) {
-        toast.success(
-          `Bine ai venit, ${user.displayName.split(" ")[0]}!`,
-          "Adaugă un card și o adresă de livrare pentru a putea licita.",
-        );
+        toast.success(`Bine ai venit, ${user.displayName.split(" ")[0]}!`);
         router.replace(destination);
         return;
       }

@@ -544,11 +544,11 @@ export default function DesignSystemPage() {
                 <Alert tone="primary" title="Ești cel mai bun ofertant!">
                   Îți ținem pumnii. Te anunțăm dacă cineva te depășește.
                 </Alert>
-                <Alert tone="sun" title="Mai ai nevoie de un card salvat">
-                  Ca să licitezi, adaugă un card și o metodă de livrare implicită.
+                <Alert tone="sun" title="Oferta ta a fost depășită">
+                  Altcineva a oferit mai mult. Poți trimite o ofertă mai mare.
                 </Alert>
                 <Alert tone="sky" title="Fonduri în siguranță">
-                  Banii sunt reținuți de bid4 până confirmi că ai primit coletul.
+                  Banii sunt păstrați de bid4 până la finalizarea comenzii.
                 </Alert>
                 <Alert tone="danger" title="Plata a fost refuzată">
                   Banca a respins tranzacția. Încearcă alt card în următoarele 24h.

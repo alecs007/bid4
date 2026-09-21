@@ -22,6 +22,7 @@ import {
   SkeletonDetail,
   StatTile,
   StatTiles,
+  StatusBadge,
   useToast,
   AccountTypeTag,
 } from "@/components/ui";
@@ -36,7 +37,7 @@ import {
 } from "@/lib/config";
 import { AUCTION_STATUS, ITEM_CONDITION } from "@/lib/labels";
 import { computeFees, formatMoney, progressPercent } from "@/lib/money";
-import { isCommitted, type AuctionDetail } from "@/lib/types";
+import { isCommitted, isOfferable, type AuctionDetail } from "@/lib/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi, useRevalidate } from "@/lib/hooks/useApi";
 import { formatRelativeRo } from "@/lib/utils/date";
@@ -44,7 +45,8 @@ import { cn } from "@/lib/utils/cn";
 import { countRo, pluralRo } from "@/lib/utils/plural";
 import { BidBox } from "./BidBox";
 import { RelatedAuctions } from "./RelatedAuctions";
-import { BidHistory } from "./BidHistory";
+import { BidHistory, SellerOffers } from "./BidHistory";
+import { stanceOf } from "./ViewerPanels";
 
 function Section({
   title,
@@ -119,8 +121,8 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   );
 
   const { data: bids, loading: bidsLoading } = useApi(
-    () => listBids(auctionId),
-    `bids:${auctionId}`,
+    () => listBids(auctionId, user?.id),
+    `bids:${auctionId}:${user?.id ?? "anon"}`,
   );
 
   if (loading && !auction) return <SkeletonDetail />;
@@ -144,8 +146,17 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   const category = AUCTION_CATEGORIES.find(
     (item) => item.id === auction.category,
   );
+  const stance = stanceOf(auction, user?.id);
+  const committed = isCommitted(auction.status);
+  const offerable = isOfferable(auction.status);
+  const listed = auction.status !== "DRAFT" && auction.status !== "PENDING_REVIEW";
+  const closed = !offerable && !committed;
+  const shopping = offerable && stance !== "seller";
+  const price = committed
+    ? (auction.acceptedAmount ?? auction.currentPrice)
+    : auction.currentPrice;
   const fees = computeFees({
-    finalPrice: auction.currentPrice,
+    finalPrice: price,
     donationPercent: auction.donationPercent,
   });
   const deliveryEta = `în ${SHIPPING.DELIVERY_DAYS_MIN}-${SHIPPING.DELIVERY_DAYS_MAX} zile lucrătoare`;
@@ -194,26 +205,30 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
   const actionButton =
     "inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 ring-1 ring-edge backdrop-blur-sm transition duration-200 active:scale-90 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none lg:hover:bg-ink-100";
 
-  const actions = (
+  const canWatch = offerable && stance !== "seller";
+
+  const actions = listed ? (
     <>
-      <button
-        type="button"
-        onClick={handleWatch}
-        aria-label={watched ? "Salvată" : "Salvează"}
-        aria-pressed={watched}
-        className={cn(
-          actionButton,
-          watched ? "text-primary-600" : "text-ink-600 hover:text-ink-900",
-        )}
-      >
-        <Icons.watchlist
-          aria-hidden="true"
+      {canWatch ? (
+        <button
+          type="button"
+          onClick={handleWatch}
+          aria-label={watched ? "Salvată" : "Salvează"}
+          aria-pressed={watched}
           className={cn(
-            "h-5 w-5 fill-transparent transition-[fill,transform] duration-200 ease-[var(--ease-out-soft)]",
-            watched && "scale-110 fill-current",
+            actionButton,
+            watched ? "text-primary-600" : "text-ink-600 hover:text-ink-900",
           )}
-        />
-      </button>
+        >
+          <Icons.watchlist
+            aria-hidden="true"
+            className={cn(
+              "h-5 w-5 fill-transparent transition-[fill,transform] duration-200 ease-[var(--ease-out-soft)]",
+              watched && "scale-110 fill-current",
+            )}
+          />
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={share}
@@ -223,7 +238,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
         <Icons.share aria-hidden="true" className="h-5 w-5 shrink-0" />
       </button>
     </>
-  );
+  ) : null;
 
   return (
     <div className="animate-reveal flex flex-col gap-6">
@@ -277,10 +292,13 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 &middot;
               </span>
               <span>Publicat {formatRelativeRo(auction.createdAt)}</span>
-              {auction.status !== "LIVE" && auction.status !== "RESERVED" ? (
-                <span className="rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
-                  {AUCTION_STATUS[auction.status].label}
-                </span>
+              {auction.status !== "LIVE" ? (
+                <StatusBadge
+                  meta={AUCTION_STATUS[auction.status]}
+                  size="sm"
+                  marker={false}
+                  className="border-transparent text-[11px]"
+                />
               ) : null}
             </div>
           </div>
@@ -296,14 +314,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
         <aside className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="rounded-xl bg-white ring-1 ring-edge">
-            <BidBox
-              auction={auction}
-              onChanged={refresh}
-              winnerName={
-                bids?.find((bid) => bid.bidderId === auction.winnerId)
-                  ?.bidderDisplayName
-              }
-            />
+            <BidBox auction={auction} onChanged={refresh} />
 
             <div className="border-t border-line">
               <Link
@@ -323,10 +334,16 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-ink-700">
-                    <span className="numeric font-extrabold text-primary-800">
-                      {formatMoney(fees.donationAmount, { compact: true })}
-                    </span>{" "}
-                    merg la{" "}
+                    {closed ? (
+                      "Anunț în sprijinul"
+                    ) : (
+                      <>
+                        <span className="numeric font-extrabold text-primary-800">
+                          {formatMoney(fees.donationAmount, { compact: true })}
+                        </span>{" "}
+                        {committed ? "din vânzare pentru" : "merg la"}
+                      </>
+                    )}{" "}
                     <span className="font-bold group-hover:underline">
                       {auction.cause.name}
                     </span>
@@ -339,153 +356,172 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                   />
                 </div>
               </Link>
-              <button
-                type="button"
-                onClick={() => setFeesOpen(true)}
-                className="px-5 pb-4 text-sm font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800"
-              >
-                Cum se împart banii?
-              </button>
-            </div>
-
-            <div className="border-t border-line px-5 py-4.5">
-              <div className="mb-3 flex items-center gap-4 text-sm text-ink-600">
-                <span className="inline-flex items-center gap-1.5">
-                  <Icons.auction
-                    aria-hidden="true"
-                    className="h-4 w-4 text-ink-400"
-                  />
-                  <span className="numeric font-bold text-ink-900">
-                    {countRo(auction.bidCount, "ofertă", "oferte")}
-                  </span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Icons.watchlist
-                    aria-hidden="true"
-                    className="h-4 w-4 text-ink-400"
-                  />
-                  <span
-                    key={following}
-                    className="numeric animate-fade-in inline-block font-bold text-ink-900"
-                  >
-                    {following}
-                  </span>{" "}
-                  urmăritori
-                </span>
-              </div>
-
-              <BidHistory
-                bids={bids}
-                loading={bidsLoading}
-                startingPrice={auction.startingPrice}
-              />
-            </div>
-
-            <div className="border-t border-line px-5 py-4.5 text-sm">
-              <p className="mb-2 font-display text-sm font-bold text-ink-700">
-                Alte costuri
-              </p>
-              <div className="flex items-center gap-1.5 py-1.5">
-                <CostMark size="sm">
-                  <Illustration
-                    src="shield-badge"
-                    className="h-full w-full"
-                    sizes="16px"
-                  />
-                </CostMark>
-                <span className="min-w-fit flex-1 whitespace-nowrap text-primary-800 text-sm sm:text-xs font-semibold">
-                  Protecția cumpărătorului
-                </span>
-                <span className="numeric shrink-0 text-xs font-bold whitespace-nowrap text-ink-900">
-                  {FEES.BUYER_TAX_PERCENT}% +{" "}
-                  {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
-                </span>
-                <InfoHint label="Ce include protecția cumpărătorului">
-                  Taxa de protecție este de {FEES.BUYER_TAX_PERCENT}% din prețul
-                  final + {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
-                  . Banii tăi sunt păstrați în siguranță până când confirmi
-                  comanda, iar reclamațiile trimise în primele{" "}
-                  {ORDER.DISPUTE_WINDOW_HOURS} de ore după livrare sunt
-                  acoperite integral.
-                </InfoHint>
-              </div>
-              <div className="flex items-start gap-2.5 py-1.5">
-                <CostMark size="sm">
-                  <Icons.delivery
-                    aria-hidden="true"
-                    className="h-full w-full text-ink-500"
-                  />
-                </CostMark>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-ink-600 text-sm sm:text-xs">
-                    Livrare {SHIPPING.COURIER_NAME}
-                  </span>
-                  <span className="block text-xs sm:text-[10px] text-ink-500">
-                    {deliveryEta}
-                  </span>
-                </span>
-                <span className="numeric shrink-0 font-bold text-ink-900 text-xs">
-                  de la{" "}
-                  {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })}
-                </span>
-                <InfoHint label="Cum se calculează livrarea">
-                  Coletul tău este livrat de {SHIPPING.COURIER_NAME}{" "}
-                  {deliveryEta} după expediere. Alegi metoda de livrare la
-                  finalizarea comenzii:{" "}
-                  {formatMoney(SHIPPING_PRICES.EASYBOX, {
-                    compact: true,
-                  })}{" "}
-                  la Easybox sau{" "}
-                  {formatMoney(SHIPPING_PRICES.HOME_COURIER, { compact: true })}{" "}
-                  la adresa ta. AWB-ul este generat automat după confirmarea
-                  plății.
-                </InfoHint>
-              </div>
-            </div>
-
-            <div className="border-t border-line px-5 py-4.5">
-              <p className="mb-2 font-display text-sm font-bold text-ink-700">
-                Opțiuni de plată
-              </p>
-              <Image
-                src="/images/payment/payment-methods.webp"
-                alt="Visa, Mastercard, Maestro, Apple Pay, Google Pay, Klarna"
-                width={2279}
-                height={256}
-                unoptimized
-                loading="lazy"
-                sizes="280px"
-                className="h-auto w-full max-w-[280px]"
-                draggable={false}
-              />
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
-            <CostMark size="md">
-              <Illustration
-                src="shield-badge"
-                className="h-full w-full"
-                sizes="24px"
-              />
-            </CostMark>
-            <div className="min-w-0">
-              <p className="font-display text-sm font-extrabold text-ink-900">
-                Cumpără și vinde în siguranță
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-ink-600">
-                Fiecare achiziție beneficiază de politica noastră de rambursare,
-                de tranzacții securizate și de asistență dedicată.{" "}
+              {closed ? (
+                <div className="pb-1" />
+              ) : (
                 <button
                   type="button"
-                  onClick={() => setProtectionOpen(true)}
-                  className="font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800"
+                  onClick={() => setFeesOpen(true)}
+                  className="px-5 pb-4 text-sm font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800"
                 >
-                  Vezi detalii
+                  Cum se împart banii?
                 </button>
-              </p>
+              )}
             </div>
+
+            {closed ? null : (
+              <div className="border-t border-line px-5 py-4.5">
+                <div className="mb-3 flex items-center gap-4 text-sm text-ink-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icons.auction
+                      aria-hidden="true"
+                      className="h-4 w-4 text-ink-400"
+                    />
+                    <span className="numeric font-bold text-ink-900">
+                      {countRo(auction.bidCount, "ofertă", "oferte")}
+                    </span>
+                  </span>
+                  {offerable ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icons.watchlist
+                        aria-hidden="true"
+                        className="h-4 w-4 text-ink-400"
+                      />
+                      <span
+                        key={following}
+                        className="numeric animate-fade-in inline-block font-bold text-ink-900"
+                      >
+                        {following}
+                      </span>{" "}
+                      urmăritori
+                    </span>
+                  ) : null}
+                </div>
+
+                {stance === "seller" && user ? (
+                  <SellerOffers
+                    auction={auction}
+                    bids={bids}
+                    loading={bidsLoading}
+                    sellerId={user.id}
+                  />
+                ) : committed ? null : (
+                  <BidHistory bids={bids} loading={bidsLoading} />
+                )}
+              </div>
+            )}
+
+            {shopping ? (
+              <>
+                <div className="border-t border-line px-5 py-4.5 text-sm">
+                  <p className="mb-2 font-display text-sm font-bold text-ink-700">
+                    Alte costuri
+                  </p>
+                  <div className="flex items-center gap-1.5 py-1.5">
+                    <CostMark size="sm">
+                      <Illustration
+                        src="shield-badge"
+                        className="h-full w-full"
+                        sizes="16px"
+                      />
+                    </CostMark>
+                    <span className="min-w-fit flex-1 whitespace-nowrap text-primary-800 text-sm sm:text-xs font-semibold">
+                      Protecția cumpărătorului
+                    </span>
+                    <span className="numeric shrink-0 text-xs font-bold whitespace-nowrap text-ink-900">
+                      {FEES.BUYER_TAX_PERCENT}% +{" "}
+                      {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
+                    </span>
+                    <InfoHint label="Ce include protecția cumpărătorului">
+                      Taxa de protecție este de {FEES.BUYER_TAX_PERCENT}% din prețul
+                      final + {formatMoney(FEES.BUYER_TAX_FIXED, { compact: true })}
+                      . Banii tăi sunt păstrați în siguranță până când confirmi
+                      comanda, iar reclamațiile trimise în primele{" "}
+                      {ORDER.DISPUTE_WINDOW_HOURS} de ore după livrare sunt
+                      acoperite integral.
+                    </InfoHint>
+                  </div>
+                  <div className="flex items-start gap-2.5 py-1.5">
+                    <CostMark size="sm">
+                      <Icons.delivery
+                        aria-hidden="true"
+                        className="h-full w-full text-ink-500"
+                      />
+                    </CostMark>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-ink-600 text-sm sm:text-xs">
+                        Livrare {SHIPPING.COURIER_NAME}
+                      </span>
+                      <span className="block text-xs sm:text-[10px] text-ink-500">
+                        {deliveryEta}
+                      </span>
+                    </span>
+                    <span className="numeric shrink-0 font-bold text-ink-900 text-xs">
+                      de la{" "}
+                      {formatMoney(SHIPPING_PRICES.EASYBOX, { compact: true })}
+                    </span>
+                    <InfoHint label="Cum se calculează livrarea">
+                      Coletul tău este livrat de {SHIPPING.COURIER_NAME}{" "}
+                      {deliveryEta} după expediere. Alegi metoda de livrare la
+                      finalizarea comenzii:{" "}
+                      {formatMoney(SHIPPING_PRICES.EASYBOX, {
+                        compact: true,
+                      })}{" "}
+                      la Easybox sau{" "}
+                      {formatMoney(SHIPPING_PRICES.HOME_COURIER, { compact: true })}{" "}
+                      la adresa ta. AWB-ul este generat automat după confirmarea
+                      plății.
+                    </InfoHint>
+                  </div>
+                </div>
+
+                <div className="border-t border-line px-5 py-4.5">
+                  <p className="mb-2 font-display text-sm font-bold text-ink-700">
+                    Opțiuni de plată
+                  </p>
+                  <Image
+                    src="/images/payment/payment-methods.webp"
+                    alt="Visa, Mastercard, Maestro, Apple Pay, Google Pay, Klarna"
+                    width={2279}
+                    height={256}
+                    unoptimized
+                    loading="lazy"
+                    sizes="280px"
+                    className="h-auto w-full max-w-[280px]"
+                    draggable={false}
+                  />
+                </div>
+              </>
+            ) : null}
           </div>
+
+          {shopping ? (
+            <div className="mt-3 flex items-start gap-3 rounded-xl bg-white p-4 ring-1 ring-edge">
+              <CostMark size="md">
+                <Illustration
+                  src="shield-badge"
+                  className="h-full w-full"
+                  sizes="24px"
+                />
+              </CostMark>
+              <div className="min-w-0">
+                <p className="font-display text-sm font-extrabold text-ink-900">
+                  Cumpără și vinde în siguranță
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-ink-600">
+                  Fiecare achiziție beneficiază de politica noastră de rambursare,
+                  de tranzacții securizate și de asistență dedicată.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setProtectionOpen(true)}
+                    className="font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800"
+                  >
+                    Vezi detalii
+                  </button>
+                </p>
+              </div>
+            </div>
+          ) : null}
         </aside>
 
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2">

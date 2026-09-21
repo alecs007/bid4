@@ -11,6 +11,7 @@ import {
   makeAwb,
   maybeFailRead,
   notFound,
+  closeSale,
   pushEvent,
   shippingPriceFor,
   snapshotDelivery,
@@ -133,7 +134,7 @@ export async function confirmOrder(
   pushEvent(
     order,
     "AWAITING_PAYMENT",
-    "Date de livrare confirmate. Procesăm plata cu cardul salvat.",
+    "Livrarea a fost aleasă.",
   );
   commit();
 
@@ -162,7 +163,7 @@ export async function retryPayment(
   }
 
   order.paymentFailureReason = undefined;
-  pushEvent(order, "AWAITING_PAYMENT", "Reluăm plata cu cardul salvat.");
+  pushEvent(order, "AWAITING_PAYMENT", "Plata poate fi reluată.");
   commit();
 
   const detail = toOrderDetail(order);
@@ -362,9 +363,15 @@ export async function payOrder(orderId: ID, userId: ID): Promise<Order> {
     badRequest("Comanda nu se află în etapa de plată.");
   }
 
+  const listing = world.auctions.find((item) => item.id === order.auctionId);
+  if (!listing || (listing.status !== "LIVE" && listing.status !== "RESERVED")) {
+    badRequest("Produsul a fost deja vândut.");
+  }
+
   order.paymentFailureReason = undefined;
   order.paidAt = new Date().toISOString();
   pushEvent(order, "PAID_HELD", "Plată confirmată. Suma este ținută de bid4.");
+  closeSale(world, order);
   commit();
   return order;
 }

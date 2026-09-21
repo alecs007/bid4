@@ -12,12 +12,6 @@ import ro.bid4.backend.catalog.domain.Bid;
 import ro.bid4.backend.catalog.domain.BidStatus;
 
 public interface BidRepository extends JpaRepository<Bid, UUID> {
-  interface Leader {
-    UUID getAuctionId();
-
-    UUID getBidderId();
-  }
-
   List<Bid> findByAuctionIdOrderByAmountDesc(UUID auctionId);
 
   Optional<Bid> findByAuctionIdAndBidderId(UUID auctionId, UUID bidderId);
@@ -54,15 +48,18 @@ public interface BidRepository extends JpaRepository<Bid, UUID> {
 
   @Query(
       """
-      select b.auctionId as auctionId, b.bidderId as bidderId
+      select b.auctionId as auctionId, b.amount as amount, b.status as status
       from Bid b
-      where b.auctionId in :auctionIds and b.status = :status
+      where b.bidderId = :bidderId and b.auctionId in :auctionIds
       """)
-  List<Leader> findLeaders(
-      @Param("auctionIds") Collection<UUID> auctionIds, @Param("status") BidStatus status);
-
-  @Query(
-      "select b.auctionId from Bid b where b.bidderId = :bidderId and b.auctionId in :auctionIds")
-  List<UUID> findAuctionIdsBidOnBy(
+  List<Own> findOwnBids(
       @Param("bidderId") UUID bidderId, @Param("auctionIds") Collection<UUID> auctionIds);
+
+  interface Own {
+    UUID getAuctionId();
+
+    long getAmount();
+
+    BidStatus getStatus();
+  }
 }

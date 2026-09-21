@@ -102,7 +102,8 @@ class OrderFlowTest {
 
     offers.accept(listing.getId(), offer.getId(), viewer(seller));
 
-    Order order = orderRows.findOpenForAuction(listing.getId()).orElseThrow();
+    Order order =
+        orderRows.findOpenForAuctionAndBuyer(listing.getId(), buyer.getId()).orElseThrow();
     assertThat(order.getStatus()).isEqualTo(OrderStatus.AWAITING_CONFIRMATION);
     assertThat(order.getBuyerId()).isEqualTo(buyer.getId());
 
@@ -571,10 +572,40 @@ class OrderFlowTest {
         .andExpect(jsonPath("$[0].reference").value(order.getReference()));
   }
 
+  @Test
+  @DisplayName("once an offer is taken, only the two parties learn who took it")
+  void theBuyerStaysPrivate() throws Exception {
+    Auction listing = liveListing();
+    Order order = accept(listing, 200 * LEU);
+    orders.chooseDelivery(order.getId(), buyerLocker, viewer(buyer));
+    orders.markPaid(order.getId(), viewer(buyer));
+    UserAccount stranger = user("Privitor Comanda");
+    String auction = "/auctions/" + listing.getId();
+
+    mvc.perform(get(auction).header(HttpHeaders.AUTHORIZATION, bearer(stranger)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.winnerId").doesNotExist());
+    mvc.perform(get(auction))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.winnerId").doesNotExist());
+    mvc.perform(get(auction).header(HttpHeaders.AUTHORIZATION, bearer(buyer)))
+        .andExpect(jsonPath("$.winnerId").value(buyer.getId().toString()));
+    mvc.perform(get(auction).header(HttpHeaders.AUTHORIZATION, bearer(seller)))
+        .andExpect(jsonPath("$.winnerId").value(buyer.getId().toString()));
+
+    mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(stranger)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty());
+    mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(buyer)))
+        .andExpect(jsonPath("$").isEmpty());
+    mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(seller)))
+        .andExpect(jsonPath("$[0].bidderId").value(buyer.getId().toString()));
+  }
+
   private Order accept(Auction listing, long price) {
     Bid offer = bid(listing, price);
     offers.accept(listing.getId(), offer.getId(), viewer(seller));
-    return orderRows.findOpenForAuction(listing.getId()).orElseThrow();
+    return orderRows.findOpenForAuctionAndBuyer(listing.getId(), buyer.getId()).orElseThrow();
   }
 
   private Order reload(Order order) {

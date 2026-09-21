@@ -20,6 +20,7 @@ import ro.bid4.backend.catalog.api.dto.FeaturedAuctionsResponse;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.catalog.domain.AuctionStatus;
 import ro.bid4.backend.catalog.domain.Bid;
+import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
 import ro.bid4.backend.catalog.repo.BidRepository;
 import ro.bid4.backend.common.error.ApiException;
@@ -113,7 +114,11 @@ public class AuctionService {
   }
 
   public List<BidResponse> bidHistory(UUID auctionId, Viewer viewer) {
-    load(auctionId, viewer);
+    Auction auction = load(auctionId, viewer);
+    boolean seller = viewer.is(auction.getSellerId());
+    if (auction.getStatus().isCommitted() && !seller) {
+      return List.of();
+    }
 
     List<Bid> history = bids.findByAuctionIdOrderByAmountDesc(auctionId);
     if (history.isEmpty()) {
@@ -133,7 +138,7 @@ public class AuctionService {
                   bid.getBidderId(),
                   bid.getAmount(),
                   bid.getCreatedAt(),
-                  bid.getStatus(),
+                  seller || viewer.is(bid.getBidderId()) ? bid.getStatus() : publicStatus(bid),
                   shortName(bidder == null ? null : bidder.displayName()),
                   bidder == null ? "" : bidder.avatarUrl(),
                   "");
@@ -200,5 +205,9 @@ public class AuctionService {
       return parts[0];
     }
     return parts[0] + " " + parts[1].charAt(0) + ".";
+  }
+
+  private static BidStatus publicStatus(Bid bid) {
+    return bid.getStatus() == BidStatus.WINNING ? BidStatus.WINNING : BidStatus.OUTBID;
   }
 }

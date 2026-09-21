@@ -16,11 +16,24 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
       """
       select o from Order o
       where o.auctionId = :auctionId
+        and o.buyerId = :buyerId
         and o.status not in (
           ro.bid4.backend.orders.domain.OrderStatus.CANCELLED,
           ro.bid4.backend.orders.domain.OrderStatus.REFUNDED)
       """)
-  Optional<Order> findOpenForAuction(@Param("auctionId") UUID auctionId);
+  Optional<Order> findOpenForAuctionAndBuyer(
+      @Param("auctionId") UUID auctionId, @Param("buyerId") UUID buyerId);
+
+  @Query(
+      """
+      select o from Order o
+      where o.auctionId = :auctionId
+        and o.status in (
+          ro.bid4.backend.orders.domain.OrderStatus.AWAITING_CONFIRMATION,
+          ro.bid4.backend.orders.domain.OrderStatus.AWAITING_PAYMENT,
+          ro.bid4.backend.orders.domain.OrderStatus.PAYMENT_FAILED)
+      """)
+  List<Order> findUnpaidForAuction(@Param("auctionId") UUID auctionId);
 
   Optional<Order> findByAwb(String awb);
 

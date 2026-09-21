@@ -15,7 +15,10 @@ import {
   FadeImage,
   Skeleton,
   tailDelay,
+  useToast,
 } from "@/components/ui";
+import { getAuction } from "@/lib/api/auctions";
+import { listOffersOnMyAuction, placeBid, retractBid } from "@/lib/api/bids";
 import { getThread, markThreadRead, sendMessage } from "@/lib/api/inbox";
 import {
   bumpInbox,
@@ -31,18 +34,30 @@ import {
   payOrder,
   reportProblem,
 } from "@/lib/api/orders";
-import { listDeliveryMethods } from "@/lib/api/users";
 import { setPageScrollLocked } from "@/components/layout/SmoothScroll";
 import { useApi } from "@/lib/hooks/useApi";
 import { useIsPhone } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { TERMS } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
-import type { ThreadItem } from "@/lib/types";
+import type { Order, ThreadItem } from "@/lib/types";
 import { formatTimeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
-import { DeliverySheet } from "./DeliverySheet";
 import { EventCard, NextStep, type OrderAction } from "./EventCard";
+import { BuyerOfferBar, SellerOfferBar } from "./OfferBar";
+import { useAcceptOffer } from "@/app/cont/_components/BiddersModal";
+
+import {
+  ConfirmPane,
+  DeliveryPane,
+  InfoPane,
+  OfferPane,
+  PayPane,
+  ProblemPane,
+  WithdrawPane,
+  type Pane,
+} from "./ThreadWindows";
 
 const THREAD_SHELL =
   "fixed inset-0 z-50 flex flex-col bg-white " +
@@ -58,7 +73,9 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
-  const [pickingDelivery, setPickingDelivery] = useState(false);
+  const [pane, setPane] = useState<Pane | null>(null);
+  const [chosenOrder, setChosenOrder] = useState<Order | null>(null);
+  const toast = useToast();
   const [leaving, setLeaving] = useState(false);
   const [afterSkeleton, setAfterSkeleton] = useState(false);
   const waited = useRef(false);
@@ -83,6 +100,24 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   });
 
   const settlingOrder = Boolean(orderId) && orderLoading;
+
+  const listingId =
+    data?.conversation.kind === "LISTING" ? data.conversation.listingId : undefined;
+  const viewerRole = data?.conversation.viewerRole;
+
+  const { data: auction, reload: reloadAuction } = useApi(
+    () => getAuction(listingId!, user?.id),
+    `auction:${listingId}:${user?.id ?? "anon"}`,
+    { enabled: Boolean(listingId && user) },
+  );
+
+  const acceptance = useAcceptOffer(listingId, user?.id);
+
+  const { data: offers, reload: reloadOffers } = useApi(
+    () => listOffersOnMyAuction(listingId!, user!.id),
+    `offers:${listingId}`,
+    { enabled: Boolean(listingId && user && viewerRole === "SELLER" && !orderId) },
+  );
 
   useEffect(() => {
     if (!phone) return;
@@ -202,44 +237,63 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
   const otherName = conversation.otherParty?.displayName;
   const buyerName = viewerIsBuyer ? user?.displayName : otherName;
   const sellerName = viewerIsBuyer ? otherName : user?.displayName;
-  const act = async (action: OrderAction) => {
+  const PANE_OF: Record<OrderAction, Pane> = {
+    CHOOSE_DELIVERY: "delivery",
+    PAY: "pay",
+    LABEL: "label",
+    CONFIRM_RECEIPT: "receipt",
+    REPORT_PROBLEM: "problem",
+  };
+
+  const act = (action: OrderAction) => {
     if (!order || acting) return;
-    if (action === "CHOOSE_DELIVERY") {
-      setPickingDelivery(true);
-      return;
-    }
+    setChosenOrder(null);
+    setPane(PANE_OF[action]);
+  };
+
+  const run = async (
+    work: () => Promise<unknown>,
+    fallback: string,
+    next: Pane | null = null,
+  ) => {
     setActing(true);
-    setSendError(null);
     try {
-      if (action === "PAY") await payOrder(order.id, user!.id);
-      if (action === "LABEL") await generateLabel(order.id);
-      if (action === "CONFIRM_RECEIPT") await confirmReceipt(order.id, user!.id);
-      if (action === "REPORT_PROBLEM") await reportProblem(order.id, user!.id);
+      await work();
       reload();
       reloadOrder();
+      reloadAuction();
+      if (viewerRole === "SELLER") reloadOffers();
+      bumpInbox();
+      setPane(next);
+      return true;
     } catch (failure) {
-      setSendError(
-        failure instanceof Error ? failure.message : "Pasul nu a putut fi făcut.",
-      );
+      toast.error(failure instanceof Error ? failure.message : fallback);
+      return false;
     } finally {
       setActing(false);
     }
   };
 
-  const pickDelivery = async (deliveryMethodId: string) => {
-    if (!order) return;
-    setActing(true);
-    try {
-      await chooseDelivery(order.id, deliveryMethodId, user!.id);
-      setPickingDelivery(false);
+  const pickDelivery = (deliveryMethodId: string) =>
+    run(
+      async () =>
+        setChosenOrder(
+          await chooseDelivery(order!.id, deliveryMethodId, user!.id),
+        ),
+      "Livrarea nu a fost salvată.",
+      "pay",
+    );
+
+  const buyerOffer = offers?.find(
+    (bid) => bid.bidderId === conversation.otherParty?.id,
+  );
+
+  const acceptBuyerOffer = async () => {
+    if (!buyerOffer) return;
+    if (await acceptance.accept(buyerOffer)) {
       reload();
-      reloadOrder();
-    } catch (failure) {
-      setSendError(
-        failure instanceof Error ? failure.message : "Livrarea nu a fost salvată.",
-      );
-    } finally {
-      setActing(false);
+      reloadAuction();
+      reloadOffers();
     }
   };
 
@@ -264,6 +318,156 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       setSending(false);
     }
   };
+
+  const back = () => setPane(null);
+
+  const renderPane = () => {
+    switch (pane) {
+      case "info":
+        return (
+          <InfoPane
+            conversation={conversation}
+            auction={auction ?? null}
+            order={order ?? null}
+            viewerIsBuyer={viewerIsBuyer}
+            onBack={back}
+          />
+        );
+      case "offer":
+        return auction ? (
+          <OfferPane
+            auction={auction}
+            busy={acting}
+            onBack={back}
+            onSubmit={(amount) =>
+              run(
+                () =>
+                  placeBid(
+                    {
+                      auctionId: auction.id,
+                      amount,
+                      acceptedTermsVersion: TERMS.VERSION,
+                    },
+                    user!.id,
+                  ),
+                "Oferta nu a fost transmisă.",
+              )
+            }
+          />
+        ) : null;
+      case "withdraw":
+        return auction?.viewerBidAmount ? (
+          <WithdrawPane
+            amount={auction.viewerBidAmount}
+            busy={acting}
+            onBack={back}
+            onConfirm={() =>
+              run(
+                () => retractBid(auction.id, user!.id),
+                "Oferta nu a putut fi retrasă.",
+              )
+            }
+          />
+        ) : null;
+      case "delivery":
+        return order ? (
+          <DeliveryPane
+            userId={user!.id}
+            busy={acting}
+            onBack={back}
+            onChoose={pickDelivery}
+          />
+        ) : null;
+      case "pay": {
+        const payable = order ? { ...order, ...(chosenOrder ?? {}) } : null;
+        return payable ? (
+          <PayPane
+            order={payable}
+            busy={acting}
+            onBack={back}
+            onPay={() =>
+              run(
+                () => payOrder(payable.id, user!.id),
+                "Plata nu a fost înregistrată.",
+              )
+            }
+          />
+        ) : null;
+      }
+      case "label":
+        return order ? (
+          <ConfirmPane
+            title="Emite eticheta de expediere"
+            lines={[
+              "Eticheta conține AWB-ul coletului și datele de livrare ale cumpărătorului.",
+              "După emitere, descarcă eticheta din conversație, lipește-o pe colet și predă coletul la Easybox sau curierului.",
+            ]}
+            confirm="Emite eticheta"
+            busy={acting}
+            onBack={back}
+            onConfirm={() =>
+              run(() => generateLabel(order.id), "Eticheta nu a fost emisă.")
+            }
+          />
+        ) : null;
+      case "receipt":
+        return order ? (
+          <ConfirmPane
+            title="Confirmă livrarea"
+            lines={[
+              "Confirmi că produsul a fost livrat și corespunde descrierii.",
+              "După confirmare, suma este eliberată vânzătorului, iar donația ajunge la cauză. Comanda se finalizează și nu mai poate fi semnalată o problemă.",
+            ]}
+            confirm="Confirm livrarea"
+            busy={acting}
+            onBack={back}
+            onConfirm={() =>
+              run(
+                () => confirmReceipt(order.id, user!.id),
+                "Confirmarea nu a fost înregistrată.",
+              )
+            }
+          />
+        ) : null;
+      case "problem":
+        return order ? (
+          <ProblemPane
+            busy={acting}
+            onBack={back}
+            onSubmit={(reason) =>
+              run(
+                () => reportProblem(order.id, user!.id, reason),
+                "Sesizarea nu a fost trimisă.",
+              )
+            }
+          />
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
+  const paneView = renderPane();
+
+  const offerBar =
+    listingId && !orderId && user ? (
+      viewerIsBuyer ? (
+        <BuyerOfferBar
+          auction={auction ?? null}
+          viewerId={user.id}
+          onModify={() => setPane("offer")}
+          onWithdraw={() => setPane("withdraw")}
+        />
+      ) : (
+        <SellerOfferBar
+          auction={auction ?? null}
+          offer={offers ? (buyerOffer ?? null) : undefined}
+          buyerName={otherName ?? "cumpărător"}
+          accepting={acceptance.pendingId !== null}
+          onAccept={acceptBuyerOffer}
+        />
+      )
+    ) : null;
 
   const panel = (
     <section
@@ -355,6 +559,23 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
               ) : null}
             </>
           )}
+
+          <button
+            type="button"
+            aria-label={pane === "info" ? "Înapoi la conversație" : "Detalii"}
+            aria-pressed={pane === "info"}
+            onClick={() =>
+              setPane((current) => (current === "info" ? null : "info"))
+            }
+            className={cn(
+              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition",
+              pane === "info"
+                ? "bg-primary-50 text-primary-700"
+                : "text-ink-600 hover:bg-ink-100 hover:text-ink-900",
+            )}
+          >
+            <Icons.info aria-hidden="true" className="h-5 w-5" />
+          </button>
         </div>
 
         {conversation.listingId ? (
@@ -381,96 +602,94 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
         ) : null}
       </header>
 
-      <div
-        ref={stream}
-        data-lenis-prevent
-        onScroll={(event) => {
-          const box = event.currentTarget;
-          wasAtBottom.current =
-            box.scrollHeight - box.scrollTop - box.clientHeight < 160;
-        }}
-        className="no-scrollbar flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
-      >
-        {items.map((item, index) => (
-          <div
-            key={item.id}
-            className="animate-fade-in"
-            style={tailDelay(index, items.length, 60)}
-          >
-            {item.kind === "EVENT" ? (
-              <EventCard
-                item={item}
-                viewerIsBuyer={viewerIsBuyer}
-                buyerName={buyerName}
-                sellerName={sellerName}
-              />
-            ) : (
-              <Item item={item} />
-            )}
-          </div>
-        ))}
-        {order ? (
-          <div
-            className="animate-fade-in"
-            style={tailDelay(items.length, items.length + 1, 60)}
-          >
-            <NextStep
-              order={order}
-              viewerIsBuyer={viewerIsBuyer}
-              buyerName={buyerName}
-              sellerName={sellerName}
-              causeName={causeName}
-              busy={acting}
-              onAct={act}
-            />
-          </div>
-        ) : null}
-        <div ref={bottom} />
-      </div>
+      {pane ? null : offerBar}
 
-      <DeliverySheet
-        open={pickingDelivery}
-        busy={acting}
-        onClose={() => setPickingDelivery(false)}
-        onChoose={pickDelivery}
-        load={() => listDeliveryMethods(user!.id)}
-      />
-
-      <form
-        onSubmit={send}
-        className="animate-fade-in border-t border-line p-3"
-        style={{ animationDelay: "60ms" }}
-      >
-        {sendError ? (
-          <p className="mb-2 text-[13px] font-semibold text-danger-700">
-            {sendError}
-          </p>
-        ) : null}
-        <div className="flex items-center gap-2">
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void send(event);
-              }
+      {paneView ?? (
+        <>
+          <div
+            ref={stream}
+            data-lenis-prevent
+            onScroll={(event) => {
+              const box = event.currentTarget;
+              wasAtBottom.current =
+                box.scrollHeight - box.scrollTop - box.clientHeight < 160;
             }}
-            rows={1}
-            placeholder="Scrie un mesaj..."
-            aria-label="Scrie un mesaj"
-            className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl bg-canvas px-3.5 py-2.5 text-base text-ink-900 ring-1 ring-ink-200 transition placeholder:text-ink-500 focus:ring-primary-500 focus:outline-none sm:text-[15px]"
-          />
-          <Button
-            type="submit"
-            size="md"
-            className="shrink-0 [--btn-depth:0px]"
-            disabled={!draft.trim() || sending}
+            className="no-scrollbar flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
           >
-            Trimite
-          </Button>
-        </div>
-      </form>
+            {items.map((item, index) => (
+              <div
+                key={item.id}
+                className="animate-fade-in"
+                style={tailDelay(index, items.length, 60)}
+              >
+                {item.kind === "EVENT" ? (
+                  <EventCard
+                    item={item}
+                    viewerIsBuyer={viewerIsBuyer}
+                    buyerName={buyerName}
+                    sellerName={sellerName}
+                  />
+                ) : (
+                  <Item item={item} />
+                )}
+              </div>
+            ))}
+            {order ? (
+              <div
+                className="animate-fade-in"
+                style={tailDelay(items.length, items.length + 1, 60)}
+              >
+                <NextStep
+                  order={order}
+                  viewerIsBuyer={viewerIsBuyer}
+                  buyerName={buyerName}
+                  sellerName={sellerName}
+                  causeName={causeName}
+                  busy={acting}
+                  onAct={act}
+                />
+              </div>
+            ) : null}
+            <div ref={bottom} />
+          </div>
+
+          <form
+            onSubmit={send}
+            className="animate-fade-in border-t border-line p-3"
+            style={{ animationDelay: "60ms" }}
+          >
+            {sendError ? (
+              <p className="mb-2 text-[13px] font-semibold text-danger-700">
+                {sendError}
+              </p>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void send(event);
+                  }
+                }}
+                rows={1}
+                placeholder="Scrie un mesaj..."
+                aria-label="Scrie un mesaj"
+                className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl bg-canvas px-3.5 py-2.5 text-base text-ink-900 ring-1 ring-ink-200 transition placeholder:text-ink-500 focus:ring-primary-500 focus:outline-none sm:text-[15px]"
+              />
+              <Button
+                type="submit"
+                size="md"
+                className="shrink-0 [--btn-depth:0px]"
+                disabled={!draft.trim() || sending}
+              >
+                Trimite
+              </Button>
+            </div>
+          </form>
+        </>
+      )}
     </section>
   );
 

@@ -1,7 +1,6 @@
 package ro.bid4.backend.catalog.service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,7 +12,6 @@ import ro.bid4.backend.catalog.api.dto.AuctionResponse;
 import ro.bid4.backend.catalog.api.dto.BidResponse;
 import ro.bid4.backend.catalog.api.dto.PlaceBidResponse;
 import ro.bid4.backend.catalog.domain.Auction;
-import ro.bid4.backend.catalog.domain.AuctionStatus;
 import ro.bid4.backend.catalog.domain.AuctionWatch;
 import ro.bid4.backend.catalog.domain.AuctionWatchId;
 import ro.bid4.backend.catalog.domain.Bid;
@@ -24,9 +22,8 @@ import ro.bid4.backend.catalog.repo.BidRepository;
 import ro.bid4.backend.common.error.ApiException;
 import ro.bid4.backend.common.error.ErrorCode;
 import ro.bid4.backend.common.web.Viewer;
-import ro.bid4.backend.identity.domain.UserAccount;
-import ro.bid4.backend.identity.repo.UserAccountRepository;
 import ro.bid4.backend.inbox.service.ThreadEvents;
+import ro.bid4.backend.orders.service.OrderService;
 import ro.bid4.backend.orders.service.Terms;
 
 @Service
@@ -36,23 +33,26 @@ public class BidService {
   private final AuctionRepository auctions;
   private final BidRepository bids;
   private final AuctionWatchRepository watches;
-  private final UserAccountRepository users;
   private final AuctionMapper mapper;
   private final ThreadEvents threads;
+  private final Standings standings;
+  private final OrderService orders;
 
   public BidService(
       AuctionRepository auctions,
       BidRepository bids,
       AuctionWatchRepository watches,
-      UserAccountRepository users,
       AuctionMapper mapper,
-      ThreadEvents threads) {
+      ThreadEvents threads,
+      Standings standings,
+      OrderService orders) {
     this.auctions = auctions;
     this.bids = bids;
     this.watches = watches;
-    this.users = users;
     this.mapper = mapper;
     this.threads = threads;
+    this.standings = standings;
+    this.orders = orders;
   }
 
   public static long minimumBid(Auction auction) {
@@ -86,8 +86,6 @@ public class BidService {
       throw ApiException.forbidden("Nu poți licita la propriul anunț.");
     }
 
-    requireBiddingUnlocked(viewer.id());
-
     if (amount > CatalogRules.MAX_BID) {
       throw new ApiException(
           ErrorCode.BID_TOO_HIGH,
@@ -106,49 +104,37 @@ public class BidService {
     }
 
     Optional<Bid> previous = bids.findByAuctionIdAndBidderId(auctionId, viewer.id());
+    if (previous.map(bid -> bid.getStatus() == BidStatus.ACCEPTED).orElse(false)) {
+      throw new ApiException(
+          ErrorCode.CONFLICT, "Oferta ta a fost acceptată. Finalizează comanda din conversație.");
+    }
     previous.ifPresent(bids::delete);
     bids.flush();
 
     long price = boughtNow ? auction.getBuyNowPrice() : amount;
 
-    BidStatus demoted = boughtNow ? BidStatus.LOST : BidStatus.OUTBID;
-    UUID accepted = auction.getAcceptedBidId();
-    if (accepted == null) {
-      bids.demoteAllFor(auctionId, demoted);
-    } else {
-      bids.demoteAllExcept(auctionId, demoted, accepted);
-    }
-    bids.flush();
-
     Bid bid = new Bid();
     bid.setAuctionId(auctionId);
     bid.setBidderId(viewer.id());
     bid.setAmount(price);
-    bid.setStatus(boughtNow ? BidStatus.ACCEPTED : BidStatus.WINNING);
+    bid.setStatus(boughtNow ? BidStatus.ACCEPTED : BidStatus.OUTBID);
     bid.setTermsVersion(Terms.CURRENT_VERSION);
     bid.setTermsAcceptedAt(now);
-    bids.save(bid);
-    bids.flush();
+    bids.saveAndFlush(bid);
 
-    auction.setCurrentPrice(price);
-    auction.setBidCount((int) bids.countByAuctionId(auctionId));
-    if (boughtNow) {
-      auction.setStatus(AuctionStatus.RESERVED);
-      auction.setWinnerId(viewer.id());
-      auction.setAcceptedBidId(bid.getId());
-      auction.setAcceptedAt(now);
-    }
+    standings.rebalance(auction);
     auctions.save(auction);
 
     if (boughtNow) {
+      orders.open(auction, viewer.id(), price);
       log.info(
-          "Auction {} bought outright by {} at {} bani (offered {})",
+          "Auction {} taken at the buy-now price by {} at {} bani (offered {})",
           auctionId,
           viewer.id(),
           price,
           amount);
     } else {
-      log.info("Bid accepted on {}: {} bani by {}", auctionId, price, viewer.id());
+      log.info("Bid placed on {}: {} bani by {}", auctionId, price, viewer.id());
     }
 
     long before = previous.map(Bid::getAmount).orElse(0L);
@@ -180,29 +166,21 @@ public class BidService {
       throw new ApiException(ErrorCode.RETRACT_NOT_ALLOWED, "Anunțul nu mai acceptă modificări.");
     }
 
-    List<Bid> ordered = bids.findByAuctionIdOrderByAmountDesc(auctionId);
-    if (ordered.isEmpty() || !ordered.getFirst().getBidderId().equals(viewer.id())) {
-      throw new ApiException(
-          ErrorCode.RETRACT_NOT_ALLOWED, "Poți retrage doar propria ofertă aflată pe primul loc.");
-    }
-
-    Bid top = ordered.getFirst();
-    if (top.getId().equals(auction.getAcceptedBidId())) {
+    Bid mine =
+        bids.findByAuctionIdAndBidderId(auctionId, viewer.id())
+            .orElseThrow(
+                () ->
+                    new ApiException(
+                        ErrorCode.RETRACT_NOT_ALLOWED, "Nu ai o ofertă activă la acest anunț."));
+    if (mine.getStatus() == BidStatus.ACCEPTED || mine.getStatus() == BidStatus.WON) {
       throw new ApiException(
           ErrorCode.RETRACT_NOT_ALLOWED,
           "Oferta ta a fost acceptată, așa că nu mai poate fi retrasă.");
     }
-    bids.delete(top);
+
+    bids.delete(mine);
     bids.flush();
-
-    Bid next = ordered.size() > 1 ? ordered.get(1) : null;
-    if (next != null && !next.getId().equals(auction.getAcceptedBidId())) {
-      next.setStatus(BidStatus.WINNING);
-      bids.save(next);
-    }
-
-    auction.setCurrentPrice(next == null ? auction.getStartingPrice() : next.getAmount());
-    auction.setBidCount(Math.max(0, auction.getBidCount() - 1));
+    standings.rebalance(auction);
     auctions.save(auction);
 
     threads.offer(
@@ -211,7 +189,7 @@ public class BidService {
         auction.getSellerId(),
         "OFFER_WITHDRAWN",
         "Oferta a fost retrasă.",
-        Map.of("amount", String.valueOf(top.getAmount())));
+        Map.of("amount", String.valueOf(mine.getAmount())));
 
     log.info(
         "Bid retracted on {} by {}; price back to {} bani",
@@ -246,26 +224,6 @@ public class BidService {
     auction.setWatcherCount(auction.getWatcherCount() + 1);
     auctions.save(auction);
     return true;
-  }
-
-  private void requireBiddingUnlocked(UUID userId) {
-    UserAccount account =
-        users.findById(userId).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHENTICATED));
-
-    boolean hasCard = users.hasPaymentMethod(userId);
-    boolean hasDelivery = account.getDefaultDeliveryMethodId() != null;
-
-    if (!hasCard && !hasDelivery) {
-      throw new ApiException(
-          ErrorCode.BID_NOT_ALLOWED, "Adaugă un card și o metodă de livrare pentru a licita.");
-    }
-    if (!hasCard) {
-      throw new ApiException(ErrorCode.BID_NOT_ALLOWED, "Adaugă un card salvat pentru a licita.");
-    }
-    if (!hasDelivery) {
-      throw new ApiException(
-          ErrorCode.BID_NOT_ALLOWED, "Alege o metodă de livrare implicită pentru a licita.");
-    }
   }
 
   private static String formatLei(long bani) {

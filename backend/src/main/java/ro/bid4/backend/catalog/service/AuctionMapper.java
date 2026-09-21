@@ -12,7 +12,6 @@ import ro.bid4.backend.catalog.api.dto.BidResponse;
 import ro.bid4.backend.catalog.api.dto.ViewerBidStatus;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.catalog.domain.Bid;
-import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.repo.AuctionWatchRepository;
 import ro.bid4.backend.catalog.repo.BidRepository;
 import ro.bid4.backend.cause.api.dto.CauseSummaryResponse;
@@ -53,19 +52,16 @@ public class AuctionMapper {
     Map<UUID, PublicUserResponse> sellers = users.publicUsersById(sellerIds);
     Map<UUID, CauseSummaryResponse> causeSummaries = causes.summariesById(causeIds);
 
-    Map<UUID, UUID> leaders = new HashMap<>();
-    if (viewerId != null) {
-      for (BidRepository.Leader leader : bids.findLeaders(auctionIds, BidStatus.WINNING)) {
-        leaders.put(leader.getAuctionId(), leader.getBidderId());
-      }
-    }
-
     Set<UUID> watched =
         viewerId == null
             ? Set.of()
             : Set.copyOf(watches.findWatchedAuctionIds(viewerId, auctionIds));
-    Set<UUID> bidOn =
-        viewerId == null ? Set.of() : Set.copyOf(bids.findAuctionIdsBidOnBy(viewerId, auctionIds));
+    Map<UUID, BidRepository.Own> ownBids = new HashMap<>();
+    if (viewerId != null) {
+      for (BidRepository.Own own : bids.findOwnBids(viewerId, auctionIds)) {
+        ownBids.put(own.getAuctionId(), own);
+      }
+    }
 
     Set<UUID> acceptedBidIds = new HashSet<>();
     for (Auction auction : auctions) {
@@ -87,9 +83,8 @@ public class AuctionMapper {
                     auction,
                     sellers.get(auction.getSellerId()),
                     causeSummaries.get(auction.getCauseId()),
-                    leaders.get(auction.getId()),
                     watched.contains(auction.getId()),
-                    bidOn.contains(auction.getId()),
+                    ownBids.get(auction.getId()),
                     auction.getAcceptedBidId() == null
                         ? null
                         : acceptedAmounts.get(auction.getAcceptedBidId()),
@@ -105,12 +100,12 @@ public class AuctionMapper {
       Auction auction,
       PublicUserResponse seller,
       CauseSummaryResponse cause,
-      UUID leaderId,
       boolean watched,
-      boolean hasBid,
+      BidRepository.Own ownBid,
       Long acceptedAmount,
       UUID viewerId) {
     boolean viewerIsSeller = viewerId != null && viewerId.equals(auction.getSellerId());
+    boolean viewerWon = viewerId != null && viewerId.equals(auction.getWinnerId());
 
     return new AuctionResponse(
         auction.getId(),
@@ -133,7 +128,7 @@ public class AuctionMapper {
         acceptedAmount,
         auction.getDispatchDeadline(),
         auction.getStatus(),
-        auction.getWinnerId(),
+        viewerIsSeller || viewerWon ? auction.getWinnerId() : null,
         auction.getBidCount(),
         auction.getWatcherCount(),
         auction.getCreatedAt(),
@@ -141,7 +136,8 @@ public class AuctionMapper {
         cause,
         auction.isReserveMet(),
         viewerId == null ? null : watched,
-        viewerBidStatus(viewerId, hasBid, leaderId));
+        viewerBidStatus(viewerId, ownBid),
+        ownBid == null ? null : ownBid.getAmount());
   }
 
   public BidResponse toBidResponse(Bid bid, UUID viewerId) {
@@ -162,13 +158,17 @@ public class AuctionMapper {
         bidder == null ? "" : bidder.username());
   }
 
-  private static ViewerBidStatus viewerBidStatus(UUID viewerId, boolean hasBid, UUID leaderId) {
+  private static ViewerBidStatus viewerBidStatus(UUID viewerId, BidRepository.Own own) {
     if (viewerId == null) {
       return null;
     }
-    if (!hasBid) {
+    if (own == null) {
       return ViewerBidStatus.NONE;
     }
-    return viewerId.equals(leaderId) ? ViewerBidStatus.WINNING : ViewerBidStatus.OUTBID;
+    return switch (own.getStatus()) {
+      case WINNING -> ViewerBidStatus.WINNING;
+      case ACCEPTED, WON -> ViewerBidStatus.ACCEPTED;
+      default -> ViewerBidStatus.OUTBID;
+    };
   }
 }

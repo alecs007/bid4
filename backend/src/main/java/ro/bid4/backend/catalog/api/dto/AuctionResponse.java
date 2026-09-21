@@ -38,4 +38,5 @@ public record AuctionResponse(
     CauseSummaryResponse cause,
     boolean reserveMet,
     @JsonProperty("isWatched") Boolean isWatched,
-    ViewerBidStatus viewerBidStatus) {}
+    ViewerBidStatus viewerBidStatus,
+    Long viewerBidAmount) {}

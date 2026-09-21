@@ -87,7 +87,8 @@ export interface AuctionDetail extends Auction {
   >;
   reserveMet: boolean;
   isWatched?: boolean;
-  viewerBidStatus?: "WINNING" | "OUTBID" | "NONE";
+  viewerBidStatus?: "WINNING" | "OUTBID" | "ACCEPTED" | "NONE";
+  viewerBidAmount?: Bani;
 }
 
 export type BidStatus =

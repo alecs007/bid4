@@ -12,6 +12,7 @@ import {
   nextId,
   notFound,
   openOrderForAcceptance,
+  rebalanceBids,
 } from "@/lib/mock/store";
 import type {
   Auction,
@@ -23,7 +24,7 @@ import type {
   ID,
   Page,
 } from "@/lib/types";
-import { PUBLIC_AUCTION_STATUSES, isCommitted } from "@/lib/types";
+import { PUBLIC_AUCTION_STATUSES, isCommitted, isOfferable } from "@/lib/types";
 
 import { matchesSearch } from "@/lib/utils/search";
 
@@ -331,12 +332,7 @@ export async function acceptOffer(
   const world = getWorld();
   const auction = world.auctions.find((item) => item.id === auctionId);
   if (!auction || auction.sellerId !== userId) notFound("Licitația");
-  if (auction.status === "RESERVED") {
-    badRequest(
-      "Ai deja o ofertă acceptată. Anuleaz-o mai întâi, apoi poți accepta alta.",
-    );
-  }
-  if (auction.status !== "LIVE") {
+  if (!isOfferable(auction.status)) {
     badRequest("Anunțul nu mai acceptă oferte.");
   }
 
@@ -344,60 +340,15 @@ export async function acceptOffer(
     (bid) => bid.id === bidId && bid.auctionId === auctionId,
   );
   if (!offer) notFound("Oferta");
-  if (offer.status === "LOST") badRequest("Oferta a fost retrasă.");
+  if (offer.status === "LOST" || offer.status === "WON") {
+    badRequest("Oferta nu mai este activă.");
+  }
 
-  offer.status = "ACCEPTED";
-  auction.status = "RESERVED";
-  auction.winnerId = offer.bidderId;
-  auction.acceptedAt = new Date().toISOString();
-  auction.acceptedAmount = offer.amount;
+  if (offer.status !== "ACCEPTED") {
+    offer.status = "ACCEPTED";
+    rebalanceBids(world, auction);
+  }
   openOrderForAcceptance(auction.id, offer.bidderId);
-  commit();
-
-  const detail = toAuctionDetail(auction, userId);
-  if (!detail) notFound("Licitația");
-  return detail;
-}
-
-export async function releaseOffer(
-  auctionId: ID,
-  userId: ID,
-): Promise<AuctionDetail> {
-  if (!USE_MOCK) {
-    return http<AuctionDetail>(`/auctions/${auctionId}/accept`, {
-      method: "DELETE",
-    });
-  }
-
-  await delay();
-  const world = getWorld();
-  const auction = world.auctions.find((item) => item.id === auctionId);
-  if (!auction || auction.sellerId !== userId) notFound("Licitația");
-  if (auction.status === "SOLD") badRequest("Comanda este deja plătită.");
-  if (auction.status !== "RESERVED") {
-    badRequest("Anunțul nu are o ofertă acceptată.");
-  }
-
-  const offers = world.bids.filter((bid) => bid.auctionId === auctionId);
-  for (const bid of offers) bid.status = "OUTBID";
-
-  const top = offers.reduce<(typeof offers)[number] | undefined>(
-    (best, bid) =>
-      !best ||
-      bid.amount > best.amount ||
-      (bid.amount === best.amount &&
-        Date.parse(bid.createdAt) < Date.parse(best.createdAt))
-        ? bid
-        : best,
-    undefined,
-  );
-  if (top) top.status = "WINNING";
-
-  auction.status = "LIVE";
-  auction.winnerId = undefined;
-  auction.acceptedAt = undefined;
-  auction.acceptedAmount = undefined;
-  world.orders = world.orders.filter((order) => order.auctionId !== auction.id);
   commit();
 
   const detail = toAuctionDetail(auction, userId);

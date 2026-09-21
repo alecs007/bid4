@@ -1,7 +1,7 @@
 import { MOCK, ORDER, SHIPPING } from "@/lib/config";
 import { computeFees } from "@/lib/money";
 import { ApiError } from "@/lib/types";
-import type { ID, Order, OrderStatus, TrackingEvent } from "@/lib/types";
+import type { Auction, ID, Order, OrderStatus, TrackingEvent } from "@/lib/types";
 
 import { shippingPriceFor, snapshotDelivery } from "./delivery";
 import { CACHE_KEYS, invalidateCache } from "@/lib/api/cache";
@@ -205,11 +205,114 @@ function releaseFunds(current: World, order: Order): void {
   );
 }
 
+const UNPAID: OrderStatus[] = [
+  "AWAITING_CONFIRMATION",
+  "AWAITING_PAYMENT",
+  "PAYMENT_FAILED",
+];
+
+export function rebalanceBids(current: World, auction: Auction): void {
+  const ordered = current.bids
+    .filter((bid) => bid.auctionId === auction.id)
+    .sort(
+      (a, b) =>
+        b.amount - a.amount || Date.parse(a.createdAt) - Date.parse(b.createdAt),
+    );
+  const leader = ordered.find(
+    (bid) => bid.status === "WINNING" || bid.status === "OUTBID",
+  );
+  for (const bid of ordered) {
+    if (bid.status === "WINNING" && bid !== leader) bid.status = "OUTBID";
+  }
+  if (leader) leader.status = "WINNING";
+
+  const standing = ordered.filter((bid) => bid.status !== "LOST");
+  auction.currentPrice = standing.length
+    ? Math.max(...standing.map((bid) => bid.amount))
+    : auction.startingPrice;
+  auction.bidCount = ordered.length;
+}
+
+export function postOrderEvent(
+  current: World,
+  order: Order,
+  eventType: string,
+  payload: Record<string, string>,
+): void {
+  const conversation = current.conversations.find(
+    (item) =>
+      item.listingId === order.auctionId && item.buyerId === order.buyerId,
+  );
+  if (!conversation) return;
+  const at = new Date().toISOString();
+  conversation.orderId = order.id;
+  conversation.lastItemAt = at;
+  conversation.archived = false;
+  for (const party of [order.buyerId, order.sellerId]) {
+    conversation.unread[party] = (conversation.unread[party] ?? 0) + 1;
+  }
+  current.threadItems.push({
+    conversationId: conversation.id,
+    id: nextId("item"),
+    kind: "EVENT",
+    mine: false,
+    imageUrls: [],
+    eventType,
+    orderStatus: order.status,
+    payload,
+    createdAt: at,
+  });
+}
+
+export function closeSale(current: World, paid: Order): void {
+  const auction = current.auctions.find((item) => item.id === paid.auctionId);
+  if (!auction) return;
+
+  const now = new Date().toISOString();
+  auction.status = "SOLD";
+  auction.winnerId = paid.buyerId;
+  auction.acceptedAt = now;
+  auction.acceptedAmount = paid.finalPrice;
+  auction.currentPrice = paid.finalPrice;
+
+  for (const bid of current.bids) {
+    if (bid.auctionId !== auction.id) continue;
+    bid.status = bid.bidderId === paid.buyerId ? "WON" : "LOST";
+  }
+
+  for (const other of current.orders) {
+    if (other.auctionId !== auction.id || other.id === paid.id) continue;
+    if (!UNPAID.includes(other.status)) continue;
+    pushEvent(other, "CANCELLED", "Produsul a fost vândut altui cumpărător.");
+    postOrderEvent(current, other, "CANCELLED", { by: "SALE" });
+  }
+}
+
+export function reopenBid(current: World, order: Order): void {
+  const auction = current.auctions.find((item) => item.id === order.auctionId);
+  if (!auction || (auction.status !== "LIVE" && auction.status !== "RESERVED")) {
+    return;
+  }
+  const bid = current.bids.find(
+    (item) =>
+      item.auctionId === order.auctionId && item.bidderId === order.buyerId,
+  );
+  if (bid?.status === "ACCEPTED") bid.status = "OUTBID";
+  rebalanceBids(current, auction);
+}
+
 export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {
   const current = getWorld();
   const auction = current.auctions.find((item) => item.id === auctionId);
   if (!auction) return;
-  if (current.orders.some((order) => order.auctionId === auctionId)) return;
+  const open = current.orders.some(
+    (order) =>
+      order.auctionId === auctionId &&
+      order.buyerId === buyerId &&
+      order.status !== "CANCELLED" &&
+      order.status !== "REFUNDED",
+  );
+  if (open) return;
 
   const accepted = current.bids.find(
     (bid) => bid.auctionId === auctionId && bid.bidderId === buyerId,
@@ -250,9 +353,25 @@ export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {
     ).toISOString(),
     createdAt: new Date().toISOString(),
   });
+
+  const opened = current.orders[current.orders.length - 1]!;
+  const cause = current.causes.find((item) => item.id === auction.causeId);
+  postOrderEvent(current, opened, "OFFER_ACCEPTED", {
+    price: String(opened.finalPrice),
+    donation: String(opened.donationAmount),
+    donationPercent: String(opened.donationPercent),
+    cause: cause?.name ?? "",
+  });
 }
 
 function chargeOrder(current: World, order: Order): void {
+  const listing = current.auctions.find((item) => item.id === order.auctionId);
+  if (!listing || (listing.status !== "LIVE" && listing.status !== "RESERVED")) {
+    pushEvent(order, "CANCELLED", "Produsul a fost vândut altui cumpărător.");
+    postOrderEvent(current, order, "CANCELLED", { by: "SALE" });
+    return;
+  }
+
   const declined = Math.random() < MOCK.PAYMENT_FAILURE_RATE;
   if (declined) {
     order.paymentFailureReason =
@@ -267,6 +386,7 @@ function chargeOrder(current: World, order: Order): void {
     "PAID_HELD",
     "Plată autorizată. Fondurile sunt reținute de bid4.",
   );
+  closeSale(current, order);
 }
 
 export function syncWorld(force = false): void {

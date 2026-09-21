@@ -219,13 +219,9 @@ export const DELIVERY_METHOD_TYPE: Record<DeliveryMethodType, string> = {
 
 export const COPY = {
   escrowExplainer:
-    "Plata este păstrată de bid4 și eliberată abia după ce confirmi că ai primit produsul.",
+    "Plata este păstrată de bid4 și eliberată după finalizarea comenzii.",
   donationExplainer:
     "Procentul stabilit de vânzător din prețul final ajunge la cauza verificată imediat ce comanda este finalizată.",
-  bidGateExplainer:
-    "Pentru a licita ai nevoie de un card salvat și de o metodă de livrare implicită, astfel încât comanda să pornească imediat ce câștigi.",
   noClockExplainer:
     "Anunțul rămâne deschis până când vânzătorul alege o ofertă. Nu există numărătoare inversă.",
-  sellerChoosesExplainer:
-    "Vânzătorul poate accepta orice ofertă, nu doar pe cea mai mare.",
 } as const;

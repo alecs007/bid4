@@ -64,12 +64,13 @@ export function toAuctionDetail(
         (bid) => bid.auctionId === auction.id && bid.bidderId === viewerId,
       )
     : [];
-  const topBid = world.bids
-    .filter((bid) => bid.auctionId === auction.id)
-    .sort((a, b) => b.amount - a.amount)[0];
+  const revealsWinner =
+    viewerId !== undefined &&
+    (viewerId === auction.sellerId || viewerId === auction.winnerId);
 
   return {
     ...auction,
+    winnerId: revealsWinner ? auction.winnerId : undefined,
     seller: toPublicUser(seller),
     cause: {
       id: cause.id,
@@ -90,14 +91,16 @@ export function toAuctionDetail(
           (entry) => entry.userId === viewerId && entry.auctionId === auction.id,
         )
       : undefined,
-    viewerBidStatus:
-      viewerBids.length === 0
-        ? viewerId
-          ? "NONE"
-          : undefined
-        : topBid?.bidderId === viewerId
-          ? "WINNING"
-          : "OUTBID",
+    viewerBidAmount: viewerBids[0]?.amount,
+    viewerBidStatus: !viewerId
+      ? undefined
+      : !viewerBids[0]
+        ? "NONE"
+        : viewerBids[0].status === "ACCEPTED" || viewerBids[0].status === "WON"
+          ? "ACCEPTED"
+          : viewerBids[0].status === "WINNING"
+            ? "WINNING"
+            : "OUTBID",
   };
 }
 

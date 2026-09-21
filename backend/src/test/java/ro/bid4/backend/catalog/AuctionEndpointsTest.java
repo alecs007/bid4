@@ -417,8 +417,8 @@ class AuctionEndpointsTest {
   }
 
   @Test
-  @DisplayName("The seller accepts an offer over HTTP, and can hand it back the same way")
-  void acceptAndReleaseRoutes() throws Exception {
+  @DisplayName("The seller accepts an offer over HTTP, and the listing stays open until it is paid")
+  void acceptRouteKeepsTheListingOpen() throws Exception {
     Auction listing = ownListing();
     Bid offer = bid(listing.getId(), rival.getId(), 100 * LEU, BidStatus.WINNING);
 
@@ -428,17 +428,14 @@ class AuctionEndpointsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"bidId\":\"" + offer.getId() + "\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("RESERVED"))
-        .andExpect(jsonPath("$.winnerId").value(rival.getId().toString()))
-        .andExpect(jsonPath("$.acceptedAt").exists())
+        .andExpect(jsonPath("$.status").value("LIVE"))
+        .andExpect(jsonPath("$.winnerId").doesNotExist())
         .andExpect(jsonPath("$.dispatchDeadline").doesNotExist());
 
     mvc.perform(
             delete("/auctions/" + listing.getId() + "/accept")
                 .header(HttpHeaders.AUTHORIZATION, bearer(loner)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("LIVE"))
-        .andExpect(jsonPath("$.winnerId").doesNotExist());
+        .andExpect(status().is4xxClientError());
   }
 
   @Test

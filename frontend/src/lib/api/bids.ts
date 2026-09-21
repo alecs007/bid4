@@ -10,6 +10,8 @@ import {
   maybeFailRead,
   nextId,
   notFound,
+  openOrderForAcceptance,
+  rebalanceBids,
   syncWorld,
 } from "@/lib/mock/store";
 import type {
@@ -20,11 +22,11 @@ import type {
   ID,
   PlaceBidPayload,
   PlaceBidResult,
-  User,
 } from "@/lib/types";
-import { isOfferable } from "@/lib/types";
+import { isCommitted, isOfferable } from "@/lib/types";
 
 import { http } from "./http";
+import { recordOfferEvent } from "./inbox";
 
 function shortName(displayName: string): string {
   const parts = displayName.trim().split(/\s+/);
@@ -32,73 +34,34 @@ function shortName(displayName: string): string {
   return `${parts[0]} ${parts[1]?.[0] ?? ""}.`;
 }
 
-export async function listBids(auctionId: ID): Promise<BidWithBidder[]> {
+export async function listBids(
+  auctionId: ID,
+  viewerId?: ID,
+): Promise<BidWithBidder[]> {
   if (!USE_MOCK) return http<BidWithBidder[]>(`/auctions/${auctionId}/bids`);
 
   await delay();
   maybeFailRead("istoricul ofertelor");
   const world = getWorld();
 
+  const auction = world.auctions.find((item) => item.id === auctionId);
+  const seller = Boolean(viewerId) && auction?.sellerId === viewerId;
+  if (auction && isCommitted(auction.status) && !seller) return [];
+
   return world.bids
     .filter((bid) => bid.auctionId === auctionId)
     .sort((a, b) => b.amount - a.amount)
     .map((bid) => {
       const bidder = world.users.find((user) => user.id === bid.bidderId);
+      const visible = seller || bid.bidderId === viewerId;
       return {
         ...bid,
+        status: visible || bid.status === "WINNING" ? bid.status : "OUTBID",
         bidderDisplayName: shortName(bidder?.displayName ?? "Ofertant"),
         bidderAvatarUrl: bidder?.avatarUrl ?? "",
         bidderUsername: bidder?.username ?? "",
       };
     });
-}
-
-export interface BidEligibility {
-  canBid: boolean;
-  hasCard: boolean;
-  hasDelivery: boolean;
-  reason?: string;
-}
-
-// TODO(backend): confirm the saved card's Stripe SetupIntent before accepting a bid.
-export function checkBidEligibility(user?: User | null): BidEligibility {
-  if (!user) {
-    return {
-      canBid: false,
-      hasCard: false,
-      hasDelivery: false,
-      reason: "Autentifică-te pentru a licita.",
-    };
-  }
-
-  const hasCard = Boolean(user.hasPaymentMethod);
-  const hasDelivery = Boolean(user.defaultDeliveryMethodId);
-
-  if (!hasCard && !hasDelivery) {
-    return {
-      canBid: false,
-      hasCard,
-      hasDelivery,
-      reason: "Adaugă un card și o metodă de livrare pentru a licita.",
-    };
-  }
-  if (!hasCard) {
-    return {
-      canBid: false,
-      hasCard,
-      hasDelivery,
-      reason: "Adaugă un card salvat pentru a licita.",
-    };
-  }
-  if (!hasDelivery) {
-    return {
-      canBid: false,
-      hasCard,
-      hasDelivery,
-      reason: "Alege o metodă de livrare implicită pentru a licita.",
-    };
-  }
-  return { canBid: true, hasCard, hasDelivery };
 }
 
 export function minimumBid(auction: {
@@ -147,17 +110,8 @@ export async function placeBid(
     forbidden("Nu poți licita la propriul anunț.");
   }
 
-  const eligibility = checkBidEligibility(
-    world.users.find((item) => item.id === bidderId),
-  );
-  if (!eligibility.canBid) {
-    badRequest(eligibility.reason ?? "Nu poți licita încă.", "BID_NOT_ALLOWED");
-  }
-
   const boughtNow =
-    auction.status === "LIVE" &&
-    auction.buyNowPrice !== undefined &&
-    payload.amount >= auction.buyNowPrice;
+    auction.buyNowPrice !== undefined && payload.amount >= auction.buyNowPrice;
 
   const minimum = minimumBid(auction);
   if (!boughtNow && payload.amount < minimum) {
@@ -167,46 +121,39 @@ export async function placeBid(
     );
   }
 
-  world.bids = world.bids.filter(
-    (bid) => !(bid.auctionId === auction.id && bid.bidderId === bidderId),
+  const previous = world.bids.find(
+    (bid) => bid.auctionId === auction.id && bid.bidderId === bidderId,
   );
-
-  world.bids
-    .filter(
-      (bid) => bid.auctionId === auction.id && bid.status !== "ACCEPTED",
-    )
-    .forEach((bid) => {
-      bid.status = "OUTBID";
-    });
+  if (previous?.status === "ACCEPTED") {
+    badRequest(
+      "Oferta ta a fost acceptată. Finalizează comanda din conversație.",
+      "CONFLICT",
+    );
+  }
+  world.bids = world.bids.filter((bid) => bid !== previous);
 
   const price = boughtNow ? auction.buyNowPrice! : payload.amount;
-  const now = new Date().toISOString();
-
   const bid: Bid = {
     id: nextId("bid"),
     auctionId: auction.id,
     bidderId,
     amount: price,
-    createdAt: now,
-    status: boughtNow ? "ACCEPTED" : "WINNING",
+    createdAt: new Date().toISOString(),
+    status: boughtNow ? "ACCEPTED" : "OUTBID",
   };
-
   world.bids.push(bid);
-  auction.currentPrice = price;
-  auction.bidCount = world.bids.filter(
-    (item) => item.auctionId === auction.id,
-  ).length;
+  rebalanceBids(world, auction);
 
-  if (boughtNow) {
-    world.bids
-      .filter((item) => item.auctionId === auction.id && item.id !== bid.id)
-      .forEach((item) => {
-        item.status = "LOST";
-      });
-    auction.status = "RESERVED";
-    auction.winnerId = bidderId;
-    auction.acceptedAt = now;
-  }
+  recordOfferEvent(
+    auction.id,
+    bidderId,
+    auction.sellerId,
+    previous ? "OFFER_RAISED" : "OFFER_PLACED",
+    previous
+      ? { previous: String(previous.amount), amount: String(price) }
+      : { amount: String(price) },
+  );
+  if (boughtNow) openOrderForAcceptance(auction.id, bidderId);
   commit();
 
   return { bid, auction, boughtNow: boughtNow || undefined };
@@ -307,7 +254,10 @@ export function checkRetractEligibility(
       reason: "Oferta ta a fost acceptată, așa că nu mai poate fi retrasă.",
     };
   }
-  if (auction.viewerBidStatus !== "WINNING") {
+  if (
+    auction.viewerBidStatus !== "WINNING" &&
+    auction.viewerBidStatus !== "OUTBID"
+  ) {
     return { canRetract: false };
   }
 
@@ -331,25 +281,28 @@ export async function retractBid(
   const auction = world.auctions.find((item) => item.id === auctionId);
   if (!auction) notFound("Licitația");
 
-  const eligibility = checkRetractEligibility(auction, bidderId);
-  if (!eligibility.canRetract) {
+  if (!isOfferable(auction.status)) {
+    badRequest("Anunțul nu mai acceptă modificări.", "RETRACT_NOT_ALLOWED");
+  }
+
+  const mine = world.bids.find(
+    (bid) => bid.auctionId === auctionId && bid.bidderId === bidderId,
+  );
+  if (!mine) {
+    badRequest("Nu ai o ofertă activă la acest anunț.", "RETRACT_NOT_ALLOWED");
+  }
+  if (mine.status === "ACCEPTED" || mine.status === "WON") {
     badRequest(
-      eligibility.reason ?? "Poți retrage doar propria ofertă aflată pe primul loc.",
+      "Oferta ta a fost acceptată, așa că nu mai poate fi retrasă.",
       "RETRACT_NOT_ALLOWED",
     );
   }
 
-  const ordered = world.bids
-    .filter((bid) => bid.auctionId === auctionId)
-    .sort((a, b) => b.amount - a.amount);
-
-  const [top, previous] = ordered;
-  if (!top) badRequest("Nu ai nicio ofertă de retras.");
-
-  world.bids = world.bids.filter((bid) => bid.id !== top.id);
-  auction.bidCount = Math.max(0, auction.bidCount - 1);
-  auction.currentPrice = previous ? previous.amount : auction.startingPrice;
-  if (previous) previous.status = "WINNING";
+  world.bids = world.bids.filter((bid) => bid.id !== mine.id);
+  rebalanceBids(world, auction);
+  recordOfferEvent(auction.id, bidderId, auction.sellerId, "OFFER_WITHDRAWN", {
+    amount: String(mine.amount),
+  });
 
   commit();
   return { auction };

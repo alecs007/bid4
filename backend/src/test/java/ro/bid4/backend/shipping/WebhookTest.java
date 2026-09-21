@@ -232,6 +232,14 @@ class WebhookTest {
     Order back = orderRows.findById(paid.order().getId()).orElseThrow();
     back.setStatus(OrderStatus.AWAITING_PAYMENT);
     back.setPaidAt(null);
+
+    Auction listing = auctions.findById(back.getAuctionId()).orElseThrow();
+    listing.setStatus(AuctionStatus.LIVE);
+    listing.setWinnerId(null);
+    listing.setAcceptedBidId(null);
+    listing.setAcceptedAt(null);
+    listing.setDispatchDeadline(null);
+    auctions.save(listing);
     return orderRows.save(back);
   }
 
@@ -279,7 +287,7 @@ class WebhookTest {
     offer.setStatus(BidStatus.WINNING);
     Bid saved = bids.save(offer);
     offers.accept(listing.getId(), saved.getId(), viewer(seller));
-    return orderRows.findOpenForAuction(listing.getId()).orElseThrow();
+    return orderRows.findOpenForAuctionAndBuyer(listing.getId(), buyer.getId()).orElseThrow();
   }
 
   private Order reload(Order order) {

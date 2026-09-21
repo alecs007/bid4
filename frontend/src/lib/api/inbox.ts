@@ -363,6 +363,48 @@ function append(
   return item;
 }
 
+export function recordOfferEvent(
+  listingId: ID,
+  buyerId: ID,
+  sellerId: ID,
+  eventType: "OFFER_PLACED" | "OFFER_RAISED" | "OFFER_WITHDRAWN",
+  payload: Record<string, string>,
+): void {
+  const world = getWorld();
+  let conversation = world.conversations.find(
+    (item) => item.listingId === listingId && item.buyerId === buyerId,
+  );
+  const at = new Date().toISOString();
+  if (!conversation) {
+    conversation = {
+      id: nextId("conv"),
+      kind: "LISTING",
+      listingId,
+      buyerId,
+      sellerId,
+      archived: false,
+      muted: false,
+      unread: {},
+      lastItemAt: at,
+    };
+    world.conversations.push(conversation);
+  }
+
+  world.threadItems.push({
+    conversationId: conversation.id,
+    id: nextId("item"),
+    kind: "EVENT",
+    mine: false,
+    imageUrls: [],
+    eventType,
+    payload,
+    createdAt: at,
+  });
+  conversation.lastItemAt = at;
+  conversation.archived = false;
+  conversation.unread[sellerId] = (conversation.unread[sellerId] ?? 0) + 1;
+}
+
 function itemsOf(conversationId: ID, me: ID): ThreadItem[] {
   return getWorld()
     .threadItems.filter((item) => item.conversationId === conversationId)
