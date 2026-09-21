@@ -36,8 +36,8 @@ export function useApi<T>(
   }, [mutate]);
 
   return {
-    data: data ?? null,
-    error: error ? errorMessage(error) : null,
+    data: enabled ? (data ?? null) : null,
+    error: enabled && error ? errorMessage(error) : null,
     loading: enabled && isLoading,
     reload,
   };

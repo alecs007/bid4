@@ -13,4 +13,6 @@ public record BidResponse(
     BidStatus status,
     String bidderDisplayName,
     String bidderAvatarUrl,
-    String bidderUsername) {}
+    String bidderUsername,
+    boolean mine,
+    String alias) {}

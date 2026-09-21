@@ -11,5 +11,5 @@ export default async function DraftThreadPage({
   params,
 }: PageProps<"/cont/inbox/nou/[listingId]">) {
   const { listingId } = await params;
-  return <DraftThread listingId={listingId} />;
+  return <DraftThread key={listingId} listingId={listingId} />;
 }

@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 
-import { Avatar, Button, Modal, Skeleton, useToast } from "@/components/ui";
+import {
+  AnonAvatar,
+  anonName,
+  Avatar,
+  Button,
+  Modal,
+  Skeleton,
+  useToast,
+} from "@/components/ui";
 import { acceptOffer } from "@/lib/api/auctions";
 import { listOffersOnMyAuction } from "@/lib/api/bids";
 import { bumpInbox } from "@/lib/api/inbox-sync";
@@ -14,6 +22,19 @@ import { cn } from "@/lib/utils/cn";
 
 export function isSettledOffer(bid: Pick<BidWithBidder, "status">): boolean {
   return bid.status === "ACCEPTED" || bid.status === "WON";
+}
+
+const STANDING: Partial<Record<BidWithBidder["status"], number>> = {
+  WON: 2,
+  ACCEPTED: 1,
+};
+
+export function sellerOrder(bids: BidWithBidder[]): BidWithBidder[] {
+  return [...bids].sort(
+    (a, b) =>
+      (STANDING[b.status] ?? 0) - (STANDING[a.status] ?? 0) ||
+      b.amount - a.amount,
+  );
 }
 
 export function useAcceptOffer(auctionId: string | undefined, sellerId?: string) {
@@ -67,13 +88,27 @@ export function OfferRow({
 
   return (
     <li className="flex items-center gap-3 py-2">
-      <Avatar name={bid.bidderDisplayName} src={bid.bidderAvatarUrl} size="sm" />
+      {bid.bidderDisplayName ? (
+        <Avatar
+          name={bid.bidderDisplayName}
+          src={bid.bidderAvatarUrl}
+          size="sm"
+        />
+      ) : (
+        <AnonAvatar seed={bid.alias ?? bid.id} />
+      )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-bold text-ink-900">
-          {bid.bidderDisplayName}
+          {bid.mine
+            ? "Tu"
+            : (bid.bidderDisplayName ?? anonName(bid.alias ?? bid.id))}
         </span>
         <span className="block truncate text-xs text-ink-500">
-          {formatDateTimeRo(bid.createdAt)}
+          {bid.status === "WON"
+            ? "A plătit"
+            : bid.status === "ACCEPTED"
+              ? "Așteaptă plata"
+              : formatDateTimeRo(bid.createdAt)}
         </span>
       </span>
       <span
@@ -84,7 +119,11 @@ export function OfferRow({
       >
         {formatMoney(bid.amount, { compact: true })}
       </span>
-      {accepted ? (
+      {bid.status === "WON" ? (
+        <span className="shrink-0 rounded-lg bg-success-50 px-2 py-1 text-xs font-bold text-success-700">
+          Cumpărător
+        </span>
+      ) : accepted ? (
         <span className="shrink-0 rounded-lg bg-sky-50 px-2 py-1 text-xs font-bold text-sky-800">
           Acceptată
         </span>
@@ -158,11 +197,11 @@ export function BiddersModal({
         <p className="text-sm text-ink-600">Încă nu există oferte.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-line">
-          {data.map((bid, index) => (
+          {sellerOrder(data).map((bid) => (
             <OfferRow
               key={bid.id}
               bid={bid}
-              highlight={index === 0}
+              highlight={bid.status === "WINNING"}
               canAct={canAct}
               pending={pendingId === bid.id}
               busy={pendingId !== null}

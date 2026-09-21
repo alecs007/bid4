@@ -64,10 +64,14 @@ export const THREAD_SHELL =
   "lg:relative lg:z-auto lg:h-full lg:min-h-0 lg:overflow-hidden lg:rounded-3xl lg:ring-1 lg:ring-edge";
 
 export function ThreadView({ conversationId }: { conversationId: string }) {
-  const { data, error, loading, reload } = useApi(
-    () => getThread(conversationId),
-    `inbox:thread:${conversationId}`,
-  );
+  const {
+    data: fetched,
+    error,
+    loading: fetching,
+    reload,
+  } = useApi(() => getThread(conversationId), `inbox:thread:${conversationId}`);
+  const data = fetched?.conversation.id === conversationId ? fetched : null;
+  const loading = fetching || (fetched !== null && data === null);
 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -92,12 +96,13 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
 
   const orderId = data?.conversation.orderId;
   const {
-    data: order,
+    data: fetchedOrder,
     loading: orderLoading,
     reload: reloadOrder,
   } = useApi(() => getOrder(orderId!, user!.id), `inbox:order:${orderId}`, {
     enabled: Boolean(orderId && user),
   });
+  const order = orderId && fetchedOrder?.id === orderId ? fetchedOrder : null;
 
   const settlingOrder = Boolean(orderId) && orderLoading;
 
@@ -105,11 +110,13 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     data?.conversation.kind === "LISTING" ? data.conversation.listingId : undefined;
   const viewerRole = data?.conversation.viewerRole;
 
-  const { data: auction, reload: reloadAuction } = useApi(
+  const { data: fetchedAuction, reload: reloadAuction } = useApi(
     () => getAuction(listingId!, user?.id),
     `auction:${listingId}:${user?.id ?? "anon"}`,
     { enabled: Boolean(listingId && user) },
   );
+  const auction =
+    listingId && fetchedAuction?.id === listingId ? fetchedAuction : null;
 
   const acceptance = useAcceptOffer(listingId, user?.id);
 
@@ -293,7 +300,8 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     );
 
   const buyerOffer = offers?.find(
-    (bid) => bid.bidderId === conversation.otherParty?.id,
+    (bid) =>
+      bid.auctionId === listingId && bid.bidderId === conversation.otherParty?.id,
   );
 
   const acceptBuyerOffer = async () => {

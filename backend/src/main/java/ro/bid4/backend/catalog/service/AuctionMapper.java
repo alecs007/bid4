@@ -26,13 +26,19 @@ public class AuctionMapper {
   private final CauseMapper causes;
   private final BidRepository bids;
   private final AuctionWatchRepository watches;
+  private final BidderAliases aliases;
 
   public AuctionMapper(
-      UserMapper users, CauseMapper causes, BidRepository bids, AuctionWatchRepository watches) {
+      UserMapper users,
+      CauseMapper causes,
+      BidRepository bids,
+      AuctionWatchRepository watches,
+      BidderAliases aliases) {
     this.users = users;
     this.causes = causes;
     this.bids = bids;
     this.watches = watches;
+    this.aliases = aliases;
   }
 
   public List<AuctionResponse> toResponses(List<Auction> auctions, UUID viewerId) {
@@ -141,10 +147,10 @@ public class AuctionMapper {
   }
 
   public BidResponse toBidResponse(Bid bid, UUID viewerId) {
-    return toBidResponse(bid, users.publicUsersById(List.of(bid.getBidderId())));
+    return toBidResponse(bid, users.publicUsersById(List.of(bid.getBidderId())), viewerId);
   }
 
-  public BidResponse toBidResponse(Bid bid, Map<UUID, PublicUserResponse> bidders) {
+  public BidResponse toBidResponse(Bid bid, Map<UUID, PublicUserResponse> bidders, UUID viewerId) {
     PublicUserResponse bidder = bidders.get(bid.getBidderId());
     return new BidResponse(
         bid.getId(),
@@ -155,7 +161,9 @@ public class AuctionMapper {
         bid.getStatus(),
         bidder == null ? "Ofertant" : bidder.displayName(),
         bidder == null ? "" : bidder.avatarUrl(),
-        bidder == null ? "" : bidder.username());
+        bidder == null ? "" : bidder.username(),
+        bid.getBidderId().equals(viewerId),
+        aliases.of(bid.getAuctionId(), bid.getBidderId()));
   }
 
   private static ViewerBidStatus viewerBidStatus(UUID viewerId, BidRepository.Own own) {

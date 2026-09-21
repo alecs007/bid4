@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   BiddersModal,
   OfferRow,
+  sellerOrder,
   useAcceptOffer,
 } from "@/app/cont/_components/BiddersModal";
 import { Button, Sheet, SkeletonBidRows } from "@/components/ui";
@@ -108,11 +109,11 @@ export function SellerOffers({
   return (
     <>
       <ul className="divide-y divide-line">
-        {bids.slice(0, INLINE_COUNT).map((bid, index) => (
+        {sellerOrder(bids).slice(0, INLINE_COUNT).map((bid) => (
           <OfferRow
             key={bid.id}
             bid={bid}
-            highlight={index === 0}
+            highlight={bid.status === "WINNING"}
             canAct={canAct}
             pending={pendingId === bid.id}
             busy={pendingId !== null}
@@ -121,22 +122,26 @@ export function SellerOffers({
         ))}
       </ul>
 
-      <Button
-        variant="secondary"
-        size="sm"
-        fullWidth
-        className="mt-3"
-        onClick={() => setOpen(true)}
-      >
-        Vezi toate ofertele ({bids.length})
-      </Button>
+      {bids.length > INLINE_COUNT ? (
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            className="mt-3"
+            onClick={() => setOpen(true)}
+          >
+            Vezi toate ofertele ({bids.length})
+          </Button>
 
-      <BiddersModal
-        auction={open ? auction : null}
-        open={open}
-        onClose={() => setOpen(false)}
-        sellerId={sellerId}
-      />
+          <BiddersModal
+            auction={open ? auction : null}
+            open={open}
+            onClose={() => setOpen(false)}
+            sellerId={sellerId}
+          />
+        </>
+      ) : null}
     </>
   );
 }

@@ -11,7 +11,7 @@ import {
   CARD_TITLE_TYPE,
 } from "@/components/auctions/cardChrome";
 
-import { collageStyle } from "./collage";
+import { COLLAGE_GAP, collageStyle } from "./collage";
 
 export function Skeleton({ className }: { className?: string }) {
   return (
@@ -186,12 +186,12 @@ export function SkeletonStatTiles({ className }: { className?: string }) {
       {Array.from({ length: 3 }).map((_, index) => (
         <div
           key={index}
-          className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-1.5 py-4 ring-1 ring-edge sm:px-3"
+          className="@container flex flex-col items-center gap-2 rounded-2xl bg-canvas px-1.5 py-4 ring-1 ring-edge sm:px-3"
         >
           <Skeleton className="h-8 w-8 rounded-xl sm:h-10 sm:w-10" />
-          <div className="flex flex-col items-center">
-            <Skeleton className="h-[18px] w-12 rounded-md sm:h-6" />
-            <Skeleton className="mt-1 h-[13px] w-16 rounded-md sm:h-[15px]" />
+          <div className="flex w-full flex-col items-center">
+            <Skeleton className="h-[calc(clamp(0.875rem,18cqw,1.375rem)*1.25)] w-1/2 rounded-md" />
+            <Skeleton className="mt-0.5 h-[calc(clamp(0.625rem,12cqw,0.75rem)*1.25)] w-2/3 rounded-md" />
           </div>
         </div>
       ))}
@@ -226,7 +226,7 @@ export function SkeletonDetail() {
           </div>
 
           <div className="@container order-1 lg:order-2">
-            <div className="grid gap-2" style={collageStyle(3) ?? undefined}>
+            <div className={cn("grid", COLLAGE_GAP)} style={collageStyle(3) ?? undefined}>
               <Skeleton className="row-span-2 h-full w-full rounded-2xl" />
               <Skeleton className="h-full w-full rounded-2xl" />
               <Skeleton className="h-full w-full rounded-2xl" />
@@ -297,15 +297,15 @@ export function SkeletonDetail() {
           </div>
           <div className="border-t border-line pt-5">
             <Skeleton className="mb-3 h-7 w-28" />
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-11 w-11 rounded-full" />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <Skeleton className="h-7 w-1/2" />
-                <div className="mt-1 flex gap-1.5">
-                  <Skeleton className="h-5 w-24 rounded-lg" />
-                  <Skeleton className="h-5 w-28 rounded-lg" />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+                <div className="flex min-w-0 flex-col">
+                  <Skeleton className="h-7 w-36" />
+                  <Skeleton className="mt-1 h-5 w-28 rounded-lg" />
                 </div>
               </div>
+              <Skeleton className="h-11 w-full shrink-0 rounded-2xl sm:w-46" />
             </div>
             <SkeletonStatTiles className="mt-4" />
           </div>
@@ -404,10 +404,12 @@ export function SkeletonProfile() {
       <SkeletonCard className="flex flex-col gap-5 sm:p-6 lg:flex-row lg:items-center lg:gap-8">
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
           <Skeleton className="h-24 w-24 shrink-0 rounded-full" />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Skeleton className="h-9 w-64 max-w-full" />
-            <Skeleton className="h-5 w-72 max-w-full" />
-            <Skeleton className="mt-1 h-5 w-full max-w-2xl" />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Skeleton className="h-8 w-56 max-w-full sm:h-9" />
+            <div className="mt-1.5 flex flex-col gap-1">
+              <Skeleton className="h-5 w-60 max-w-full" />
+              <Skeleton className="h-5 w-44 max-w-full" />
+            </div>
           </div>
         </div>
         <SkeletonStatTiles className="w-full shrink-0 lg:w-[27rem]" />

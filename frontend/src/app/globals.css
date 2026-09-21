@@ -111,6 +111,7 @@
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-confetti: confetti-fall 2.8s linear forwards;
   --animate-tick: tick 0.9s ease-out;
+  --animate-sway: sway 2.8s ease-in-out infinite;
 
   @keyframes float {
     0%,
@@ -269,6 +270,16 @@
         rotate(var(--confetti-r, 540deg));
     }
   }
+  @keyframes sway {
+    0%,
+    100% {
+      transform: translateY(1px) rotate(-6deg);
+    }
+    50% {
+      transform: translateY(-1.5px) rotate(6deg);
+    }
+  }
+
   @keyframes tick {
     0% {
       transform: translateY(-0.35em);

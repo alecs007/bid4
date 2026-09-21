@@ -206,6 +206,8 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
     "inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 ring-1 ring-edge backdrop-blur-sm transition duration-200 active:scale-90 lg:bg-transparent lg:ring-0 lg:backdrop-blur-none lg:hover:bg-ink-100";
 
   const canWatch = offerable && stance !== "seller";
+  const acceptedCount =
+    bids?.filter((bid) => bid.status === "ACCEPTED").length ?? 0;
 
   const actions = listed ? (
     <>
@@ -381,6 +383,18 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                       {countRo(auction.bidCount, "ofertă", "oferte")}
                     </span>
                   </span>
+                  {stance === "seller" && acceptedCount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icons.success
+                        aria-hidden="true"
+                        className="h-4 w-4 text-sky-600"
+                      />
+                      <span className="numeric font-bold text-ink-900">
+                        {acceptedCount}
+                      </span>
+                      {pluralRo(acceptedCount, "acceptată", "acceptate")}
+                    </span>
+                  ) : null}
                   {offerable ? (
                     <span className="inline-flex items-center gap-1.5">
                       <Icons.watchlist
@@ -405,7 +419,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                     loading={bidsLoading}
                     sellerId={user.id}
                   />
-                ) : committed ? null : (
+                ) : (
                   <BidHistory bids={bids} loading={bidsLoading} />
                 )}
               </div>
@@ -532,50 +546,52 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
           </Section>
 
           <Section title="Vândut de">
-            <Link
-              href={`/profil/${auction.seller.username}`}
-              className="group flex min-w-0 items-center gap-3"
-            >
-              <Avatar
-                name={auction.seller.displayName}
-                src={auction.seller.avatarUrl}
-                accountType={auction.seller.accountType}
-                size="md"
-              />
-              <span className="min-w-0">
-                <span className="flex items-center gap-1 font-display text-lg font-extrabold text-ink-900 group-hover:text-primary-700">
-                  {auction.seller.displayName}
-                  <Icons.crumb
-                    aria-hidden="true"
-                    className="h-4 w-4 text-ink-400"
-                  />
-                </span>
-                <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                  {auction.seller.city ? (
-                    <span className="inline-flex items-center gap-1 rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
-                      <Icons.locker
-                        aria-hidden="true"
-                        className="h-3 w-3 shrink-0"
-                      />
-                      {auction.seller.city}
-                    </span>
-                  ) : null}
-                  <AccountTypeTag user={auction.seller} />
-                </span>
-              </span>
-            </Link>
-
-            {stance !== "seller" ? (
-              <ButtonLink
-                href={user ? `/cont/inbox/nou/${auction.id}` : "/autentificare"}
-                variant="secondary"
-                size="sm"
-                className="mt-4"
-                leftIcon={<Icons.inbox aria-hidden="true" className="h-4 w-4 shrink-0" />}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <Link
+                href={`/profil/${auction.seller.username}`}
+                className="group flex min-w-0 items-center gap-3"
               >
-                Trimite un mesaj
-              </ButtonLink>
-            ) : null}
+                <Avatar
+                  name={auction.seller.displayName}
+                  src={auction.seller.avatarUrl}
+                  accountType={auction.seller.accountType}
+                  size="md"
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1 font-display text-lg font-extrabold text-ink-900 group-hover:text-primary-700">
+                    {auction.seller.displayName}
+                    <Icons.crumb
+                      aria-hidden="true"
+                      className="h-4 w-4 text-ink-400"
+                    />
+                  </span>
+                  <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {auction.seller.city ? (
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-ink-100 px-2 py-0.5 text-xs font-bold text-ink-700">
+                        <Icons.locker
+                          aria-hidden="true"
+                          className="h-3 w-3 shrink-0"
+                        />
+                        {auction.seller.city}
+                      </span>
+                    ) : null}
+                    <AccountTypeTag user={auction.seller} />
+                  </span>
+                </span>
+              </Link>
+
+              {stance !== "seller" ? (
+                <ButtonLink
+                  href={user ? `/cont/inbox/nou/${auction.id}` : "/autentificare"}
+                  variant="secondary"
+                  size="md"
+                  className="w-full shrink-0 sm:w-auto"
+                  leftIcon={<Icons.inbox aria-hidden="true" className="h-4 w-4 shrink-0" />}
+                >
+                  Trimite un mesaj
+                </ButtonLink>
+              ) : null}
+            </div>
 
             <StatTiles className="mt-4">
               <StatTile

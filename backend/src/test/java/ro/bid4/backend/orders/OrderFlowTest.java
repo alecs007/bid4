@@ -595,11 +595,52 @@ class OrderFlowTest {
 
     mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(stranger)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$").isEmpty());
+        .andExpect(jsonPath("$[0].amount").value(200 * LEU))
+        .andExpect(jsonPath("$[0].bidderId").doesNotExist())
+        .andExpect(jsonPath("$[0].bidderDisplayName").doesNotExist())
+        .andExpect(jsonPath("$[0].bidderAvatarUrl").doesNotExist())
+        .andExpect(jsonPath("$[0].status").value("OUTBID"))
+        .andExpect(jsonPath("$[0].alias").isNotEmpty());
+    mvc.perform(get(auction + "/bids"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].bidderId").doesNotExist());
     mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(buyer)))
-        .andExpect(jsonPath("$").isEmpty());
-    mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(seller)))
+        .andExpect(jsonPath("$[0].mine").value(true))
         .andExpect(jsonPath("$[0].bidderId").value(buyer.getId().toString()));
+    mvc.perform(get(auction + "/bids").header(HttpHeaders.AUTHORIZATION, bearer(seller)))
+        .andExpect(jsonPath("$[0].bidderId").value(buyer.getId().toString()))
+        .andExpect(jsonPath("$[0].bidderDisplayName").isNotEmpty());
+  }
+
+  @Test
+  @DisplayName("on a live listing, bidders are anonymous to everyone but the seller and themselves")
+  void biddersAreAnonymous() throws Exception {
+    Auction listing = liveListing();
+    bid(listing, 150 * LEU);
+    UserAccount rival = user("Rival Anonim");
+    Bid theirs = new Bid();
+    theirs.setAuctionId(listing.getId());
+    theirs.setBidderId(rival.getId());
+    theirs.setAmount(120 * LEU);
+    theirs.setStatus(BidStatus.OUTBID);
+    bids.save(theirs);
+    UserAccount stranger = user("Privitor Licitatie");
+    String route = "/auctions/" + listing.getId() + "/bids";
+
+    mvc.perform(get(route).header(HttpHeaders.AUTHORIZATION, bearer(stranger)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[*].bidderId").isEmpty())
+        .andExpect(jsonPath("$[*].bidderDisplayName").isEmpty())
+        .andExpect(jsonPath("$[*].bidderAvatarUrl").isEmpty())
+        .andExpect(jsonPath("$[0].alias").isNotEmpty())
+        .andExpect(jsonPath("$[1].alias").isNotEmpty());
+
+    mvc.perform(get(route).header(HttpHeaders.AUTHORIZATION, bearer(rival)))
+        .andExpect(jsonPath("$[0].bidderId").doesNotExist())
+        .andExpect(jsonPath("$[0].mine").value(false))
+        .andExpect(jsonPath("$[1].mine").value(true))
+        .andExpect(jsonPath("$[1].bidderId").value(rival.getId().toString()));
   }
 
   private Order accept(Auction listing, long price) {

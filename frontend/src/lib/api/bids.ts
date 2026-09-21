@@ -23,7 +23,7 @@ import type {
   PlaceBidPayload,
   PlaceBidResult,
 } from "@/lib/types";
-import { isCommitted, isOfferable } from "@/lib/types";
+import { isOfferable } from "@/lib/types";
 
 import { http } from "./http";
 import { recordOfferEvent } from "./inbox";
@@ -32,6 +32,15 @@ function shortName(displayName: string): string {
   const parts = displayName.trim().split(/\s+/);
   if (parts.length === 1) return parts[0] ?? "Ofertant";
   return `${parts[0]} ${parts[1]?.[0] ?? ""}.`;
+}
+
+function aliasOf(auctionId: ID, bidderId: ID): string {
+  let value = 2166136261;
+  for (const char of `${auctionId}:${bidderId}`) {
+    value ^= char.charCodeAt(0);
+    value = Math.imul(value, 16777619);
+  }
+  return (value >>> 0).toString(16).padStart(8, "0");
 }
 
 export async function listBids(
@@ -46,17 +55,29 @@ export async function listBids(
 
   const auction = world.auctions.find((item) => item.id === auctionId);
   const seller = Boolean(viewerId) && auction?.sellerId === viewerId;
-  if (auction && isCommitted(auction.status) && !seller) return [];
 
   return world.bids
     .filter((bid) => bid.auctionId === auctionId)
     .sort((a, b) => b.amount - a.amount)
-    .map((bid) => {
+    .map((bid): BidWithBidder => {
+      const mine = Boolean(viewerId) && bid.bidderId === viewerId;
+      const alias = aliasOf(auctionId, bid.bidderId);
+      if (!seller && !mine) {
+        return {
+          id: bid.id,
+          auctionId: bid.auctionId,
+          amount: bid.amount,
+          createdAt: bid.createdAt,
+          status: bid.status === "WINNING" ? "WINNING" : "OUTBID",
+          mine: false,
+          alias,
+        };
+      }
       const bidder = world.users.find((user) => user.id === bid.bidderId);
-      const visible = seller || bid.bidderId === viewerId;
       return {
         ...bid,
-        status: visible || bid.status === "WINNING" ? bid.status : "OUTBID",
+        mine,
+        alias,
         bidderDisplayName: shortName(bidder?.displayName ?? "Ofertant"),
         bidderAvatarUrl: bidder?.avatarUrl ?? "",
         bidderUsername: bidder?.username ?? "",

@@ -419,44 +419,59 @@ export function BidBox({
     <Notice tone="sky" className="mt-4">
       Vânzătorul a acceptat o ofertă. Produsul este încă disponibil.
     </Notice>
-  ) : stance === "outbid" ? (
-    <Notice tone="sun" className="mt-4">
-      Oferta ta a fost depășită.
-    </Notice>
   ) : null;
 
-  const leadingPanel = isLeading ? (
-    <div className="mt-4 flex flex-col gap-3">
-      {reserved ? null : (
-        <p className="flex items-center gap-2 font-bold text-primary-800">
-          <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
-          Ești cel mai bun ofertant
-        </p>
-      )}
-      <div className="flex gap-2">
-        <Button size="lg" className="flex-1" onClick={() => setSheetOpen(true)}>
-          Mărește oferta
+  const outbid = stance === "outbid";
+  const hasOwnOffer = isLeading || outbid;
+
+  const standing = reserved ? null : outbid ? (
+    <p className="flex items-center gap-2 font-bold text-sun-800">
+      <Icons.warning aria-hidden="true" className="h-4 w-4 shrink-0" />
+      Oferta ta a fost depășită
+    </p>
+  ) : (
+    <p className="flex items-center gap-2 font-bold text-primary-800">
+      <Icons.success aria-hidden="true" className="h-4 w-4 shrink-0" />
+      Ești cel mai bun ofertant
+    </p>
+  );
+
+  const offerButtons = (
+    <div className="flex gap-2">
+      <Button
+        size="lg"
+        className="min-w-0 flex-1 px-4 sm:px-4"
+        onClick={() => setSheetOpen(true)}
+      >
+        Mărește oferta
+      </Button>
+      {retract.canRetract ? (
+        <Button
+          variant="danger"
+          size="lg"
+          className="shrink-0 px-4 sm:px-4"
+          onClick={undo}
+          loading={pending}
+        >
+          Retrage
         </Button>
-        {retract.canRetract ? (
-          <Button
-            variant="danger"
-            size="lg"
-            onClick={undo}
-            loading={pending}
-            leftIcon={<Icons.close aria-hidden="true" className="h-4 w-4 shrink-0" />}
-          >
-            Retrage
-          </Button>
-        ) : null}
-      </div>
+      ) : null}
+    </div>
+  );
+
+  const leadingPanel = hasOwnOffer ? (
+    <div className="mt-4 flex flex-col gap-3">
+      {standing}
+      {offerButtons}
 
       {!retract.canRetract && retract.reason ? (
         <p className="text-sm text-ink-500">{retract.reason}</p>
       ) : null}
       <ConversationButton
         auction={auction}
-        label="Mergi la conversație"
+        label="Deschide conversația"
         variant="secondary"
+        withIcon
       />
     </div>
   ) : null;
@@ -477,7 +492,7 @@ export function BidBox({
         {priceBlock}
         {notice}
 
-        {isLeading ? (
+        {hasOwnOffer ? (
           <div className="hidden lg:block">{leadingPanel}</div>
         ) : (
           <div className="mt-4 hidden lg:block">
@@ -501,36 +516,10 @@ export function BidBox({
           className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden"
         >
           <div className="mx-auto max-w-7xl">
-            {isLeading ? (
+            {hasOwnOffer ? (
               <>
-                {reserved ? null : (
-                  <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-primary-800">
-                    <Icons.success
-                      aria-hidden="true"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    Ești cel mai bun ofertant
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setSheetOpen(true)}
-                  >
-                    Mărește oferta
-                  </Button>
-                  {retract.canRetract ? (
-                    <Button
-                      variant="danger"
-                      size="lg"
-                      onClick={undo}
-                      loading={pending}
-                    >
-                      Retrage
-                    </Button>
-                  ) : null}
-                </div>
+                {standing ? <div className="mb-2 text-sm">{standing}</div> : null}
+                {offerButtons}
               </>
             ) : (
               <div className="flex items-center gap-4">
@@ -551,11 +540,7 @@ export function BidBox({
                     setSheetOpen(true);
                   }}
                 >
-                  {reserved
-                    ? "Ofertă de rezervă"
-                    : stance === "outbid"
-                      ? "Mărește oferta"
-                      : "Licitează acum"}
+                  {reserved ? "Ofertă de rezervă" : "Licitează acum"}
                 </Button>
               </div>
             )}
@@ -657,7 +642,11 @@ export function BidBox({
       <Sheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={bidding.isLeading ? "Mărește oferta" : "Oferta ta"}
+        title={
+          bidding.isLeading || auction.viewerBidStatus === "OUTBID"
+            ? "Mărește oferta"
+            : "Oferta ta"
+        }
       >
         <div className="pb-2">
           {blocker ?? (
@@ -667,25 +656,29 @@ export function BidBox({
               onDone={() => setSheetOpen(false)}
             />
           )}
-          <button
-            type="button"
-            onClick={() => {
-              setSheetOpen(false);
-              setRulesOpen(true);
-            }}
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
-          >
-            <Icons.help aria-hidden="true" className="h-4 w-4 shrink-0" />
-            Cum funcționează licitarea
-          </button>
-          <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
-            <Icons.escrow
-              aria-hidden="true"
-              className="mt-0.5 h-3.5 w-3.5 shrink-0"
-            />
-            Nu plătești nimic acum. Plata se face din conversație, doar dacă
-            vânzătorul acceptă oferta.
-          </p>
+          {hasOwnOffer ? null : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setSheetOpen(false);
+                  setRulesOpen(true);
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
+              >
+                <Icons.help aria-hidden="true" className="h-4 w-4 shrink-0" />
+                Cum funcționează licitarea
+              </button>
+              <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
+                <Icons.escrow
+                  aria-hidden="true"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                />
+                Nu plătești nimic acum. Plata se face din conversație, doar
+                dacă vânzătorul acceptă oferta.
+              </p>
+            </>
+          )}
         </div>
       </Sheet>
     </>

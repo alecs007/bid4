@@ -93,10 +93,12 @@ export function ConversationButton({
   auction,
   label,
   variant = "primary",
+  withIcon = false,
 }: {
   auction: AuctionDetail;
   label: string;
   variant?: "primary" | "secondary" | "ghost";
+  withIcon?: boolean;
 }) {
   return (
     <ButtonLink
@@ -104,6 +106,11 @@ export function ConversationButton({
       size="lg"
       fullWidth
       variant={variant}
+      leftIcon={
+        withIcon ? (
+          <Icons.inbox aria-hidden="true" className="h-4.5 w-4.5 shrink-0" />
+        ) : undefined
+      }
     >
       {label}
     </ButtonLink>
@@ -160,7 +167,7 @@ export function SellerPanel({ auction }: { auction: AuctionDetail }) {
     return (
       <Shell>
         <Notice tone={sold ? "success" : "sky"}>
-          {sold ? "Produsul a fost vândut și plătit." : "Ai acceptat o ofertă."}
+          {sold ? "Produsul a fost vândut." : "Ai acceptat o ofertă."}
         </Notice>
         <Amount label={sold ? "Preț de vânzare" : "Oferta acceptată"} value={settled} />
         <ButtonLink href={orderHref} size="lg" fullWidth>

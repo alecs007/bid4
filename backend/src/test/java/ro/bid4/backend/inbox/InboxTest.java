@@ -101,6 +101,23 @@ class InboxTest {
   }
 
   @Test
+  @DisplayName("a first message about a second listing opens that listing's own conversation")
+  void eachListingHasItsOwnConversation() {
+    Auction first = liveListing();
+    Auction second = liveListing();
+
+    ThreadResponse earlier =
+        inbox.open(new OpenThreadRequest(first.getId(), "Despre primul"), viewer(buyer));
+    ThreadResponse later =
+        inbox.open(new OpenThreadRequest(second.getId(), "Despre al doilea"), viewer(buyer));
+
+    assertThat(later.conversation().id()).isNotEqualTo(earlier.conversation().id());
+    assertThat(later.conversation().listingId()).isEqualTo(second.getId());
+    assertThat(inbox.forListing(second.getId(), viewer(buyer)).conversation().id())
+        .isEqualTo(later.conversation().id());
+  }
+
+  @Test
   @DisplayName("asking a second time continues the first conversation")
   void openingIsIdempotent() {
     Auction listing = liveListing();

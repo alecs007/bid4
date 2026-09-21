@@ -37,13 +37,19 @@ public class AuctionService {
   private final BidRepository bids;
   private final AuctionMapper mapper;
   private final UserMapper users;
+  private final BidderAliases aliases;
 
   public AuctionService(
-      AuctionRepository auctions, BidRepository bids, AuctionMapper mapper, UserMapper users) {
+      AuctionRepository auctions,
+      BidRepository bids,
+      AuctionMapper mapper,
+      UserMapper users,
+      BidderAliases aliases) {
     this.auctions = auctions;
     this.bids = bids;
     this.mapper = mapper;
     this.users = users;
+    this.aliases = aliases;
   }
 
   public PageResponse<AuctionResponse> list(AuctionQuery query, Viewer viewer) {
@@ -116,21 +122,37 @@ public class AuctionService {
   public List<BidResponse> bidHistory(UUID auctionId, Viewer viewer) {
     Auction auction = load(auctionId, viewer);
     boolean seller = viewer.is(auction.getSellerId());
-    if (auction.getStatus().isCommitted() && !seller) {
-      return List.of();
-    }
 
     List<Bid> history = bids.findByAuctionIdOrderByAmountDesc(auctionId);
     if (history.isEmpty()) {
       return List.of();
     }
 
-    Map<UUID, PublicUserResponse> bidders =
-        users.publicUsersById(history.stream().map(Bid::getBidderId).distinct().toList());
+    List<UUID> named =
+        seller
+            ? history.stream().map(Bid::getBidderId).distinct().toList()
+            : viewer.isAnonymous() ? List.of() : List.of(viewer.id());
+    Map<UUID, PublicUserResponse> bidders = users.publicUsersById(named);
 
     return history.stream()
         .map(
             bid -> {
+              boolean mine = viewer.is(bid.getBidderId());
+              String alias = aliases.of(auctionId, bid.getBidderId());
+              if (!seller && !mine) {
+                return new BidResponse(
+                    bid.getId(),
+                    bid.getAuctionId(),
+                    null,
+                    bid.getAmount(),
+                    bid.getCreatedAt(),
+                    publicStatus(bid),
+                    null,
+                    null,
+                    null,
+                    false,
+                    alias);
+              }
               PublicUserResponse bidder = bidders.get(bid.getBidderId());
               return new BidResponse(
                   bid.getId(),
@@ -138,10 +160,12 @@ public class AuctionService {
                   bid.getBidderId(),
                   bid.getAmount(),
                   bid.getCreatedAt(),
-                  seller || viewer.is(bid.getBidderId()) ? bid.getStatus() : publicStatus(bid),
+                  bid.getStatus(),
                   shortName(bidder == null ? null : bidder.displayName()),
                   bidder == null ? "" : bidder.avatarUrl(),
-                  "");
+                  "",
+                  mine,
+                  alias);
             })
         .toList();
   }

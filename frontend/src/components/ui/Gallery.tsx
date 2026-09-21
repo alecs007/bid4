@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
-import { collageStyle } from "./collage";
+import { COLLAGE_GAP, collageStyle } from "./collage";
 import { Lightbox } from "./Lightbox";
 
 const SHOWN = 5;
@@ -56,11 +56,11 @@ export function Gallery({
         ) : null}
 
         {collage ? (
-          <div className="grid gap-2" style={collage}>
+          <div className={cn("grid", COLLAGE_GAP)} style={collage}>
             {tiles}
           </div>
         ) : count === 2 ? (
-          <div className="grid grid-cols-2 gap-2">{tiles}</div>
+          <div className={cn("grid grid-cols-2", COLLAGE_GAP)}>{tiles}</div>
         ) : (
           <div className="frame-empty flex justify-center rounded-2xl">
             <div className="w-1/2">{tiles}</div>

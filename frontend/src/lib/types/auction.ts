@@ -108,10 +108,13 @@ export interface Bid {
   status: BidStatus;
 }
 
-export interface BidWithBidder extends Bid {
-  bidderDisplayName: string;
-  bidderAvatarUrl: string;
-  bidderUsername: string;
+export interface BidWithBidder extends Omit<Bid, "bidderId"> {
+  bidderId?: ID;
+  bidderDisplayName?: string;
+  bidderAvatarUrl?: string;
+  bidderUsername?: string;
+  mine?: boolean;
+  alias?: string;
 }
 
 export interface PlaceBidPayload {

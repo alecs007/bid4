@@ -1,4 +1,6 @@
-const GAP = "0.5rem";
+const GAP = "var(--collage-gap)";
+
+export const COLLAGE_GAP = "gap-(--collage-gap) [--collage-gap:0.25rem] sm:[--collage-gap:0.5rem]";
 
 const WIDE = `calc(var(--h) * 0.75) repeat(2, calc((var(--h) - ${GAP}) * 0.375))`;
 

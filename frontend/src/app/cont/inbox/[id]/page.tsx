@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 
 export default async function ThreadPage({ params }: PageProps<"/cont/inbox/[id]">) {
   const { id } = await params;
-  return <ThreadView conversationId={id} />;
+  return <ThreadView key={id} conversationId={id} />;
 }

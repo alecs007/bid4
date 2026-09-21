@@ -41,6 +41,7 @@ export { UnreadBadge } from "./UnreadBadge";
 export type { UnreadBadgeSize } from "./UnreadBadge";
 export { ProgressBar, GoalProgress } from "./Progress";
 export { Avatar, AvatarStack } from "./Avatar";
+export { AnonAvatar, anonName } from "./AnonAvatar";
 export type { AvatarSize } from "./Avatar";
 
 export {

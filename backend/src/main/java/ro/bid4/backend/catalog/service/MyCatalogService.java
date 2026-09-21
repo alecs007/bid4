@@ -71,7 +71,7 @@ public class MyCatalogService {
 
     Map<UUID, PublicUserResponse> bidders =
         users.publicUsersById(offers.stream().map(Bid::getBidderId).distinct().toList());
-    return offers.stream().map(bid -> mapper.toBidResponse(bid, bidders)).toList();
+    return offers.stream().map(bid -> mapper.toBidResponse(bid, bidders, viewer.id())).toList();
   }
 
   public List<AuctionResponse> watchlist(Viewer viewer) {
@@ -127,7 +127,7 @@ public class MyCatalogService {
       summaries.add(
           new MyBidResponse(
               views.get(index),
-              mapper.toBidResponse(bid, bidders),
+              mapper.toBidResponse(bid, bidders, viewer.id()),
               bid.getStatus() == BidStatus.WINNING || bid.getStatus() == BidStatus.WON));
     }
     return summaries;

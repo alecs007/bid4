@@ -225,8 +225,8 @@ class AuctionEndpointsTest {
 
     mvc.perform(get("/auctions/" + listing.getId() + "/bids"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].bidderAvatarUrl").exists())
-        .andExpect(jsonPath("$[0].bidderUsername").exists());
+        .andExpect(jsonPath("$[0].alias").exists())
+        .andExpect(jsonPath("$[0].mine").exists());
   }
 
   @Test
@@ -480,16 +480,34 @@ class AuctionEndpointsTest {
   }
 
   @Test
-  @DisplayName("The public bid history is pseudonymised and carries no handle")
-  void bidHistoryIsPseudonymised() throws Exception {
+  @DisplayName("The public bid history names nobody, and tells bidders apart only by alias")
+  void bidHistoryIsAnonymous() throws Exception {
     mvc.perform(get("/auctions/" + canon.getId() + "/bids"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
         .andExpect(jsonPath("$[0].amount").value(300 * LEU))
         .andExpect(jsonPath("$[0].status").value("WINNING"))
-        .andExpect(jsonPath("$[0].bidderDisplayName").value("Andrei M."))
-        .andExpect(jsonPath("$[0].bidderUsername").value(""))
-        .andExpect(jsonPath("$[1].bidderDisplayName").value("Vlad P."));
+        .andExpect(jsonPath("$[*].bidderId").isEmpty())
+        .andExpect(jsonPath("$[*].bidderDisplayName").isEmpty())
+        .andExpect(jsonPath("$[*].bidderAvatarUrl").isEmpty())
+        .andExpect(jsonPath("$[*].bidderUsername").isEmpty())
+        .andExpect(
+            result -> {
+              String body = result.getResponse().getContentAsString();
+              assertThat(body).doesNotContain("Andrei").doesNotContain("Vlad");
+            });
+
+    String first =
+        mvc.perform(get("/auctions/" + canon.getId() + "/bids"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String second =
+        mvc.perform(get("/auctions/" + canon.getId() + "/bids"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertThat(first).isEqualTo(second);
   }
 
   @Test
