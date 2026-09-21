@@ -136,7 +136,7 @@ function InfoRow({
 }: {
   href?: string;
   icon: React.ReactNode;
-  label: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   const body = (
@@ -148,7 +148,9 @@ function InfoRow({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[12px] text-ink-500">{label}</span>
+        {label ? (
+          <span className="block text-[12px] text-ink-500">{label}</span>
+        ) : null}
         <span className="block text-[15px] text-ink-900">{children}</span>
       </span>
       {href ? (
@@ -240,13 +242,9 @@ export function InfoPane({
                 <Icons.auction className="h-5 w-5" />
               )
             }
-            label={order ? "Produs · preț convenit" : "Produs"}
           >
             <span className="block truncate font-bold">
               {conversation.listingTitle}
-            </span>
-            <span className="numeric block text-[13px] text-ink-600">
-              {formatMoney(order ? order.finalPrice : conversation.listingPrice)}
             </span>
           </InfoRow>
         ) : null}

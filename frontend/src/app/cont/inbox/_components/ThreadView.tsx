@@ -191,6 +191,14 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     settled.current = true;
   }, [newestId, data?.items.length, settlingOrder]);
 
+  useLayoutEffect(() => {
+    if (pane) return;
+    const scroller = stream.current;
+    if (!scroller) return;
+    wasAtBottom.current = true;
+    scroller.scrollTop = scroller.scrollHeight;
+  }, [pane]);
+
   useEffect(() => {
     const scroller = stream.current;
     if (!scroller) return;
@@ -203,7 +211,7 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
     const observer = new ResizeObserver(pin);
     for (const child of Array.from(scroller.children)) observer.observe(child);
     return () => observer.disconnect();
-  }, [data?.items.length, settlingOrder]);
+  }, [data?.items.length, settlingOrder, pane]);
 
   if (loading || settlingOrder)
     return place(
@@ -469,7 +477,9 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
       )
     ) : null;
 
-  const panel = (
+  const panel = paneView ? (
+    <section className={THREAD_SHELL}>{paneView}</section>
+  ) : (
     <section
       className={cn(
         THREAD_SHELL,
@@ -602,94 +612,90 @@ export function ThreadView({ conversationId }: { conversationId: string }) {
         ) : null}
       </header>
 
-      {pane ? null : offerBar}
+      {offerBar}
 
-      {paneView ?? (
-        <>
+      <div
+        ref={stream}
+        data-lenis-prevent
+        onScroll={(event) => {
+          const box = event.currentTarget;
+          wasAtBottom.current =
+            box.scrollHeight - box.scrollTop - box.clientHeight < 160;
+        }}
+        className="no-scrollbar flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
+      >
+        {items.map((item, index) => (
           <div
-            ref={stream}
-            data-lenis-prevent
-            onScroll={(event) => {
-              const box = event.currentTarget;
-              wasAtBottom.current =
-                box.scrollHeight - box.scrollTop - box.clientHeight < 160;
-            }}
-            className="no-scrollbar flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain p-3"
+            key={item.id}
+            className="animate-fade-in"
+            style={tailDelay(index, items.length, 60)}
           >
-            {items.map((item, index) => (
-              <div
-                key={item.id}
-                className="animate-fade-in"
-                style={tailDelay(index, items.length, 60)}
-              >
-                {item.kind === "EVENT" ? (
-                  <EventCard
-                    item={item}
-                    viewerIsBuyer={viewerIsBuyer}
-                    buyerName={buyerName}
-                    sellerName={sellerName}
-                  />
-                ) : (
-                  <Item item={item} />
-                )}
-              </div>
-            ))}
-            {order ? (
-              <div
-                className="animate-fade-in"
-                style={tailDelay(items.length, items.length + 1, 60)}
-              >
-                <NextStep
-                  order={order}
-                  viewerIsBuyer={viewerIsBuyer}
-                  buyerName={buyerName}
-                  sellerName={sellerName}
-                  causeName={causeName}
-                  busy={acting}
-                  onAct={act}
-                />
-              </div>
-            ) : null}
-            <div ref={bottom} />
-          </div>
-
-          <form
-            onSubmit={send}
-            className="animate-fade-in border-t border-line p-3"
-            style={{ animationDelay: "60ms" }}
-          >
-            {sendError ? (
-              <p className="mb-2 text-[13px] font-semibold text-danger-700">
-                {sendError}
-              </p>
-            ) : null}
-            <div className="flex items-center gap-2">
-              <textarea
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void send(event);
-                  }
-                }}
-                rows={1}
-                placeholder="Scrie un mesaj..."
-                aria-label="Scrie un mesaj"
-                className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl bg-canvas px-3.5 py-2.5 text-base text-ink-900 ring-1 ring-ink-200 transition placeholder:text-ink-500 focus:ring-primary-500 focus:outline-none sm:text-[15px]"
+            {item.kind === "EVENT" ? (
+              <EventCard
+                item={item}
+                viewerIsBuyer={viewerIsBuyer}
+                buyerName={buyerName}
+                sellerName={sellerName}
               />
-              <Button
-                type="submit"
-                size="md"
-                className="shrink-0 [--btn-depth:0px]"
-                disabled={!draft.trim() || sending}
-              >
-                Trimite
-              </Button>
-            </div>
-          </form>
-        </>
-      )}
+            ) : (
+              <Item item={item} />
+            )}
+          </div>
+        ))}
+        {order ? (
+          <div
+            className="animate-fade-in"
+            style={tailDelay(items.length, items.length + 1, 60)}
+          >
+            <NextStep
+              order={order}
+              viewerIsBuyer={viewerIsBuyer}
+              buyerName={buyerName}
+              sellerName={sellerName}
+              causeName={causeName}
+              busy={acting}
+              onAct={act}
+            />
+          </div>
+        ) : null}
+        <div ref={bottom} />
+      </div>
+
+      <form
+        onSubmit={send}
+        className="animate-fade-in border-t border-line p-3"
+        style={{ animationDelay: "60ms" }}
+      >
+        {sendError ? (
+          <p className="mb-2 text-[13px] font-semibold text-danger-700">
+            {sendError}
+          </p>
+        ) : null}
+        <div className="flex items-center gap-2">
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void send(event);
+              }
+            }}
+            rows={1}
+            placeholder="Scrie un mesaj..."
+            aria-label="Scrie un mesaj"
+            className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl bg-canvas px-3.5 py-2.5 text-base text-ink-900 ring-1 ring-ink-200 transition placeholder:text-ink-500 focus:ring-primary-500 focus:outline-none sm:text-[15px]"
+          />
+          <Button
+            type="submit"
+            size="md"
+            className="shrink-0 [--btn-depth:0px]"
+            disabled={!draft.trim() || sending}
+          >
+            Trimite
+          </Button>
+        </div>
+      </form>
     </section>
   );
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 
 import { Icons, type Icon } from "@/components/icons";
 import { TrackingNumber } from "@/components/orders/TrackingNumber";
@@ -106,13 +105,7 @@ export function NextStep({
     money: (amount) => formatMoney(amount),
   };
 
-  if (!step) {
-    return (
-      <div className="my-3 flex justify-center px-3">
-        <OrderLink order={order} />
-      </div>
-    );
-  }
+  if (!step) return null;
 
   return (
     <div className="my-3 -mx-3 flex flex-col items-center gap-1 border-y border-line bg-canvas px-3 py-4 text-center">
@@ -157,39 +150,7 @@ export function NextStep({
           ) : null}
         </>
       ) : null}
-
-      <OrderLink order={order} className="mt-2.5" />
     </div>
-  );
-}
-
-function OrderLink({ order, className }: { order: Order; className?: string }) {
-  return (
-    <Link
-      href={`/cont/comenzi/${order.id}`}
-      className={cn(
-        "inline-flex w-full max-w-xs items-center gap-2 rounded-xl bg-white px-3 py-2 text-left",
-        "ring-1 ring-edge transition hover:ring-ink-300",
-        className,
-      )}
-    >
-      <Icons.invoice
-        aria-hidden="true"
-        className="h-4 w-4 shrink-0 text-ink-500"
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-ink-800">
-          Detaliile comenzii
-        </span>
-        <span className="numeric block text-[11px] text-ink-500">
-          {order.reference}
-        </span>
-      </span>
-      <Icons.forward
-        aria-hidden="true"
-        className="h-3.5 w-3.5 shrink-0 text-ink-400"
-      />
-    </Link>
   );
 }
 
