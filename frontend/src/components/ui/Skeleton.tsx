@@ -11,6 +11,8 @@ import {
   CARD_TITLE_TYPE,
 } from "@/components/auctions/cardChrome";
 
+import { collageStyle } from "./collage";
+
 export function Skeleton({ className }: { className?: string }) {
   return (
     <span
@@ -224,17 +226,12 @@ export function SkeletonDetail() {
             </div>
           </div>
 
-          <div className="order-1 flex gap-3 lg:order-2">
-            <div className="hidden w-16 shrink-0 flex-col gap-2 lg:flex">
-              <Skeleton className="h-8 w-8 self-center rounded-xl" />
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton
-                  key={index}
-                  className="aspect-square w-full rounded-2xl"
-                />
-              ))}
+          <div className="@container order-1 lg:order-2">
+            <div className="grid gap-2" style={collageStyle(3) ?? undefined}>
+              <Skeleton className="row-span-2 h-full w-full rounded-2xl" />
+              <Skeleton className="h-full w-full rounded-2xl" />
+              <Skeleton className="h-full w-full rounded-2xl" />
             </div>
-            <Skeleton className="aspect-4/3 min-w-0 flex-1 rounded-2xl" />
           </div>
         </div>
 

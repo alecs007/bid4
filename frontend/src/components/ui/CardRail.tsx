@@ -104,7 +104,6 @@ export function CardRail({
       startLeft: rail.scrollLeft,
       moved: false,
     };
-    rail.setPointerCapture(event.pointerId);
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -112,14 +111,21 @@ export function CardRail({
     if (!drag.current.active || !rail) return;
 
     const travelled = event.clientX - drag.current.startX;
-    if (Math.abs(travelled) > DRAG_THRESHOLD_PX) drag.current.moved = true;
+    if (!drag.current.moved) {
+      if (Math.abs(travelled) <= DRAG_THRESHOLD_PX) return;
+      drag.current.moved = true;
+      rail.setPointerCapture(event.pointerId);
+    }
     rail.scrollLeft = drag.current.startLeft - travelled;
   };
 
   const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!drag.current.active) return;
     drag.current.active = false;
-    railRef.current?.releasePointerCapture(event.pointerId);
+    const rail = railRef.current;
+    if (rail?.hasPointerCapture(event.pointerId)) {
+      rail.releasePointerCapture(event.pointerId);
+    }
   };
 
   const onClickCapture = (event: React.MouseEvent) => {

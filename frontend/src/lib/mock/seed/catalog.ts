@@ -711,7 +711,7 @@ export function buildCatalog(): CatalogSeed {
       causeId: seed.causeId,
       title: seed.title,
       description: seed.description,
-      images: auctionGallery(seed.key, seed.category, 3),
+      images: auctionGallery(seed.key, seed.category, 1 + (listingIndex % 6)),
       category: seed.category,
       condition: seed.condition,
       weightGrams: seed.weightGrams,

@@ -5,26 +5,10 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
+import { collageStyle } from "./collage";
 import { Lightbox } from "./Lightbox";
 
 const SHOWN = 5;
-
-const GAP = "0.5rem";
-
-const COLLAGES: Record<number, { height: string; columns: string }> = {
-  3: {
-    height: `calc((800cqw - 5 * ${GAP}) / 9)`,
-    columns: `calc(var(--h) * 0.75) calc((var(--h) - ${GAP}) * 0.375)`,
-  },
-  4: {
-    height: `calc((400cqw - 5 * ${GAP}) / 6)`,
-    columns: `calc(var(--h) * 0.75) repeat(2, calc((var(--h) - ${GAP}) * 0.375))`,
-  },
-  5: {
-    height: `calc((400cqw - 5 * ${GAP}) / 6)`,
-    columns: `calc(var(--h) * 0.75) repeat(2, calc((var(--h) - ${GAP}) * 0.375))`,
-  },
-};
 
 export function Gallery({
   images,
@@ -42,7 +26,7 @@ export function Gallery({
 
   const shown = images.slice(0, SHOWN);
   const hidden = count - shown.length;
-  const collage = COLLAGES[shown.length];
+  const collage = collageStyle(shown.length);
 
   const tiles = shown.map((image, index) => (
     <Tile
@@ -72,17 +56,7 @@ export function Gallery({
         ) : null}
 
         {collage ? (
-          <div
-            className="grid gap-2"
-            style={
-              {
-                "--h": collage.height,
-                height: "var(--h)",
-                gridTemplateColumns: collage.columns,
-                gridTemplateRows: "repeat(2, minmax(0, 1fr))",
-              } as React.CSSProperties
-            }
-          >
+          <div className="grid gap-2" style={collage}>
             {tiles}
           </div>
         ) : count === 2 ? (
@@ -146,7 +120,7 @@ function Tile({
         onLoad={(event) =>
           event.currentTarget.setAttribute("data-loaded", "true")
         }
-        className="object-cover opacity-0 [transition:opacity_220ms_ease-out,scale_500ms] group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
+        className="object-cover opacity-0 [transition:opacity_220ms_ease-out,scale_500ms] group-hover:scale-[1.015] data-[loaded=true]:opacity-100"
         draggable={false}
       />
       {more ? (

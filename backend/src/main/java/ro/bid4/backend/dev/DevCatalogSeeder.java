@@ -3,6 +3,7 @@ package ro.bid4.backend.dev;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
   public void run(ApplicationArguments args) {
     if (causes.count() > 0) {
       log.info("Development catalogue seed skipped: causes already exist");
+      varyGalleries();
       return;
     }
 
@@ -326,6 +328,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
     }
     auctions.saveAll(everything.stream().map(Planned::auction).toList());
     bids.saveAll(offers);
+    varyGalleries();
 
     log.warn(
         "Development seed: {} causes, {} listings, {} bids. "
@@ -638,10 +641,38 @@ public class DevCatalogSeeder implements ApplicationRunner {
           Map.entry("Geacă de piele naturală, mărimea M", "geaca-piele"),
           Map.entry("Servietă din piele, model clasic", "servieta"));
 
+  private static final int MOST_PHOTOS = 6;
+
+  private void varyGalleries() {
+    List<Auction> seeded =
+        auctions.findAll().stream().sorted(Comparator.comparing(Auction::getTitle)).toList();
+    List<Auction> changed = new ArrayList<>();
+    for (int index = 0; index < seeded.size(); index++) {
+      Auction auction = seeded.get(index);
+      List<String> current = List.copyOf(auction.getImages());
+      List<String> next = gallery(auction.getTitle(), 1 + index % MOST_PHOTOS);
+      if (!current.equals(gallery(auction.getTitle())) || current.equals(next)) continue;
+      auction.setImages(new ArrayList<>(next));
+      changed.add(auction);
+    }
+    auctions.saveAll(changed);
+    if (!changed.isEmpty()) {
+      log.info("Development seed: {} galleries given 1 to {} photos", changed.size(), MOST_PHOTOS);
+    }
+  }
+
   private static List<String> gallery(String title) {
+    return gallery(title, 3);
+  }
+
+  private static List<String> gallery(String title, int count) {
     String slug = COVERS.get(title);
     String cover = slug != null ? "/images/products/" + slug + ".webp" : photo(title + "-1");
-    return List.of(cover, photo(title + "-2"), photo(title + "-3"));
+    List<String> photos = new ArrayList<>(List.of(cover));
+    for (int number = 2; number <= count; number++) {
+      photos.add(photo(title + "-" + number));
+    }
+    return List.copyOf(photos);
   }
 
   private static String photo(String seed) {
