@@ -59,7 +59,7 @@ import {
   type Pane,
 } from "./ThreadWindows";
 
-const THREAD_SHELL =
+export const THREAD_SHELL =
   "fixed inset-0 z-50 flex flex-col bg-white " +
   "lg:relative lg:z-auto lg:h-full lg:min-h-0 lg:overflow-hidden lg:rounded-3xl lg:ring-1 lg:ring-edge";
 

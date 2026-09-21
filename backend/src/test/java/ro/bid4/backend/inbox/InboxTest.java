@@ -83,6 +83,24 @@ class InboxTest {
   }
 
   @Test
+  @DisplayName("nothing is stored until the first message is written")
+  void anEmptyConversationIsNeverStored() {
+    Auction listing = liveListing();
+
+    assertThatThrownBy(
+            () -> inbox.open(new OpenThreadRequest(listing.getId(), "  "), viewer(buyer)))
+        .isInstanceOf(ApiException.class);
+    assertThatThrownBy(() -> inbox.forListing(listing.getId(), viewer(buyer)))
+        .isInstanceOf(ApiException.class);
+
+    ThreadResponse written =
+        inbox.open(new OpenThreadRequest(listing.getId(), "Bună ziua"), viewer(buyer));
+
+    assertThat(inbox.forListing(listing.getId(), viewer(buyer)).conversation().id())
+        .isEqualTo(written.conversation().id());
+  }
+
+  @Test
   @DisplayName("asking a second time continues the first conversation")
   void openingIsIdempotent() {
     Auction listing = liveListing();

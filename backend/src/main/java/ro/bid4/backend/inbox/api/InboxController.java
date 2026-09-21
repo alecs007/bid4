@@ -64,6 +64,11 @@ public class InboxController {
     return inbox.open(request, Viewers.from(jwt));
   }
 
+  @GetMapping("/conversations/listing/{listingId}")
+  ThreadResponse forListing(@PathVariable UUID listingId, @AuthenticationPrincipal Jwt jwt) {
+    return inbox.forListing(listingId, Viewers.from(jwt));
+  }
+
   @GetMapping("/conversations/{id}")
   ThreadResponse thread(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
     return inbox.thread(id, Viewers.from(jwt));

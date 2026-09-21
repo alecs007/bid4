@@ -8,6 +8,7 @@ import {
   nextId,
   notFound,
 } from "@/lib/mock/store";
+import { ApiError } from "@/lib/types";
 import type {
   Conversation,
   CursorPage,
@@ -123,9 +124,11 @@ export async function openThread(
     badRequest("Nu poți deschide o conversație la propriul anunț.");
   }
 
+  const saying = Boolean(message && message.trim());
   let conversation = world.conversations.find(
     (item) => item.listingId === listingId && item.buyerId === me,
   );
+  if (!conversation && !saying) notFound("Conversația");
   if (!conversation) {
     conversation = {
       id: nextId("conv"),
@@ -146,6 +149,24 @@ export async function openThread(
   }
   commit();
   return getThread(conversation.id);
+}
+
+export async function findListingThread(listingId: ID): Promise<Thread | null> {
+  if (!USE_MOCK) {
+    try {
+      return await http<Thread>(`/inbox/conversations/listing/${listingId}`);
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 404) return null;
+      throw failure;
+    }
+  }
+
+  await delay();
+  const me = currentMockUser();
+  const conversation = getWorld().conversations.find(
+    (item) => item.listingId === listingId && item.buyerId === me,
+  );
+  return conversation ? getThread(conversation.id) : null;
 }
 
 export async function sendMessage(

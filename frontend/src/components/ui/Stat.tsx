@@ -66,17 +66,19 @@ export function StatTile({
   label: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 text-center ring-1 ring-edge">
+    <div className="@container flex min-w-0 flex-col items-center gap-2 rounded-2xl bg-canvas px-1.5 py-4 text-center ring-1 ring-edge sm:px-3">
       <Illustration
         src={illustration}
-        className="h-8 w-8 sm:h-10 sm:w-10"
+        className="h-8 w-8 shrink-0 sm:h-10 sm:w-10"
         sizes="40px"
       />
-      <div>
-        <dt className="numeric font-display text-lg leading-none font-extrabold text-ink-900 sm:text-xl">
+      <div className="w-full min-w-0">
+        <dt className="numeric font-display text-[clamp(0.875rem,18cqw,1.375rem)] leading-tight font-extrabold whitespace-nowrap text-ink-900">
           {value}
         </dt>
-        <dd className="mt-1 text-xs leading-tight text-ink-500">{label}</dd>
+        <dd className="mt-0.5 text-[clamp(0.625rem,12cqw,0.75rem)] leading-tight whitespace-nowrap text-ink-500">
+          {label}
+        </dd>
       </div>
     </div>
   );
@@ -90,7 +92,7 @@ export function StatTiles({
   className?: string;
 }) {
   return (
-    <dl className={cn("grid grid-cols-3 gap-2 sm:gap-3", className)}>
+    <dl className={cn("grid grid-cols-3 gap-1.5 sm:gap-3", className)}>
       {children}
     </dl>
   );

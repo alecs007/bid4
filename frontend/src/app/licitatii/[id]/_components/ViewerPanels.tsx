@@ -1,11 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-
 import { Icons } from "@/components/icons";
-import { Button, ButtonLink } from "@/components/ui";
-import { openThread } from "@/lib/api/inbox";
+import { ButtonLink } from "@/components/ui";
 import { listOrders } from "@/lib/api/orders";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApi } from "@/lib/hooks/useApi";
@@ -102,27 +98,15 @@ export function ConversationButton({
   label: string;
   variant?: "primary" | "secondary" | "ghost";
 }) {
-  const router = useRouter();
-  const [opening, setOpening] = useState(false);
-
   return (
-    <Button
+    <ButtonLink
+      href={`/cont/inbox/nou/${auction.id}`}
       size="lg"
       fullWidth
       variant={variant}
-      loading={opening}
-      onClick={async () => {
-        setOpening(true);
-        try {
-          const thread = await openThread(auction.id);
-          router.push(`/cont/inbox/${thread.conversation.id}`);
-        } catch {
-          setOpening(false);
-        }
-      }}
     >
       {label}
-    </Button>
+    </ButtonLink>
   );
 }
 

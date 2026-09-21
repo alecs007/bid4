@@ -121,7 +121,7 @@ export function ProfileView({ username }: { username: string }) {
               <p className="mt-1 text-ink-600">{user.orgLegalName}</p>
             ) : null}
 
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
+            <div className="mt-1.5 flex flex-col gap-1 text-sm text-ink-500 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
               {user.ratingCount > 0 ? (
                 <span className="inline-flex items-center gap-1.5">
                   <StarRating value={user.rating} />
@@ -136,9 +136,21 @@ export function ProfileView({ username }: { username: string }) {
                   Nicio evaluare încă
                 </span>
               )}
-              {user.city ? <span>{user.city}</span> : null}
-              <span>Membru din {formatMemberSince(user.createdAt)}</span>
-            </p>
+              <span aria-hidden="true" className="hidden text-ink-300 sm:inline">
+                &middot;
+              </span>
+              <span className="flex flex-wrap items-center gap-x-2">
+                {user.city ? (
+                  <>
+                    <span>{user.city}</span>
+                    <span aria-hidden="true" className="text-ink-300">
+                      &middot;
+                    </span>
+                  </>
+                ) : null}
+                <span>Membru din {formatMemberSince(user.createdAt)}</span>
+              </span>
+            </div>
 
             {user.bio ? (
               <p className="mt-3 max-w-2xl text-ink-700">{user.bio}</p>
@@ -146,7 +158,7 @@ export function ProfileView({ username }: { username: string }) {
           </div>
         </div>
 
-        <StatTiles className="w-full shrink-0 lg:w-[22rem]">
+        <StatTiles className="w-full shrink-0 lg:w-[27rem]">
           <StatTile
             illustration="amount-donated"
             value={formatMoney(user.totalRaised, { compact: true })}

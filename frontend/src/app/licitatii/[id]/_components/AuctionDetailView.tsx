@@ -565,6 +565,18 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
               </span>
             </Link>
 
+            {stance !== "seller" ? (
+              <ButtonLink
+                href={user ? `/cont/inbox/nou/${auction.id}` : "/autentificare"}
+                variant="secondary"
+                size="sm"
+                className="mt-4"
+                leftIcon={<Icons.inbox aria-hidden="true" className="h-4 w-4 shrink-0" />}
+              >
+                Trimite un mesaj
+              </ButtonLink>
+            ) : null}
+
             <StatTiles className="mt-4">
               <StatTile
                 illustration="rating"

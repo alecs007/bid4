@@ -21,7 +21,6 @@ import {
   retractBid,
 } from "@/lib/api/bids";
 import { AUCTION, ORDER, TERMS, type Bani } from "@/lib/config";
-import { openThread } from "@/lib/api/inbox";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { computeFees, formatMoney, parseLeiInput } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
@@ -96,8 +95,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
       }
       setConsenting(null);
       onChanged();
-      const thread = await openThread(auction.id);
-      router.push(`/cont/inbox/${thread.conversation.id}`);
+      router.push(`/cont/inbox/nou/${auction.id}`);
       return true;
     } catch (caught) {
       toast.error("Oferta nu a fost acceptată", errorMessage(caught));

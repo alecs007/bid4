@@ -174,15 +174,29 @@ public class InboxService {
       throw new ApiException(ErrorCode.NOT_FOUND, "Anunțul nu a fost găsit.");
     }
 
-    Conversation conversation =
-        conversations
-            .findListingThread(listing.getId(), me)
-            .orElseGet(() -> threads.ensureThread(listing.getId(), me, listing.getSellerId()));
+    boolean saying = request.message() != null && !request.message().isBlank();
+    Optional<Conversation> existing = conversations.findListingThread(listing.getId(), me);
+    if (existing.isEmpty() && !saying) {
+      throw new ApiException(ErrorCode.NOT_FOUND, "Conversația nu există încă.");
+    }
 
-    if (request.message() != null && !request.message().isBlank()) {
+    Conversation conversation =
+        existing.orElseGet(() -> threads.ensureThread(listing.getId(), me, listing.getSellerId()));
+    if (saying) {
       write(conversation, me, request.message(), List.of());
     }
 
+    return thread(conversation.getId(), viewer);
+  }
+
+  @Transactional(readOnly = true)
+  public ThreadResponse forListing(UUID listingId, Viewer viewer) {
+    UUID me = required(viewer);
+    Conversation conversation =
+        conversations
+            .findListingThread(listingId, me)
+            .orElseThrow(
+                () -> new ApiException(ErrorCode.NOT_FOUND, "Conversația nu există încă."));
     return thread(conversation.getId(), viewer);
   }
 

@@ -182,16 +182,16 @@ function SkeletonPersonRow() {
 
 export function SkeletonStatTiles({ className }: { className?: string }) {
   return (
-    <div className={cn("grid grid-cols-3 gap-2 sm:gap-3", className)}>
+    <div className={cn("grid grid-cols-3 gap-1.5 sm:gap-3", className)}>
       {Array.from({ length: 3 }).map((_, index) => (
         <div
           key={index}
-          className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-2 py-4 ring-1 ring-edge"
+          className="flex flex-col items-center gap-2 rounded-2xl bg-canvas px-1.5 py-4 ring-1 ring-edge sm:px-3"
         >
           <Skeleton className="h-8 w-8 rounded-xl sm:h-10 sm:w-10" />
           <div className="flex flex-col items-center">
-            <Skeleton className="h-[18px] w-12 rounded-md sm:h-5" />
-            <Skeleton className="mt-1 h-[15px] w-16 rounded-md" />
+            <Skeleton className="h-[18px] w-12 rounded-md sm:h-6" />
+            <Skeleton className="mt-1 h-[13px] w-16 rounded-md sm:h-[15px]" />
           </div>
         </div>
       ))}
@@ -410,7 +410,7 @@ export function SkeletonProfile() {
             <Skeleton className="mt-1 h-5 w-full max-w-2xl" />
           </div>
         </div>
-        <SkeletonStatTiles className="w-full shrink-0 lg:w-[22rem]" />
+        <SkeletonStatTiles className="w-full shrink-0 lg:w-[27rem]" />
       </SkeletonCard>
 
       <SkeletonGrid count={PAGINATION.DEFAULT_PAGE_SIZE} columns={5} />
