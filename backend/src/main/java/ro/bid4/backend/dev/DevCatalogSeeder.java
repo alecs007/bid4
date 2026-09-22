@@ -261,7 +261,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
                     null,
                     null,
                     now.minus(Duration.ofDays(4)),
-                    AuctionStatus.RESERVED),
+                    AuctionStatus.LIVE),
                 3),
             new Planned(
                 listing(
@@ -384,7 +384,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
       AuctionStatus.LIVE,
       AuctionStatus.PENDING_REVIEW,
       AuctionStatus.LIVE,
-      AuctionStatus.RESERVED,
+      AuctionStatus.LIVE,
       AuctionStatus.LIVE,
       AuctionStatus.DRAFT,
       AuctionStatus.LIVE,

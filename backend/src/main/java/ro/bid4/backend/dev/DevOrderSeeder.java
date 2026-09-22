@@ -1,5 +1,6 @@
 package ro.bid4.backend.dev;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -14,7 +15,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import ro.bid4.backend.catalog.domain.Auction;
 import ro.bid4.backend.catalog.domain.AuctionStatus;
+import ro.bid4.backend.catalog.domain.Bid;
+import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
+import ro.bid4.backend.catalog.repo.BidRepository;
 import ro.bid4.backend.common.web.Viewer;
 import ro.bid4.backend.identity.domain.DeliveryMethod;
 import ro.bid4.backend.identity.domain.UserAccount;
@@ -24,6 +28,7 @@ import ro.bid4.backend.orders.domain.DisputeOutcome;
 import ro.bid4.backend.orders.domain.OrderStatus;
 import ro.bid4.backend.orders.repo.OrderRepository;
 import ro.bid4.backend.orders.service.OrderService;
+import ro.bid4.backend.orders.service.Terms;
 
 @Component
 @Order(4)
@@ -55,18 +60,21 @@ public class DevOrderSeeder implements ApplicationRunner {
   private final OrderRepository orders;
   private final DeliveryMethodRepository deliveryMethods;
   private final OrderService sales;
+  private final BidRepository bids;
 
   public DevOrderSeeder(
       UserAccountRepository users,
       AuctionRepository auctions,
       OrderRepository orders,
       DeliveryMethodRepository deliveryMethods,
-      OrderService sales) {
+      OrderService sales,
+      BidRepository bids) {
     this.users = users;
     this.auctions = auctions;
     this.orders = orders;
     this.deliveryMethods = deliveryMethods;
     this.sales = sales;
+    this.bids = bids;
   }
 
   @Override
@@ -155,10 +163,30 @@ public class DevOrderSeeder implements ApplicationRunner {
         .toList();
   }
 
+  private void acceptOffer(Auction listing, UUID buyerId) {
+    Bid offer =
+        bids.findByAuctionIdAndBidderId(listing.getId(), buyerId)
+            .orElseGet(
+                () -> {
+                  Bid fresh = new Bid();
+                  fresh.setAuctionId(listing.getId());
+                  fresh.setBidderId(buyerId);
+                  fresh.setAmount(listing.getCurrentPrice());
+                  fresh.setTermsVersion(Terms.CURRENT_VERSION);
+                  fresh.setTermsAcceptedAt(Instant.now());
+                  return fresh;
+                });
+    offer.setStatus(BidStatus.ACCEPTED);
+    bids.saveAndFlush(offer);
+    listing.setBidCount((int) bids.countByAuctionId(listing.getId()));
+    auctions.save(listing);
+  }
+
   private void walk(Auction listing, UUID buyerId, Stage until, Viewer staff) {
     Viewer buyer = Viewer.of(buyerId, false);
     Viewer seller = Viewer.of(listing.getSellerId(), false);
 
+    acceptOffer(listing, buyerId);
     var order = sales.open(listing, buyerId, listing.getCurrentPrice());
     UUID id = order.getId();
     if (until == Stage.DELIVERY_PENDING) {

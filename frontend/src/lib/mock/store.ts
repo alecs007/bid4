@@ -57,7 +57,7 @@ function persist(): void {
 }
 
 export function resetWorld(): void {
-  world = createWorld();
+  world = normalizeSales(createWorld());
   seededAt = Date.now();
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(MOCK.STORAGE_KEY);
@@ -71,7 +71,7 @@ export function getWorld(): World {
     if (restored) {
       world = restored;
     } else {
-      world = createWorld();
+      world = normalizeSales(createWorld());
       seededAt = Date.now();
     }
   }
@@ -299,6 +299,59 @@ export function reopenBid(current: World, order: Order): void {
   );
   if (bid?.status === "ACCEPTED") bid.status = "OUTBID";
   rebalanceBids(current, auction);
+}
+
+function normalizeSales(current: World): World {
+  for (const auction of current.auctions) {
+    if (auction.status === "RESERVED") {
+      auction.status = "LIVE";
+      auction.winnerId = undefined;
+      auction.acceptedAt = undefined;
+      auction.acceptedAmount = undefined;
+    }
+  }
+
+  for (const order of current.orders) {
+    const auction = current.auctions.find((item) => item.id === order.auctionId);
+    if (!auction || order.status === "CANCELLED" || order.status === "REFUNDED") {
+      continue;
+    }
+
+    let bid = current.bids.find(
+      (item) => item.auctionId === auction.id && item.bidderId === order.buyerId,
+    );
+    if (!bid) {
+      bid = {
+        id: nextId("bid"),
+        auctionId: auction.id,
+        bidderId: order.buyerId,
+        amount: order.finalPrice,
+        createdAt: order.createdAt,
+        status: "ACCEPTED",
+      };
+      current.bids.push(bid);
+    }
+
+    if (UNPAID.includes(order.status)) {
+      auction.status = "LIVE";
+      auction.winnerId = undefined;
+      auction.acceptedAt = undefined;
+      auction.acceptedAmount = undefined;
+      auction.dispatchDeadline = undefined;
+      bid.status = "ACCEPTED";
+      rebalanceBids(current, auction);
+    } else {
+      auction.status = "SOLD";
+      auction.winnerId = order.buyerId;
+      auction.acceptedAmount = order.finalPrice;
+      auction.acceptedAt = auction.acceptedAt ?? order.paidAt ?? order.createdAt;
+      for (const other of current.bids) {
+        if (other.auctionId !== auction.id) continue;
+        other.status = other.bidderId === order.buyerId ? "WON" : "LOST";
+      }
+    }
+  }
+  return current;
 }
 
 export function openOrderForAcceptance(auctionId: ID, buyerId: ID): void {

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -18,7 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import ro.bid4.backend.TestcontainersConfiguration;
@@ -80,6 +83,7 @@ class OrderFlowTest {
   @Autowired private CauseRepository causes;
   @Autowired private UserAccountRepository users;
   @Autowired private DeliveryMethodRepository deliveryMethods;
+  @Autowired private JdbcTemplate jdbc;
 
   private UserAccount seller;
   private UserAccount buyer;
@@ -641,6 +645,65 @@ class OrderFlowTest {
         .andExpect(jsonPath("$[0].mine").value(false))
         .andExpect(jsonPath("$[1].mine").value(true))
         .andExpect(jsonPath("$[1].bidderId").value(rival.getId().toString()));
+  }
+
+  @Test
+  @DisplayName("V16 repairs listings left behind by the single-acceptance model")
+  void legacyListingsAreRepaired() throws Exception {
+    Auction unpaid = liveListing();
+    Order waiting = orders.open(unpaid, buyer.getId(), 100 * LEU);
+
+    Auction paid = liveListing();
+    Order settled = orders.open(paid, buyer.getId(), 200 * LEU);
+    settled.setStatus(OrderStatus.PAID_HELD);
+    settled.setPaidAt(Instant.now());
+    orderRows.save(settled);
+
+    Auction reserved = liveListing();
+    Bid taken = bid(reserved, 150 * LEU);
+    taken.setStatus(BidStatus.ACCEPTED);
+    bids.save(taken);
+    jdbc.update(
+        "update auctions set status = 'RESERVED', winner_id = ?, accepted_bid_id = ?,"
+            + " accepted_at = now() where id = ?",
+        buyer.getId(),
+        taken.getId(),
+        reserved.getId());
+
+    String script =
+        new String(
+            new ClassPathResource("db/migration/V16__no_reserved_listings.sql")
+                .getInputStream()
+                .readAllBytes(),
+            StandardCharsets.UTF_8);
+    for (String statement : script.split(";")) {
+      if (!statement.isBlank()) {
+        jdbc.update(statement);
+      }
+    }
+
+    assertThat(auctions.findById(unpaid.getId()).orElseThrow().getStatus())
+        .isEqualTo(AuctionStatus.LIVE);
+    assertThat(
+            bids.findByAuctionIdAndBidderId(unpaid.getId(), buyer.getId())
+                .orElseThrow()
+                .getStatus())
+        .isEqualTo(BidStatus.ACCEPTED);
+    assertThat(orderRows.findById(waiting.getId()).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_CONFIRMATION);
+
+    Auction sold = auctions.findById(paid.getId()).orElseThrow();
+    assertThat(sold.getStatus()).isEqualTo(AuctionStatus.SOLD);
+    assertThat(sold.getWinnerId()).isEqualTo(buyer.getId());
+    assertThat(
+            bids.findByAuctionIdAndBidderId(paid.getId(), buyer.getId()).orElseThrow().getStatus())
+        .isEqualTo(BidStatus.WON);
+
+    Auction live = auctions.findById(reserved.getId()).orElseThrow();
+    assertThat(live.getStatus()).isEqualTo(AuctionStatus.LIVE);
+    assertThat(live.getWinnerId()).isNull();
+    assertThat(bids.findById(taken.getId()).orElseThrow().getStatus())
+        .isEqualTo(BidStatus.ACCEPTED);
   }
 
   private Order accept(Auction listing, long price) {
