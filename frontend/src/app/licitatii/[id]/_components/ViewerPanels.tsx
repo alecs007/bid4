@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/money";
 import type { AuctionDetail } from "@/lib/types";
 import { isCommitted } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
+import { countRo } from "@/lib/utils/plural";
 
 export type Stance =
   | "seller"
@@ -132,7 +133,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col gap-4 px-5 py-5">{children}</div>;
 }
 
-export function SellerPanel({ auction }: { auction: AuctionDetail }) {
+export function SellerPanel({
+  auction,
+  acceptedCount = 0,
+}: {
+  auction: AuctionDetail;
+  acceptedCount?: number;
+}) {
   const orderHref = useOrderHref(auction, "seller");
   const settled = auction.acceptedAmount ?? auction.currentPrice;
 
@@ -179,6 +186,11 @@ export function SellerPanel({ auction }: { auction: AuctionDetail }) {
 
   return (
     <Shell>
+      {acceptedCount > 0 ? (
+        <Notice tone="sky">
+          Ai acceptat {countRo(acceptedCount, "ofertă", "oferte")}.
+        </Notice>
+      ) : null}
       <ButtonLink href="/cont/vanzari" size="lg" fullWidth>
         Gestionează anunțul
       </ButtonLink>

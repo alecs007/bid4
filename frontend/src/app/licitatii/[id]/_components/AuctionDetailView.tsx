@@ -316,7 +316,11 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
 
         <aside className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="rounded-xl bg-white ring-1 ring-edge">
-            <BidBox auction={auction} onChanged={refresh} />
+            <BidBox
+              auction={auction}
+              onChanged={refresh}
+              acceptedCount={acceptedCount}
+            />
 
             <div className="border-t border-line">
               <Link
@@ -383,18 +387,6 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
                       {countRo(auction.bidCount, "ofertă", "oferte")}
                     </span>
                   </span>
-                  {stance === "seller" && acceptedCount > 0 ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Icons.success
-                        aria-hidden="true"
-                        className="h-4 w-4 text-sky-600"
-                      />
-                      <span className="numeric font-bold text-ink-900">
-                        {acceptedCount}
-                      </span>
-                      {pluralRo(acceptedCount, "acceptată", "acceptate")}
-                    </span>
-                  ) : null}
                   {offerable ? (
                     <span className="inline-flex items-center gap-1.5">
                       <Icons.watchlist

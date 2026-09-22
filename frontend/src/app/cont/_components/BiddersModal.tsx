@@ -37,7 +37,10 @@ export function sellerOrder(bids: BidWithBidder[]): BidWithBidder[] {
   );
 }
 
-export function useAcceptOffer(auctionId: string | undefined, sellerId?: string) {
+export function useAcceptOffer(
+  auctionId: string | undefined,
+  sellerId?: string,
+) {
   const toast = useToast();
   const revalidate = useRevalidate();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -87,7 +90,12 @@ export function OfferRow({
   const accepted = isSettledOffer(bid);
 
   return (
-    <li className="flex items-center gap-3 py-2">
+    <li
+      className={cn(
+        "flex items-center gap-3 py-2",
+        bid.mine && "-mx-2 rounded-xl bg-primary-50 px-2 ring-1 ring-primary-200",
+      )}
+    >
       {bid.bidderDisplayName ? (
         <Avatar
           name={bid.bidderDisplayName}
@@ -98,10 +106,13 @@ export function OfferRow({
         <AnonAvatar seed={bid.alias ?? bid.id} />
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold text-ink-900">
-          {bid.mine
-            ? "Tu"
-            : (bid.bidderDisplayName ?? anonName(bid.alias ?? bid.id))}
+        <span
+          className={cn(
+            "block truncate text-sm font-bold",
+            bid.mine ? "text-primary-800" : "text-ink-900",
+          )}
+        >
+          {bid.bidderDisplayName ?? anonName(bid.alias ?? bid.id)}
         </span>
         <span className="block truncate text-xs text-ink-500">
           {bid.status === "WON"
@@ -164,7 +175,10 @@ export function BiddersModal({
     `offers:${auction?.id}`,
     {
       enabled:
-        open && Boolean(auction) && Boolean(sellerId) && auction?.sellerId === sellerId,
+        open &&
+        Boolean(auction) &&
+        Boolean(sellerId) &&
+        auction?.sellerId === sellerId,
     },
   );
 

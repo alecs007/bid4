@@ -372,9 +372,11 @@ function OfferConsent({
 export function BidBox({
   auction,
   onChanged,
+  acceptedCount = 0,
 }: {
   auction: AuctionDetail;
   onChanged: () => void;
+  acceptedCount?: number;
 }) {
   const bidding = useBidding(auction, onChanged);
   const router = useRouter();
@@ -476,7 +478,9 @@ export function BidBox({
     </div>
   ) : null;
 
-  if (stance === "seller") return <SellerPanel auction={auction} />;
+  if (stance === "seller") {
+    return <SellerPanel auction={auction} acceptedCount={acceptedCount} />;
+  }
   if (stance === "accepted" && offerable) {
     return <AcceptedPanel auction={auction} />;
   }

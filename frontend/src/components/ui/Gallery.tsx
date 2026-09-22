@@ -41,6 +41,9 @@ export function Gallery({
       className={cn(
         !collage && "aspect-[3/4]",
         collage && index === 0 && "row-span-2",
+        !collage || index === 0
+          ? "rounded-xl sm:rounded-2xl"
+          : "rounded-lg sm:rounded-xl",
         shown.length === 4 && index === 1 && "col-span-2",
       )}
     />
@@ -105,7 +108,7 @@ function Tile({
       onClick={onOpen}
       aria-label={more ? `${label}, încă ${more}` : label}
       className={cn(
-        "group relative block min-h-0 w-full cursor-zoom-in overflow-hidden rounded-2xl bg-ink-100",
+        "group relative block min-h-0 w-full cursor-zoom-in overflow-hidden bg-ink-100",
         className,
       )}
     >

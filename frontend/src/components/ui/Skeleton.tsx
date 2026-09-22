@@ -227,9 +227,9 @@ export function SkeletonDetail() {
 
           <div className="@container order-1 lg:order-2">
             <div className={cn("grid", COLLAGE_GAP)} style={collageStyle(3) ?? undefined}>
-              <Skeleton className="row-span-2 h-full w-full rounded-2xl" />
-              <Skeleton className="h-full w-full rounded-2xl" />
-              <Skeleton className="h-full w-full rounded-2xl" />
+              <Skeleton className="row-span-2 h-full w-full rounded-xl sm:rounded-2xl" />
+              <Skeleton className="h-full w-full rounded-lg sm:rounded-xl" />
+              <Skeleton className="h-full w-full rounded-lg sm:rounded-xl" />
             </div>
           </div>
         </div>
