@@ -39,9 +39,9 @@ export function Gallery({
       more={index === shown.length - 1 && hidden > 0 ? hidden : 0}
       onOpen={() => setOpen(index)}
       className={cn(
-        !collage && "aspect-[3/4]",
-        collage && index === 0 && "row-span-2",
-        !collage || index === 0
+        shown.length === 1 && "aspect-[3/4] h-full w-auto justify-self-center",
+        shown.length > 2 && index === 0 && "row-span-2",
+        index === 0 || shown.length <= 2
           ? "rounded-xl sm:rounded-2xl"
           : "rounded-lg sm:rounded-xl",
         shown.length === 4 && index === 1 && "col-span-2",
@@ -58,17 +58,16 @@ export function Gallery({
           </div>
         ) : null}
 
-        {collage ? (
-          <div className={cn("grid", COLLAGE_GAP)} style={collage}>
-            {tiles}
-          </div>
-        ) : count === 2 ? (
-          <div className={cn("grid grid-cols-2", COLLAGE_GAP)}>{tiles}</div>
-        ) : (
-          <div className="frame-empty flex justify-center rounded-2xl">
-            <div className="w-1/2">{tiles}</div>
-          </div>
-        )}
+        <div
+          className={cn(
+            "grid",
+            COLLAGE_GAP,
+            shown.length === 1 && "frame-empty rounded-2xl",
+          )}
+          style={collage}
+        >
+          {tiles}
+        </div>
       </div>
 
       {open !== null ? (
