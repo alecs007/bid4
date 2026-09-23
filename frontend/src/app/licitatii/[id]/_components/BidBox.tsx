@@ -405,11 +405,9 @@ export function BidBox({
   const priceBlock = (
     <div>
       <p className="text-sm text-ink-500">
-        {reserved
+        {reserved || auction.bidCount > 0
           ? "Cea mai mare ofertă"
-          : auction.bidCount > 0
-            ? "Oferta curentă"
-            : "Preț de pornire"}
+          : "Preț de pornire"}
       </p>
       <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
         {formatMoney(auction.currentPrice, { compact: true })}
