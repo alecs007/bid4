@@ -1,4 +1,8 @@
-import { IMAGE } from "@/lib/config";
+import { IMAGE, USE_MOCK } from "@/lib/config";
+
+export const INTAKE = USE_MOCK
+  ? { maxEdge: IMAGE.DEMO_MAX_EDGE_PX, quality: IMAGE.DEMO_QUALITY }
+  : { maxEdge: IMAGE.MAX_EDGE_PX, quality: IMAGE.QUALITY };
 
 export interface ProcessedImage {
   blob: Blob;
@@ -29,7 +33,7 @@ async function decode(file: File): Promise<ImageBitmap> {
   }
 }
 
-async function encode(
+export async function encode(
   canvas: OffscreenCanvas | HTMLCanvasElement,
   quality: number,
 ): Promise<Blob> {

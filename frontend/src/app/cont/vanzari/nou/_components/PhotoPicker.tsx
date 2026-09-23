@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { Icons } from "@/components/icons";
 import { FadeImage } from "@/components/ui";
-import { AUCTION, IMAGE, USE_MOCK } from "@/lib/config";
-import { ImageRejected, processImage } from "@/lib/images/process";
+import { AUCTION } from "@/lib/config";
+import { ImageRejected, INTAKE, processImage } from "@/lib/images/process";
 import type { ProcessedImage } from "@/lib/images/process";
 import { cn } from "@/lib/utils/cn";
+
+import { PhotoEditor } from "./PhotoEditor";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
@@ -21,10 +23,6 @@ const CARD =
   "relative aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-2xl sm:w-28";
 
 const CARD_HEIGHT = "h-32 sm:h-[9.3333rem]";
-
-const SETTINGS = USE_MOCK
-  ? { maxEdge: IMAGE.DEMO_MAX_EDGE_PX, quality: IMAGE.DEMO_QUALITY }
-  : { maxEdge: IMAGE.MAX_EDGE_PX, quality: IMAGE.QUALITY };
 
 export function PhotoPicker({
   value,
@@ -40,6 +38,7 @@ export function PhotoPicker({
   const [fileOver, setFileOver] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
   const [holding, setHolding] = useState<number | null>(null);
+  const [editing, setEditing] = useState<number | null>(null);
   const from = useRef({ x: 0, y: 0 });
   const holdTimer = useRef<number | null>(null);
   const loose = useRef(false);
@@ -62,7 +61,7 @@ export function PhotoPicker({
 
     for (const file of picked) {
       try {
-        const photo = await processImage(file, SETTINGS);
+        const photo = await processImage(file, INTAKE);
         onChange([...held.current, photo]);
       } catch (error) {
         setRefused(
@@ -108,8 +107,13 @@ export function PhotoPicker({
       if (travelled > HOLD_SLOP_PX) cancelHold();
     };
 
+    const liftOff = () => {
+      if (holdTimer.current !== null) setEditing(holding);
+      cancelHold();
+    };
+
     window.addEventListener("pointermove", wander, { passive: true });
-    window.addEventListener("pointerup", cancelHold);
+    window.addEventListener("pointerup", liftOff);
     window.addEventListener("pointercancel", cancelHold);
     window.addEventListener("scroll", cancelHold, {
       passive: true,
@@ -117,7 +121,7 @@ export function PhotoPicker({
     });
     return () => {
       window.removeEventListener("pointermove", wander);
-      window.removeEventListener("pointerup", cancelHold);
+      window.removeEventListener("pointerup", liftOff);
       window.removeEventListener("pointercancel", cancelHold);
       window.removeEventListener("scroll", cancelHold, { capture: true });
     };
@@ -164,6 +168,7 @@ export function PhotoPicker({
     const swallow = (event: TouchEvent) => event.preventDefault();
 
     const drop = () => {
+      if (!loose.current) setEditing(dragged);
       loose.current = false;
       setDragged(null);
     };
@@ -326,13 +331,34 @@ export function PhotoPicker({
           empty ? "opacity-0" : "opacity-100",
         )}
       >
-        Trage fotografiile pentru a schimba ordinea.
+        Atinge o fotografie pentru a o edita, trage pentru a schimba ordinea.
       </p>
 
       {refused ? (
         <p role="alert" className="text-sm font-semibold text-danger-600">
           {refused}
         </p>
+      ) : null}
+
+      {editing !== null && value[editing] ? (
+        <PhotoEditor
+          photo={value[editing]}
+          onClose={() => setEditing(null)}
+          onDelete={() => {
+            remove(editing);
+            setEditing(null);
+          }}
+          onApply={(next) => {
+            const previous = value[editing]!;
+            onChange(
+              value.map((photo, position) =>
+                position === editing ? next : photo,
+              ),
+            );
+            previous.release();
+            setEditing(null);
+          }}
+        />
       ) : null}
     </div>
   );
