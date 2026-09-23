@@ -237,15 +237,18 @@ export function SkeletonDetail() {
         <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="divide-y divide-line rounded-xl bg-white ring-1 ring-edge">
             <div className="px-5 py-5">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="mt-1 h-[30px] w-32" />
+              <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+                <div>
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="mt-1 h-[30px] w-28" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="mt-1 h-6 w-24" />
+                </div>
+              </div>
               <div className="mt-4 hidden flex-col gap-3 lg:flex">
                 <Skeleton className="h-14 w-full rounded-2xl" />
-                <div className="flex gap-2">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} className="h-9 flex-1 rounded-xl" />
-                  ))}
-                </div>
                 <Skeleton className="h-13 w-full rounded-2xl" />
               </div>
               <Skeleton className="mt-3 h-5 w-44" />

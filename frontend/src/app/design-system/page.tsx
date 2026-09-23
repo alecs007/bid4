@@ -544,7 +544,7 @@ export default function DesignSystemPage() {
                 <Alert tone="primary" title="Ești cel mai bun ofertant!">
                   Îți ținem pumnii. Te anunțăm dacă cineva te depășește.
                 </Alert>
-                <Alert tone="sun" title="Oferta ta a fost depășită">
+                <Alert tone="sun" title="Oferta ta este depășită">
                   Altcineva a oferit mai mult. Poți trimite o ofertă mai mare.
                 </Alert>
                 <Alert tone="sky" title="Fonduri în siguranță">

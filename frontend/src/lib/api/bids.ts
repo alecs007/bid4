@@ -85,15 +85,8 @@ export async function listBids(
     });
 }
 
-export function minimumBid(auction: {
-  currentPrice: number;
-  bidIncrement: number;
-  bidCount: number;
-  startingPrice: number;
-}): number {
-  return auction.bidCount === 0
-    ? auction.startingPrice
-    : auction.currentPrice + auction.bidIncrement;
+export function minimumBid(auction: { startingPrice: number }): number {
+  return auction.startingPrice;
 }
 
 export async function placeBid(

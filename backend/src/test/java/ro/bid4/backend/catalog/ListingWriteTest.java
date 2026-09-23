@@ -25,7 +25,6 @@ import ro.bid4.backend.catalog.domain.BidStatus;
 import ro.bid4.backend.catalog.domain.ItemCondition;
 import ro.bid4.backend.catalog.repo.AuctionRepository;
 import ro.bid4.backend.catalog.repo.BidRepository;
-import ro.bid4.backend.catalog.service.CatalogRules;
 import ro.bid4.backend.catalog.service.ListingService;
 import ro.bid4.backend.cause.domain.Cause;
 import ro.bid4.backend.cause.domain.CauseStatus;
@@ -120,16 +119,6 @@ class ListingWriteTest {
     assertThatThrownBy(
             () -> listings.create(request().buyNowPrice(100 * LEU).build(), viewer(seller)))
         .isInstanceOf(ApiException.class);
-  }
-
-  @Test
-  @DisplayName("the bid step is read off the asking price, not off the seller")
-  void bidStepIsDerived() {
-    AuctionResponse created = listings.create(request().build(), viewer(seller));
-
-    assertThat(auctions.findById(created.id()).orElseThrow().getBidIncrement())
-        .isEqualTo(CatalogRules.bidStepFor(100 * LEU))
-        .isEqualTo(5 * LEU);
   }
 
   @Test
@@ -342,7 +331,6 @@ class ListingWriteTest {
     auction.setDonationPercent((short) 25);
     auction.setStartingPrice(100 * LEU);
     auction.setCurrentPrice(100 * LEU);
-    auction.setBidIncrement(10 * LEU);
     auction.setStartTime(Instant.now().minus(Duration.ofHours(1)));
     auction.setStatus(AuctionStatus.LIVE);
     return auctions.save(auction);

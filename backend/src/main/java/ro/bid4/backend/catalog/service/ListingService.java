@@ -81,7 +81,6 @@ public class ListingService {
     auction.setDonationPercent((short) request.donationPercent());
     auction.setStartingPrice(request.startingPrice());
     auction.setCurrentPrice(request.startingPrice());
-    auction.setBidIncrement(CatalogRules.bidStepFor(request.startingPrice()));
     auction.setReservePrice(request.reservePrice());
     auction.setBuyNowPrice(request.buyNowPrice());
     auction.setStartTime(now);

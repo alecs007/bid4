@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AUCTION, bidStepFor } from "@/lib/config";
+import { minimumBid } from "@/lib/api/bids";
 import { lei } from "@/lib/money";
 import type { Auction } from "@/lib/types";
 import { isLive, pickLatest, pickMostWatched, popularityScore } from "./featured";
@@ -19,7 +19,6 @@ function auction(over: Partial<Auction> = {}): Auction {
     donationPercent: 50,
     startingPrice: lei(100),
     currentPrice: lei(100),
-    bidIncrement: lei(5),
     startTime: "2026-08-01T10:00:00Z",
     status: "LIVE",
     bidCount: 0,
@@ -29,38 +28,12 @@ function auction(over: Partial<Auction> = {}): Auction {
   };
 }
 
-describe("the bid step", () => {
-  it("reads off the ladder, at the bound and just past it", () => {
-    expect(bidStepFor(lei(10))).toBe(lei(0.5));
-    expect(bidStepFor(lei(10.01))).toBe(lei(2.5));
-    expect(bidStepFor(lei(100))).toBe(lei(5));
-    expect(bidStepFor(lei(100.01))).toBe(lei(10));
-    expect(bidStepFor(lei(500))).toBe(lei(10));
-    expect(bidStepFor(lei(500.01))).toBe(lei(25));
-    expect(bidStepFor(lei(10_000))).toBe(lei(100));
-  });
-
-  it("falls back to the flat step above the ladder", () => {
-    expect(bidStepFor(lei(10_001))).toBe(AUCTION.BID_STEP_ABOVE_LADDER);
-    expect(bidStepFor(lei(1_000_000))).toBe(AUCTION.BID_STEP_ABOVE_LADDER);
-  });
-
-  it("is always a round number a person would say out loud", () => {
-    for (const price of [1, 37, 99, 250, 999, 4_200, 9_999, 50_000]) {
-      expect(bidStepFor(lei(price)) % lei(0.5)).toBe(0);
-    }
-  });
-
-  it("never asks for a raise larger than the asking price", () => {
-    for (const price of [1, 5, 20, 100, 500, 5_000, 50_000]) {
-      expect(bidStepFor(lei(price))).toBeLessThanOrEqual(lei(price));
-    }
-  });
-
-  it("stays a sane share of the asking price", () => {
-    for (const price of [10, 25, 60, 120, 600, 1_200, 6_000, 12_000]) {
-      expect(bidStepFor(lei(price)) / lei(price)).toBeLessThanOrEqual(0.2);
-    }
+describe("the minimum offer", () => {
+  it("is the starting price, however high the offers already are", () => {
+    expect(minimumBid(auction())).toBe(lei(100));
+    expect(minimumBid(auction({ currentPrice: lei(940), bidCount: 12 }))).toBe(
+      lei(100),
+    );
   });
 });
 

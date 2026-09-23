@@ -22,7 +22,6 @@ public record AuctionResponse(
     int donationPercent,
     long startingPrice,
     long currentPrice,
-    long bidIncrement,
     Long reservePrice,
     Long buyNowPrice,
     Instant startTime,

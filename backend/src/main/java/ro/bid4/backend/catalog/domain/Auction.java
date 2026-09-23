@@ -70,9 +70,6 @@ public class Auction {
   @Column(name = "current_price", nullable = false)
   private long currentPrice;
 
-  @Column(name = "bid_increment", nullable = false)
-  private long bidIncrement;
-
   @Column(name = "reserve_price")
   private Long reservePrice;
 

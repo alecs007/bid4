@@ -1,4 +1,4 @@
-import { AUCTION, bidStepFor, type AuctionCategoryId } from "@/lib/config";
+import { AUCTION, LEU, type AuctionCategoryId } from "@/lib/config";
 import { lei } from "@/lib/money";
 import type { Auction, AuctionStatus, Bid, ItemCondition } from "@/lib/types";
 import { isoAgo } from "@/lib/utils/date";
@@ -641,7 +641,7 @@ export function buildCatalog(): CatalogSeed {
     const auctionId = `auc_${seed.key}`;
     const start = startedAt(seed.age);
     const startingPrice = lei(seed.startLei);
-    const increment = bidStepFor(startingPrice);
+    const raise = Math.max(LEU, Math.round(startingPrice / 20 / LEU) * LEU);
 
     const bidCount = seed.bids ?? 0;
     let currentPrice = startingPrice;
@@ -650,7 +650,7 @@ export function buildCatalog(): CatalogSeed {
     let step = 0;
     for (let index = 0; index < bidCount; index += 1) {
       step += index % 4 === 3 ? 2 : 1;
-      const amount = startingPrice + increment * step;
+      const amount = startingPrice + raise * step;
       const bidderId =
         index === bidCount - 1 && seed.winnerId
           ? seed.winnerId
@@ -718,7 +718,6 @@ export function buildCatalog(): CatalogSeed {
       donationPercent: seed.donationPercent,
       startingPrice,
       currentPrice,
-      bidIncrement: increment,
       reservePrice,
       buyNowPrice: seed.buyNowLei ? lei(seed.buyNowLei) : undefined,
       startTime: start,

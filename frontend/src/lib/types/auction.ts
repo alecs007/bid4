@@ -54,7 +54,6 @@ export interface Auction {
 
   startingPrice: Bani;
   currentPrice: Bani;
-  bidIncrement: Bani;
   reservePrice?: Bani;
   buyNowPrice?: Bani;
 

@@ -565,7 +565,6 @@ class AuctionEndpointsTest {
     auction.setDonationPercent((short) donationPercent);
     auction.setStartingPrice(startingPrice);
     auction.setCurrentPrice(startingPrice);
-    auction.setBidIncrement(10 * LEU);
     auction.setReservePrice(reservePrice);
     auction.setStartTime(startTime);
     auction.setCreatedAt(startTime);

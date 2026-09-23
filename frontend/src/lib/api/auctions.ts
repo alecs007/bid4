@@ -1,4 +1,4 @@
-import { AUCTION, PAGINATION, USE_MOCK, bidStepFor } from "@/lib/config";
+import { AUCTION, PAGINATION, USE_MOCK } from "@/lib/config";
 import { pickLatest, pickMostWatched, pickRelated } from "@/lib/featured";
 import { toAuctionDetail } from "@/lib/mock/join";
 import { auctionGallery } from "@/lib/mock/images";
@@ -270,7 +270,6 @@ export async function createAuction(
     donationPercent: payload.donationPercent,
     startingPrice: payload.startingPrice,
     currentPrice: payload.startingPrice,
-    bidIncrement: bidStepFor(payload.startingPrice),
     reservePrice: payload.reservePrice,
     buyNowPrice: payload.buyNowPrice,
     startTime: now,

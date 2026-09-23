@@ -307,7 +307,6 @@ class WebhookTest {
     auction.setDonationPercent((short) 30);
     auction.setStartingPrice(100 * LEU);
     auction.setCurrentPrice(100 * LEU);
-    auction.setBidIncrement(10 * LEU);
     auction.setStartTime(Instant.now().minus(Duration.ofHours(1)));
     auction.setStatus(AuctionStatus.LIVE);
     return auctions.save(auction);

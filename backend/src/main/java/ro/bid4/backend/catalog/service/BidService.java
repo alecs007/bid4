@@ -56,9 +56,7 @@ public class BidService {
   }
 
   public static long minimumBid(Auction auction) {
-    return auction.getBidCount() == 0
-        ? auction.getStartingPrice()
-        : auction.getCurrentPrice() + auction.getBidIncrement();
+    return auction.getStartingPrice();
   }
 
   @Transactional

@@ -145,7 +145,7 @@ function AmountForm({
   auction: AuctionDetail;
   onDone?: () => void;
 }) {
-  const { amount, setAmount, minimum, error, request } = bidding;
+  const { amount, setAmount, error, request } = bidding;
 
   return (
     <form
@@ -178,22 +178,6 @@ function AmountForm({
           {error}
         </p>
       ) : null}
-
-      <div className="flex gap-2">
-        {[0, 1, 3].map((extra) => {
-          const quick = minimum + auction.bidIncrement * extra;
-          return (
-            <button
-              key={extra}
-              type="button"
-              onClick={() => setAmount(String(quick / 100))}
-              className="flex-1 rounded-xl bg-ink-100 py-2 text-sm font-bold text-ink-700 transition hover:bg-ink-200"
-            >
-              {formatMoney(quick, { compact: true, omitCurrency: true })}
-            </button>
-          );
-        })}
-      </div>
       <Button type="submit" size="lg" fullWidth>
         {bidding.isLeading || auction.viewerBidStatus === "OUTBID"
           ? "Mărește oferta"
@@ -403,15 +387,21 @@ export function BidBox({
   ) : null;
 
   const priceBlock = (
-    <div>
-      <p className="text-sm text-ink-500">
-        {reserved || auction.bidCount > 0
-          ? "Cea mai mare ofertă"
-          : "Preț de pornire"}
-      </p>
-      <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
-        {formatMoney(auction.currentPrice, { compact: true })}
-      </p>
+    <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+      <div>
+        <p className="text-sm text-ink-500">Preț de pornire</p>
+        <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
+          {formatMoney(auction.startingPrice, { compact: true })}
+        </p>
+      </div>
+      {auction.bidCount > 0 ? (
+        <div>
+          <p className="text-sm text-ink-500">Cea mai mare ofertă</p>
+          <p className="numeric font-display text-2xl leading-none font-extrabold text-ink-900">
+            {formatMoney(auction.currentPrice, { compact: true })}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -427,7 +417,7 @@ export function BidBox({
   const standing = reserved ? null : outbid ? (
     <p className="flex items-center gap-2 font-bold text-sun-800">
       <Icons.warning aria-hidden="true" className="h-4 w-4 shrink-0" />
-      Oferta ta a fost depășită
+      Oferta ta este depășită
     </p>
   ) : (
     <p className="flex items-center gap-2 font-bold text-primary-800">
@@ -570,13 +560,13 @@ export function BidBox({
             title="Oferta"
           >
             <p>
-              Oferta minimă este prețul curent plus pasul de licitare, care
-              pentru acest anunț este de{" "}
+              Oferta minimă este prețul de pornire, care pentru acest anunț
+              este de{" "}
               <strong className="numeric font-bold text-ink-900">
-                {formatMoney(auction.bidIncrement)}
+                {formatMoney(auction.startingPrice)}
               </strong>
-              . Pasul se stabilește automat, în funcție de prețul de pornire,
-              și nu poate fi modificat de vânzător.
+              . Poți oferi oricât peste acest prag, indiferent de ofertele
+              celorlalți.
             </p>
             <p className="mt-2.5">
               Poți avea o singură ofertă activă pe un anunț. Dacă oferăi din

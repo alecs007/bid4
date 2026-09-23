@@ -83,7 +83,7 @@ class CatalogWriteTest {
   void buyNowAcceptsTheOffer() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, 300 * LEU);
+    Auction auction = auction(seller, 100 * LEU, 300 * LEU);
 
     PlaceBidResponse result =
         bidding.place(auction.getId(), 700 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
@@ -96,13 +96,13 @@ class CatalogWriteTest {
   }
 
   @Test
-  @DisplayName("The final price is reachable even when it sits below the next increment")
-  void buyNowIsReachableBelowTheMinimumRaise() {
+  @DisplayName("The final price can still be taken after someone else has offered")
+  void buyNowIsReachableAfterAnOffer() {
     UserAccount seller = seller();
     UserAccount first = bidder();
     UserAccount second = bidder();
 
-    Auction auction = auction(seller, 100 * LEU, 50 * LEU, 120 * LEU);
+    Auction auction = auction(seller, 100 * LEU, 120 * LEU);
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
 
     PlaceBidResponse result =
@@ -118,7 +118,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount modest = bidder();
     UserAccount top = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(modest));
     bidding.place(auction.getId(), 200 * LEU, Terms.CURRENT_VERSION, viewer(top));
@@ -139,7 +139,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount first = bidder();
     UserAccount second = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
@@ -156,7 +156,7 @@ class CatalogWriteTest {
   void acceptedOffersAreFixed() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     offers.accept(auction.getId(), offerOf(auction, buyer).getId(), viewer(seller));
@@ -176,7 +176,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount slow = bidder();
     UserAccount quick = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(slow));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(quick));
@@ -210,7 +210,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount left = bidder();
     UserAccount right = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(left));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(right));
@@ -252,7 +252,7 @@ class CatalogWriteTest {
   void cancellingReopensTheOffer() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     offers.accept(auction.getId(), offerOf(auction, buyer).getId(), viewer(seller));
@@ -269,7 +269,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
     UserAccount stranger = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid offer = offerOf(auction, buyer);
@@ -284,8 +284,8 @@ class CatalogWriteTest {
   void offersBelongToTheirOwnListing() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction mine = auction(seller, 100 * LEU, 10 * LEU, null);
-    Auction other = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction mine = auction(seller, 100 * LEU, null);
+    Auction other = auction(seller, 100 * LEU, null);
 
     bidding.place(other.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     Bid elsewhere = offerOf(other, buyer);
@@ -295,18 +295,30 @@ class CatalogWriteTest {
   }
 
   @Test
-  @DisplayName("An offer below the minimum raise is refused")
+  @DisplayName("An offer below the starting price is refused")
   void tooLowIsRefused() {
     UserAccount seller = seller();
-    UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
-    bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
+    Auction auction = auction(seller, 100 * LEU, null);
 
-    UserAccount other = bidder();
+    UserAccount buyer = bidder();
     assertThatThrownBy(
-            () -> bidding.place(auction.getId(), 105 * LEU, Terms.CURRENT_VERSION, viewer(other)))
+            () -> bidding.place(auction.getId(), 95 * LEU, Terms.CURRENT_VERSION, viewer(buyer)))
         .isInstanceOf(ApiException.class)
-        .hasMessageContaining("110");
+        .hasMessageContaining("100");
+  }
+
+  @Test
+  @DisplayName("A later offer does not have to beat the ones before it")
+  void offersDoNotHaveToRise() {
+    UserAccount seller = seller();
+    Auction auction = auction(seller, 100 * LEU, null);
+    bidding.place(auction.getId(), 300 * LEU, Terms.CURRENT_VERSION, viewer(bidder()));
+
+    PlaceBidResponse modest =
+        bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(bidder()));
+
+    assertThat(modest.bid().amount()).isEqualTo(100 * LEU);
+    assertThat(modest.auction().currentPrice()).isEqualTo(300 * LEU);
   }
 
   @Test
@@ -314,7 +326,7 @@ class CatalogWriteTest {
   void absurdAmountsAreRefused() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     assertThatThrownBy(
             () ->
@@ -327,7 +339,7 @@ class CatalogWriteTest {
   @DisplayName("A seller cannot bid on their own listing")
   void sellersCannotBidOnThemselves() {
     UserAccount seller = seller();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     assertThatThrownBy(
             () -> bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(seller)))
@@ -340,7 +352,7 @@ class CatalogWriteTest {
   void anOfferNeedsNothingSavedInAdvance() {
     UserAccount seller = seller();
     UserAccount unequipped = user("Fara Card", UserRole.USER);
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     PlaceBidResponse placed =
         bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(unequipped));
@@ -354,7 +366,7 @@ class CatalogWriteTest {
   void raisingReplacesYourOwnOffer() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     PlaceBidResponse second =
@@ -370,7 +382,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount first = bidder();
     UserAccount second = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
@@ -389,7 +401,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount first = bidder();
     UserAccount second = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(first));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(second));
@@ -407,7 +419,7 @@ class CatalogWriteTest {
   void withdrawingNeedsAnOffer() {
     UserAccount seller = seller();
     UserAccount stranger = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     assertThatThrownBy(() -> bidding.retract(auction.getId(), viewer(stranger)))
         .isInstanceOf(ApiException.class)
@@ -419,7 +431,7 @@ class CatalogWriteTest {
   void retractingLocksAfterAnAcceptance() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
     Bid offer = bids.findByAuctionIdOrderByAmountDesc(auction.getId()).getFirst();
@@ -434,7 +446,7 @@ class CatalogWriteTest {
   void watchingTogglesAndCounts() {
     UserAccount seller = seller();
     UserAccount follower = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     assertThat(bidding.toggleWatch(auction.getId(), viewer(follower))).isTrue();
     assertThat(auctions.findById(auction.getId()).orElseThrow().getWatcherCount()).isEqualTo(1);
@@ -449,7 +461,7 @@ class CatalogWriteTest {
     UserAccount seller = seller();
     UserAccount left = bidder();
     UserAccount right = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     CountDownLatch go = new CountDownLatch(1);
     AtomicInteger accepted = new AtomicInteger();
@@ -483,7 +495,7 @@ class CatalogWriteTest {
   void anOfferWithoutAcceptedTermsIsRefused() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, null, viewer(buyer)))
         .isInstanceOf(ApiException.class)
@@ -497,7 +509,7 @@ class CatalogWriteTest {
   void anOfferNamingStaleTermsIsRefused() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     assertThatThrownBy(() -> bidding.place(auction.getId(), 100 * LEU, "1999-01-01", viewer(buyer)))
         .isInstanceOf(ApiException.class)
@@ -509,7 +521,7 @@ class CatalogWriteTest {
   void anOfferRecordsTheAcceptanceBesideIt() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     Instant before = Instant.now().minusSeconds(1);
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
@@ -524,7 +536,7 @@ class CatalogWriteTest {
   void aFirstOfferIsNarratedIntoTheThread() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
 
@@ -538,7 +550,7 @@ class CatalogWriteTest {
   void raisingIsNarratedWithWhatItWasBefore() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     bidding.place(auction.getId(), 150 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
@@ -557,7 +569,7 @@ class CatalogWriteTest {
   void withdrawingIsNarratedIntoTheThread() {
     UserAccount seller = seller();
     UserAccount buyer = bidder();
-    Auction auction = auction(seller, 100 * LEU, 10 * LEU, null);
+    Auction auction = auction(seller, 100 * LEU, null);
 
     bidding.place(auction.getId(), 100 * LEU, Terms.CURRENT_VERSION, viewer(buyer));
     bidding.retract(auction.getId(), viewer(buyer));
@@ -645,7 +657,7 @@ class CatalogWriteTest {
     return causes.save(cause);
   }
 
-  private Auction auction(UserAccount seller, long startingPrice, long increment, Long buyNow) {
+  private Auction auction(UserAccount seller, long startingPrice, Long buyNow) {
     Auction auction = new Auction();
     auction.setSellerId(seller.getId());
     auction.setCauseId(cause(seller.getId()).getId());
@@ -658,7 +670,6 @@ class CatalogWriteTest {
     auction.setDonationPercent((short) 50);
     auction.setStartingPrice(startingPrice);
     auction.setCurrentPrice(startingPrice);
-    auction.setBidIncrement(increment);
     auction.setBuyNowPrice(buyNow);
     auction.setStartTime(Instant.now().minus(Duration.ofHours(1)));
     auction.setStatus(AuctionStatus.LIVE);

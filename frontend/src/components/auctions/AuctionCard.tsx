@@ -165,7 +165,7 @@ export function AuctionCard({
 
         <div className={CARD_FOOTER}>
           <span className={CARD_PRICE}>
-            {formatMoney(auction.currentPrice, { compact: true })}
+            {formatMoney(auction.startingPrice, { compact: true })}
           </span>
           {live ? (
             auction.bidCount > 0 ? (

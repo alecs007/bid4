@@ -529,7 +529,6 @@ public class DevCatalogSeeder implements ApplicationRunner {
     auction.setDonationPercent((short) donationPercent);
     auction.setStartingPrice(startingPrice);
     auction.setCurrentPrice(startingPrice);
-    auction.setBidIncrement(CatalogRules.bidStepFor(startingPrice));
     auction.setReservePrice(reservePrice);
     auction.setBuyNowPrice(buyNowPrice);
     auction.setStartTime(startTime);
@@ -555,6 +554,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
 
     List<Bid> placed = new ArrayList<>(bidders.size());
     long amount = auction.getStartingPrice();
+    long raise = Math.max(LEU, Math.round(auction.getStartingPrice() / 20d / LEU) * LEU);
 
     for (int index = 0; index < bidders.size(); index++) {
       Bid bid = new Bid();
@@ -567,7 +567,7 @@ public class DevCatalogSeeder implements ApplicationRunner {
       bid.setTermsVersion(Terms.CURRENT_VERSION);
       bid.setTermsAcceptedAt(at);
       placed.add(bid);
-      amount += auction.getBidIncrement();
+      amount += raise;
     }
 
     Bid leader = placed.getLast();

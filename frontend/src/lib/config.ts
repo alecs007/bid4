@@ -71,17 +71,6 @@ export const AUCTION = {
   MIN_STARTING_PRICE: 1 * LEU,
   MAX_STARTING_PRICE: 100_000 * LEU,
 
-  BID_STEP_LADDER: [
-    [10 * LEU, LEU / 2],
-    [50 * LEU, 2.5 * LEU],
-    [100 * LEU, 5 * LEU],
-    [500 * LEU, 10 * LEU],
-    [1_000 * LEU, 25 * LEU],
-    [5_000 * LEU, 50 * LEU],
-    [10_000 * LEU, 100 * LEU],
-  ] as const,
-  BID_STEP_ABOVE_LADDER: 250 * LEU,
-
   DISPATCH_DAYS: 7,
 
   PARCEL_TYPES: [
@@ -122,13 +111,6 @@ export const AUCTION = {
 
   HOT_BID_THRESHOLD: 8,
 } as const;
-
-export function bidStepFor(startingPrice: Bani): Bani {
-  for (const [bound, step] of AUCTION.BID_STEP_LADDER) {
-    if (startingPrice <= bound) return step;
-  }
-  return AUCTION.BID_STEP_ABOVE_LADDER;
-}
 
 export const DONATION = {
   MIN_PERCENT: 5,
@@ -172,7 +154,7 @@ export const MOCK = {
   COURIER_STEP_SECONDS: 40,
   SIMULATION_WINDOW_SECONDS: 1800,
   STORAGE_KEY: "bid4.world",
-  SCHEMA_VERSION: 15,
+  SCHEMA_VERSION: 16,
   MAX_WORLD_AGE_HOURS: 8,
 } as const;
 

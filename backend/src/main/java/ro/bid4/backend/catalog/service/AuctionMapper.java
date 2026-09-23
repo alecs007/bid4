@@ -126,7 +126,6 @@ public class AuctionMapper {
         auction.getDonationPercent(),
         auction.getStartingPrice(),
         auction.getCurrentPrice(),
-        auction.getBidIncrement(),
         viewerIsSeller ? auction.getReservePrice() : null,
         auction.getBuyNowPrice(),
         auction.getStartTime(),

@@ -432,22 +432,6 @@ export function OfferPane({
           />
         </Field>
 
-        <div className="flex gap-2">
-          {[0, 1, 3].map((extra) => {
-            const quick = minimum + auction.bidIncrement * extra;
-            return (
-              <button
-                key={extra}
-                type="button"
-                onClick={() => setAmount(String(quick / 100))}
-                className="flex-1 rounded-xl bg-ink-100 py-2 text-sm font-bold text-ink-700 transition hover:bg-ink-200"
-              >
-                {formatMoney(quick, { compact: true })}
-              </button>
-            );
-          })}
-        </div>
-
         <Lines>
           <p>
             {buysNow

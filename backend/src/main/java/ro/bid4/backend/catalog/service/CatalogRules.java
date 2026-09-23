@@ -34,27 +34,6 @@ public final class CatalogRules {
   public static final long MIN_STARTING_PRICE = 100L;
   public static final long MAX_STARTING_PRICE = 10_000_000L;
 
-  private static final long[][] BID_STEP_LADDER = {
-    {1_000L, 50L},
-    {5_000L, 250L},
-    {10_000L, 500L},
-    {50_000L, 1_000L},
-    {100_000L, 2_500L},
-    {500_000L, 5_000L},
-    {1_000_000L, 10_000L},
-  };
-
-  private static final long BID_STEP_ABOVE_LADDER = 25_000L;
-
-  public static long bidStepFor(long startingPrice) {
-    for (long[] rung : BID_STEP_LADDER) {
-      if (startingPrice <= rung[0]) {
-        return rung[1];
-      }
-    }
-    return BID_STEP_ABOVE_LADDER;
-  }
-
   public static final int DEFAULT_PAGE_SIZE = 16;
 
   public static final int MAX_PAGE_SIZE = 60;
