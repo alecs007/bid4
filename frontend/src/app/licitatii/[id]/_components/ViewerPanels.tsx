@@ -125,27 +125,42 @@ export function PriceBlock({
   auction: AuctionDetail;
   second?: { label: string; value: number };
 }) {
+  const parts = [
+    {
+      label: "Preț de pornire",
+      value: auction.startingPrice,
+      tone: second ? "text-ink-900" : "text-accent-700",
+    },
+    ...(second ? [{ ...second, tone: "text-accent-700" }] : []),
+  ];
+
   return (
-    <div className="flex items-end justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-sm text-ink-500">Preț de pornire</p>
-        <p
-          className={cn(
-            "numeric font-display leading-none font-extrabold",
-            second ? "text-2xl text-ink-900" : "text-3xl text-accent-700",
-          )}
-        >
-          {formatMoney(auction.startingPrice, { compact: true })}
-        </p>
-      </div>
-      {second ? (
-        <div className="min-w-0 text-right">
-          <p className="text-sm text-ink-500">{second.label}</p>
-          <p className="numeric font-display text-2xl leading-none font-extrabold text-accent-700">
-            {formatMoney(second.value, { compact: true })}
+    <div className={cn("grid gap-4", second && "grid-cols-2")}>
+      {parts.map((part, index) => (
+        <div key={part.label} className={cn("min-w-0", index > 0 && "text-right")}>
+          <p className="text-sm text-ink-500">{part.label}</p>
+          <p
+            className={cn(
+              "numeric font-display leading-none font-extrabold",
+              second ? "text-2xl" : "text-3xl",
+              part.tone,
+            )}
+          >
+            {formatMoney(part.value, { compact: true })}
           </p>
         </div>
-      ) : null}
+      ))}
+    </div>
+  );
+}
+
+function Amount({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-sm text-ink-500">{label}</p>
+      <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
+        {formatMoney(value, { compact: true })}
+      </p>
     </div>
   );
 }
@@ -199,12 +214,9 @@ export function SellerPanel({
         <Notice tone={sold ? "success" : "sky"}>
           {sold ? "Produsul a fost vândut." : "Ai acceptat o ofertă."}
         </Notice>
-        <PriceBlock
-          auction={auction}
-          second={{
-            label: sold ? "Preț de vânzare" : "Oferta acceptată",
-            value: settled,
-          }}
+        <Amount
+          label={sold ? "Preț de vânzare" : "Oferta acceptată"}
+          value={settled}
         />
         <ButtonLink href={orderHref} size="lg" fullWidth>
           Vezi comanda
@@ -245,13 +257,7 @@ export function BuyerPanel({ auction }: { auction: AuctionDetail }) {
       <Notice tone={sold ? "success" : "sky"}>
         {sold ? "Ai cumpărat acest produs." : "Oferta ta a fost acceptată."}
       </Notice>
-      <PriceBlock
-        auction={auction}
-        second={{
-          label: sold ? "Preț plătit" : "Oferta acceptată",
-          value: settled,
-        }}
-      />
+      <Amount label={sold ? "Preț plătit" : "Oferta acceptată"} value={settled} />
       {sold ? (
         <ButtonLink href={orderHref} size="lg" fullWidth>
           Vezi comanda
@@ -269,14 +275,9 @@ export function AcceptedPanel({ auction }: { auction: AuctionDetail }) {
       <Notice tone="sky">
         Oferta ta a fost acceptată. Plătește pentru a cumpăra produsul.
       </Notice>
-      <PriceBlock
-        auction={auction}
-        second={
-          auction.viewerBidAmount
-            ? { label: "Oferta ta", value: auction.viewerBidAmount }
-            : undefined
-        }
-      />
+      {auction.viewerBidAmount ? (
+        <Amount label="Oferta ta" value={auction.viewerBidAmount} />
+      ) : null}
       <ConversationButton auction={auction} label="Finalizează comanda" />
     </Shell>
   );
@@ -300,10 +301,7 @@ export function OutcomePanel({
             ? "Produsul a fost vândut altui cumpărător."
             : "Produsul a fost vândut."}
         </Notice>
-        <PriceBlock
-          auction={auction}
-          second={{ label: "Preț final", value: settled }}
-        />
+        <Amount label="Preț final" value={settled} />
         <ButtonLink href="/licitatii" variant="secondary" fullWidth>
           Vezi alte licitații
         </ButtonLink>

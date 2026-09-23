@@ -630,11 +630,7 @@ export function BidBox({
       <Sheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={
-          bidding.isLeading || auction.viewerBidStatus === "OUTBID"
-            ? "Mărește oferta"
-            : "Oferta ta"
-        }
+        title="Oferta ta"
       >
         <div className="pb-2">
           {blocker ?? (
