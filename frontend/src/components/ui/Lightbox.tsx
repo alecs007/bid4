@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Icons } from "@/components/icons";
@@ -44,6 +44,25 @@ export function Lightbox({
 
   const count = images.length;
   const zoomed = view.scale > MIN_SCALE + 0.01;
+  const current = images[index] ?? "";
+
+  const [painted, setPainted] = useState<ReadonlySet<string>>(() => new Set());
+  const settled = useMemo(() => {
+    const mark = (src: string) =>
+      setPainted((done) => (done.has(src) ? done : new Set(done).add(src)));
+    return new Map(
+      images.map((src) => [
+        src,
+        {
+          ref: (node: HTMLImageElement | null) => {
+            if (node?.complete) mark(src);
+          },
+          onLoad: () => mark(src),
+          onError: () => mark(src),
+        },
+      ]),
+    );
+  }, [images]);
 
   const contain = useCallback((next: View): View => {
     const stage = stageRef.current;
@@ -238,19 +257,24 @@ export function Lightbox({
           )}
         >
           <Image
-            key={index}
-            src={images[index] ?? ""}
+            key={current}
+            src={current}
             alt={alt}
             fill
             unoptimized
+            priority
             sizes="100vw"
             draggable={false}
+            {...settled.get(current)}
             style={{
               transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})`,
             }}
             className={cn(
-              "animate-fade-in object-contain select-none",
-              !dragging && "transition-transform duration-300 ease-out",
+              "object-contain select-none",
+              dragging
+                ? "[transition:opacity_300ms_var(--ease-out-soft)]"
+                : "[transition:opacity_300ms_var(--ease-out-soft),transform_300ms_ease-out]",
+              painted.has(current) ? "opacity-100" : "opacity-0",
             )}
           />
         </div>
@@ -290,8 +314,13 @@ export function Lightbox({
                   alt=""
                   fill
                   unoptimized
+                  loading="eager"
                   sizes="64px"
-                  className="object-cover"
+                  {...settled.get(image)}
+                  className={cn(
+                    "object-cover [transition:opacity_300ms_var(--ease-out-soft)]",
+                    painted.has(image) ? "opacity-100" : "opacity-0",
+                  )}
                   draggable={false}
                 />
               </button>

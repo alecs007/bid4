@@ -70,6 +70,7 @@ export const IMAGE = {
 export const AUCTION = {
   MIN_STARTING_PRICE: 1 * LEU,
   MAX_STARTING_PRICE: 100_000 * LEU,
+  SUGGESTED_RAISE: 10 * LEU,
 
   DISPATCH_DAYS: 7,
 

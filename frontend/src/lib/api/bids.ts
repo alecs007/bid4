@@ -1,4 +1,4 @@
-import { TERMS, USE_MOCK } from "@/lib/config";
+import { AUCTION, TERMS, USE_MOCK } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 import { toAuctionDetail } from "@/lib/mock/join";
 import {
@@ -87,6 +87,16 @@ export async function listBids(
 
 export function minimumBid(auction: { startingPrice: number }): number {
   return auction.startingPrice;
+}
+
+export function suggestedOffer(auction: {
+  startingPrice: number;
+  currentPrice: number;
+  bidCount: number;
+}): number {
+  return auction.bidCount > 0
+    ? auction.currentPrice + AUCTION.SUGGESTED_RAISE
+    : auction.startingPrice;
 }
 
 export async function placeBid(

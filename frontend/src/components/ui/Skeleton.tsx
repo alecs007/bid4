@@ -237,14 +237,14 @@ export function SkeletonDetail() {
         <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="divide-y divide-line rounded-xl bg-white ring-1 ring-edge">
             <div className="px-5 py-5">
-              <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+              <div className="flex items-end justify-between gap-4">
                 <div>
                   <Skeleton className="h-4 w-24" />
-                  <Skeleton className="mt-1 h-[30px] w-28" />
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-28" />
                   <Skeleton className="mt-1 h-6 w-24" />
+                </div>
+                <div className="flex flex-col items-end">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="mt-1 h-6 w-20" />
                 </div>
               </div>
               <div className="mt-4 hidden flex-col gap-3 lg:flex">

@@ -18,7 +18,7 @@ import {
   StatusBadge,
   Textarea,
 } from "@/components/ui";
-import { minimumBid } from "@/lib/api/bids";
+import { minimumBid, suggestedOffer } from "@/lib/api/bids";
 import { searchLockers } from "@/lib/api/shipping";
 import { addDeliveryMethod, listDeliveryMethods } from "@/lib/api/users";
 import { ORDER, SHIPPING_PRICES } from "@/lib/config";
@@ -362,7 +362,7 @@ export function OfferPane({
   onSubmit: (amount: number) => Promise<boolean>;
 }) {
   const minimum = minimumBid(auction);
-  const [amount, setAmount] = useState(String(minimum / 100));
+  const [amount, setAmount] = useState(String(suggestedOffer(auction) / 100));
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

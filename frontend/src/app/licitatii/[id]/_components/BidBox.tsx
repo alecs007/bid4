@@ -19,6 +19,7 @@ import {
   minimumBid,
   placeBid,
   retractBid,
+  suggestedOffer,
 } from "@/lib/api/bids";
 import { AUCTION, ORDER, TERMS, type Bani } from "@/lib/config";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -34,6 +35,7 @@ import {
   ConversationButton,
   Notice,
   OutcomePanel,
+  PriceBlock,
   SellerPanel,
   stanceOf,
 } from "./ViewerPanels";
@@ -44,7 +46,8 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const router = useRouter();
 
   const minimum = minimumBid(auction);
-  const [amount, setAmount] = useState(String(minimum / 100));
+  const [typed, setTyped] = useState<string | null>(null);
+  const amount = typed ?? String(suggestedOffer(auction) / 100);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [consenting, setConsenting] = useState<number | null>(null);
@@ -94,6 +97,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
         toast.success("Oferta a fost transmisă", formatMoney(consenting));
       }
       setConsenting(null);
+      setTyped(null);
       onChanged();
       router.push(`/cont/inbox/nou/${auction.id}`);
       return true;
@@ -123,7 +127,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
     user,
     minimum,
     amount,
-    setAmount,
+    setAmount: setTyped,
     pending,
     error,
     retract,
@@ -387,22 +391,14 @@ export function BidBox({
   ) : null;
 
   const priceBlock = (
-    <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-      <div>
-        <p className="text-sm text-ink-500">Preț de pornire</p>
-        <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
-          {formatMoney(auction.startingPrice, { compact: true })}
-        </p>
-      </div>
-      {auction.bidCount > 0 ? (
-        <div>
-          <p className="text-sm text-ink-500">Cea mai mare ofertă</p>
-          <p className="numeric font-display text-2xl leading-none font-extrabold text-ink-900">
-            {formatMoney(auction.currentPrice, { compact: true })}
-          </p>
-        </div>
-      ) : null}
-    </div>
+    <PriceBlock
+      auction={auction}
+      second={
+        auction.bidCount > 0
+          ? { label: "Cea mai mare ofertă", value: auction.currentPrice }
+          : undefined
+      }
+    />
   );
 
   const notice = reserved ? (
@@ -647,29 +643,6 @@ export function BidBox({
               auction={auction}
               onDone={() => setSheetOpen(false)}
             />
-          )}
-          {hasOwnOffer ? null : (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setSheetOpen(false);
-                  setRulesOpen(true);
-                }}
-                className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-ink-600 transition hover:text-ink-900"
-              >
-                <Icons.help aria-hidden="true" className="h-4 w-4 shrink-0" />
-                Cum funcționează licitarea
-              </button>
-              <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
-                <Icons.escrow
-                  aria-hidden="true"
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                />
-                Nu plătești nimic acum. Plata se face din conversație, doar
-                dacă vânzătorul acceptă oferta.
-              </p>
-            </>
           )}
         </div>
       </Sheet>

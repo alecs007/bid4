@@ -118,13 +118,34 @@ export function ConversationButton({
   );
 }
 
-function Amount({ label, value }: { label: string; value: number }) {
+export function PriceBlock({
+  auction,
+  second,
+}: {
+  auction: AuctionDetail;
+  second?: { label: string; value: number };
+}) {
   return (
-    <div>
-      <p className="text-sm text-ink-500">{label}</p>
-      <p className="numeric font-display text-3xl leading-none font-extrabold text-accent-700">
-        {formatMoney(value, { compact: true })}
-      </p>
+    <div className="flex items-end justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm text-ink-500">Preț de pornire</p>
+        <p
+          className={cn(
+            "numeric font-display leading-none font-extrabold",
+            second ? "text-2xl text-ink-900" : "text-3xl text-accent-700",
+          )}
+        >
+          {formatMoney(auction.startingPrice, { compact: true })}
+        </p>
+      </div>
+      {second ? (
+        <div className="min-w-0 text-right">
+          <p className="text-sm text-ink-500">{second.label}</p>
+          <p className="numeric font-display text-2xl leading-none font-extrabold text-accent-700">
+            {formatMoney(second.value, { compact: true })}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -151,6 +172,7 @@ export function SellerPanel({
             ? "Anunțul este o ciornă și nu este public."
             : "Anunțul este în verificare la echipa bid4."}
         </Notice>
+        <PriceBlock auction={auction} />
         <ButtonLink href="/cont/vanzari" variant="secondary" fullWidth>
           Mergi la vânzările mele
         </ButtonLink>
@@ -162,6 +184,7 @@ export function SellerPanel({
     return (
       <Shell>
         <Notice tone="neutral">Ai retras acest anunț.</Notice>
+        <PriceBlock auction={auction} />
         <ButtonLink href="/cont/vanzari" variant="secondary" fullWidth>
           Mergi la vânzările mele
         </ButtonLink>
@@ -176,7 +199,13 @@ export function SellerPanel({
         <Notice tone={sold ? "success" : "sky"}>
           {sold ? "Produsul a fost vândut." : "Ai acceptat o ofertă."}
         </Notice>
-        <Amount label={sold ? "Preț de vânzare" : "Oferta acceptată"} value={settled} />
+        <PriceBlock
+          auction={auction}
+          second={{
+            label: sold ? "Preț de vânzare" : "Oferta acceptată",
+            value: settled,
+          }}
+        />
         <ButtonLink href={orderHref} size="lg" fullWidth>
           Vezi comanda
         </ButtonLink>
@@ -191,6 +220,14 @@ export function SellerPanel({
           Ai acceptat {countRo(acceptedCount, "ofertă", "oferte")}.
         </Notice>
       ) : null}
+      <PriceBlock
+        auction={auction}
+        second={
+          auction.bidCount > 0
+            ? { label: "Cea mai mare ofertă", value: auction.currentPrice }
+            : undefined
+        }
+      />
       <ButtonLink href="/cont/vanzari" size="lg" fullWidth>
         Gestionează anunțul
       </ButtonLink>
@@ -208,7 +245,13 @@ export function BuyerPanel({ auction }: { auction: AuctionDetail }) {
       <Notice tone={sold ? "success" : "sky"}>
         {sold ? "Ai cumpărat acest produs." : "Oferta ta a fost acceptată."}
       </Notice>
-      <Amount label={sold ? "Preț plătit" : "Oferta acceptată"} value={settled} />
+      <PriceBlock
+        auction={auction}
+        second={{
+          label: sold ? "Preț plătit" : "Oferta acceptată",
+          value: settled,
+        }}
+      />
       {sold ? (
         <ButtonLink href={orderHref} size="lg" fullWidth>
           Vezi comanda
@@ -226,9 +269,14 @@ export function AcceptedPanel({ auction }: { auction: AuctionDetail }) {
       <Notice tone="sky">
         Oferta ta a fost acceptată. Plătește pentru a cumpăra produsul.
       </Notice>
-      {auction.viewerBidAmount ? (
-        <Amount label="Oferta ta" value={auction.viewerBidAmount} />
-      ) : null}
+      <PriceBlock
+        auction={auction}
+        second={
+          auction.viewerBidAmount
+            ? { label: "Oferta ta", value: auction.viewerBidAmount }
+            : undefined
+        }
+      />
       <ConversationButton auction={auction} label="Finalizează comanda" />
     </Shell>
   );
@@ -252,7 +300,10 @@ export function OutcomePanel({
             ? "Produsul a fost vândut altui cumpărător."
             : "Produsul a fost vândut."}
         </Notice>
-        <Amount label="Preț final" value={settled} />
+        <PriceBlock
+          auction={auction}
+          second={{ label: "Preț final", value: settled }}
+        />
         <ButtonLink href="/licitatii" variant="secondary" fullWidth>
           Vezi alte licitații
         </ButtonLink>
@@ -267,6 +318,7 @@ export function OutcomePanel({
           ? "Anunțul a fost retras de vânzător."
           : "Anunțul nu este public."}
       </Notice>
+      <PriceBlock auction={auction} />
       <ButtonLink href="/licitatii" variant="secondary" fullWidth>
         Vezi alte licitații
       </ButtonLink>

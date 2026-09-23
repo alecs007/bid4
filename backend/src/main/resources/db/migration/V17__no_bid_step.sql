@@ -1,3 +1,1 @@
-ALTER TABLE auctions
-    DROP CONSTRAINT auctions_increment_min,
-    DROP COLUMN bid_increment;
+ALTER TABLE auctions DROP COLUMN bid_increment;

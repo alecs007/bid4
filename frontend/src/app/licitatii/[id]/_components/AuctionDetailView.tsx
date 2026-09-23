@@ -588,7 +588,7 @@ export function AuctionDetailView({ auctionId }: { auctionId: string }) {
             <StatTiles className="mt-4">
               <StatTile
                 illustration="rating"
-                value={auction.seller.rating.toFixed(1).replace(".", ",")}
+                value={`${auction.seller.rating.toFixed(1).replace(".", ",")}/5`}
                 label="rating"
               />
               <StatTile
