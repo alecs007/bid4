@@ -17,6 +17,7 @@ import {
 import {
   checkRetractEligibility,
   minimumBid,
+  offerRefusal,
   placeBid,
   retractBid,
   suggestedOffer,
@@ -46,31 +47,20 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   const router = useRouter();
 
   const minimum = minimumBid(auction);
-  const [typed, setTyped] = useState<string | null>(null);
-  const amount = typed ?? String(suggestedOffer(auction) / 100);
+  const suggested = suggestedOffer(auction);
+  const [amount, setAmount] = useState("");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [consenting, setConsenting] = useState<number | null>(null);
 
   const retract = checkRetractEligibility(auction, user?.id);
   const isLeading = auction.viewerBidStatus === "WINNING";
 
+  const parsed = parseLeiInput(amount);
+  const refusal = offerRefusal(parsed, auction);
+  const refused = amount.trim().length > 0 ? refusal : null;
+
   const request = () => {
-    if (!user) return false;
-    const parsed = parseLeiInput(amount);
-    if (parsed === null) {
-      setError("Introdu o sumă validă.");
-      return false;
-    }
-    const takesItOutright =
-      auction.buyNowPrice !== undefined && parsed >= auction.buyNowPrice;
-
-    if (!takesItOutright && parsed < minimum) {
-      setError(`Minim ${formatMoney(minimum)}.`);
-      return false;
-    }
-
-    setError(null);
+    if (!user || parsed === null || refusal !== null) return false;
     setConsenting(parsed);
     return true;
   };
@@ -97,7 +87,7 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
         toast.success("Oferta a fost transmisă", formatMoney(consenting));
       }
       setConsenting(null);
-      setTyped(null);
+      setAmount("");
       onChanged();
       router.push(`/cont/inbox/nou/${auction.id}`);
       return true;
@@ -126,10 +116,12 @@ function useBidding(auction: AuctionDetail, onChanged: () => void) {
   return {
     user,
     minimum,
+    suggested,
     amount,
-    setAmount: setTyped,
+    setAmount,
     pending,
-    error,
+    refused,
+    ready: refusal === null,
     retract,
     isLeading,
     consenting,
@@ -149,7 +141,7 @@ function AmountForm({
   auction: AuctionDetail;
   onDone?: () => void;
 }) {
-  const { amount, setAmount, error, request } = bidding;
+  const { amount, setAmount, refused, ready, suggested, request } = bidding;
 
   return (
     <form
@@ -163,26 +155,36 @@ function AmountForm({
         className={cn(
           "flex h-14 items-center gap-2 rounded-2xl bg-ink-100 px-4 transition",
           "focus-within:bg-white focus-within:ring-2 focus-within:ring-primary-500",
-          error && "bg-danger-50 ring-2 ring-danger-500",
+          refused && "bg-danger-50 ring-2 ring-danger-500",
         )}
       >
         <input
           inputMode="decimal"
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
+          placeholder={formatMoney(suggested, {
+            compact: true,
+            omitCurrency: true,
+          })}
           aria-label="Oferta ta în lei"
           autoComplete="off"
-          className="numeric min-w-0 flex-1 bg-transparent font-display text-2xl font-extrabold text-ink-900 focus:outline-none"
+          className="numeric min-w-0 flex-1 bg-transparent font-display text-2xl font-extrabold text-ink-900 placeholder:text-ink-400 focus:outline-none"
         />
         <span className="font-display text-lg font-bold text-ink-400">lei</span>
       </div>
 
-      {error ? (
-        <p role="alert" className="text-sm font-semibold text-danger-600">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" size="lg" fullWidth>
+      <p
+        role={refused ? "alert" : undefined}
+        className={cn(
+          "text-sm",
+          refused
+            ? "font-semibold text-danger-600"
+            : "text-ink-500",
+        )}
+      >
+        {refused ?? `Oferta minimă este ${formatMoney(bidding.minimum)}.`}
+      </p>
+      <Button type="submit" size="lg" fullWidth disabled={!ready}>
         {bidding.isLeading || auction.viewerBidStatus === "OUTBID"
           ? "Mărește oferta"
           : auction.status === "RESERVED"

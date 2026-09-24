@@ -18,7 +18,7 @@ import {
   StatusBadge,
   Textarea,
 } from "@/components/ui";
-import { minimumBid, suggestedOffer } from "@/lib/api/bids";
+import { minimumBid, offerRefusal, suggestedOffer } from "@/lib/api/bids";
 import { searchLockers } from "@/lib/api/shipping";
 import { addDeliveryMethod, listDeliveryMethods } from "@/lib/api/users";
 import { ORDER, SHIPPING_PRICES } from "@/lib/config";
@@ -362,28 +362,21 @@ export function OfferPane({
   onSubmit: (amount: number) => Promise<boolean>;
 }) {
   const minimum = minimumBid(auction);
-  const [amount, setAmount] = useState(String(suggestedOffer(auction) / 100));
+  const suggested = suggestedOffer(auction);
+  const [amount, setAmount] = useState("");
   const [accepted, setAccepted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const parsed = parseLeiInput(amount);
+  const refusal = offerRefusal(parsed, auction);
+  const refused = amount.trim().length > 0 ? refusal : null;
   const buysNow =
     parsed !== null &&
     auction.buyNowPrice !== undefined &&
     parsed >= auction.buyNowPrice;
   const price = buysNow ? auction.buyNowPrice! : parsed;
-  const valid = price !== null && (buysNow || price >= minimum);
 
   const submit = async () => {
-    if (price === null) {
-      setError("Introdu o sumă validă.");
-      return;
-    }
-    if (!buysNow && price < minimum) {
-      setError(`Oferta minimă este ${formatMoney(minimum)}.`);
-      return;
-    }
-    setError(null);
+    if (price === null || refusal !== null) return;
     await onSubmit(price);
   };
 
@@ -395,7 +388,7 @@ export function OfferPane({
         <Button
           size="lg"
           fullWidth
-          disabled={!valid || !accepted}
+          disabled={refusal !== null || !accepted}
           loading={busy}
           onClick={submit}
         >
@@ -421,12 +414,16 @@ export function OfferPane({
         <Field
           label="Suma oferită"
           hint={`Oferta minimă este ${formatMoney(minimum)}.`}
-          error={error ?? undefined}
+          error={refused ?? undefined}
         >
           <Input
             inputMode="decimal"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+            placeholder={formatMoney(suggested, {
+              compact: true,
+              omitCurrency: true,
+            })}
             autoComplete="off"
             trailing={<span className="font-bold text-ink-500">lei</span>}
           />

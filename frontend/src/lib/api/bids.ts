@@ -99,6 +99,29 @@ export function suggestedOffer(auction: {
     : auction.startingPrice;
 }
 
+export function offerRefusal(
+  amount: number | null,
+  auction: {
+    startingPrice: number;
+    buyNowPrice?: number;
+    viewerBidAmount?: number;
+  },
+): string | null {
+  if (amount === null) return "Introdu o sumă validă.";
+  if (amount > AUCTION.MAX_OFFER) {
+    return `Maxim ${formatMoney(AUCTION.MAX_OFFER)}.`;
+  }
+  if (auction.buyNowPrice !== undefined && amount >= auction.buyNowPrice) {
+    return null;
+  }
+  if (auction.viewerBidAmount && amount <= auction.viewerBidAmount) {
+    return `Mai mult decât oferta ta de ${formatMoney(auction.viewerBidAmount)}.`;
+  }
+  const minimum = minimumBid(auction);
+  if (amount < minimum) return `Minim ${formatMoney(minimum)}.`;
+  return null;
+}
+
 export async function placeBid(
   payload: PlaceBidPayload,
   bidderId: ID,
@@ -136,6 +159,13 @@ export async function placeBid(
 
   const boughtNow =
     auction.buyNowPrice !== undefined && payload.amount >= auction.buyNowPrice;
+
+  if (payload.amount > AUCTION.MAX_OFFER) {
+    badRequest(
+      `Oferta depășește maximul acceptat de ${formatMoney(AUCTION.MAX_OFFER)}.`,
+      "BID_TOO_HIGH",
+    );
+  }
 
   const minimum = minimumBid(auction);
   if (!boughtNow && payload.amount < minimum) {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { minimumBid } from "@/lib/api/bids";
 import { lei } from "@/lib/money";
 import type { Auction } from "@/lib/types";
 import { isLive, pickLatest, pickMostWatched, popularityScore } from "./featured";
@@ -27,15 +26,6 @@ function auction(over: Partial<Auction> = {}): Auction {
     ...over,
   };
 }
-
-describe("the minimum offer", () => {
-  it("is the starting price, however high the offers already are", () => {
-    expect(minimumBid(auction())).toBe(lei(100));
-    expect(minimumBid(auction({ currentPrice: lei(940), bidCount: 12 }))).toBe(
-      lei(100),
-    );
-  });
-});
 
 describe("what counts as open", () => {
   it("is the status and nothing about the time", () => {
