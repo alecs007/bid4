@@ -73,7 +73,7 @@ export function PaneShell({
       </div>
       <div
         data-lenis-prevent
-        className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+        className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 scroll-py-3"
       >
         {children}
       </div>

@@ -9,6 +9,7 @@ import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 import { SheetGrabber, useSheetDismiss } from "./sheetDismiss";
+import { useViewportFrame } from "./viewportFrame";
 
 export function Modal({
   open,
@@ -40,6 +41,7 @@ export function Modal({
   const { grab, grabbed, pulling, panelStyle, backdropStyle } = useSheetDismiss(
     { open, onClose, panelRef },
   );
+  const frame = useViewportFrame(open);
 
   useEffect(() => {
     if (!open) return;
@@ -81,7 +83,10 @@ export function Modal({
   } as const;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 pt-[6dvh] sm:items-center sm:p-4 sm:pt-4">
+    <div
+      style={frame ? { top: frame.top, height: frame.height } : undefined}
+      className="fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-4"
+    >
       <button
         type="button"
         aria-label={closeLabel}
@@ -157,7 +162,7 @@ export function Modal({
         <div
           data-lenis-prevent
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-1",
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-2 scroll-py-3",
             footer ? undefined : "pb-5",
           )}
         >

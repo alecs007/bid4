@@ -8,6 +8,7 @@ import { Icons } from "@/components/icons";
 import { scrollPageTo } from "@/components/layout/SmoothScroll";
 import { cn } from "@/lib/utils/cn";
 import { SheetGrabber, useSheetDismiss } from "./sheetDismiss";
+import { useViewportFrame } from "./viewportFrame";
 
 export function Sheet({
   open,
@@ -35,6 +36,7 @@ export function Sheet({
       panelRef,
     },
   );
+  const frame = useViewportFrame(open);
 
   useEffect(() => {
     if (!open) return;
@@ -71,7 +73,10 @@ export function Sheet({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+    <div
+      style={frame ? { top: frame.top, height: frame.height } : undefined}
+      className="fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center sm:items-center sm:p-4"
+    >
       <button
         type="button"
         aria-label="Închide"
@@ -92,7 +97,7 @@ export function Sheet({
         aria-labelledby={`${id}-title`}
         style={panelStyle}
         className={cn(
-          "relative flex max-h-[88dvh] w-full flex-col rounded-t-3xl bg-white sm:max-w-md sm:rounded-3xl",
+          "relative flex max-h-[88%] w-full flex-col rounded-t-3xl bg-white sm:max-w-md sm:rounded-3xl",
           grabbed
             ? "animate-none"
             : "animate-[toast-in_0.28s_cubic-bezier(0.2,0.9,0.3,1.1)_both]",
@@ -125,7 +130,7 @@ export function Sheet({
 
         <div
           data-lenis-prevent
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-1 pb-4 scroll-py-3"
         >
           {children}
         </div>
