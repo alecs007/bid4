@@ -85,6 +85,7 @@ export async function editImage(
     const previewUrl = URL.createObjectURL(blob);
 
     return {
+      id: source.id,
       blob,
       fileName: source.fileName,
       mimeType: blob.type,

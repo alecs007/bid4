@@ -5,6 +5,7 @@ export const INTAKE = USE_MOCK
   : { maxEdge: IMAGE.MAX_EDGE_PX, quality: IMAGE.QUALITY };
 
 export interface ProcessedImage {
+  id: string;
   blob: Blob;
   fileName: string;
   mimeType: string;
@@ -95,6 +96,7 @@ export async function processImage(
     const previewUrl = URL.createObjectURL(blob);
 
     return {
+      id: crypto.randomUUID(),
       blob,
       fileName: file.name,
       mimeType: blob.type,

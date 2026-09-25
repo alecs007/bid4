@@ -44,11 +44,18 @@ export function PhotoPicker({
   const loose = useRef(false);
 
   const held = useRef<ProcessedImage[]>([]);
+  const shed = useRef<ProcessedImage[]>([]);
   useEffect(() => {
     held.current = value;
   });
 
-  useEffect(() => () => held.current.forEach((photo) => photo.release()), []);
+  useEffect(
+    () => () => {
+      held.current.forEach((photo) => photo.release());
+      shed.current.forEach((photo) => photo.release());
+    },
+    [],
+  );
 
   const add = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -236,7 +243,7 @@ export function PhotoPicker({
 
         {value.map((photo, index) => (
           <div
-            key={photo.previewUrl}
+            key={photo.id}
             data-photo={index}
             className={cn(
               CARD,
@@ -343,20 +350,22 @@ export function PhotoPicker({
       {editing !== null && value[editing] ? (
         <PhotoEditor
           photo={value[editing]}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            shed.current.forEach((photo) => photo.release());
+            shed.current = [];
+          }}
           onDelete={() => {
             remove(editing);
             setEditing(null);
           }}
           onApply={(next) => {
-            const previous = value[editing]!;
+            shed.current.push(value[editing]!);
             onChange(
               value.map((photo, position) =>
                 position === editing ? next : photo,
               ),
             );
-            previous.release();
-            setEditing(null);
           }}
         />
       ) : null}

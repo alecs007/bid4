@@ -43,6 +43,12 @@ function clamp(value: number, bound: number): number {
   return Math.min(bound, Math.max(-bound, value));
 }
 
+function paint(url: string): Promise<void> {
+  const image = new window.Image();
+  image.src = url;
+  return image.decode().catch(() => undefined);
+}
+
 export function PhotoEditor({
   photo,
   onApply,
@@ -61,17 +67,19 @@ export function PhotoEditor({
   const [stage, setStage] = useState<Box>({ width: 0, height: 0 });
   const [moving, setMoving] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [held, setHeld] = useState<ProcessedImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const rotation = ((((turns % 4) + 4) % 4) * 90) as Rotation;
+  const shown = held ?? photo;
 
   const stageRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ distance: number; zoom: number } | null>(null);
 
-  const turned = turn(photo, rotation);
+  const turned = turn(shown, rotation);
   const frame = fit(
     {
       width: Math.max(0, stage.width - STAGE_PADDING * 2),
@@ -209,6 +217,7 @@ export function PhotoEditor({
   };
 
   const apply = async () => {
+    if (busy || leaving) return;
     if (rotation === 0 && !cropping) {
       leave(onClose);
       return;
@@ -221,7 +230,10 @@ export function PhotoEditor({
         ? cropOf({ turned, frame, scale, offset })
         : undefined;
       const next = await editImage(photo, { rotation, crop }, INTAKE);
-      leave(() => onApply(next));
+      await paint(next.previewUrl);
+      setHeld(photo);
+      onApply(next);
+      leave(onClose);
     } catch {
       setFailed(true);
     } finally {
@@ -238,7 +250,7 @@ export function PhotoEditor({
       aria-label="Editează fotografia"
       className={cn(
         "fixed inset-0 z-[70] flex flex-col bg-ink-900",
-        leaving ? "animate-fade-out" : "animate-fade-in",
+        leaving ? "animate-fade-out pointer-events-none" : "animate-fade-in",
       )}
     >
       <div className="flex items-center justify-between gap-3 px-2 py-2 sm:px-4">
@@ -262,7 +274,7 @@ export function PhotoEditor({
         )}
       >
         <Photo
-          photo={photo}
+          photo={shown}
           turns={turns}
           scale={scale}
           offset={cropping ? offset : { x: 0, y: 0 }}
@@ -281,7 +293,7 @@ export function PhotoEditor({
           >
             <div className="flex h-full w-full items-center justify-center">
               <Photo
-                photo={photo}
+                photo={shown}
                 turns={turns}
                 scale={scale}
                 offset={offset}
