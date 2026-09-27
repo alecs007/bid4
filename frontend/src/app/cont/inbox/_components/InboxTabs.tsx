@@ -26,7 +26,7 @@ export function InboxTabs({ className }: { className?: string }) {
     <nav
       aria-label="Inbox"
       className={cn(
-        "sticky top-12 z-30 -mx-4 -mt-5 mb-4 flex border-b border-line bg-white sm:-mx-6 sm:-mt-8 sm:top-14 lg:hidden",
+        "sticky top-12 z-30 -mx-4 -mt-5 mb-4 flex h-12 border-b border-line bg-white sm:-mx-6 sm:-mt-8 sm:top-14 lg:hidden",
         className,
       )}
     >

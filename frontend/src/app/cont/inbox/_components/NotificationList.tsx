@@ -21,6 +21,11 @@ import type { Notification } from "@/lib/types";
 import { formatTimeRo } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
+const STICKY_DAY = cn(
+  "sticky z-20 bg-canvas px-1 pt-1 pb-2 text-xs font-semibold text-ink-500",
+  "top-24 sm:top-26 lg:top-0",
+);
+
 export function NotificationList() {
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
@@ -59,9 +64,7 @@ export function NotificationList() {
       <div className="flex flex-col gap-5">
         {groupByDay(rows).map((group) => (
           <section key={group.label}>
-            <h2 className="mb-2 px-1 text-xs font-semibold text-ink-500">
-              {group.label}
-            </h2>
+            <h2 className={STICKY_DAY}>{group.label}</h2>
             <ul className="flex flex-col gap-2">
               {group.rows.map((row, index) => (
                 <li
@@ -232,7 +235,7 @@ function NotificationSkeleton({
   return (
     <div className="flex flex-col gap-5">
       <section>
-        {heading ? <Skeleton className="mb-2 ml-1 h-4 w-20" /> : null}
+        {heading ? <Skeleton className="mt-1 mb-2 ml-1 h-4 w-20" /> : null}
         <ul className="flex flex-col gap-2">
           {Array.from({ length: rows }).map((_, index) => (
             <li
