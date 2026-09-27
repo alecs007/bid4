@@ -1,180 +1,519 @@
-# bid4
+# 🍏 bid4
 
-A Romanian charity auction platform. Someone lists an item, picks a verified
-cause and chooses what share of the sale price goes to it. People bid. When the
-auction closes the money is held in escrow until the buyer confirms the parcel
-arrived — then the donation reaches the cause, the rest reaches the seller, and
-bid4 keeps its fees.
+**bid4** is a Romanian charity auction platform. A seller lists an item, selects
+a verified cause and sets the share of the sale price that goes to it, between
+5% and 100%. Buyers make offers, the seller accepts one, and the payment is held
+in escrow until the buyer confirms delivery. On release, the donation is
+transferred to the cause, the remainder to the seller, and the platform retains
+its fee.
 
-Two halves: a Next.js frontend that has been built against a mock data layer,
-and a Spring Boot backend that is now replacing it endpoint by endpoint.
+The repository holds both halves of the product: a **Next.js 16** web
+application and a **Spring Boot 4** API backed by PostgreSQL, Redis and MinIO.
+The full local stack runs from a single `docker compose up`, and the web
+application can also run standalone against a seeded in-browser data layer.
 
-## The repository
+Status: the web application is feature-complete against that data layer, and
+the API implements the same contract endpoint by endpoint. Payment, delivery
+and email are stubbed behind interfaces rather than connected to live
+providers, as set out under **Scope and simulated integrations** below.
 
-| Path | What it is |
-| ---- | ---------- |
-| `docker-compose.yml` | The whole local stack: Postgres, Redis, MinIO, and the API behind the `app` profile |
-| `.env.example` | The shape of the secrets. Copy to `.env`, which is ignored |
-| `.github/workflows/` | `backend.yml`, `frontend.yml`, `security.yml` |
-| `backend/` | The API. See `backend/ARCHITECTURE.md` for decisions and the request path |
-| `frontend/` | The web app. See `frontend/README.md` |
+<p align="center">
+  <img
+    src="docs/images/banner.webp"
+    alt="bid4 — buy, bid, make a difference. Built with Next.js, Spring Boot, PostgreSQL and Redis."
+    width="100%"
+  />
+</p>
 
-### Backend, the parts worth knowing
+---
 
-| Path | What it does |
-| ---- | ------------ |
-| `src/main/resources/application.yaml` | Every setting: datasource, Flyway, Redis, Tomcat limits, actuator, and the `bid4.*` tree |
-| `src/main/resources/db/migration/` | Flyway migrations. Forward-only; the schema lives here, not in Hibernate |
-| `common/config/Bid4Properties.java` | The `bid4.*` settings as a validated record. A bad value fails the boot |
-| `common/error/` | `ErrorCode`, `ApiErrorResponse`, `GlobalExceptionHandler` — the one error shape the frontend parses |
-| `common/text/TextSanitizer.java` | Strips markup and normalises Unicode on write |
-| `common/web/` | `PageResponse` (the paged wire shape) and the `X-Request-Id` filter |
-| `security/SecurityConfig.java` | The filter chain: CORS, headers, deny-by-default, JWT |
-| `security/jwt/JwtService.java` | Issues access and refresh tokens |
-| `security/ratelimit/` | Bucket4j buckets in Redis, four budgets, per caller |
-| `identity/` | The users feature: entity, repository, service, controller, DTOs |
+## ✨ Features
 
-`Dockerfile` builds the API image; `pom.xml` pins the dependencies and wires
-Spotless.
+**Listings and offers.** A listing carries the item, its photographs, the
+selected cause and the donation share. Offers are measured against the asking
+price rather than against each other, so a buyer is never required to outbid
+anyone. There is no auction clock and no bid increment: a listing remains open
+until its seller settles it.
 
-## Running it
+**Several offers may be accepted; payment decides.** Each acceptance opens an
+order awaiting payment, and the first buyer to complete payment takes the item.
+That order becomes the sale, the listing is marked sold to that buyer, a
+dispatch deadline is set for the seller, and every other unpaid order on the
+listing is cancelled automatically with a notice posted into each conversation.
+The rule is enforced in the database as well as in the service: a partial
+unique index permits at most one order per listing in a paid state, so two
+buyers paying at the same moment cannot both win. A payment arriving after the
+listing has closed is refused and flagged for voiding.
 
-You need Docker Desktop, JDK 21 and pnpm.
+**Escrow on a double-entry ledger.** Every movement of money is recorded as a
+balanced transaction across six account kinds: member balance, cause balance,
+platform escrow, platform revenue, platform shipping, and external. The ledger
+rejects any movement whose sides do not sum to zero, and account balances are
+reconcilable against the sum of their entries. Payment moves funds into escrow,
+release splits them between seller and cause, and refunds reverse the movement.
+All amounts are integer bani — `long` in Java, a branded `Bani` type in
+TypeScript — with no floating-point arithmetic anywhere in the money path.
+
+**Order lifecycle.** Orders progress through a fourteen-state machine covering
+confirmation, payment, label generation, drop-off, transit, locker arrival and
+delivery, with dispute, refund and cancellation as terminal branches. Each order
+carries an event history, tracking events, a delivery snapshot taken at purchase
+time, and the agreements both parties accepted. The buyer has 72 hours to
+confirm delivery; easybox and courier shipping are both priced in.
+
+**Billing documents.** Proformas, invoices, donation receipts, payout statements
+and shipping labels are generated server-side, numbered per series and year, and
+stored against the order.
+
+**Causes and verification.** A cause is submitted with supporting documents and
+reviewed by an operator before it can receive donations. Identity documents are
+stored in a private bucket, separate from public imagery.
+
+**Messaging.** Buyer and seller hold a per-listing conversation in which the
+offer, its acceptance and the resulting order all take place. Live updates are
+delivered over Server-Sent Events; because `EventSource` cannot send an
+`Authorization` header, the client first exchanges its access token for a
+single-use stream ticket and opens the stream with that.
+
+**Authentication and sessions.** Registration with email confirmation (24-hour
+token, 2-minute resend cooldown), OAuth2 sign-in, and HS256 access tokens with a
+15-minute lifetime held only in memory on the client. Refresh tokens rotate
+inside a family recorded server-side, with a 30-day sliding lifetime and a
+90-day absolute cap: presenting an already-rotated token is treated as theft and
+revokes every session for that account. Access tokens carry a version claim
+validated against the account, so a password change or a global sign-out
+invalidates outstanding tokens within ten seconds without a database read per
+request. Failed logins lock an account after five attempts for fifteen minutes.
+
+**Media pipeline.** Photographs are decoded, re-encoded to WebP, resized and
+EXIF-oriented in the browser before upload, with rotation and cropping applied
+on a canvas. On the server the declared content type is discarded: the bytes are
+probed for a JPEG, PNG or WebP signature, dimensions are read from the header,
+and the file is stored in MinIO and served through an API route that can
+authorise the reader rather than from a public bucket URL.
+
+<p align="center">
+  <br />
+  <img
+    src="docs/images/ui.webp"
+    alt="bid4 on a phone: the home page, and a listing showing its donation share, starting price and highest offer."
+    width="100%"
+  />
+</p>
+
+---
+
+## 💶 How a sale settles
+
+The buyer pays the item price, the platform fee and the delivery cost. The
+seller's proceeds are never reduced by the platform fee — the only deduction
+from the sale price is the donation the seller chose.
+
+- **Platform fee** — 5% of the sale price plus a fixed 2.50 lei, paid by the buyer.
+- **Delivery** — 14.99 lei to an easybox, 22.99 lei by courier, paid by the buyer.
+- **Donation** — the share the seller set when listing, from 5% to 100% of the sale price.
+
+A 200.00 lei sale with a 25% donation share, delivered to an easybox:
+
+| Party            | Amount          | Derivation                          |
+| ---------------- | --------------- | ----------------------------------- |
+| Buyer pays       | **227.49 lei**  | 200.00 + 12.50 fee + 14.99 delivery |
+| Cause receives   | **50.00 lei**   | 25% of 200.00                       |
+| Seller receives  | **150.00 lei**  | 200.00 − 50.00                      |
+| Platform retains | **12.50 lei**   | 5% of 200.00, plus 2.50             |
+| Delivery         | **14.99 lei**   | held in the platform shipping account |
+
+The split is computed identically on both sides — `lib/money.ts` in the browser
+and `orders/service/Fees.java` on the server — and the resulting figures are
+stored on the order, so a later change to the fee schedule cannot alter a
+settled sale. The buyer's full payment enters platform escrow; release moves
+the donation to the cause and the remainder to the seller.
+
+---
+
+## 🧭 Scope and simulated integrations
+
+Three external services are defined as interfaces with stub implementations
+rather than live integrations. Each is selected by configuration, so
+introducing a provider means supplying an adapter, with no change to the
+domain.
+
+| Integration | Interface | Selected by | Implemented today |
+| ----------- | --------- | ----------- | ----------------- |
+| **Payment** | `PaymentGateway` | `bid4.payments.provider`, default `stub` | Checkout sessions, payment references, settlement and failure handling, and the escrow ledger entries. No payment provider is connected, and no card data exists anywhere in the system. |
+| **Delivery** | `CourierGateway` | `bid4.shipping.provider`, default `stub` | Locker lookup, AWB issuance, label documents and tracking scans, all generated locally. Inbound webhooks are verified with HMAC-SHA256 and a constant-time comparison before they reach the order state machine, exactly as a carrier's would be. |
+| **Email** | `JavaMailSender` over SMTP | `MAIL_HOST` / `MAIL_PORT`, default `localhost:1025` | A single message: the address-confirmation link. In development it is captured by Mailpit and never leaves the machine. No provider is configured for production, and there are no notification emails for offers, orders or delivery. |
+
+The boundaries are explicit by design. The domain model, the ledger and the
+order state machine are the substance of the project; each external service
+sits behind an interface so a real provider can be introduced without touching
+them.
+
+---
+
+## 🧱 Architecture
+
+```
+backend/               Spring Boot 4 API, packaged by feature rather than layer
+  identity/            accounts, sessions, delivery and payment methods
+  catalog/             listings, offers, settlement
+  cause/               causes, verification, totals raised
+  orders/              state machine, agreements, disputes, tracking
+  ledger/              accounts, balanced transactions, balances
+  billing/ payments/   documents and the payment surface
+  shipping/ storage/   labels and tracking; uploads and media in MinIO
+  inbox/               per-listing conversations over SSE
+  ops/                 platform statistics
+  common/ security/    errors, money, paging, audit; JWT, CORS, rate limiting
+frontend/              Next.js 16 App Router, React 19, TypeScript, Tailwind v4
+  src/app/             routes, in Romanian: /licitatii, /cauze, /cont/...
+  src/components/      ui/ design system, layout/, auctions/, causes/, orders/
+  src/lib/api/         the single data seam the UI imports from
+  src/lib/mock/        the seeded dataset it runs on without a backend
+docker-compose.yml     the local stack; the API sits behind a compose profile
+```
+
+The HTTP contract is defined by the client: each function in
+`frontend/src/lib/api/*` names the endpoint it calls, and the API implements
+that contract and no more. UI code imports from `lib/api` exclusively, never
+from `lib/mock`, which is what allows `NEXT_PUBLIC_USE_MOCK` to replace the
+entire data layer without a component change.
+
+| Service    | Purpose                                            | Published on     |
+| ---------- | -------------------------------------------------- | ---------------- |
+| `postgres` | System of record                                   | `127.0.0.1:5432` |
+| `redis`    | Rate limiting, login throttling, short-lived state | `127.0.0.1:6379` |
+| `minio`    | Object storage: imagery and identity documents     | `127.0.0.1:9000` |
+| `mailpit`  | Captures outbound mail in development               | `127.0.0.1:8025` |
+| `backend`  | The API, behind the `app` profile                  | `127.0.0.1:8080` |
+
+Every published port is bound to `127.0.0.1`, so the datastores are reachable
+from the host and the compose network but never from the LAN. All services run
+with `no-new-privileges`. Actuator is served on port 8081, which compose does
+not publish, placing health and metrics out of reach by construction rather than
+by access control.
+
+### Enforced boundaries
+
+Five ArchUnit rules run as part of the test suite and fail the build:
+
+| Rule | Rationale |
+| ---- | --------- |
+| Controllers must not depend on repositories | A controller that queries directly is a service that cannot be reused or tested |
+| `common` must not depend on any feature package | The shared floor cannot know what is built on it |
+| Repositories must be interfaces | Spring Data supplies the implementation |
+| Controllers must not depend on domain entities | Controllers speak DTOs, so no request can bind onto a table row |
+| No field injection | Constructor injection turns a missing dependency into a compile error |
+
+<p align="center">
+  <br />
+  <img
+    src="docs/images/architecture.webp"
+    alt="bid4 architecture: the browser loads Next.js and calls the Spring Boot API over REST, with an SSE stream back; the API runs under Docker Compose alongside PostgreSQL, Redis, MinIO and Mailpit."
+    width="100%"
+  />
+</p>
+
+The request path, schema conventions and the reasoning behind each decision are
+documented in [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md).
+
+---
+
+## 🛠️ Tech stack
+
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot%204-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Java](https://img.shields.io/badge/Java%2021-437291?style=for-the-badge&logo=openjdk&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Flyway](https://img.shields.io/badge/Flyway-CC0200?style=for-the-badge&logo=flyway&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![MinIO](https://img.shields.io/badge/MinIO-C72E49?style=for-the-badge&logo=minio&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)
+
+![Next.js](https://img.shields.io/badge/Next%20js%2016-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React%2019-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![SWR](https://img.shields.io/badge/SWR-000000?style=for-the-badge&logo=swr&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod-000000?style=for-the-badge&logo=zod&logoColor=3068B7)
+![Vitest](https://img.shields.io/badge/Vitest-%236E9F18?style=for-the-badge&logo=Vitest&logoColor=%23fcd703)
+![PNPM](https://img.shields.io/badge/pnpm-%234a4a4a.svg?style=for-the-badge&logo=pnpm&logoColor=f69220)
+
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
+
+Also in use: Testcontainers and ArchUnit for the backend test suite, Bucket4j
+over Lettuce for distributed rate limiting, the OWASP Java HTML Sanitizer on
+every write, Spring Security OAuth2 as both resource server and client, Spotless
+and ESLint as style gates, and Trivy for dependency and secret scanning in CI.
+On the client: SWR for data fetching with per-viewer cache keys, Zod for
+boundary validation, jsPDF for locally rendered documents, and JSON-LD for
+structured data alongside generated `sitemap.ts` and `robots.ts`.
+
+---
+
+## 🚀 Local setup
+
+Requires Docker Desktop, JDK 21 and pnpm.
+
+### 1. Clone and configure
 
 ```bash
+git clone https://github.com/alecs007/bid4.git
+cd bid4
 cp .env.example .env
 ```
 
-Fill it in. For the JWT secret:
+Every value in `.env.example` is a placeholder. The JWT secret requires real
+entropy:
 
 ```bash
 openssl rand -base64 48
 ```
 
-Start the infrastructure:
+### 2. Start the infrastructure
 
 ```bash
 docker compose up -d
 ```
 
-That is Postgres on 5432, Redis on 6379 and MinIO on 9000, each bound to
-`127.0.0.1` so nothing is exposed to the network. The API is not included by
-default — it sits behind a profile, so the common case stays fast.
+Starts PostgreSQL, Redis, MinIO and Mailpit. The API is excluded by default — it
+sits behind a compose profile so the common case stays fast.
 
-### The API
-
-Open `backend/pom.xml` in IntelliJ as a project and run `BackendApplication`.
-It reads the repo-root `.env` itself, so there is nothing to configure in the
-run configuration.
-
-- API: `http://localhost:8080`
-- Health: `http://localhost:8081/actuator/health` — a separate port, deliberately
-  not published by compose
-
-Or from the terminal:
+### 3. Run the API
 
 ```bash
 cd backend && ./mvnw spring-boot:run
 ```
 
-### The web app
+The application reads the repository-root `.env` itself, so an IDE run
+configuration needs no additional setup: open `backend/pom.xml` as a project and
+run `BackendApplication`.
+
+- API: `http://localhost:8080`, served from the root — `POST /auth/login`
+- Health: `http://localhost:8081/actuator/health`
+
+### 4. Run the web application
 
 ```bash
 cd frontend && pnpm install && pnpm dev
 ```
 
-`http://localhost:3000`. It runs on seeded mock data while
-`NEXT_PUBLIC_USE_MOCK=true`; set it to `false` in `frontend/.env.local` to talk
-to the real API instead.
+Available at `http://localhost:3000`. It starts against the seeded data layer;
+set `NEXT_PUBLIC_USE_MOCK=false` in `frontend/.env.local` to call the API.
 
-### Everything in containers
+### Full stack in containers
 
 ```bash
 docker compose --profile app up -d --build
 ```
 
-Slower, because the image builds Maven from scratch. Worth running before a
-deploy, not while writing code.
+Slower, since the image builds with Maven from scratch. Appropriate before a
+deployment rather than during development.
 
-## Testing
+---
 
-```bash
-cd backend && ./mvnw verify
-```
+## ⚙️ Configuration
 
-Spotless first, then the suite. Testcontainers starts a real Postgres and Redis,
-so Flyway migrates on every run and a broken migration fails the build rather
-than the deploy. Docker Desktop has to be running.
+Infrastructure and API secrets are read from `.env` at the repository root,
+which is gitignored. The template is [`.env.example`](.env.example).
 
-```bash
-cd frontend && pnpm exec next typegen && pnpm exec tsc --noEmit && pnpm exec eslint src --max-warnings=0 && pnpm exec next build
-```
+| Variable                              | Required | Purpose                                        |
+| ------------------------------------- | -------- | ---------------------------------------------- |
+| `POSTGRES_DB` / `_USER` / `_PASSWORD` | yes      | System of record                               |
+| `REDIS_PASSWORD`                      | yes      | Rate limiting and short-lived state            |
+| `MINIO_ROOT_USER` / `_PASSWORD`       | yes      | Object storage credentials                     |
+| `MINIO_BUCKET_PUBLIC` / `_PRIVATE`    | yes      | Public imagery and identity documents, separated |
+| `BID4_JWT_SECRET`                     | yes      | HMAC key for access tokens; ≥ 32 bytes, base64 |
+| `BID4_CORS_ORIGINS`                   | yes      | Origins permitted to call the API              |
 
-`next typegen` comes first because `PageProps` and `LayoutProps` are generated
-into `.next/types`, which `tsconfig.json` includes. On a clean clone, where no
-dev server has run, the typecheck cannot resolve them without it.
+The web application reads its own configuration from `frontend/.env.local`
+([template](frontend/.env.example)):
 
-The lint budget is zero warnings. A warning is either worth fixing or worth
-silencing at its line with a reason; leaving one standing spends the budget that
-would have made the next one visible.
+| Variable                     | Purpose                                                    |
+| ---------------------------- | ---------------------------------------------------------- |
+| `NEXT_PUBLIC_USE_MOCK`       | `true` serves the seeded dataset, `false` calls the API     |
+| `NEXT_PUBLIC_API_BASE`       | API origin, used when the mock layer is disabled            |
+| `NEXT_PUBLIC_SHOW_DEV_TOOLS` | Seed-account sign-in panel; never rendered in production    |
+| `NEXT_PUBLIC_SITE_URL`       | Public origin, used for canonical URLs and social cards     |
 
-### Demo accounts
+Platform behaviour is configured under the `bid4.*` tree in
+`application.yaml` and bound to a validated record
+(`common/config/Bid4Properties.java`), so an invalid value fails startup rather
+than the first request that depends on it.
 
-An empty database is hard to test against, so the `dev` profile seeds the same
-four accounts the frontend's mock world uses. In IntelliJ set **Active profiles:
-`dev`** on the run configuration, or:
+| Setting                        | Default            |
+| ------------------------------ | ------------------ |
+| Access token lifetime          | 15 minutes         |
+| Refresh token lifetime         | 30 days sliding, 90 days absolute |
+| Email verification token       | 24 hours, 2-minute resend cooldown |
+| Account lockout                | 5 failed logins, 15 minutes |
+| Rate limit — authentication    | 10 requests / 15 minutes, fails closed |
+| Rate limit — refresh           | 60 requests / 5 minutes |
+| Rate limit — writes            | 60 requests / minute |
+| Rate limit — reads             | 300 requests / minute |
+
+---
+
+## 👥 Demo accounts
+
+The `dev` profile seeds the four accounts the mock dataset already uses:
 
 ```bash
 cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-| Address | Role | Type |
-| ------- | ---- | ---- |
-| `maria@bid4.ro` | USER | individual |
-| `contact@zambet.ro` | USER | organisation |
-| `operator@bid4.ro` | OPERATOR | individual |
-| `admin@bid4.ro` | ADMIN | individual |
+| Address             | Role       | Type         |
+| ------------------- | ---------- | ------------ |
+| `maria@bid4.ro`     | `USER`     | individual   |
+| `contact@zambet.ro` | `USER`     | organisation |
+| `operator@bid4.ro`  | `OPERATOR` | individual   |
+| `admin@bid4.ro`     | `ADMIN`    | individual   |
 
-All four use the password `bid4demo` and are already confirmed, so they sign in
-without an email round trip.
+All four use the password `bid4demo` and are pre-confirmed. Seeding requires
+`bid4.dev.seed=true`, which only the `dev` profile sets, and aborts if the
+database already contains users.
 
-This never runs by accident: it needs `bid4.dev.seed=true`, which only the `dev`
-profile sets, and it refuses to touch a database that already holds any users.
+Accounts registered manually must confirm their address first. In development
+all outbound mail is captured by Mailpit at `http://127.0.0.1:8025` and is never
+delivered externally.
 
-### Confirming an address by hand
+---
 
-A new account has to follow the link before it can sign in. In development the
-mail goes to Mailpit rather than anywhere real:
+## 🧪 Testing and CI
 
 ```bash
-open http://127.0.0.1:8025
+cd backend && ./mvnw verify
 ```
 
-Register, open the message, and follow the link — it lands on
-`/confirmare-email`, which redeems the token. To do it entirely from an API
-client, read the token out of Mailpit's own API at
-`http://127.0.0.1:8025/api/v1/messages` and post it to `/auth/verify`.
+Spotless runs first, then 198 tests across 20 classes: endpoint tests per
+feature, the refresh-token exchange and lifetime, rate limiting, cache headers,
+the order flow, ledger balancing, courier webhooks, and the five ArchUnit rules.
+Testcontainers provisions real PostgreSQL, Redis and MinIO instances, so Flyway
+applies all 17 migrations on every run and a broken migration fails the build
+rather than a deployment. Docker must be running.
 
-### By hand
-
-Point Postman at `http://localhost:8080`. Register, and store the token from
-the response:
-
-```js
-pm.environment.set("accessToken", pm.response.json().token);
+```bash
+cd frontend
+pnpm exec next typegen      # PageProps and LayoutProps are generated
+pnpm exec tsc --noEmit
+pnpm exec eslint src --max-warnings=0
+pnpm exec vitest run
+pnpm exec next build
 ```
 
-Set the collection's authorization to `Bearer {{accessToken}}` and leave every
-other request on "inherit". The refresh token is an httpOnly cookie, which
-Postman keeps for you, so `/auth/refresh` works after a login without any setup.
+`next typegen` must run first: the generated route types are emitted to
+`.next/types`, which `tsconfig.json` includes, and on a clean checkout the
+typecheck cannot resolve them otherwise. The lint budget is zero warnings — a
+warning is either fixed or silenced at its line with a stated reason.
 
-Worth trying by hand: `/auth/me` with no token, with a forged token, and with a
-real one; five wrong passwords followed by the right one; the same email
-registered twice; `/auth/refresh` twice with the same cookie.
+Three workflows run these checks, each with read-only token permissions and a
+cancel-in-progress concurrency group:
 
-## Conventions
+| Workflow       | What it runs                                                              |
+| -------------- | ------------------------------------------------------------------------- |
+| `backend.yml`  | `mvnw verify` with Testcontainers, plus a Buildx build of the API image that is never pushed, so a broken Dockerfile is caught before deployment |
+| `frontend.yml` | Frozen-lockfile install, typegen, typecheck, lint, tests, production build |
+| `security.yml` | Trivy filesystem scan for known-fixed CVEs in `pom.xml` and `pnpm-lock.yaml` and for committed secrets, on every push and weekly |
 
-User-facing copy is Romanian; code, comments and identifiers are English. Money
-is always an integer number of bani — `lib/money.ts` on one side, `long` on the
-other — and never a floating point type. Comments are rare and short, and only
-where the code cannot explain itself.
+---
+
+## 🔒 Security
+
+- **Deny by default.** The filter chain is stateless and opts endpoints in
+  explicitly; every other route requires authentication. CSRF protection is
+  disabled deliberately, because no request is authorised by ambient cookie
+  credentials: the only cookie carrying authority is the refresh token, which
+  is redeemed at a single endpoint.
+- **Authorisation is the API's responsibility.** The web application's
+  middleware only decides which page to render first; a forged role cookie
+  produces a page whose data the API then refuses.
+- **Token handling.** Access tokens are held in memory and never written to
+  `localStorage`. The refresh cookie is `HttpOnly`, `Secure` and
+  `SameSite=Strict`, and rotates within a server-side family; presenting a
+  rotated token revokes every session for that account.
+- **Rate limiting.** Four Bucket4j budgets in Redis, applied per caller. The
+  authentication budget fails closed: if Redis is unavailable, authentication
+  requests are rejected rather than allowed through.
+- **Input handling.** Markup is stripped and Unicode normalised on write by the
+  OWASP sanitizer, rather than escaped on read. All persistence goes through
+  Spring Data with bound parameters.
+- **Upload validation.** Content type is determined by probing the bytes for a
+  JPEG, PNG or WebP signature and reading the dimensions from the header; the
+  client's declared type is discarded. Public imagery and identity documents are
+  stored in separate buckets and served through an authorising API route.
+- **Response headers.** Content Security Policy, `X-Content-Type-Options`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`
+  and a `Permissions-Policy` granting no hardware, set on both halves.
+  `script-src` still includes `unsafe-inline`, which Next.js hydration requires
+  until a per-request nonce replaces it; the directives that do not depend on
+  script injection — `frame-ancestors`, `base-uri`, `form-action`, `object-src`
+  — are enforced.
+- **Webhook authenticity.** Payment and courier callbacks are authenticated
+  with an HMAC-SHA256 signature over the raw body, compared in constant time,
+  and an unsigned or mismatched callback is rejected before any order
+  transition is applied.
+- **Uniform error contract.** A single `ErrorCode` enumeration,
+  `ApiErrorResponse` shape and global exception handler, so no stack trace
+  reaches a client and the web application has exactly one response shape to
+  parse. Every response carries an `X-Request-Id` that also appears in the
+  server log.
+- **Redirect safety.** `safeRedirect` resolves a `?redirect=` parameter against
+  a probe origin and accepts it only if it resolves to the same one; prefix
+  matching is insufficient, because browsers normalise `/\` to `//`.
+- **No secrets in the repository.** All configuration comes from environment
+  variables, `.env` files are gitignored, and CI scans every push for
+  credentials that reached the tree.
+
+Payment is simulated and a nonce-based CSP is not yet in place. Vulnerability
+reports are handled through [SECURITY.md](SECURITY.md).
+
+---
+
+## 🩺 Troubleshooting
+
+| ⚠️ Problem                                              | 🛠️ Resolution                                                                            |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 🐳 `./mvnw verify` cannot start a container              | Testcontainers requires a running Docker daemon. Start Docker Desktop and retry.            |
+| 🔌 The API starts but the browser is refused             | `BID4_CORS_ORIGINS` must list the web application origin, `http://localhost:3000` locally.  |
+| 🔑 `BID4_JWT_SECRET` rejected at startup                 | The key must be at least 32 bytes, base64-encoded: `openssl rand -base64 48`.               |
+| 🧭 The web app shows data the API never returned          | It is still using the mock layer. Set `NEXT_PUBLIC_USE_MOCK=false` in `frontend/.env.local`. |
+| 📭 Registration succeeds but no mail arrives             | Development mail is captured by Mailpit at `http://127.0.0.1:8025`.                         |
+| 🚫 Authentication rejected with "too many attempts"      | Rate limiting or account lockout. Wait out the stated interval, or clear the `ratelimit:*` keys in Redis. |
+| 🧩 `tsc` cannot resolve `PageProps` or `LayoutProps`     | Run `pnpm exec next typegen` first; both are generated into `.next/types`.                  |
+| 🗃️ A migration fails at startup after a schema change    | Flyway is forward-only. Add a new `V*.sql` rather than editing one that has already run.    |
+| 🔁 Port already in use: 3000, 5432, 6379, 8080, 9000     | Stop the process holding it, or change the mapping in `docker-compose.yml`.                 |
+
+---
+
+## 📚 Documentation
+
+- [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) — runtime topology, package layout, where each control sits, migration policy, decision log
+- [`frontend/README.md`](frontend/README.md) — the web application, its security surface and the data seam
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, the checks CI runs, pull-request guidelines
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting and scope
+
+---
+
+## 📐 Conventions
+
+User-facing copy is Romanian; code, comments and identifiers are English.
+Monetary amounts are integer bani on both sides of the wire — `lib/money.ts` and
+`long` — and never a floating-point type. The backend is packaged by feature, so
+a change to causes is contained to one directory. Migrations are forward-only:
+the schema is defined in `db/migration/`, not derived from Hibernate. Comments
+are reserved for what the code cannot state itself.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
+the checks CI runs, and pull-request guidelines. For security issues, please
+follow [SECURITY.md](SECURITY.md) rather than opening a public issue.
+
+---
+
+## 📄 License
+
+Released under the [MIT License](LICENSE).

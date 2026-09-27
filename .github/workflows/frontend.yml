@@ -64,7 +64,9 @@ jobs:
       - name: typecheck
         run: pnpm exec tsc --noEmit
 
-      # One warning is expected: the commented-out DevRoleSwitcher import.
+      # Zero warnings: one is either worth fixing or worth silencing at its
+      # line with a reason. Leaving one standing spends the budget that would
+      # have made the next one visible.
       - name: lint
         run: pnpm exec eslint src --max-warnings=0
 

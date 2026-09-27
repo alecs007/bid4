@@ -16,9 +16,10 @@ pnpm dev
 Then open http://localhost:3000.
 
 ```bash
-pnpm build     # production build
-pnpm lint      # eslint
-pnpm exec tsc --noEmit
+pnpm build                        # production build
+pnpm exec tsc --noEmit            # typecheck
+pnpm exec eslint src --max-warnings=0
+pnpm exec vitest run              # unit tests
 ```
 
 ## Security
@@ -64,8 +65,9 @@ Seed accounts all use the password `bid4demo`:
 | operator@bid4.ro | OPERATOR |
 | admin@bid4.ro | ADMIN |
 
-In development a floating switcher jumps between them and can reset the
-seeded world.
+The sign-in page carries a development-only panel that signs straight in as
+any of them; `NEXT_PUBLIC_SHOW_DEV_TOOLS=false` removes it, and a production
+build never renders it.
 
 ## Layout
 
@@ -79,7 +81,8 @@ src/lib          api/ (the backend seam), mock/, types/, money, config
 split and keeps amounts in integer bani. `/design-system` renders the
 component vocabulary.
 
-The backend now exists under `../backend` and already serves
-`/api/auth/*`. Its decisions, the request path and the schema conventions are
-in `../backend/ARCHITECTURE.md`; how to run both halves together is in the
-README at the repository root.
+The backend lives under `../backend` and serves the contract these functions
+name, from the root rather than under a prefix: `/auth/*`, `/auctions`,
+`/causes`, `/orders`, `/inbox`, `/uploads`, and the rest. Its decisions, the request path and the
+schema conventions are in `../backend/ARCHITECTURE.md`; how to run both halves
+together is in the README at the repository root.
