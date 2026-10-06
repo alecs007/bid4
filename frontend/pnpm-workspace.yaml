@@ -1,0 +1,6 @@
+# pnpm 10.16 stopped reading the `pnpm` field in package.json; overrides live
+# here now. The pin itself still matters: sharp arrives only as an optional
+# transitive dependency of Next.js, so without it a lockfile regenerated on a
+# different machine can resolve a different build.
+overrides:
+  sharp: 0.35.4
