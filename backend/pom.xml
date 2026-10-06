@@ -38,7 +38,7 @@
 		<bouncycastle.version>1.86</bouncycastle.version>
 		<minio.version>8.6.0</minio.version>
 		<okhttp.version>5.5.0</okhttp.version>
-		<owasp-sanitizer.version>20260101.1</owasp-sanitizer.version>
+		<owasp-sanitizer.version>20260924.2</owasp-sanitizer.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
 		<archunit.version>1.5.1</archunit.version>
 		<spotless.version>2.44.0</spotless.version>
