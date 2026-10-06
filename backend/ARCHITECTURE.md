@@ -122,29 +122,53 @@ Flyway, `src/main/resources/db/migration`, forward-only. `clean` is disabled.
 
 ## Continuous integration
 
-Three path-filtered workflows in `.github/workflows`.
+Four workflows in `.github/workflows`. The first two are path-filtered; the
+two security jobs are not, because a dependency or a query pack can go stale
+without anything in this repository changing.
 
 | Workflow      | Runs on                          | What it does |
 | ------------- | -------------------------------- | ------------ |
-| `backend.yml` | `backend/**`, `docker-compose.yml` | `./mvnw verify` on JDK 21 — Spotless, then 22 tests against a real Postgres and Redis via Testcontainers, so Flyway migrates on every push. A second job builds the container image without pushing it. |
-| `frontend.yml`| `frontend/**`                     | `tsc --noEmit`, `eslint --max-warnings=1`, `next build`. |
+| `backend.yml` | `backend/**`, `docker-compose.yml` | `./mvnw verify` on JDK 21 — Spotless, then 175 tests against a real Postgres, Redis and MinIO via Testcontainers, so Flyway migrates on every push. A second job builds the container image without pushing it. |
+| `frontend.yml`| `frontend/**`                     | Frozen-lockfile install, `next typegen`, `tsc --noEmit`, `eslint src --max-warnings=0`, `vitest run`, `next build`. |
 | `security.yml`| everything, plus weekly           | Trivy filesystem scan: known CVEs in `pom.xml` and `pnpm-lock.yaml`, and secrets that reached the tree. |
+| `codeql.yml`  | everything, plus weekly           | CodeQL for `java-kotlin` and `javascript-typescript`, `security-and-quality` queries. |
 
 Every workflow declares `permissions: contents: read` and escalates only where
-it must, and every one cancels the run it supersedes.
+it must — `codeql.yml` is the one job that needs `security-events: write`, to
+upload its results — and every one cancels the run it supersedes.
 
-**CodeQL was removed.** It analysed both languages correctly — 4 Java files, 140
-TypeScript files — and then failed on every run at the upload step, because
-publishing results requires GitHub code scanning, which on a *private*
-repository is part of GitHub Advanced Security. Nothing in the workflow could
-have fixed that. If this repository ever becomes public, code scanning is free
-and CodeQL is worth restoring: one workflow file with `languages:
-java-kotlin, javascript-typescript`, `build-mode: autobuild` for Java and
-`none` for TypeScript, and `security-events: write`.
+`.github/dependabot.yml` opens the pull requests that act on what the Trivy job
+reports: Maven, npm, GitHub Actions and the Dockerfile's base images, weekly
+and grouped, with majors separated out because those are the ones that need a
+migration note read by a human. The `github-actions` ecosystem is in there for
+a specific reason — see below.
 
-Trivy needs none of that and covers the failure modes that are more likely in
-practice anyway — a dependency with a published CVE, or a key that reached the
-tree. `ignore-unfixed` is set, because a finding with no released fix is not
+**Every action is on a major that declares `node24`.** This is a floor, not a
+preference: GitHub retired Node 20 from the runners on 23 September 2026, and
+the runners now execute JavaScript actions on Node 24 only. The majors this
+repository used before — `checkout@v4`, `setup-java@v4`, `setup-node@v4`,
+`upload-artifact@v4`, `pnpm/action-setup@v4`, `setup-buildx-action@v3`,
+`build-push-action@v6` — all declare `runs.using: node20`. The lowest major
+that moved to `node24` differs per action and is not always the next one
+(`upload-artifact` stayed on `node20` through v5), so the versions here were
+each checked against their `action.yml` rather than bumped by one.
+`trivy-action` is a composite action and has no runtime of its own.
+
+**CodeQL was removed once and has been restored.** It always analysed both
+languages correctly and then failed at the upload step, because publishing
+results requires GitHub code scanning, which on a *private* repository is part
+of GitHub Advanced Security. Nothing in the workflow could have fixed that.
+Making the repository public made code scanning free, and `codeql.yml` is that
+workflow. One deviation from the plan recorded here previously: the Java job
+uses `build-mode: manual` with an explicit `./mvnw -DskipTests compile` rather
+than `autobuild`, because autobuild would have to discover that the Maven
+project lives in `backend/` rather than at the root, and naming the build is
+one line that removes the guess. TypeScript needs no build and uses
+`build-mode: none`.
+
+Trivy needs none of that and covers failure modes CodeQL cannot see — a
+dependency with a published CVE, or a key that reached the tree.
+`ignore-unfixed` is set, because a finding with no released fix is not
 something a build can act on and failing on it only teaches people to ignore the
 job.
 

@@ -1,0 +1,65 @@
+version: 2
+
+# Trivy reports a dependency with a published CVE; nothing in CI moves it.
+# These updates are the other half of that: the report has somewhere to go.
+#
+# Weekly rather than daily, and grouped, because a pull request per package on
+# a Spring Boot and Next.js tree is a queue nobody reads. Patch and minor
+# arrive together; a major arrives on its own, since that is the one that needs
+# a human to read a migration note.
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: scope
+    groups:
+      backend-patch-and-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: scope
+    groups:
+      frontend-patch-and-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # next, react and react-dom are pinned to exact versions on purpose, and
+      # eslint-config-next must match next. Moving them is a deliberate change
+      # with a build to verify, not an automated one.
+      - dependency-name: next
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore"
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore"
+      include: scope

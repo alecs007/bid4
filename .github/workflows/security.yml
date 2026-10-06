@@ -1,14 +1,15 @@
 name: security
 
-# Replaces the CodeQL workflow, which could never pass here: uploading its
-# results needs GitHub code scanning, and on a private repository that is part
-# of GitHub Advanced Security. The analysis ran fine and the upload was refused
-# every time. See backend/ARCHITECTURE.md for how to bring CodeQL back if this
-# repository ever goes public.
+# Trivy's half of the picture: one filesystem scan covering the two things most
+# likely to actually hurt — a dependency with a known CVE, and a secret that
+# reached the tree. CodeQL covers the third, a taint path through this
+# project's own code, and lives in codeql.yml; it was absent for as long as
+# this repository was private, because uploading its results needs GitHub code
+# scanning, which on a private repository is part of GitHub Advanced Security.
+# backend/ARCHITECTURE.md has that history.
 #
-# Trivy needs none of that. One filesystem scan covers the two things most
-# likely to actually hurt: a dependency with a known CVE, and a secret that
-# reached the tree.
+# Dependabot opens the pull requests that act on what this job reports;
+# nothing here updates anything by itself.
 
 on:
   push:

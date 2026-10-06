@@ -1,0 +1,69 @@
+name: codeql
+
+# Code scanning is free on public repositories, which is what makes this
+# workflow possible at all: the analysis always ran, but uploading its results
+# needs GitHub code scanning, and on a private repository that is part of
+# GitHub Advanced Security. See backend/ARCHITECTURE.md for the history.
+#
+# Trivy in security.yml covers dependencies and committed secrets. CodeQL
+# covers what neither can see — a taint path through this project's own code.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # A query pack updated after the last commit finds nothing until something is
+  # pushed, so the schedule is what keeps the analysis current.
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # Uploading the SARIF results. The only job in this repository that needs
+      # more than read.
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-and-quality
+
+      # autobuild would have to discover that the Maven project lives in
+      # backend/ rather than at the root. Naming the build is one line and
+      # removes the guess; -DskipTests because backend.yml already runs the
+      # suite and CodeQL only needs the classes.
+      - name: build
+        if: matrix.build-mode == 'manual'
+        run: ./mvnw -B --no-transfer-progress -DskipTests compile
+        working-directory: backend
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
