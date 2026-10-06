@@ -32,10 +32,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # A job-level permissions block REPLACES the workflow-level default rather
+    # than merging with it, so `contents: read` has to be restated here —
+    # without it the token cannot read the repository and checkout fails with
+    # "repository not found" before CodeQL ever runs.
     permissions:
+      contents: read
       # Uploading the SARIF results. The only job in this repository that needs
       # more than read.
       security-events: write
+      # Both are in GitHub's own CodeQL template: packages to fetch CodeQL
+      # packs, actions to read workflow run metadata.
+      packages: read
+      actions: read
 
     strategy:
       fail-fast: false

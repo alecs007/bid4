@@ -45,6 +45,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: react-dom
         update-types: ["version-update:semver-major"]
+      # @types/node tracks the Node the workflow installs, which is 22. A major
+      # here types against a runtime CI does not use.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
@@ -63,3 +67,10 @@ updates:
     commit-message:
       prefix: "chore"
       include: scope
+    ignore:
+      # The base image is Java 21 because the project targets Java 21
+      # (`<java.version>` in pom.xml). A major bump moves the JDK out from
+      # under the build — temurin 25 fails the image job outright — so the
+      # runtime moves when the project does, not when a tag appears.
+      - dependency-name: eclipse-temurin
+        update-types: ["version-update:semver-major"]
