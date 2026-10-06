@@ -28,7 +28,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Before setup-node, which needs pnpm present to resolve its cache.
       #
@@ -38,11 +38,11 @@ jobs:
       # workflow's checkout, finds none, and fails with "No pnpm version is
       # specified". The version itself still comes from the packageManager
       # field, so it is stated in one place.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: frontend/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: pnpm
