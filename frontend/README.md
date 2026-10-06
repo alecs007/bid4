@@ -54,6 +54,11 @@ points every call in `lib/api/*` at `NEXT_PUBLIC_API_BASE` instead. UI code
 imports from `lib/api` only, never from `lib/mock`, so the swap touches no
 component.
 
+Not every call has an endpoint behind it yet — cause submission and operator
+review, password reset and account management are built here and served only
+from `lib/mock`, so those screens stop working against the live API.
+[`ROADMAP.md`](../ROADMAP.md) lists each one and what the endpoint would take.
+
 Copy `.env.example` to `.env.local` to change either flag.
 
 Seed accounts all use the password `bid4demo`:

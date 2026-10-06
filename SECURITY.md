@@ -43,9 +43,12 @@ an ordinary account — verifying a cause, resolving a dispute, or moving money 
 particular.
 
 **Session handling.** Replaying a rotated refresh token without triggering
-family revocation, retaining a valid session past a sign-out or password change,
-defeating the account lockout, or extracting an access token from the browser,
-where it is held in memory by design.
+family revocation, retaining a valid session past a sign-out, defeating the
+account lockout, or extracting an access token from the browser, where it is
+held in memory by design. Note that `POST /auth/logout` revokes the session it
+is presented with, and nothing else: there is no global sign-out and no
+password-change endpoint, so an access token outliving either of those is not a
+finding — it is the gap recorded in [ROADMAP.md](ROADMAP.md).
 
 **Rate limiting.** Bypassing the authentication budget, or causing it to fail
 open when Redis is unavailable, where it is specified to fail closed.
@@ -76,6 +79,14 @@ still permits `unsafe-inline`, which Next.js hydration requires until a
 per-request nonce replaces it; the directives that do not depend on script
 injection — `frame-ancestors`, `base-uri`, `form-action`, `object-src` — are
 enforced.
+
+Neither is an unimplemented endpoint. Several surfaces the web application
+offers against its seeded dataset have no API behind them yet — cause
+submission and operator review, password reset, account and payout management.
+They are listed in [ROADMAP.md](ROADMAP.md), and that something cannot be done
+through the API is not a vulnerability in it. A *reachable* write that should
+have required an `OPERATOR` role, on the other hand, is exactly the kind of
+report the vertical access control section above is asking for.
 
 ## Testing guidelines
 

@@ -12,10 +12,14 @@ application and a **Spring Boot 4** API backed by PostgreSQL, Redis and MinIO.
 The full local stack runs from a single `docker compose up`, and the web
 application can also run standalone against a seeded in-browser data layer.
 
-Status: the web application is feature-complete against that data layer, and
-the API implements the same contract endpoint by endpoint. Payment, delivery
-and email are stubbed behind interfaces rather than connected to live
+Status: the project is incomplete, and deliberately so in some places. The web
+application is feature-complete against the seeded data layer. The API
+implements most of the same contract but not all of it — cause submission and
+operator review, password reset and account management have no endpoint yet,
+and the web application covers them against the seeded dataset only. Payment,
+delivery and email are stubbed behind interfaces rather than connected to live
 providers, as set out under **Scope and simulated integrations** below.
+[`ROADMAP.md`](ROADMAP.md) lists every gap and what closing it would take.
 
 <p align="center">
   <img
@@ -67,7 +71,9 @@ stored against the order.
 
 **Causes and verification.** A cause is submitted with supporting documents and
 reviewed by an operator before it can receive donations. Identity documents are
-stored in a private bucket, separate from public imagery.
+stored in a private bucket, separate from public imagery. The submission wizard
+and the review queue are built in the web application; on the API `/causes` is
+still read-only, so both run against the seeded dataset for now.
 
 **Messaging.** Buyer and seller hold a per-listing conversation in which the
 offer, its acceptance and the resulting order all take place. Live updates are
@@ -76,14 +82,16 @@ delivered over Server-Sent Events; because `EventSource` cannot send an
 single-use stream ticket and opens the stream with that.
 
 **Authentication and sessions.** Registration with email confirmation (24-hour
-token, 2-minute resend cooldown), OAuth2 sign-in, and HS256 access tokens with a
+token, 2-minute resend cooldown) and HS256 access tokens with a
 15-minute lifetime held only in memory on the client. Refresh tokens rotate
 inside a family recorded server-side, with a 30-day sliding lifetime and a
 90-day absolute cap: presenting an already-rotated token is treated as theft and
 revokes every session for that account. Access tokens carry a version claim
-validated against the account, so a password change or a global sign-out
-invalidates outstanding tokens within ten seconds without a database read per
-request. Failed logins lock an account after five attempts for fifteen minutes.
+validated against the account, which is what will let a password change or a
+global sign-out invalidate outstanding tokens within ten seconds without a
+database read per request — the validator is in the filter chain, but neither
+of the two endpoints that would raise the version exists yet. Failed logins
+lock an account after five attempts for fifteen minutes.
 
 **Media pipeline.** Photographs are decoded, re-encoded to WebP, resized and
 EXIF-oriented in the browser before upload, with rotation and cropping applied
@@ -244,8 +252,9 @@ documented in [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md).
 
 Also in use: Testcontainers and ArchUnit for the backend test suite, Bucket4j
 over Lettuce for distributed rate limiting, the OWASP Java HTML Sanitizer on
-every write, Spring Security OAuth2 as both resource server and client, Spotless
-and ESLint as style gates, and Trivy for dependency and secret scanning in CI.
+every write, Spring Security's OAuth2 resource server for JWT validation,
+Spotless and ESLint as style gates, and Trivy for dependency and secret
+scanning in CI.
 On the client: SWR for data fetching with per-viewer cache keys, Zod for
 boundary validation, jsPDF for locally rendered documents, and JSON-LD for
 structured data alongside generated `sitemap.ts` and `robots.ts`.
@@ -386,7 +395,7 @@ delivered externally.
 cd backend && ./mvnw verify
 ```
 
-Spotless runs first, then 198 tests across 20 classes: endpoint tests per
+Spotless runs first, then 175 tests across 18 classes: endpoint tests per
 feature, the refresh-token exchange and lifetime, rate limiting, cache headers,
 the order flow, ledger balancing, courier webhooks, and the five ArchUnit rules.
 Testcontainers provisions real PostgreSQL, Redis and MinIO instances, so Flyway
@@ -492,6 +501,7 @@ reports are handled through [SECURITY.md](SECURITY.md).
 - [`frontend/README.md`](frontend/README.md) — the web application, its security surface and the data seam
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, the checks CI runs, pull-request guidelines
 - [`SECURITY.md`](SECURITY.md) — vulnerability reporting and scope
+- [`ROADMAP.md`](ROADMAP.md) — what is stubbed, what is missing, and what each would take
 - [`docs/CREDITS.md`](docs/CREDITS.md) — the licence of every third-party image in the tree
 
 ---
