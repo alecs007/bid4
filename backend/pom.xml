@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.0</version>
+		<version>4.1.1</version>
 		<relativePath/>	</parent>
 	<groupId>ro.bid4</groupId>
 	<artifactId>backend</artifactId>
@@ -27,10 +27,15 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!-- Boot 4.1.1 pins 3.1.5 / 2.21.5; both carry parser denial-of-service
+		     advisories that Trivy fails the build on. Held ahead of the BOM until
+		     a Boot patch catches up, at which point these two can go. -->
+		<jackson-bom.version>3.1.7</jackson-bom.version>
+		<jackson-2-bom.version>2.21.7</jackson-2-bom.version>
 		<postgresql.version>42.7.12</postgresql.version>
 		<netty.version>4.2.17.Final</netty.version>
 		<tomcat.version>11.0.25</tomcat.version>
-		<bouncycastle.version>1.81.1</bouncycastle.version>
+		<bouncycastle.version>1.85</bouncycastle.version>
 		<minio.version>8.6.0</minio.version>
 		<okhttp.version>5.1.0</okhttp.version>
 		<owasp-sanitizer.version>20260101.1</owasp-sanitizer.version>

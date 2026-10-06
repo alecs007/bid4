@@ -1,6 +1,11 @@
 # pnpm 10.16 stopped reading the `pnpm` field in package.json; overrides live
-# here now. The pin itself still matters: sharp arrives only as an optional
-# transitive dependency of Next.js, so without it a lockfile regenerated on a
-# different machine can resolve a different build.
+# here now.
 overrides:
+  # sharp arrives only as an optional transitive dependency of Next.js, so
+  # without a pin a lockfile regenerated on a different machine can resolve a
+  # different build.
   sharp: 0.35.4
+  # CVE-2026-93749, denial of service via malformed indexed source maps. Pulled
+  # in transitively by postcss; nothing declares it directly, so a pin is the
+  # only way to move it.
+  source-map-js: ">=1.2.2"
