@@ -4,9 +4,24 @@ version: 2
 # These updates are the other half of that: the report has somewhere to go.
 #
 # Weekly rather than daily, and grouped, because a pull request per package on
-# a Spring Boot and Next.js tree is a queue nobody reads. Patch and minor
-# arrive together; a major arrives on its own, since that is the one that needs
-# a human to read a migration note.
+# a Spring Boot and Next.js tree is a queue nobody reads.
+#
+# Majors are ignored everywhere except GitHub Actions. A major is a migration
+# note to read and a build to verify, not something to arrive unbidden on a
+# Monday — and left on, they do arrive: the first run here proposed temurin 25
+# under a Java 21 build, minio 9, spotless 3, typescript 6 and @types/node 26
+# in one morning, one of which failed CI by construction.
+#
+# This does not weaken the CVE position, because Dependabot was never what
+# held it. security.yml runs Trivy on every push and weekly, with
+# `exit-code: 1` over CRITICAL and HIGH findings that have a released fix. If
+# the only fix for an advisory is a major, the build goes red and the upgrade
+# gets made deliberately, which is the right way round for a change that large.
+#
+# GitHub Actions is the exception, and deliberately so: an action's major is
+# how a runner retirement reaches you. Node 20 left the runners in September
+# 2026 and every action pinned here declared it — majors are the only warning
+# that arrives before CI simply stops working.
 updates:
   - package-ecosystem: maven
     directory: /backend
@@ -21,6 +36,9 @@ updates:
       backend-patch-and-minor:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -36,18 +54,10 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
     ignore:
-      # next, react and react-dom are pinned to exact versions on purpose, and
-      # eslint-config-next must match next. Moving them is a deliberate change
-      # with a build to verify, not an automated one.
-      - dependency-name: next
-        update-types: ["version-update:semver-major"]
-      - dependency-name: react
-        update-types: ["version-update:semver-major"]
-      - dependency-name: react-dom
-        update-types: ["version-update:semver-major"]
-      # @types/node tracks the Node the workflow installs, which is 22. A major
-      # here types against a runtime CI does not use.
-      - dependency-name: "@types/node"
+      # Covers what was listed here individually before: next, react and
+      # react-dom are pinned to exact versions, eslint-config-next must match
+      # next, and @types/node types against the Node the workflow installs.
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
@@ -72,5 +82,5 @@ updates:
       # (`<java.version>` in pom.xml). A major bump moves the JDK out from
       # under the build — temurin 25 fails the image job outright — so the
       # runtime moves when the project does, not when a tag appears.
-      - dependency-name: eclipse-temurin
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
