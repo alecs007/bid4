@@ -41,7 +41,7 @@
 		<owasp-sanitizer.version>20260101.1</owasp-sanitizer.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
 		<archunit.version>1.5.1</archunit.version>
-		<spotless.version>2.44.0</spotless.version>
+		<spotless.version>2.46.1</spotless.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
