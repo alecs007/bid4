@@ -58,6 +58,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Before init, so CodeQL traces the compiler the project actually builds
+      # with. The runner's default JDK is 17, and the build sets release 21 —
+      # without this, javac rejects it as "release version 21 not supported"
+      # long before any analysis happens. backend.yml sets the same version for
+      # the same reason.
+      - uses: actions/setup-java@v6
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
       - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
