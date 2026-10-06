@@ -3,6 +3,15 @@
 Bug reports, fixes and feature proposals are all welcome. This document covers
 the setup, the checks that must pass, and the conventions the codebase holds to.
 
+Participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+**If you are looking for something to work on**, [`ROADMAP.md`](ROADMAP.md) is
+the list: what the project does not do yet, why, and what closing each gap
+would take. The largest items are the API endpoints behind screens the web
+application already has — cause submission and operator review above all — and
+each one names the files involved. Open an issue referencing the item before
+you start, so the design questions it raises get settled first.
+
 ## Environment
 
 Docker Desktop, JDK 21 and pnpm are required. Follow the

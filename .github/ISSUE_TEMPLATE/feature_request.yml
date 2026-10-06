@@ -1,0 +1,47 @@
+name: Feature proposal
+description: Something the project should do that it does not do yet.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [ROADMAP.md](https://github.com/alecs007/bid4/blob/main/ROADMAP.md) lists
+        what is already known to be missing, and what each item would take. If
+        your proposal is there, comment on it or open an issue that references
+        it rather than restating it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or impossible today. Describe the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: >
+        Where it would live, and what it would touch. The backend is packaged by
+        feature; naming the directory is useful.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: surface
+    attributes:
+      label: What it touches
+      options:
+        - label: The money path — fees, the ledger, escrow or a payout
+        - label: The order state machine
+        - label: Authentication, sessions or authorisation
+        - label: The database schema (a new forward-only migration)
+        - label: The HTTP contract between `lib/api` and the API
+        - label: Only the web application
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including doing nothing, where that is a real option.
