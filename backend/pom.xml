@@ -35,12 +35,12 @@
 		<postgresql.version>42.7.12</postgresql.version>
 		<netty.version>4.2.17.Final</netty.version>
 		<tomcat.version>11.0.25</tomcat.version>
-		<bouncycastle.version>1.85</bouncycastle.version>
+		<bouncycastle.version>1.86</bouncycastle.version>
 		<minio.version>8.6.0</minio.version>
-		<okhttp.version>5.1.0</okhttp.version>
+		<okhttp.version>5.5.0</okhttp.version>
 		<owasp-sanitizer.version>20260101.1</owasp-sanitizer.version>
-		<bucket4j.version>8.16.0</bucket4j.version>
-		<archunit.version>1.4.0</archunit.version>
+		<bucket4j.version>8.21.0</bucket4j.version>
+		<archunit.version>1.5.1</archunit.version>
 		<spotless.version>2.44.0</spotless.version>
 	</properties>
 	<dependencyManagement>
