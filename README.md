@@ -492,6 +492,7 @@ reports are handled through [SECURITY.md](SECURITY.md).
 - [`frontend/README.md`](frontend/README.md) — the web application, its security surface and the data seam
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, the checks CI runs, pull-request guidelines
 - [`SECURITY.md`](SECURITY.md) — vulnerability reporting and scope
+- [`docs/CREDITS.md`](docs/CREDITS.md) — the licence of every third-party image in the tree
 
 ---
 
@@ -516,4 +517,12 @@ follow [SECURITY.md](SECURITY.md) rather than opening a public issue.
 
 ## 📄 License
 
-Released under the [MIT License](LICENSE).
+The source code is released under the [MIT License](LICENSE).
+
+The imagery is a separate matter. The seeded demo dataset ships 58 photographs
+from Wikimedia Commons under Creative Commons terms, 35 of them share-alike,
+and MIT cannot relicense them. Each file is credited with its author, source
+and licence in [`docs/CREDITS.md`](docs/CREDITS.md), generated from the
+`CREDITS.json` files held beside the images. If you are reusing the project
+rather than reading it, replace that imagery with your own — nothing in the
+domain depends on it.
